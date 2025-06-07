@@ -1,3 +1,20 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Issue
+from .forms import IssueForm
 
-# Create your views here.
+def issue_list(request):
+    issues = Issue.objects.order_by('-created_at')
+    return render(request, 'reporthub/issue_list.html', {'issues': issues})
+
+def report_issue(request):
+    if request.method == 'POST':
+        form = IssueForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('reporthub:issue_list')
+    else:
+        form = IssueForm()
+    return render(request, 'reporthub/report_issue.html', {'form': form})
+
+def voice_record(request):
+    return render(request, 'reporthub/voice_record.html')

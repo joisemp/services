@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Report Issue</title>
+</head>
+<body>
+    <h1>Report a New Issue</h1>
+    <form method="post" enctype="multipart/form-data" id="issueForm">
+        {% csrf_token %}
+        {{ form.title.label_tag }} {{ form.title }}<br>
+        {{ form.description.label_tag }} {{ form.description }}<br>
+        {{ form.image.label_tag }} 
+        <div>
+            <input type="file" id="imageInput" name="image" accept="image/*" onchange="previewImage(this)">
+            <img id="imagePreview" src="" alt="Image Preview" style="display:none; max-width:200px; max-height:200px;"/>
+            <button type="button" id="deleteImageBtn" style="display:none;" onclick="deleteImage()">Delete Image</button>
+        </div>
+        <label>Voice Note:</label>
+        <div>
+            <a href="{% url 'reporthub:voice_record' %}" target="_blank" onclick="window.open(this.href, 'VoiceRecorder', 'width=400,height=300'); return false;">Record Voice in Browser</a><br>
+            <input type="file" id="voiceInput" name="voice" accept="audio/*" onchange="previewVoice(this)" style="display:none;">
+            <audio id="audioPreview" controls style="display:none;"></audio>
+            <button type="button" id="deleteVoiceBtn" style="display:none;" onclick="deleteVoice()">Delete Voice</button>
+        </div>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+    <a href="{% url 'reporthub:issue_list' %}">Back to Issue List</a>
+    <script>
+    function previewImage(input) {
+        const img = document.getElementById('imagePreview');
+        const deleteBtn = document.getElementById('deleteImageBtn');
+        if (input.files && input.files[0]) {
+            img.src = URL.createObjectURL(input.files[0]);
+            img.style.display = 'block';
+            deleteBtn.style.display = 'inline';
+        } else {
+            img.style.display = 'none';
+            deleteBtn.style.display = 'none';
+        }
+    }
+    function deleteImage() {
+        const input = document.getElementById('imageInput');
+        input.value = '';
+        previewImage(input);
+    }
+    function previewVoice(input) {
+        const audio = document.getElementById('audioPreview');
+        const deleteBtn = document.getElementById('deleteVoiceBtn');
+        if (input.files && input.files[0]) {
+            audio.src = URL.createObjectURL(input.files[0]);
+            audio.style.display = 'block';
+            deleteBtn.style.display = 'inline';
+        } else {
+            audio.style.display = 'none';
+            deleteBtn.style.display = 'none';
+        }
+    }
+    function deleteVoice() {
+        const input = document.getElementById('voiceInput');
+        input.value = '';
+        previewVoice(input);
+    }
+    window.previewVoice = previewVoice;
+    window.previewImage = previewImage;
+    </script>
+</body>
+</html>

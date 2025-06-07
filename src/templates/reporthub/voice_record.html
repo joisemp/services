@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Record Voice</title>
+</head>
+<body>
+    <h1>Record Your Voice Note</h1>
+    <button id="recordBtn">Record</button>
+    <button id="stopBtn" disabled>Stop</button>
+    <button id="confirmBtn" disabled>Confirm & Attach</button>
+    <span id="recordingStatus" style="color:red; display:none;">Recording in progress...</span>
+    <audio id="audioPlayback" controls style="display:none;"></audio>
+    <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob;
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const recordingStatus = document.getElementById('recordingStatus');
+
+    recordBtn.onclick = async function() {
+        audioChunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+        confirmBtn.disabled = true;
+        audioPlayback.style.display = 'none';
+        recordingStatus.style.display = 'inline';
+        mediaRecorder.ondataavailable = e => {
+            audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = e => {
+            audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayback.src = audioUrl;
+            audioPlayback.style.display = 'block';
+            confirmBtn.disabled = false;
+            recordingStatus.style.display = 'none';
+        };
+    };
+    stopBtn.onclick = function() {
+        mediaRecorder.stop();
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+    };
+    confirmBtn.onclick = function() {
+        if (audioBlob) {
+            // Pass audio to opener form
+            const file = new File([audioBlob], 'voice_note.webm', { type: 'audio/webm' });
+            if (window.opener) {
+                const voiceInput = window.opener.document.getElementById('voiceInput');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                voiceInput.files = dataTransfer.files;
+                // Preview in parent
+                if (window.opener.previewVoice) {
+                    window.opener.previewVoice(voiceInput);
+                }
+                window.close();
+            } else {
+                alert('Could not attach voice note. Please use the form page to open this recorder.');
+            }
+        }
+    };
+    </script>
+    <p>After recording, click <b>Confirm & Attach</b> to add the voice note to your report.</p>
+</body>
+</html>

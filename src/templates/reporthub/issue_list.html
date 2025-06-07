@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Issue Reports</title>
+</head>
+<body>
+    <h1>Issue Reports</h1>
+    <a href="{% url 'reporthub:report_issue' %}">Report Issue</a>
+    <ul>
+        {% for issue in issues %}
+        <li>
+            <h2>{{ issue.title }}</h2>
+            <p>{{ issue.description }}</p>
+            {% if issue.image %}
+                <img src="{{ issue.image.url }}" alt="Issue Image" width="200" />
+            {% endif %}
+            {% if issue.voice %}
+                <audio controls>
+                    <source src="{{ issue.voice.url }}">
+                    Your browser does not support the audio element.
+                </audio>
+            {% endif %}
+            <small>Reported at: {{ issue.created_at }}</small>
+        </li>
+        {% empty %}
+        <li>No issues reported yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
