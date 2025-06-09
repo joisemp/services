@@ -132,12 +132,21 @@
     imageInput.addEventListener('change', function(e) {
         // Append new files to the existing imageFiles array
         const newFiles = Array.from(e.target.files);
-        // Only add files that are not already present (by name and size)
+        let added = 0;
+        let rejected = 0;
         newFiles.forEach(newFile => {
             if (!imageFiles.some(f => f.name === newFile.name && f.size === newFile.size)) {
-                imageFiles.push(newFile);
+                if (imageFiles.length < 3) {
+                    imageFiles.push(newFile);
+                    added++;
+                } else {
+                    rejected++;
+                }
             }
         });
+        if (rejected > 0) {
+            alert('You can only upload a maximum of 3 images.');
+        }
         updateInputFiles();
         renderImagePreviews();
     });

@@ -9,10 +9,13 @@ def issue_list(request):
 def report_issue(request):
     if request.method == 'POST':
         form = IssueForm(request.POST, request.FILES)
+        images = request.FILES.getlist('image')
+        if len(images) > 3:
+            form.add_error('image', 'You can upload a maximum of 3 images.')
         if form.is_valid():
             issue = form.save()
-            # Handle multiple images
-            for img in request.FILES.getlist('image'):
+            # Handle multiple images (limit to 3)
+            for img in images[:3]:
                 IssueImage.objects.create(issue=issue, image=img)
             return redirect('reporthub:issue_list')
     else:
