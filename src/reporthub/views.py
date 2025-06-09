@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Issue
+from .models import Issue, IssueImage
 from .forms import IssueForm
 
 def issue_list(request):
@@ -10,7 +10,10 @@ def report_issue(request):
     if request.method == 'POST':
         form = IssueForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            issue = form.save()
+            # Handle multiple images
+            for img in request.FILES.getlist('image'):
+                IssueImage.objects.create(issue=issue, image=img)
             return redirect('reporthub:issue_list')
     else:
         form = IssueForm()

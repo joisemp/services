@@ -4,4 +4,4 @@ from .models import Issue
 class IssueForm(forms.ModelForm):
     class Meta:
         model = Issue
-        fields = ['title', 'description', 'image', 'voice']
+        fields = ['title', 'description', 'voice']  # Remove 'image' from form fields
