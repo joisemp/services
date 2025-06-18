@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('report/', include('reporthub.urls', namespace='reporthub')),
-    # Include other app URLs here
+    path('core/', include('core.urls', namespace='core')),
 ]
 
 if settings.DEBUG:

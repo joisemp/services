@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'reporthub.apps.ReporthubConfig',
+    'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
