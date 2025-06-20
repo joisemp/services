@@ -1,0 +1,88 @@
+from django.shortcuts import render, redirect
+from django.db import transaction
+from django.contrib import messages
+from .models import User, UserProfile, Organisation
+from .forms import AccountCreationForm, OrganisationCreationForm, UserLoginForm, GeneralUserLoginForm
+from django.contrib.auth import authenticate, login
+from django.urls import reverse
+
+
+def account_creation_view(request):
+    if request.method == 'POST':
+        form = AccountCreationForm(request.POST)
+        if form.is_valid():
+            request.session['account_data'] = form.cleaned_data
+            return redirect('core:organisation_creation')
+    else:
+        form = AccountCreationForm()
+    return render(request, 'core/account_creation.html', {'form': form})
+
+
+def organisation_creation_view(request):
+    account_data = request.session.get('account_data')
+    if not account_data:
+        return redirect('core:account_creation')
+    if request.method == 'POST':
+        form = OrganisationCreationForm(request.POST)
+        if form.is_valid():
+            org_data = form.cleaned_data
+            try:
+                with transaction.atomic():
+                    org = Organisation.objects.create(
+                        name=org_data['name'],
+                        address=org_data['address']
+                    )
+                    user = User.objects.create_user(
+                        email=account_data['email'],
+                        phone=account_data['phone'],
+                        password=account_data['password']
+                    )
+                    profile = UserProfile.objects.create(
+                        user=user,
+                        first_name=account_data['first_name'],
+                        last_name=account_data['last_name'],
+                        user_type='central_admin',
+                        org=org
+                    )
+                    org.central_admins.add(user)
+                messages.success(request, 'Account and organisation created successfully!')
+                request.session.pop('account_data', None)
+                return redirect('core:account_creation_success')
+            except Exception as e:
+                messages.error(request, f'Error: {str(e)}')
+    else:
+        form = OrganisationCreationForm()
+    return render(request, 'core/organisation_creation.html', {'form': form})
+
+
+def account_creation_success(request):
+    return render(request, 'core/account_creation_success.html')
+
+
+def user_login_view(request):
+    form = UserLoginForm(request.POST or None)
+    error = None
+    if request.method == 'POST' and form.is_valid():
+        email = form.cleaned_data.get('email')
+        password = form.cleaned_data.get('password')
+        user = authenticate(request, email=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect(reverse('landing'))
+        else:
+            error = 'Invalid credentials.'
+    return render(request, 'core/user_login.html', {'form': form, 'error': error})
+
+
+def general_user_login_view(request):
+    form = GeneralUserLoginForm(request.POST or None)
+    error = None
+    if request.method == 'POST' and form.is_valid():
+        phone = form.cleaned_data.get('phone')
+        try:
+            user = User.objects.get(phone=phone, profile__user_type='general_user')
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            return redirect(reverse('landing'))
+        except User.DoesNotExist:
+            error = 'No general user found with this phone number.'
+    return render(request, 'core/general_user_login.html', {'form': form, 'error': error})

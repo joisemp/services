@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from environ import Env
 
+AUTH_USER_MODEL = 'core.User'
 
 env = Env()
 Env.read_env()
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'reporthub.apps.ReporthubConfig',
+    'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
