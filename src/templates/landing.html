@@ -8,11 +8,26 @@
 </head>
 <body>
     <div class="container mt-5 text-center">
+        {% if user.is_authenticated %}
+            <div class="alert alert-dark mb-4">
+                Logged in as <strong>
+                    {% if user.profile.first_name or user.profile.last_name %}
+                        {{ user.profile.first_name }} {{ user.profile.last_name }}
+                    {% elif user.email %}
+                        {{ user.email }}
+                    {% else %}
+                        {{ user.phone }}
+                    {% endif %}
+                </strong>
+            </div>
+        {% endif %}
         <h3>Welcome to Issue Reporter</h3>
         <p>Report, track, and manage issues efficiently for your organisation.</p>
         <a href="{% url 'admin:index' %}" class="btn btn-primary">Admin Login</a>
         <a href="/report/" class="btn btn-primary">Report an Issue</a>
         <a href="{% url 'core:account_creation' %}" class="btn btn-success">Create Organisation Account</a>
+        <a href="{% url 'core:user_login' %}" class="btn btn-outline-primary me-2">User Login</a>
+        <a href="{% url 'core:general_user_login' %}" class="btn btn-outline-secondary me-2">General User Login</a>
     </div>
 </body>
 </html>

@@ -42,3 +42,25 @@ class AccountCreationForm(forms.Form):
 class OrganisationCreationForm(forms.Form):
     name = forms.CharField(max_length=255)
     address = forms.CharField(widget=forms.Textarea, required=False)
+
+class UserLoginForm(forms.Form):
+    email = forms.EmailField(label='Email', widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        password = cleaned_data.get('password')
+        if not email or not password:
+            raise forms.ValidationError('Both email and password are required.')
+        return cleaned_data
+
+class GeneralUserLoginForm(forms.Form):
+    phone = forms.CharField(label='Phone Number', max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        phone = cleaned_data.get('phone')
+        if not phone:
+            raise forms.ValidationError('Phone number is required.')
+        return cleaned_data
