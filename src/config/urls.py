@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('report/', include('reporthub.urls', namespace='reporthub')),
     path('core/', include('core.urls', namespace='core')),
+    path('dashboard/', include('dashboard.urls', namespace='dashboard')),
 ]
 
 if settings.DEBUG:

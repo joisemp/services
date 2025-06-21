@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'reporthub.apps.ReporthubConfig',
     'core.apps.CoreConfig',
+    'dashboard.apps.DashboardConfig',
 ]
 
 MIDDLEWARE = [
