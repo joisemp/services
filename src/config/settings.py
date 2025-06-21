@@ -50,8 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'reporthub.apps.ReporthubConfig',
+    'issue_management.apps.IssueManagementConfig',
     'core.apps.CoreConfig',
+    'dashboard.apps.DashboardConfig',
 ]
 
 MIDDLEWARE = [

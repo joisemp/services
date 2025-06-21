@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class ReporthubConfig(AppConfig):
+class IssueManagementConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'reporthub'
+    name = 'issue_management'

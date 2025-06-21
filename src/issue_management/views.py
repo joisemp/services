@@ -4,7 +4,7 @@ from .forms import IssueForm
 
 def issue_list(request):
     issues = Issue.objects.order_by('-created_at')
-    return render(request, 'reporthub/issue_list.html', {'issues': issues})
+    return render(request, 'issue_management/issue_list.html', {'issues': issues})
 
 def report_issue(request):
     if request.method == 'POST':
@@ -17,10 +17,10 @@ def report_issue(request):
             # Handle multiple images (limit to 3)
             for img in images[:3]:
                 IssueImage.objects.create(issue=issue, image=img)
-            return redirect('reporthub:issue_list')
+            return redirect('issue_management:issue_list')
     else:
         form = IssueForm()
-    return render(request, 'reporthub/report_issue.html', {'form': form})
+    return render(request, 'issue_management/report_issue.html', {'form': form})
 
 def voice_record(request):
-    return render(request, 'reporthub/voice_record.html')
+    return render(request, 'issue_management/voice_record.html')
