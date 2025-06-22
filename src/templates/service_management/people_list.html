@@ -31,7 +31,8 @@
                 <td>{{ person.user.phone }}</td>
                 <td>{{ person.user_type|title }}</td>
                 <td>
-                    <a href="{% url 'service_management:edit_person' person.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <a href="{% url 'service_management:edit_person' person.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                    <a href="{% url 'service_management:upgrade_user' person.pk %}" class="btn btn-sm btn-warning ms-1">Upgrade/Downgrade</a>
                 </td>
             </tr>
             {% empty %}

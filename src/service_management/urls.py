@@ -8,3 +8,9 @@ urlpatterns = [
     path('people/add/', views.add_person, name='add_person'),
     path('people/edit/<slug:profile_id>/', views.edit_person, name='edit_person'),
 ]
+
+urlpatterns += [
+    path('people/upgrade/<slug:profile_id>/',
+         __import__('service_management.upgrade_views', fromlist=['upgrade_user']).upgrade_user,
+         name='upgrade_user'),
+]
