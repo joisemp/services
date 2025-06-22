@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'issue_management.apps.IssueManagementConfig',
     'core.apps.CoreConfig',
     'dashboard.apps.DashboardConfig',
+    'service_management.apps.ServiceManagementConfig',
 ]
 
 MIDDLEWARE = [

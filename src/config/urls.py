@@ -10,6 +10,7 @@ urlpatterns = [
     path('issue-management/', include('issue_management.urls', namespace='issue_management')),
     path('core/', include('core.urls', namespace='core')),
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
+    path('services/', include('service_management.urls', namespace='service_management')),
 ]
 
 if settings.DEBUG:
