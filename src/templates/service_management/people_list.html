@@ -9,11 +9,13 @@
 <body>
 <div class="container mt-5">
     <h2>People in Your Organisation</h2>
+    <a href="{% url 'service_management:add_person' %}" class="btn btn-success mb-3">Add Person</a>
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Phone</th>
                 <th>User Type</th>
             </tr>
         </thead>
@@ -25,11 +27,12 @@
                     {% if person.user == request.user %}<span class="badge bg-primary ms-2">(You)</span>{% endif %}
                 </td>
                 <td>{{ person.user.email }}</td>
+                <td>{{ person.user.phone }}</td>
                 <td>{{ person.user_type|title }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3">No people found in your organisation.</td>
+                <td colspan="4">No people found in your organisation.</td>
             </tr>
             {% endfor %}
         </tbody>

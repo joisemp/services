@@ -1,0 +1,21 @@
+from django import forms
+from core.models import UserProfile
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+USER_TYPE_CHOICES = [
+    (k, v) for k, v in UserProfile.USER_TYPE_CHOICES if k != 'general_user'
+]
+
+class AddGeneralUserForm(forms.Form):
+    phone = forms.CharField(max_length=20, label='Phone Number')
+    first_name = forms.CharField(max_length=255, required=False)
+    last_name = forms.CharField(max_length=255, required=False)
+
+class AddOtherUserForm(forms.Form):
+    email = forms.EmailField()
+    phone = forms.CharField(max_length=20)
+    first_name = forms.CharField(max_length=255)
+    last_name = forms.CharField(max_length=255)
+    user_type = forms.ChoiceField(choices=USER_TYPE_CHOICES, label='User Type')
