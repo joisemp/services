@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People in Your Organisation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h2>People in Your Organisation</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>User Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for person in people %}
+            <tr {% if person.user == request.user %} class="table-light"{% endif %}>
+                <td>
+                    {{ person.first_name }} {{ person.last_name }}
+                    {% if person.user == request.user %}<span class="badge bg-primary ms-2">(You)</span>{% endif %}
+                </td>
+                <td>{{ person.user.email }}</td>
+                <td>{{ person.user_type|title }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No people found in your organisation.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
