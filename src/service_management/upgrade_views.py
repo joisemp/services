@@ -5,9 +5,7 @@ from django.db import transaction
 from core.models import UserProfile, User
 from .upgrade_forms import UserTypeSelectForm, UserEmailUpdateForm
 import threading
-
-def is_central_admin(user):
-    return hasattr(user, 'profile') and user.profile.user_type == 'central_admin'
+from config.helpers import is_central_admin
 
 @login_required
 @user_passes_test(is_central_admin)

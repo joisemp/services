@@ -5,13 +5,11 @@ from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
 from django.db import transaction
+from django.contrib import messages
 
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
-
-# Helper to check if user is a central admin
-def is_central_admin(user):
-    return hasattr(user, 'profile') and user.profile.user_type == 'central_admin'
+from config.helpers import is_central_admin
 
 @login_required
 @user_passes_test(is_central_admin)
@@ -97,5 +95,20 @@ def edit_person(request, profile_id):
     else:
         form = EditUserForm(instance=profile)
     return render(request, 'service_management/edit_person.html', {'form': form, 'profile': profile})
+
+@login_required
+@user_passes_test(is_central_admin)
+def delete_person(request, profile_id):
+    profile = get_object_or_404(UserProfile, pk=profile_id)
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    if not orgs.exists() or profile.org not in orgs:
+        messages.error(request, 'You do not have permission to delete this user.')
+        return redirect('service_management:people_list')
+    if request.method == 'POST':
+        user_email = profile.user.email
+        profile.delete()  # This will also delete the user due to signal
+        messages.success(request, f'User {user_email} deleted successfully.')
+        return redirect('service_management:people_list')
+    return render(request, 'service_management/delete_person_confirm.html', {'profile': profile})
 
 # Create your views here.

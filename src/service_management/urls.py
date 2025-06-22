@@ -13,4 +13,7 @@ urlpatterns += [
     path('people/upgrade/<slug:profile_id>/',
          __import__('service_management.upgrade_views', fromlist=['upgrade_user']).upgrade_user,
          name='upgrade_user'),
+    path('people/delete/<slug:profile_id>/',
+         views.delete_person,
+         name='delete_person'),
 ]
