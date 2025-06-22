@@ -17,6 +17,7 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>User Type</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -29,10 +30,13 @@
                 <td>{{ person.user.email }}</td>
                 <td>{{ person.user.phone }}</td>
                 <td>{{ person.user_type|title }}</td>
+                <td>
+                    <a href="{% url 'service_management:edit_person' person.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4">No people found in your organisation.</td>
+                <td colspan="5">No people found in your organisation.</td>
             </tr>
             {% endfor %}
         </tbody>

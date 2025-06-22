@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .forms import AddGeneralUserForm, AddOtherUserForm
+from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
 from django.db import transaction
@@ -80,5 +81,21 @@ def add_person(request):
         else:
             form = AddOtherUserForm()
     return render(request, 'service_management/add_person.html', {'form': form, 'mode': mode})
+
+@login_required
+@user_passes_test(is_central_admin)
+def edit_person(request, profile_id):
+    profile = get_object_or_404(UserProfile, pk=profile_id)
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    if not orgs.exists() or profile.org not in orgs:
+        return redirect('service_management:people_list')
+    if request.method == 'POST':
+        form = EditUserForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('service_management:people_list')
+    else:
+        form = EditUserForm(instance=profile)
+    return render(request, 'service_management/edit_person.html', {'form': form, 'profile': profile})
 
 # Create your views here.
