@@ -13,7 +13,12 @@ def report_issue(request):
         if len(images) > 3:
             form.add_error('image', 'You can upload a maximum of 3 images.')
         if form.is_valid():
-            issue = form.save()
+            issue = form.save(commit=False)
+            # Assign organisation if user is authenticated and has a profile
+            if request.user.is_authenticated and hasattr(request.user, 'profile'):
+                issue.org = request.user.profile.org
+                issue.created_by = request.user
+            issue.save()
             # Handle multiple images (limit to 3)
             for img in images[:3]:
                 IssueImage.objects.create(issue=issue, image=img)

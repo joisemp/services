@@ -107,7 +107,7 @@
                         Your browser does not support the audio element.
                     </audio>
                 {% endif %}
-                <small>Reported at: {{ issue.created_at|date:'M d, Y H:i' }}</small>
+                <small>Reported by: {% if issue.created_by %}<b>{{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}</b>{% else %}Unknown{% endif %} at {{ issue.created_at|date:'M d, Y H:i' }}</small>
             </div>
             {% endfor %}
         {% else %}
