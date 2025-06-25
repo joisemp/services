@@ -6,6 +6,8 @@ import secrets
 from django.core.mail import send_mail
 from django.db import transaction
 from django.contrib import messages
+from django.urls import reverse
+from django.http import HttpResponseForbidden
 
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
@@ -135,5 +137,29 @@ def create_work_category(request):
     else:
         form = WorkCategoryForm()
     return render(request, 'service_management/create_work_category.html', {'form': form})
+
+@login_required
+@user_passes_test(is_central_admin)
+def update_work_category(request, category_slug):
+    org = getattr(request.user.profile, 'org', None)
+    category = get_object_or_404(WorkCategory, slug=category_slug, org=org)
+    if request.method == 'POST':
+        form = WorkCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            return redirect('service_management:work_category_list')
+    else:
+        form = WorkCategoryForm(instance=category)
+    return render(request, 'service_management/update_work_category.html', {'form': form, 'category': category})
+
+@login_required
+@user_passes_test(is_central_admin)
+def delete_work_category(request, category_slug):
+    org = getattr(request.user.profile, 'org', None)
+    category = get_object_or_404(WorkCategory, slug=category_slug, org=org)
+    if request.method == 'POST':
+        category.delete()
+        return redirect('service_management:work_category_list')
+    return render(request, 'service_management/delete_work_category_confirm.html', {'category': category})
 
 # Create your views here.
