@@ -9,6 +9,7 @@ from django.contrib import messages
 
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
+from .models import WorkCategory
 from config.helpers import is_central_admin
 
 @login_required
@@ -110,5 +111,12 @@ def delete_person(request, profile_id):
         messages.success(request, f'User {user_email} deleted successfully.')
         return redirect('service_management:people_list')
     return render(request, 'service_management/delete_person_confirm.html', {'profile': profile})
+
+@login_required
+@user_passes_test(is_central_admin)
+def work_category_list(request):
+    org = getattr(request.user.profile, 'org', None)
+    categories = WorkCategory.objects.filter(org=org).order_by('name') if org else WorkCategory.objects.none()
+    return render(request, 'service_management/work_category_list.html', {'categories': categories})
 
 # Create your views here.
