@@ -5,7 +5,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 
 def issue_list(request):
-    issues = Issue.objects.order_by('-created_at')
+    if request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.user_type == 'maintainer':
+        issues = Issue.objects.filter(maintainer=request.user).order_by('-created_at')
+    else:
+        issues = Issue.objects.order_by('-created_at')
     return render(request, 'issue_management/issue_list.html', {'issues': issues})
 
 def report_issue(request):
