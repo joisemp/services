@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import AddGeneralUserForm, AddOtherUserForm
+from .forms import AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm
 from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
@@ -118,5 +118,22 @@ def work_category_list(request):
     org = getattr(request.user.profile, 'org', None)
     categories = WorkCategory.objects.filter(org=org).order_by('name') if org else WorkCategory.objects.none()
     return render(request, 'service_management/work_category_list.html', {'categories': categories})
+
+@login_required
+@user_passes_test(is_central_admin)
+def create_work_category(request):
+    org = getattr(request.user.profile, 'org', None)
+    if not org:
+        return redirect('service_management:work_category_list')
+    if request.method == 'POST':
+        form = WorkCategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save(commit=False)
+            category.org = org
+            category.save()
+            return redirect('service_management:work_category_list')
+    else:
+        form = WorkCategoryForm()
+    return render(request, 'service_management/create_work_category.html', {'form': form})
 
 # Create your views here.

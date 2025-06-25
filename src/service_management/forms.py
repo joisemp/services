@@ -1,6 +1,7 @@
 from django import forms
 from core.models import UserProfile
 from django.contrib.auth import get_user_model
+from .models import WorkCategory
 
 User = get_user_model()
 
@@ -19,3 +20,8 @@ class AddOtherUserForm(forms.Form):
     first_name = forms.CharField(max_length=255)
     last_name = forms.CharField(max_length=255)
     user_type = forms.ChoiceField(choices=USER_TYPE_CHOICES, label='User Type')
+
+class WorkCategoryForm(forms.ModelForm):
+    class Meta:
+        model = WorkCategory
+        fields = ['name', 'description']

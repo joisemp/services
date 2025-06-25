@@ -8,6 +8,7 @@ urlpatterns = [
     path('people/add/', views.add_person, name='add_person'),
     path('people/edit/<slug:profile_id>/', views.edit_person, name='edit_person'),
     path('work-categories/', views.work_category_list, name='work_category_list'),
+    path('work-categories/create/', views.create_work_category, name='create_work_category'),
 ]
 
 urlpatterns += [
