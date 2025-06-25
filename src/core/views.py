@@ -5,6 +5,27 @@ from .models import User, UserProfile, Organisation
 from .forms import AccountCreationForm, OrganisationCreationForm, UserLoginForm, GeneralUserLoginForm
 from django.contrib.auth import authenticate, login
 from django.urls import reverse
+from django.contrib.auth import views as auth_views
+
+
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    template_name = 'core/password_reset_form.html'
+    email_template_name = 'core/password_reset_email.html'
+    subject_template_name = 'core/password_reset_subject.txt'
+    success_url = '/core/password-reset/done/'
+
+
+class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
+    template_name = 'core/password_reset_done.html'
+
+
+class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = 'core/password_reset_confirm.html'
+    success_url = '/core/password-reset/complete/'
+
+
+class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
+    template_name = 'core/password_reset_complete.html'
 
 
 def account_creation_view(request):
