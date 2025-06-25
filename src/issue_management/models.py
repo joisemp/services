@@ -13,6 +13,7 @@ class Issue(models.Model):
     org = models.ForeignKey(Organisation, related_name='issues', on_delete=models.CASCADE, null=True, blank=True)
     slug = models.SlugField(unique=True, db_index=True, blank=True)
     created_by = models.ForeignKey('core.User', related_name='created_issues', on_delete=models.SET_NULL, null=True, blank=True)
+    maintainer = models.ForeignKey('core.User', related_name='assigned_issues', on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'profile__user_type': 'maintainer'})
 
     def save(self, *args, **kwargs):
         if not self.slug:

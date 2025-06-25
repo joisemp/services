@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Issue, IssueImage
-from .forms import IssueForm
+from .forms import IssueForm, IssueAssignmentForm
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 
 def issue_list(request):
     issues = Issue.objects.order_by('-created_at')
@@ -29,3 +31,16 @@ def report_issue(request):
 
 def voice_record(request):
     return render(request, 'issue_management/voice_record.html')
+
+def assign_issue(request, issue_slug):
+    issue = get_object_or_404(Issue, slug=issue_slug)
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile') or request.user.profile.user_type != 'central_admin':
+        return HttpResponseForbidden('You do not have permission to assign issues.')
+    if request.method == 'POST':
+        form = IssueAssignmentForm(request.POST, instance=issue)
+        if form.is_valid():
+            form.save()
+            return redirect('issue_management:issue_list')
+    else:
+        form = IssueAssignmentForm(instance=issue)
+    return render(request, 'issue_management/assign_issue.html', {'form': form, 'issue': issue})
