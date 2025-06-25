@@ -20,6 +20,20 @@ class AddOtherUserForm(forms.Form):
     first_name = forms.CharField(max_length=255)
     last_name = forms.CharField(max_length=255)
     user_type = forms.ChoiceField(choices=USER_TYPE_CHOICES, label='User Type')
+    skills = forms.ModelMultipleChoiceField(
+        queryset=WorkCategory.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label='Work Categories (Skills)'
+    )
+
+    def __init__(self, *args, **kwargs):
+        org = kwargs.pop('org', None)
+        super().__init__(*args, **kwargs)
+        if org:
+            self.fields['skills'].queryset = WorkCategory.objects.filter(org=org)
+        else:
+            self.fields['skills'].queryset = WorkCategory.objects.all()
 
 class WorkCategoryForm(forms.ModelForm):
     class Meta:

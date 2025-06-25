@@ -6,6 +6,7 @@ from django.utils.text import slugify
 from config.utils import generate_unique_slug
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from service_management.models import WorkCategory
     
     
 class User(AbstractUser):
@@ -59,6 +60,7 @@ class UserProfile(models.Model):
     last_name = models.CharField(max_length=255, blank=True)
     slug = models.SlugField(unique=True, db_index=True)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='general_user')
+    skills = models.ManyToManyField('service_management.WorkCategory', related_name='skilled_users', blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -88,5 +90,4 @@ def delete_user_on_profile_delete(sender, instance, **kwargs):
         print(f"User {user.email} and associated profile deleted successfully.")
     except Exception as e:
         print(f"Error occurred while deleting user: {str(e)}")
-        
-        
+

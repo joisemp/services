@@ -17,6 +17,7 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>User Type</th>
+                <th>Skills</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -31,6 +32,15 @@
                 <td>{{ person.user.phone }}</td>
                 <td>{{ person.user_type|title }}</td>
                 <td>
+                    {% if person.user_type == 'maintainer' %}
+                        {% for skill in person.skills.all %}
+                            <span class="badge bg-info text-dark">{{ skill.name }}</span>{% if not forloop.last %} {% endif %}
+                        {% empty %}<span class="text-muted">None</span>{% endfor %}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
                     <a href="{% url 'service_management:edit_person' person.pk %}" class="btn btn-sm btn-primary">Edit</a>
                     <a href="{% url 'service_management:upgrade_user' person.pk %}" class="btn btn-sm btn-warning ms-1">Upgrade/Downgrade</a>
                     <a href="{% url 'service_management:delete_person' person.pk %}" class="btn btn-sm btn-danger ms-1">Delete</a>
@@ -38,7 +48,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">No people found in your organisation.</td>
+                <td colspan="6">No people found in your organisation.</td>
             </tr>
             {% endfor %}
         </tbody>

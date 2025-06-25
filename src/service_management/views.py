@@ -29,6 +29,7 @@ def add_person(request):
     orgs = Organisation.objects.filter(central_admins=request.user)
     if not orgs.exists():
         return redirect('service_management:people_list')
+    org = orgs.first()
     mode = request.GET.get('mode', 'general')
     if mode not in ['general', 'other']:
         return redirect('service_management:add_person')  # fallback to default
@@ -44,7 +45,7 @@ def add_person(request):
                     )
                     UserProfile.objects.create(
                         user=user,
-                        org=orgs.first(),
+                        org=org,
                         first_name=form.cleaned_data.get('first_name', ''),
                         last_name=form.cleaned_data.get('last_name', ''),
                         user_type='general_user'
@@ -52,7 +53,7 @@ def add_person(request):
                 # Optionally notify user by SMS here
                 return redirect('service_management:people_list')
         else:
-            form = AddOtherUserForm(request.POST)
+            form = AddOtherUserForm(request.POST, org=org)
             if form.is_valid():
                 with transaction.atomic():
                     password = secrets.token_urlsafe(8)
@@ -61,13 +62,20 @@ def add_person(request):
                         phone=form.cleaned_data['phone'],
                         password=password
                     )
-                    UserProfile.objects.create(
+                    profile = UserProfile.objects.create(
                         user=user,
-                        org=orgs.first(),
+                        org=org,
                         first_name=form.cleaned_data['first_name'],
                         last_name=form.cleaned_data['last_name'],
                         user_type=form.cleaned_data['user_type']
                     )
+                    # Assign skills if maintainer
+                    if form.cleaned_data['user_type'] == 'maintainer':
+                        selected_skills = list(form.cleaned_data['skills'])
+                        general_skill = WorkCategory.objects.filter(org=org, name__iexact='general').first()
+                        if general_skill and general_skill not in selected_skills:
+                            selected_skills.append(general_skill)
+                        profile.skills.set(selected_skills)
                     send_mail(
                         'Your Account Created',
                         f'Your password is: {password}',
@@ -80,7 +88,7 @@ def add_person(request):
         if mode == 'general':
             form = AddGeneralUserForm()
         else:
-            form = AddOtherUserForm()
+            form = AddOtherUserForm(org=org)
     return render(request, 'service_management/add_person.html', {'form': form, 'mode': mode})
 
 @login_required
@@ -90,14 +98,28 @@ def edit_person(request, profile_id):
     orgs = Organisation.objects.filter(central_admins=request.user)
     if not orgs.exists() or profile.org not in orgs:
         return redirect('service_management:people_list')
+    org = orgs.first()
     if request.method == 'POST':
         form = EditUserForm(request.POST, instance=profile)
         if form.is_valid():
-            form.save()
+            profile = form.save()
+            # If maintainer, verify/confirm skills
+            if profile.user_type == 'maintainer':
+                selected_skills = request.POST.getlist('skills')
+                general_skill = WorkCategory.objects.filter(org=org, name__iexact='general').first()
+                if general_skill and str(general_skill.pk) not in selected_skills:
+                    selected_skills.append(str(general_skill.pk))
+                profile.skills.set(selected_skills)
             return redirect('service_management:people_list')
     else:
         form = EditUserForm(instance=profile)
-    return render(request, 'service_management/edit_person.html', {'form': form, 'profile': profile})
+    # If maintainer, show skills for confirmation
+    skills_field = None
+    if profile.user_type == 'maintainer':
+        all_skills = WorkCategory.objects.filter(org=org)
+        current_skills = profile.skills.values_list('pk', flat=True)
+        skills_field = {'all_skills': all_skills, 'current_skills': current_skills}
+    return render(request, 'service_management/edit_person.html', {'form': form, 'profile': profile, 'skills_field': skills_field})
 
 @login_required
 @user_passes_test(is_central_admin)
