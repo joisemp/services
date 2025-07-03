@@ -107,7 +107,13 @@
                         Your browser does not support the audio element.
                     </audio>
                 {% endif %}
-                <small>Reported at: {{ issue.created_at|date:'M d, Y H:i' }}</small>
+                <small>Reported by: {% if issue.created_by %}<b>{{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}</b>{% else %}Unknown{% endif %} at {{ issue.created_at|date:'M d, Y H:i' }}</small>
+                <div class="mt-2">
+                    <span>Maintainer: {% if issue.maintainer %}{{ issue.maintainer.profile.first_name }} {{ issue.maintainer.profile.last_name }}{% else %}<em>Unassigned</em>{% endif %}</span>
+                    {% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
+                        <a href="{% url 'issue_management:assign_issue' issue.slug %}" class="btn btn-sm btn-outline-primary ms-2">Assign/Change Maintainer</a>
+                    {% endif %}
+                </div>
             </div>
             {% endfor %}
         {% else %}

@@ -7,4 +7,5 @@ urlpatterns = [
     path('issues/', views.issue_list, name='issue_list'),
     path('report-issue/', views.report_issue, name='report_issue'),
     path('report-issue/voice-record/', views.voice_record, name='voice_record'),
+    path('assign-issue/<slug:issue_slug>/', views.assign_issue, name='assign_issue'),
 ]
