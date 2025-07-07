@@ -133,4 +133,40 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+#dashboard-admin .col {
+  padding: 5px !important;
+}
+#dashboard-admin .col .card {
+  max-width: 100%;
+  border-radius: 5px;
+  border: 2px solid #d1d5db;
+  background: #ffffff;
+}
+#dashboard-admin .col .card .card-body {
+  padding: 1.2rem;
+}
+#dashboard-admin .col .card .user {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-right: 1rem;
+}
+#dashboard-admin .col .card .count {
+  margin-left: auto;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+#dashboard-admin .col .card .days {
+  color: #888;
+  font-size: 12px;
+}
+#dashboard-admin .col .card .label {
+  background: #111;
+  color: #fff;
+  border-radius: 2rem;
+  padding: 5px 18px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
 }/*# sourceMappingURL=style.css.map */
