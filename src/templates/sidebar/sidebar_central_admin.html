@@ -1,6 +1,6 @@
 <section class="sidebar">
     <div class="nav">
-        <a class="navlink active" href="#">
+        <a class="navlink active" href="{% url 'dashboard:dashboard' %}?user={{ user.profile.slug }}">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
