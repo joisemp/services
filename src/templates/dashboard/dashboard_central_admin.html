@@ -3,7 +3,7 @@
 {% load i18n %}
 
 {% block title %}
-Central Admin Dashboard</title>
+Central Admin Dashboard
 {% endblock title %}
 
 {% block style %}
@@ -11,22 +11,100 @@ Central Admin Dashboard</title>
 {% endblock style %}
 
 {% block navbar %}
-    {% include 'navbar/navbar_central_admin.html' %}
+{% include 'navbar/navbar_central_admin.html' %}
 {% endblock navbar %}
 
 {% block sidebar %}
-    {% include 'sidebar/sidebar_central_admin.html' %}
+{% include 'sidebar/sidebar_central_admin.html' %}
 {% endblock sidebar %}
 
 {% block content %}
-<div class="container">
-    <div class="alert alert-primary">
-        Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong>!
+<section id="dashboard-admin">
+    <div class="container">
+        <div class="alert alert-primary">
+            Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong>!
+        </div>
+        <h2 class="mb-4">Central Admin Dashboard</h2>
+        <p>This is your Central Admin dashboard. (Add admin-specific info here.)</p>
+        <div class="row d-flex justify-content-space">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="material-symbols-outlined"
+                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="user">Category</span>
+                            <span class="count">2345</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="days">Last 30 days</span>
+                            <span class="label">
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="material-symbols-outlined"
+                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="user">Transaction</span>
+                            <span class="count">2345</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="days">Last 30 days</span>
+                            <span class="label">
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="material-symbols-outlined"
+                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="user">Users</span>
+                            <span class="count">2345</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="days">Last 30 days</span>
+                            <span class="label">
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="material-symbols-outlined"
+                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="user">Issue</span>
+                            <span class="count">2345</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="days">Last 30 days</span>
+                            <span class="label">
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <h2 class="mb-4">Central Admin Dashboard</h2>
-    <p>This is your Central Admin dashboard. (Add admin-specific info here.)</p>
-    <a href="{% url 'service_management:people_list' %}" class="btn btn-warning mt-3">View People in My Organisation</a>
-    <a href="{% url 'service_management:work_category_list' %}" class="btn btn-info mt-3 ms-2">View Work Categories</a>
-</div>
-{% endblock content %}
+</section>
 
+{% endblock content %}

@@ -1,3 +1,40 @@
 @import '../../sidebar_base';
 
-
+#dashboard-admin {
+    .col{
+        padding:5px !important;
+        .card {
+        max-width:100%; 
+        border-radius: 5px;
+        border: 2px solid #d1d5db; 
+        background: #ffffff;
+        .card-body {
+            padding: 1.2rem;
+        }
+        .user {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+        .count {
+            margin-left: auto;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        .days {
+            color: #888;
+            font-size: 12px;
+        }
+        .label {
+            background: #111;
+            color: #fff;
+            border-radius: 2rem;
+            padding: 5px 18px;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+    }
+    }
+    
+}

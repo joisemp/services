@@ -1,12 +1,12 @@
 <section class="sidebar">
     <div class="nav">
-        <a class="navlink active" href="#">
+        <a class="navlink active" href="{% url 'dashboard:dashboard' %}?user={{ user.profile.slug }}">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
             <span class="menu-text">Dashboard</span>
         </a>
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'service_management:people_list' %}">
             <span class="material-symbols-outlined me-2">
                 groups
             </span>
@@ -41,11 +41,11 @@
             <span class="menu-text">Purchases</span>
         </a>
 
-        <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                report
+        <a class="navlink" href="{% url 'service_management:people_list' %}">
+            <span class="material-symbols-outlined">
+              group
             </span>
-            <span class="menu-text">Issues</span>
+            <span class="menu-text">People</span>
         </a>
 
         <a class="navlink" href="#">
@@ -55,11 +55,11 @@
             <span class="menu-text">Issues</span>
         </a>
 
-        <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                report
-            </span>
-            <span class="menu-text">Issues</span>
+        <a class="navlink" href="{% url 'service_management:work_category_list' %}">
+           <span class="material-symbols-outlined">
+             category
+           </span>
+            <span class="menu-text">Work category</span>
         </a>
 
         <a class="navlink" href="#">
