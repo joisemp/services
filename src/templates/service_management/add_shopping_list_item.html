@@ -1,0 +1,333 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Add Item - {{ shopping_list.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .shopping-list-info {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border-left: 4px solid #667eea;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section h4 {
+        color: #333;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-add {
+        background: #667eea;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        color: white;
+        transition: background 0.3s ease;
+    }
+
+    .btn-add:hover {
+        background: #5a67d8;
+    }
+
+    .back-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .back-link:hover {
+        color: #5a67d8;
+        text-decoration: underline;
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+
+    .input-group-text {
+        background: #f8f9fa;
+        border-color: #ced4da;
+    }
+
+    .cost-calculator {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .total-cost {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container my-5">
+    <!-- Shopping List Info -->
+    <div class="shopping-list-info">
+        <div class="row">
+            <div class="col-md-8">
+                <h5>{{ shopping_list.name }}</h5>
+                <p class="mb-0">{{ shopping_list.description|default:"No description provided." }}</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <span
+                    class="badge bg-{{ shopping_list.priority }} bg-{{ shopping_list.priority }}-subtle text-{{ shopping_list.priority }}-emphasis">
+                    {{ shopping_list.get_priority_display }} Priority
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="form-container">
+        <form method="post" id="addItemForm">
+            {% csrf_token %}
+
+            <!-- Basic Item Information -->
+            <div class="form-section">
+                <h4>Item Information</h4>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="{{ form.item_name.id_for_label }}" class="form-label">
+                                Item Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.item_name }}
+                            {% if form.item_name.errors %}
+                            <div class="text-danger">{{ form.item_name.errors }}</div>
+                            {% endif %}
+                            <div class="help-text">
+                                Enter a clear, descriptive name for the item
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                Quantity <span class="text-danger">*</span>
+                            </label>
+                            {{ form.quantity }}
+                            {% if form.quantity.errors %}
+                            <div class="text-danger">{{ form.quantity.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                        Description
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger">{{ form.description.errors }}</div>
+                    {% endif %}
+                    <div class="help-text">
+                        Provide additional details about the item (specifications, brand, etc.)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost and Category -->
+            <div class="form-section">
+                <h4>Cost and Category</h4>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">
+                                Estimated Cost per Unit
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.estimated_cost }}
+                            </div>
+                            {% if form.estimated_cost.errors %}
+                            <div class="text-danger">{{ form.estimated_cost.errors }}</div>
+                            {% endif %}
+                            <div class="help-text">
+                                Enter the estimated cost per unit (optional)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                Category
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                            <div class="text-danger">{{ form.category.errors }}</div>
+                            {% endif %}
+                            <div class="help-text">
+                                Select a category for this item (optional)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cost Calculator -->
+                <div class="cost-calculator" id="costCalculator" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Quantity:</strong> <span id="calcQuantity">1</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Cost per Unit:</strong> $<span id="calcUnitCost">0.00</span>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <strong>Total Estimated Cost:</strong> <span class="total-cost">$<span
+                                id="calcTotalCost">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Information -->
+            <div class="form-section">
+                <h4>Supplier Information</h4>
+
+                <div class="mb-3">
+                    <label for="{{ form.supplier.id_for_label }}" class="form-label">
+                        Preferred Supplier
+                    </label>
+                    {{ form.supplier }}
+                    {% if form.supplier.errors %}
+                    <div class="text-danger">{{ form.supplier.errors }}</div>
+                    {% endif %}
+                    <div class="help-text">
+                        Enter the name of your preferred supplier (optional)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="form-section">
+                <h4>Additional Notes</h4>
+
+                <div class="mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                        Notes
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger">{{ form.notes.errors }}</div>
+                    {% endif %}
+                    <div class="help-text">
+                        Any additional notes or special requirements for this item
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'service_management:shopping_list_detail' shopping_list.slug %}" class="back-link">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Shopping List
+                </a>
+                <div>
+                    <button type="submit" name="action" value="add_another" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-plus me-2"></i>Add & Add Another
+                    </button>
+                    <button type="submit" name="action" value="add" class="btn btn-add">
+                        <i class="fas fa-check me-2"></i>Add Item
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
+        const costInput = document.getElementById('{{ form.estimated_cost.id_for_label }}');
+        const calculator = document.getElementById('costCalculator');
+        const calcQuantity = document.getElementById('calcQuantity');
+        const calcUnitCost = document.getElementById('calcUnitCost');
+        const calcTotalCost = document.getElementById('calcTotalCost');
+
+        function updateCalculator() {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const unitCost = parseFloat(costInput.value) || 0;
+            const totalCost = quantity * unitCost;
+
+            calcQuantity.textContent = quantity;
+            calcUnitCost.textContent = unitCost.toFixed(2);
+            calcTotalCost.textContent = totalCost.toFixed(2);
+
+            // Show calculator if both values are present
+            if (quantity > 0 && unitCost > 0) {
+                calculator.style.display = 'block';
+            } else {
+                calculator.style.display = 'none';
+            }
+        }
+
+        // Update calculator when inputs change
+        quantityInput.addEventListener('input', updateCalculator);
+        costInput.addEventListener('input', updateCalculator);
+
+        // Initial update
+        updateCalculator();
+
+        // Form validation
+        const form = document.getElementById('addItemForm');
+        form.addEventListener('submit', function (e) {
+            const itemName = document.getElementById('{{ form.item_name.id_for_label }}').value.trim();
+            const quantity = document.getElementById('{{ form.quantity.id_for_label }}').value;
+
+            if (!itemName) {
+                e.preventDefault();
+                alert('Please enter an item name');
+                document.getElementById('{{ form.item_name.id_for_label }}').focus();
+                return;
+            }
+
+            if (!quantity || quantity <= 0) {
+                e.preventDefault();
+                alert('Please enter a valid quantity');
+                document.getElementById('{{ form.quantity.id_for_label }}').focus();
+                return;
+            }
+        });
+    });
+</script>
+{% endblock %}
