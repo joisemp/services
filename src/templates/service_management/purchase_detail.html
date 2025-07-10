@@ -84,7 +84,7 @@
                     <h5>Order Information</h5>
                     <ul class="list-unstyled">
                         <li><strong>Ordered By:</strong> {{ purchase.ordered_by.profile.first_name }} {{ purchase.ordered_by.profile.last_name }}</li>
-                        <li><strong>Supplier:</strong> {{ purchase.supplier|default:"Not specified" }}</li>
+                        <li><strong>Supplier:</strong> {{ purchase.supplier_name|default:"Not specified" }}</li>
                         <li><strong>Priority:</strong> {{ purchase.shopping_list.get_priority_display }}</li>
                         {% if purchase.approved_by %}
                         <li><strong>Approved By:</strong> {{ purchase.approved_by.profile.first_name }} {{ purchase.approved_by.profile.last_name }}</li>
