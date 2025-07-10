@@ -11,6 +11,7 @@ urlpatterns = [
     path('core/', include('core.urls', namespace='core')),
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
     path('services/', include('service_management.urls', namespace='service_management')),
+    path('transport/', include('transportation.urls', namespace='transportation')),
 ]
 
 if settings.DEBUG:
