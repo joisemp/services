@@ -289,21 +289,42 @@ def maintenance_create(request, vehicle_slug=None):
         vehicle = get_object_or_404(Vehicle, slug=vehicle_slug)
     
     if request.method == 'POST':
-        form = MaintenanceRecordForm(request.POST)
+        # Include vehicle in POST data if it was pre-selected
+        post_data = request.POST.copy()
+        if vehicle and 'vehicle' not in post_data:
+            post_data['vehicle'] = vehicle.pk
+        
+        form = MaintenanceRecordForm(post_data)
         if form.is_valid():
-            maintenance = form.save(commit=False)
-            maintenance.performed_by = request.user
-            maintenance.save()
-            messages.success(request, 'Maintenance record created successfully!')
-            
-            if request.headers.get('HX-Request'):
-                return JsonResponse({
-                    'success': True,
-                    'redirect_url': maintenance.vehicle.get_absolute_url()
-                })
-            return redirect('transportation:vehicle_detail', slug=maintenance.vehicle.slug)
+            try:
+                maintenance = form.save(commit=False)
+                maintenance.performed_by = request.user
+                # Ensure vehicle is set if pre-selected
+                if vehicle:
+                    maintenance.vehicle = vehicle
+                maintenance.save()
+                messages.success(request, 'Maintenance record created successfully!')
+                
+                if request.headers.get('HX-Request'):
+                    return JsonResponse({
+                        'success': True,
+                        'redirect_url': maintenance.vehicle.get_absolute_url()
+                    })
+                return redirect('transportation:vehicle_detail', slug=maintenance.vehicle.slug)
+            except Exception as e:
+                print(f"Error saving maintenance record: {e}")
+                messages.error(request, f'Error creating maintenance record: {str(e)}')
+        else:
+            # Debug form errors
+            print(f"Form errors: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
-        form = MaintenanceRecordForm(initial={'vehicle': vehicle} if vehicle else None)
+        initial_data = {}
+        if vehicle:
+            initial_data['vehicle'] = vehicle.pk
+        form = MaintenanceRecordForm(initial=initial_data)
     
     context = {'form': form, 'vehicle': vehicle}
     
