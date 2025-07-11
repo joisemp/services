@@ -1,0 +1,17 @@
+<!-- Vehicle Model Creation Modal -->
+<div class="modal fade" id="vehicleModelModal" tabindex="-1" aria-labelledby="vehicleModelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vehicleModelModalLabel">
+                    <span class="material-symbols-outlined me-2">directions_car</span>
+                    Add New Vehicle Model
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="vehicle-model-form-container">
+                {% include 'transportation/partials/vehicle_model_form.html' %}
+            </div>
+        </div>
+    </div>
+</div>

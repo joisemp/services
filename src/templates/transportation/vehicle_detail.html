@@ -1,0 +1,398 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{{ vehicle.license_plate }} - Vehicle Details{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/vehicle_detail/vehicle_detail.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="vehicle-detail-container">
+    <!-- Header -->
+    <div class="vehicle-header">
+        <div class="header-content">
+            <div class="vehicle-title">
+                <h1>{{ vehicle.license_plate }}</h1>
+                <p class="vehicle-subtitle">{{ vehicle.vehicle_model }} • {{ vehicle.year }}</p>
+                <div class="status-badge status-{{ vehicle.status }}">
+                    {{ vehicle.get_status_display }}
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'transportation:vehicle_edit' vehicle.slug %}" class="btn btn-primary">
+                    <span class="material-symbols-outlined me-2">edit</span>
+                    Edit Vehicle
+                </a>
+                <a href="{% url 'transportation:maintenance_create_for_vehicle' vehicle.slug %}" class="btn btn-outline-success">
+                    <span class="material-symbols-outlined me-2">build</span>
+                    Log Maintenance
+                </a>
+                <a href="{% url 'transportation:document_create' vehicle.slug %}" class="btn btn-outline-primary">
+                    <span class="material-symbols-outlined me-2">upload_file</span>
+                    Add Document
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if vehicle.is_service_due or vehicle.is_insurance_expired or vehicle.is_registration_expired %}
+    <div class="alert-section">
+        {% if vehicle.is_service_due %}
+        <div class="alert alert-warning">
+            <span class="material-symbols-outlined">build</span>
+            <div>
+                <strong>Service Due</strong>
+                <p>This vehicle is due for maintenance service.</p>
+            </div>
+        </div>
+        {% endif %}
+        {% if vehicle.is_insurance_expired %}
+        <div class="alert alert-danger">
+            <span class="material-symbols-outlined">shield</span>
+            <div>
+                <strong>Insurance Expired</strong>
+                <p>Insurance expired on {{ vehicle.insurance_expiry|date:"M d, Y" }}.</p>
+            </div>
+        </div>
+        {% endif %}
+        {% if vehicle.is_registration_expired %}
+        <div class="alert alert-danger">
+            <span class="material-symbols-outlined">description</span>
+            <div>
+                <strong>Registration Expired</strong>
+                <p>Registration expired on {{ vehicle.registration_expiry|date:"M d, Y" }}.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="detail-grid">
+        <!-- Vehicle Information -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h2>Vehicle Information</h2>
+            </div>
+            <div class="card-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>License Plate</label>
+                        <span>{{ vehicle.license_plate }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>VIN</label>
+                        <span>{{ vehicle.vin }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Make & Model</label>
+                        <span>{{ vehicle.vehicle_model }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Year</label>
+                        <span>{{ vehicle.year }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Color</label>
+                        <span>{{ vehicle.color }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Fuel Type</label>
+                        <span>{{ vehicle.get_fuel_type_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Transmission</label>
+                        <span>{{ vehicle.get_transmission_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Engine Capacity</label>
+                        <span>{% if vehicle.engine_capacity %}{{ vehicle.engine_capacity }}L{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Current Mileage</label>
+                        <span>{{ vehicle.mileage|floatformat:0 }} km</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status</label>
+                        <span class="status-badge status-{{ vehicle.status }}">{{ vehicle.get_status_display }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ownership & Assignment -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h2>Ownership & Assignment</h2>
+            </div>
+            <div class="card-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Owner</label>
+                        <span>{% if vehicle.owner %}{{ vehicle.owner.get_full_name|default:vehicle.owner.username }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Assigned To</label>
+                        <span>{% if vehicle.assigned_to %}{{ vehicle.assigned_to.get_full_name|default:vehicle.assigned_to.username }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Company Vehicle</label>
+                        <span>{% if vehicle.is_company_vehicle %}Yes{% else %}No{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Purchase Date</label>
+                        <span>{% if vehicle.purchase_date %}{{ vehicle.purchase_date|date:"M d, Y" }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Purchase Price</label>
+                        <span>{% if vehicle.purchase_price %}<span class="currency">${{ vehicle.purchase_price|floatformat:2 }}</span>{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Current Value</label>
+                        <span>{% if vehicle.current_value %}<span class="currency">${{ vehicle.current_value|floatformat:2 }}</span>{% else %}-{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insurance & Registration -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h2>Insurance & Registration</h2>
+            </div>
+            <div class="card-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Insurance Company</label>
+                        <span>{{ vehicle.insurance_company|default:"-" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Policy Number</label>
+                        <span>{{ vehicle.insurance_policy_number|default:"-" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Insurance Expiry</label>
+                        <span class="{% if vehicle.is_insurance_expired %}text-danger{% endif %}">
+                            {% if vehicle.insurance_expiry %}{{ vehicle.insurance_expiry|date:"M d, Y" }}{% else %}-{% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <label>Registration Expiry</label>
+                        <span class="{% if vehicle.is_registration_expired %}text-danger{% endif %}">
+                            {% if vehicle.registration_expiry %}{{ vehicle.registration_expiry|date:"M d, Y" }}{% else %}-{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Schedule -->
+        <div class="detail-card">
+            <div class="card-header">
+                <h2>Maintenance Schedule</h2>
+            </div>
+            <div class="card-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Last Service</label>
+                        <span>{% if vehicle.last_service_date %}{{ vehicle.last_service_date|date:"M d, Y" }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Next Service Due</label>
+                        <span class="{% if vehicle.is_service_due %}text-warning{% endif %}">
+                            {% if vehicle.next_service_due %}{{ vehicle.next_service_due|date:"M d, Y" }}{% else %}-{% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <label>Service Interval</label>
+                        <span>{% if vehicle.service_interval_km %}{{ vehicle.service_interval_km|floatformat:0 }} km{% else %}-{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Maintenance -->
+        <div class="detail-card maintenance-section">
+            <div class="card-header">
+                <h2>Recent Maintenance</h2>
+                <a href="{% url 'transportation:maintenance_create_for_vehicle' vehicle.slug %}" class="btn btn-sm btn-outline-primary">
+                    <span class="material-symbols-outlined me-1">add</span>
+                    Add Record
+                </a>
+            </div>
+            <div class="card-content">
+                {% if maintenance_records %}
+                <div class="maintenance-list">
+                    {% for record in maintenance_records %}
+                    <div class="maintenance-item">
+                        <div class="maintenance-info">
+                            <div class="maintenance-type">{{ record.get_maintenance_type_display }}</div>
+                            <div class="maintenance-description">{{ record.description|truncatewords:15 }}</div>
+                            <div class="maintenance-date">{{ record.date|date:"M d, Y" }} • {{ record.mileage_at_service|floatformat:0 }} km</div>
+                            {% if record.service_provider %}
+                            <div class="service-provider">{{ record.service_provider }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="maintenance-cost">
+                            {% if record.cost %}
+                                <span class="currency">${{ record.cost|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="view-all-maintenance">
+                    <a href="{% url 'transportation:maintenance_list' %}?vehicle={{ vehicle.slug }}" class="btn btn-outline-secondary">
+                        View All Maintenance Records
+                    </a>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <span class="material-symbols-outlined">build</span>
+                    <p>No maintenance records found</p>
+                    <a href="{% url 'transportation:maintenance_create_for_vehicle' vehicle.slug %}" class="btn btn-primary">
+                        Add First Record
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="detail-card documents-section">
+            <div class="card-header">
+                <h2>Documents</h2>
+                <a href="{% url 'transportation:document_create' vehicle.slug %}" class="btn btn-sm btn-outline-primary">
+                    <span class="material-symbols-outlined me-1">add</span>
+                    Upload
+                </a>
+            </div>
+            <div class="card-content">
+                {% if documents %}
+                <div class="documents-list">
+                    {% for document in documents %}
+                    <div class="document-item">
+                        <div class="document-icon">
+                            <span class="material-symbols-outlined">description</span>
+                        </div>
+                        <div class="document-info">
+                            <div class="document-title">{{ document.title }}</div>
+                            <div class="document-type">{{ document.get_document_type_display }}</div>
+                            {% if document.expiry_date %}
+                            <div class="document-expiry {% if document.is_expired %}text-danger{% endif %}">
+                                Expires: {{ document.expiry_date|date:"M d, Y" }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="document-actions">
+                            <a href="{{ document.document_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <span class="material-symbols-outlined">description</span>
+                    <p>No documents uploaded</p>
+                    <a href="{% url 'transportation:document_create' vehicle.slug %}" class="btn btn-primary">
+                        Upload First Document
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Components -->
+        {% if component_instances %}
+        <div class="detail-card components-section">
+            <div class="card-header">
+                <h2>Vehicle Components</h2>
+            </div>
+            <div class="card-content">
+                <div class="components-list">
+                    {% for instance in component_instances %}
+                    <div class="component-item">
+                        <div class="component-info">
+                            <div class="component-name">{{ instance.component.name }}</div>
+                            <div class="component-category">{{ instance.component.get_category_display }}</div>
+                            <div class="component-status status-{{ instance.current_status }}">
+                                {{ instance.get_current_status_display }}
+                            </div>
+                        </div>
+                        <div class="component-actions">
+                            <a href="{% url 'transportation:inspection_create' instance.slug %}" class="btn btn-sm btn-outline-primary">
+                                <span class="material-symbols-outlined">fact_check</span>
+                                Inspect
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Change Log -->
+        {% if change_logs %}
+        <div class="detail-card changelog-section">
+            <div class="card-header">
+                <h2>Recent Changes</h2>
+            </div>
+            <div class="card-content">
+                <div class="changelog-list">
+                    {% for log in change_logs %}
+                    <div class="changelog-item">
+                        <div class="changelog-info">
+                            <div class="change-type">{{ log.get_change_type_display }}</div>
+                            <div class="change-description">{{ log.description|truncatewords:15 }}</div>
+                            <div class="change-date">
+                                {{ log.created_at|date:"M d, Y H:i" }} 
+                                {% if log.changed_by %}by {{ log.changed_by.get_full_name|default:log.changed_by.username }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if vehicle.notes %}
+        <div class="detail-card notes-section">
+            <div class="card-header">
+                <h2>Notes</h2>
+            </div>
+            <div class="card-content">
+                <div class="notes-content">
+                    {{ vehicle.notes|linebreaks }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize any vehicle detail specific JavaScript here
+    console.log('Vehicle detail page loaded');
+});
+</script>
+{% endblock scripts %}

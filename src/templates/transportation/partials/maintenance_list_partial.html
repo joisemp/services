@@ -1,0 +1,210 @@
+<!-- Maintenance List Partial -->
+<div class="row">
+    {% for maintenance in page_obj %}
+    <div class="col-12 col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 maintenance-card" data-type="{{ maintenance.maintenance_type }}">
+            <!-- Card Body -->
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="maintenance-type">
+                        <h6 class="card-title mb-1">{{ maintenance.get_maintenance_type_display }}</h6>
+                        <small class="text-muted">
+                            {{ maintenance.vehicle.vehicle_model.make.name }} {{ maintenance.vehicle.vehicle_model.name }}
+                            <span class="badge bg-light text-dark ms-1">{{ maintenance.vehicle.license_plate }}</span>
+                        </small>
+                    </div>
+                    <div class="maintenance-date text-end">
+                        <small class="text-muted d-block">{{ maintenance.date|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+                
+                <div class="maintenance-metrics d-flex justify-content-between mb-3">
+                    <div class="metric">
+                        <div class="metric-value">{{ maintenance.mileage_at_service|floatformat:0 }}</div>
+                        <small class="text-muted">km</small>
+                    </div>
+                    
+                    {% if maintenance.cost %}
+                    <div class="metric">
+                        <div class="metric-value text-success">${{ maintenance.cost|floatformat:2 }}</div>
+                        <small class="text-muted">Cost</small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if maintenance.performed_by %}
+                    <div class="metric">
+                        <div class="metric-value small">{{ maintenance.performed_by.get_full_name|truncatechars:12 }}</div>
+                        <small class="text-muted">Technician</small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if maintenance.description %}
+                <div class="maintenance-description mb-3">
+                    <p class="text-muted small mb-0">{{ maintenance.description|truncatewords:15 }}</p>
+                </div>
+                {% endif %}
+                
+                {% if maintenance.service_provider %}
+                <div class="service-provider mb-2">
+                    <small class="text-muted">Provider: {{ maintenance.service_provider }}</small>
+                </div>
+                {% endif %}
+                
+                {% if maintenance.next_service_due_date %}
+                <div class="next-service mb-2">
+                    <small class="text-muted">Next service: {{ maintenance.next_service_due_date|date:"M d, Y" }}</small>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'transportation:maintenance_detail' maintenance.id %}" class="btn btn-primary me-2 d-flex align-items-center">
+                            <span class="material-symbols-outlined me-1">visibility</span>
+                            <span class="d-none d-md-inline">View</span>
+                        </a>
+                        <a href="{% url 'transportation:vehicle_detail' maintenance.vehicle.slug %}" class="btn btn-outline-secondary d-flex align-items-center">
+                            <span class="material-symbols-outlined">directions_car</span>
+                            <span class="d-none d-md-inline ms-1">Vehicle</span>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state text-center py-5">
+            <div class="mb-4">
+                <span class="material-symbols-outlined display-1">build</span>
+            </div>
+            <h3 class="mb-3">No Maintenance Records Found</h3>
+            <p class="mb-4">
+                No maintenance records match your current search criteria.<br>
+                Start by adding your first maintenance record to keep track of your vehicle servicing.
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <a href="{% url 'transportation:maintenance_create' %}" class="btn btn-primary">
+                    <span class="material-symbols-outlined me-2">add</span>
+                    Add Maintenance Record
+                </a>
+                <a href="{% url 'transportation:vehicle_list' %}" class="btn btn-outline-secondary">
+                    <span class="material-symbols-outlined me-2">directions_car</span>
+                    View Vehicles
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <div class="text-muted">
+        Showing <strong>{{ page_obj.start_index }}</strong> to <strong>{{ page_obj.end_index }}</strong> 
+        of <strong>{{ page_obj.paginator.count }}</strong> records
+    </div>
+    
+    <nav aria-label="Maintenance records pagination">
+        <ul class="pagination mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1" aria-label="First page"
+                   hx-get="{% url 'transportation:maintenance_list' %}?page=1"
+                   hx-target="#maintenance-list"
+                   hx-include="[name='search'], [name='vehicle'], [name='type']">
+                    <span class="material-symbols-outlined">first_page</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous page"
+                   hx-get="{% url 'transportation:maintenance_list' %}?page={{ page_obj.previous_page_number }}"
+                   hx-target="#maintenance-list"
+                   hx-include="[name='search'], [name='vehicle'], [name='type']">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <span class="material-symbols-outlined">first_page</span>
+                </span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </span>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}"
+                       hx-get="{% url 'transportation:maintenance_list' %}?page={{ num }}"
+                       hx-target="#maintenance-list"
+                       hx-include="[name='search'], [name='vehicle'], [name='type']">{{ num }}</a>
+                </li>
+                {% elif num == 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}"
+                       hx-get="{% url 'transportation:maintenance_list' %}?page={{ num }}"
+                       hx-target="#maintenance-list"
+                       hx-include="[name='search'], [name='vehicle'], [name='type']">{{ num }}</a>
+                </li>
+                {% elif num == page_obj.paginator.num_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}"
+                       hx-get="{% url 'transportation:maintenance_list' %}?page={{ num }}"
+                       hx-target="#maintenance-list"
+                       hx-include="[name='search'], [name='vehicle'], [name='type']">{{ num }}</a>
+                </li>
+                {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next page"
+                   hx-get="{% url 'transportation:maintenance_list' %}?page={{ page_obj.next_page_number }}"
+                   hx-target="#maintenance-list"
+                   hx-include="[name='search'], [name='vehicle'], [name='type']">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last page"
+                   hx-get="{% url 'transportation:maintenance_list' %}?page={{ page_obj.paginator.num_pages }}"
+                   hx-target="#maintenance-list"
+                   hx-include="[name='search'], [name='vehicle'], [name='type']">
+                    <span class="material-symbols-outlined">last_page</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <span class="material-symbols-outlined">last_page</span>
+                </span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}

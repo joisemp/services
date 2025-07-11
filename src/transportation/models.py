@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.text import slugify
 from django.core.validators import RegexValidator
+from django.urls import reverse
 from config.utils import generate_unique_slug
 
 
@@ -197,6 +198,9 @@ class Vehicle(models.Model):
     def __str__(self):
         return f"{self.vehicle_model} - {self.license_plate}"
     
+    def get_absolute_url(self):
+        return reverse('transportation:vehicle_detail', kwargs={'slug': self.slug})
+    
     @property
     def full_name(self):
         return f"{self.year} {self.vehicle_model} ({self.license_plate})"
@@ -308,6 +312,10 @@ class MaintenanceRecord(models.Model):
     
     def __str__(self):
         return f"{self.vehicle.license_plate} - {self.get_maintenance_type_display()} ({self.date})"
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('transportation:maintenance_detail', kwargs={'pk': self.pk})
 
 
 class VehicleComponent(models.Model):

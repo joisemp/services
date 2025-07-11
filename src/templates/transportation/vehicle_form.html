@@ -1,0 +1,84 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{% if vehicle %}Edit Vehicle{% else %}Add Vehicle{% endif %}{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/vehicle_form/vehicle_form.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="vehicle-form-container">
+    <div class="form-header">
+        <div class="header-content">
+            <h1>{% if vehicle %}Edit Vehicle{% else %}Add New Vehicle{% endif %}</h1>
+            <div class="header-actions">
+                <a href="{% if vehicle %}{% url 'transportation:vehicle_detail' vehicle.slug %}{% else %}{% url 'transportation:vehicle_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <span class="material-symbols-outlined me-2">arrow_back</span>
+                    {% if vehicle %}Back to Vehicle{% else %}Back to List{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-content">
+        <form method="post" hx-post="{% if vehicle %}{% url 'transportation:vehicle_edit' vehicle.slug %}{% else %}{% url 'transportation:vehicle_create' %}{% endif %}" 
+              hx-target="#form-container" hx-swap="outerHTML">
+            <div id="form-container">
+                {% include 'transportation/partials/vehicle_form_partial.html' %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Vehicle Model Modal Container -->
+<div id="vehicle-model-modal-container"></div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus first input
+    const firstInput = document.querySelector('input:not([type="hidden"]), select, textarea');
+    if (firstInput) {
+        firstInput.focus();
+    }
+});
+
+// Handle HTMX form submission
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful && event.detail.xhr.response) {
+        try {
+            const response = JSON.parse(event.detail.xhr.response);
+            if (response.success && response.redirect_url) {
+                window.location.href = response.redirect_url;
+            }
+        } catch (e) {
+            // Response is HTML, continue normal processing
+        }
+    }
+});
+
+// Handle modal loading after HTMX request
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Check if a modal was loaded
+    const modal = document.getElementById('vehicleModelModal');
+    if (modal && event.detail.target.id === 'vehicle-model-modal-container') {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+        }, 50);
+    }
+});
+</script>
+{% endblock scripts %}

@@ -1,0 +1,116 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Transportation Reports{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/reports/reports.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="reports-container">
+    <div class="page-header">
+        <h1>Transportation Reports & Analytics</h1>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-outlined">directions_car</span>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_vehicles }}</h3>
+                <p>Total Vehicles</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-outlined">build</span>
+            </div>
+            <div class="stat-content">
+                <h3>{{ upcoming_maintenance }}</h3>
+                <p>Upcoming Maintenance</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-outlined">shield</span>
+            </div>
+            <div class="stat-content">
+                <h3>{{ expiring_insurance }}</h3>
+                <p>Expiring Insurance</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-outlined">description</span>
+            </div>
+            <div class="stat-content">
+                <h3>{{ expiring_registration }}</h3>
+                <p>Expiring Registration</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Reports -->
+    <div class="reports-grid">
+        <div class="report-card">
+            <div class="card-header">
+                <h2>Fleet by Status</h2>
+            </div>
+            <div class="card-content">
+                {% for status in by_status %}
+                <div class="status-item">
+                    <span class="status-label">{{ status.status|title }}</span>
+                    <span class="status-count">{{ status.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="report-card">
+            <div class="card-header">
+                <h2>Fleet by Type</h2>
+            </div>
+            <div class="card-content">
+                {% for type in by_type %}
+                <div class="type-item">
+                    <span class="type-label">{{ type.vehicle_model__vehicle_type__name|title }}</span>
+                    <span class="type-count">{{ type.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="report-card">
+            <div class="card-header">
+                <h2>Maintenance Costs</h2>
+            </div>
+            <div class="card-content">
+                <div class="cost-summary">
+                    <div class="cost-item">
+                        <span class="cost-label">Total Maintenance Cost</span>
+                        <span class="cost-value">${{ maintenance_costs.total_cost|default:0|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span class="cost-label">Average Cost per Service</span>
+                        <span class="cost-value">${{ maintenance_costs.avg_cost|default:0|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
