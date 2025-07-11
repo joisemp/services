@@ -16,7 +16,7 @@ from .models import (
 from .forms import (
     VehicleForm, VehicleDocumentForm, MaintenanceRecordForm,
     VehicleComponentForm, ComponentInspectionForm, VehicleModelForm,
-    QuickVehicleModelForm
+    QuickVehicleModelForm, QuickVehicleMakeForm, QuickVehicleTypeForm
 )
 
 
@@ -600,6 +600,124 @@ def vehicle_model_form_modal(request):
 
 
 @login_required
+def vehicle_make_create_ajax(request):
+    """Create a new vehicle make via HTMX"""
+    if request.method == 'POST':
+        form = QuickVehicleMakeForm(request.POST)
+        if form.is_valid():
+            try:
+                vehicle_make = form.save()
+                print(f"DEBUG: Vehicle make created successfully: {vehicle_make}")
+                
+                # Return JavaScript to update the select and close modal
+                context = {
+                    'vehicle_make': vehicle_make,
+                    'success': True
+                }
+                return render(request, 'transportation/partials/vehicle_make_success.html', context)
+            except Exception as e:
+                print(f"DEBUG: Error saving vehicle make: {e}")
+                form.add_error(None, f"Error saving vehicle make: {str(e)}")
+        else:
+            print(f"DEBUG: Form errors: {form.errors}")
+        
+        # Return form with errors
+        return render(request, 'transportation/partials/vehicle_make_form.html', {'form': form})
+    else:
+        form = QuickVehicleMakeForm()
+        return render(request, 'transportation/partials/vehicle_make_form.html', {'form': form})
+
+
+@login_required
+def vehicle_make_form_modal(request):
+    """Return the modal form for creating a new vehicle make"""
+    form = QuickVehicleMakeForm()
+    return render(request, 'transportation/partials/vehicle_make_modal.html', {'form': form})
+
+
+@login_required
+def vehicle_type_create_ajax(request):
+    """Create a new vehicle type via HTMX"""
+    if request.method == 'POST':
+        print(f"DEBUG: POST request received with data: {request.POST}")
+        form = QuickVehicleTypeForm(request.POST)
+        print(f"DEBUG: Form created, is_valid: {form.is_valid()}")
+        if form.is_valid():
+            try:
+                # Check if this type already exists
+                existing_type = VehicleType.objects.filter(name=form.cleaned_data['name']).first()
+                if existing_type:
+                    print(f"DEBUG: Type already exists: {existing_type}")
+                    form.add_error('name', 'This vehicle type already exists.')
+                    
+                    # Pass context for error case
+                    existing_types = VehicleType.objects.values_list('name', flat=True)
+                    available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+                    context = {
+                        'form': form,
+                        'has_available_types': len(available_choices) > 0,
+                        'available_count': len(available_choices)
+                    }
+                    return render(request, 'transportation/partials/vehicle_type_form.html', context)
+                
+                vehicle_type = form.save()
+                print(f"DEBUG: Vehicle type created successfully: {vehicle_type}")
+                
+                # Return JavaScript to update the select and close modal
+                context = {
+                    'vehicle_type': vehicle_type,
+                    'success': True
+                }
+                return render(request, 'transportation/partials/vehicle_type_success.html', context)
+            except Exception as e:
+                print(f"DEBUG: Error saving vehicle type: {e}")
+                form.add_error(None, f"Error saving vehicle type: {str(e)}")
+        else:
+            print(f"DEBUG: Form errors: {form.errors}")
+        
+        # Return form with errors
+        existing_types = VehicleType.objects.values_list('name', flat=True)
+        available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+        context = {
+            'form': form,
+            'has_available_types': len(available_choices) > 0,
+            'available_count': len(available_choices)
+        }
+        return render(request, 'transportation/partials/vehicle_type_form.html', context)
+    else:
+        print("DEBUG: GET request for vehicle type form")
+        form = QuickVehicleTypeForm()
+        print(f"DEBUG: Available choices: {form.fields['name'].widget.choices}")
+        
+        existing_types = VehicleType.objects.values_list('name', flat=True)
+        available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+        context = {
+            'form': form,
+            'has_available_types': len(available_choices) > 0,
+            'available_count': len(available_choices)
+        }
+        return render(request, 'transportation/partials/vehicle_type_form.html', context)
+
+
+@login_required
+def vehicle_type_form_modal(request):
+    """Return the modal form for creating a new vehicle type"""
+    form = QuickVehicleTypeForm()
+    
+    # Check if there are available types to create
+    existing_types = VehicleType.objects.values_list('name', flat=True)
+    available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+    has_available_types = len(available_choices) > 0
+    
+    context = {
+        'form': form,
+        'has_available_types': has_available_types,
+        'available_count': len(available_choices)
+    }
+    return render(request, 'transportation/partials/vehicle_type_modal.html', context)
+
+
+@login_required
 def reports(request):
     """Transportation reports and analytics"""
     # Vehicle statistics
@@ -687,3 +805,25 @@ def vehicle_model_options_ajax(request):
         'selected_model_id': None
     }
     return render(request, 'transportation/partials/vehicle_model_options.html', context)
+
+
+@login_required
+def vehicle_make_options_ajax(request):
+    """Return vehicle make options for select field"""
+    vehicle_makes = VehicleMake.objects.all().order_by('name')
+    context = {
+        'vehicle_makes': vehicle_makes,
+        'selected_make_id': None
+    }
+    return render(request, 'transportation/partials/vehicle_make_options.html', context)
+
+
+@login_required
+def vehicle_type_options_ajax(request):
+    """Return vehicle type options for select field"""
+    vehicle_types = VehicleType.objects.all().order_by('name')
+    context = {
+        'vehicle_types': vehicle_types,
+        'selected_type_id': None
+    }
+    return render(request, 'transportation/partials/vehicle_type_options.html', context)

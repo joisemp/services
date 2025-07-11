@@ -5,6 +5,7 @@
 
 {% block style %}
 <link rel="stylesheet" href="{% static 'styles/transportation/vehicle_form/vehicle_form.css' %}">
+<link rel="stylesheet" href="{% static 'styles/transportation/modals.css' %}">
 {% endblock style %}
 
 {% block navbar %}
@@ -42,6 +43,10 @@
 <!-- Vehicle Model Modal Container -->
 <div id="vehicle-model-modal-container"></div>
 
+<!-- Modal containers for nested modals -->
+<div id="vehicle-make-modal-container"></div>
+<div id="vehicle-type-modal-container"></div>
+
 {% endblock content %}
 
 {% block scripts %}
@@ -71,13 +76,46 @@ document.body.addEventListener('htmx:afterRequest', function(event) {
 // Handle modal loading after HTMX request
 document.body.addEventListener('htmx:afterSwap', function(event) {
     // Check if a modal was loaded
-    const modal = document.getElementById('vehicleModelModal');
-    if (modal && event.detail.target.id === 'vehicle-model-modal-container') {
+    const vehicleModelModal = document.getElementById('vehicleModelModal');
+    const vehicleMakeModal = document.getElementById('vehicleMakeModal');
+    const vehicleTypeModal = document.getElementById('vehicleTypeModal');
+    
+    if (vehicleModelModal && event.detail.target.id === 'vehicle-model-modal-container') {
         // Small delay to ensure DOM is ready
         setTimeout(() => {
-            const bootstrapModal = new bootstrap.Modal(modal);
+            const bootstrapModal = new bootstrap.Modal(vehicleModelModal);
             bootstrapModal.show();
         }, 50);
+    }
+    
+    if (vehicleMakeModal && event.detail.target.id === 'vehicle-make-modal-container') {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            const bootstrapModal = new bootstrap.Modal(vehicleMakeModal, {
+                backdrop: 'static'  // Prevent clicking backdrop to close while parent modal is open
+            });
+            bootstrapModal.show();
+        }, 50);
+    }
+    
+    if (vehicleTypeModal && event.detail.target.id === 'vehicle-type-modal-container') {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            const bootstrapModal = new bootstrap.Modal(vehicleTypeModal, {
+                backdrop: 'static'  // Prevent clicking backdrop to close while parent modal is open
+            });
+            bootstrapModal.show();
+        }, 50);
+    }
+});
+
+// Handle modal events to manage backdrop issues with nested modals
+document.body.addEventListener('hidden.bs.modal', function(event) {
+    // When a nested modal is closed, make sure the parent modal backdrop is restored
+    const vehicleModelModal = document.getElementById('vehicleModelModal');
+    if (vehicleModelModal && vehicleModelModal.classList.contains('show')) {
+        // Re-add the backdrop class if the parent modal is still open
+        document.body.classList.add('modal-open');
     }
 });
 </script>

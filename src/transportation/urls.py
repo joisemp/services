@@ -45,4 +45,14 @@ urlpatterns = [
     path('ajax/vehicle-model/create/', views.vehicle_model_create_ajax, name='vehicle_model_create_ajax'),
     path('ajax/vehicle-model/form/', views.vehicle_model_form_modal, name='vehicle_model_form_modal'),
     path('ajax/vehicle-model-options/', views.vehicle_model_options_ajax, name='vehicle_model_options_ajax'),
+    
+    # Vehicle Make HTMX endpoints
+    path('ajax/vehicle-make/create/', views.vehicle_make_create_ajax, name='vehicle_make_create_ajax'),
+    path('ajax/vehicle-make/form/', views.vehicle_make_form_modal, name='vehicle_make_form_modal'),
+    path('ajax/vehicle-make-options/', views.vehicle_make_options_ajax, name='vehicle_make_options_ajax'),
+    
+    # Vehicle Type HTMX endpoints
+    path('ajax/vehicle-type/create/', views.vehicle_type_create_ajax, name='vehicle_type_create_ajax'),
+    path('ajax/vehicle-type/form/', views.vehicle_type_form_modal, name='vehicle_type_form_modal'),
+    path('ajax/vehicle-type-options/', views.vehicle_type_options_ajax, name='vehicle_type_options_ajax'),
 ]

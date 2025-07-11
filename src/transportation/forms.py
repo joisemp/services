@@ -125,7 +125,8 @@ class VehicleModelForm(forms.ModelForm):
     
     class Meta:
         model = VehicleModel
-        fields = ['make', 'name', 'vehicle_type', 'year_introduced', 'year_discontinued', 'engine_types']
+        fields = ['make', 'name', 'vehicle_type', 'year_introduced', 'year_discontinued', 'engine_types'
+        ]
         widgets = {
             'make': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={
@@ -394,3 +395,53 @@ class MaintenanceFilterForm(forms.Form):
             'hx-trigger': 'change'
         })
     )
+
+
+class QuickVehicleMakeForm(forms.ModelForm):
+    """Simplified form for quick vehicle make creation via HTMX"""
+    
+    class Meta:
+        model = VehicleMake
+        fields = ['name', 'country']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter make name (e.g., Toyota, Ford)',
+                'required': True
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Country of origin (optional)'
+            }),
+        }
+
+
+class QuickVehicleTypeForm(forms.ModelForm):
+    """Simplified form for quick vehicle type creation via HTMX"""
+    
+    class Meta:
+        model = VehicleType
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Brief description (optional)'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Get existing vehicle types to exclude them from choices
+        existing_types = VehicleType.objects.values_list('name', flat=True)
+        available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+        
+        self.fields['name'].widget.choices = [('', 'Select vehicle type')] + available_choices
+        
+        # If no types are available, show a message
+        if not available_choices:
+            self.fields['name'].widget.choices = [('', 'All vehicle types are already created')]
+            self.fields['name'].widget.attrs['disabled'] = True
