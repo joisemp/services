@@ -1,0 +1,100 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Delete Maintenance Record{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/maintenance_detail/maintenance_detail.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="maintenance-detail-container">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Delete Maintenance Record</h1>
+            <div class="header-actions">
+                <a href="{% url 'transportation:maintenance_detail' pk=maintenance.pk %}" class="btn btn-secondary">
+                    <span class="material-symbols-outlined me-2">arrow_back</span>
+                    Back to Record
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="delete-confirmation-section">
+        <div class="confirmation-card">
+            <div class="warning-icon">
+                <span class="material-symbols-outlined">warning</span>
+            </div>
+            
+            <h2>Are you sure you want to delete this maintenance record?</h2>
+            
+            <div class="record-summary">
+                <div class="summary-item">
+                    <strong>Vehicle:</strong> {{ maintenance.vehicle.license_plate }}
+                </div>
+                <div class="summary-item">
+                    <strong>Type:</strong> {{ maintenance.get_maintenance_type_display }}
+                </div>
+                <div class="summary-item">
+                    <strong>Date:</strong> {{ maintenance.date|date:"F j, Y" }}
+                </div>
+                <div class="summary-item">
+                    <strong>Description:</strong> {{ maintenance.description|truncatewords:20 }}
+                </div>
+                {% if maintenance.cost %}
+                <div class="summary-item">
+                    <strong>Cost:</strong> ${{ maintenance.cost|floatformat:2 }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="warning-text">
+                <p>This action cannot be undone. The maintenance record will be permanently deleted.</p>
+            </div>
+            
+            <div class="action-buttons">
+                <form method="post" class="delete-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <span class="material-symbols-outlined me-2">delete</span>
+                        Delete Record
+                    </button>
+                    <a href="{% url 'transportation:maintenance_detail' pk=maintenance.pk %}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.querySelector('.delete-form');
+    const deleteButton = deleteForm.querySelector('button[type="submit"]');
+    
+    deleteForm.addEventListener('submit', function(e) {
+        // Double confirmation
+        if (!confirm('Are you absolutely sure you want to delete this maintenance record?')) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Disable button to prevent double submission
+        deleteButton.disabled = true;
+        deleteButton.innerHTML = '<span class="material-symbols-outlined me-2">hourglass_empty</span>Deleting...';
+    });
+});
+</script>
+{% endblock scripts %}

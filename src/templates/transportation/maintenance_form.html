@@ -1,0 +1,84 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Log Maintenance{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/maintenance_form/maintenance_form.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="maintenance-form-container">
+    <div class="form-header">
+        <div class="header-content">
+            <h1>Log Maintenance</h1>
+            <div class="header-actions">
+                <a href="{% if vehicle %}{% url 'transportation:vehicle_detail' vehicle.slug %}{% else %}{% url 'transportation:maintenance_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <span class="material-symbols-outlined me-2">arrow_back</span>
+                    {% if vehicle %}Back to Vehicle{% else %}Back to List{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-content">
+        <form method="post" hx-post="{% if vehicle %}{% url 'transportation:maintenance_create_for_vehicle' vehicle.slug %}{% else %}{% url 'transportation:maintenance_create' %}{% endif %}" 
+              hx-target="#form-container" hx-swap="outerHTML">
+            <div id="form-container">
+                {% include 'transportation/partials/maintenance_form_partial.html' %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus first input
+    const firstInput = document.querySelector('select, input:not([type="hidden"]), textarea');
+    if (firstInput) {
+        firstInput.focus();
+    }
+});
+
+// Handle HTMX form submission
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    console.log('HTMX Response Status:', event.detail.xhr.status);
+    console.log('HTMX Response:', event.detail.xhr.response);
+    
+    if (event.detail.successful && event.detail.xhr.response) {
+        try {
+            const response = JSON.parse(event.detail.xhr.response);
+            if (response.success && response.redirect_url) {
+                window.location.href = response.redirect_url;
+            }
+        } catch (e) {
+            // Response is HTML, continue normal processing
+            console.log('HTML response received, updating form');
+        }
+    } else {
+        console.error('HTMX request failed');
+    }
+});
+
+// Handle HTMX errors
+document.body.addEventListener('htmx:responseError', function(event) {
+    console.error('HTMX Response Error:', event.detail);
+    alert('An error occurred while submitting the form. Please try again.');
+});
+
+document.body.addEventListener('htmx:sendError', function(event) {
+    console.error('HTMX Send Error:', event.detail);
+    alert('Network error. Please check your connection and try again.');
+});
+</script>
+{% endblock scripts %}

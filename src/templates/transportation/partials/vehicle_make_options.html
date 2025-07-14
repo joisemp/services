@@ -1,0 +1,7 @@
+<!-- Vehicle Make Options -->
+<option value="">Select a vehicle make</option>
+{% for vehicle_make in vehicle_makes %}
+    <option value="{{ vehicle_make.id }}" {% if vehicle_make.id == selected_make_id %}selected{% endif %}>
+        {{ vehicle_make.name }}
+    </option>
+{% endfor %}

@@ -1,0 +1,101 @@
+<div class="components-grid">
+    {% for component in components %}
+        <div class="component-card">
+            <div class="component-header">
+                <h3 class="component-name">
+                    <a href="{% url 'transportation:component_detail' component.slug %}">
+                        {{ component.name }}
+                    </a>
+                </h3>
+                <span class="component-category">{{ component.category|title }}</span>
+            </div>
+            
+            <div class="component-details">
+                {% if component.description %}
+                    <p class="component-description">{{ component.description|truncatewords:20 }}</p>
+                {% endif %}
+                
+                <div class="component-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Instances:</span>
+                        <span class="stat-value">{{ component.vehiclecomponentinstance_set.count }}</span>
+                    </div>
+                    
+                    {% if component.expected_lifespan_km %}
+                        <div class="stat-item">
+                            <span class="stat-label">Expected Lifespan:</span>
+                            <span class="stat-value">{{ component.expected_lifespan_km|floatformat:0 }} km</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if component.maintenance_interval_km %}
+                        <div class="stat-item">
+                            <span class="stat-label">Maintenance Interval:</span>
+                            <span class="stat-value">{{ component.maintenance_interval_km|floatformat:0 }} km</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="component-actions">
+                <a href="{% url 'transportation:component_detail' component.slug %}" 
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i>
+                    View Details
+                </a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h3>No Components Found</h3>
+            <p>No vehicle components match your current filters.</p>
+        </div>
+    {% endfor %}
+</div>
+
+{% if components.has_other_pages %}
+    <div class="pagination-container">
+        <nav aria-label="Components pagination">
+            <ul class="pagination">
+                {% if components.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           hx-get="?page={{ components.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}"
+                           hx-target="#components-list">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in components.paginator.page_range %}
+                    {% if components.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > components.number|add:'-3' and num < components.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" 
+                               hx-get="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}"
+                               hx-target="#components-list">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if components.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           hx-get="?page={{ components.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}"
+                           hx-target="#components-list">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+{% endif %}

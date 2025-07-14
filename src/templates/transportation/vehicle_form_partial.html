@@ -1,0 +1,339 @@
+{% load static %}
+{% csrf_token %}
+
+<div class="form-sections">
+    <!-- Basic Information -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Basic Information</h2>
+            <p>Enter the basic vehicle identification details</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.vehicle_model.id_for_label }}" class="form-label">Vehicle Model *</label>
+                    {{ form.vehicle_model }}
+                    {% if form.vehicle_model.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.vehicle_model.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.license_plate.id_for_label }}" class="form-label">License Plate *</label>
+                    {{ form.license_plate }}
+                    {% if form.license_plate.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.license_plate.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.vin.id_for_label }}" class="form-label">VIN *</label>
+                    {{ form.vin }}
+                    {% if form.vin.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.vin.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-help">Vehicle Identification Number (17 characters)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.year.id_for_label }}" class="form-label">Year *</label>
+                    {{ form.year }}
+                    {% if form.year.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.year.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.color.id_for_label }}" class="form-label">Color *</label>
+                    {{ form.color }}
+                    {% if form.color.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.color.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">Status *</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.status.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Specifications -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Technical Specifications</h2>
+            <p>Engine and performance specifications</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.engine_capacity.id_for_label }}" class="form-label">Engine Capacity</label>
+                    {{ form.engine_capacity }}
+                    {% if form.engine_capacity.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.engine_capacity.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-help">Engine capacity in liters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.fuel_type.id_for_label }}" class="form-label">Fuel Type *</label>
+                    {{ form.fuel_type }}
+                    {% if form.fuel_type.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.fuel_type.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.transmission.id_for_label }}" class="form-label">Transmission *</label>
+                    {{ form.transmission }}
+                    {% if form.transmission.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.transmission.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.mileage.id_for_label }}" class="form-label">Current Mileage *</label>
+                    {{ form.mileage }}
+                    {% if form.mileage.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.mileage.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-help">Current odometer reading in kilometers</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ownership & Assignment -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Ownership & Assignment</h2>
+            <p>Owner and user assignment information</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.owner.id_for_label }}" class="form-label">Owner</label>
+                    {{ form.owner }}
+                    {% if form.owner.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.owner.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assigned To</label>
+                    {{ form.assigned_to }}
+                    {% if form.assigned_to.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.assigned_to.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <div class="form-check">
+                        {{ form.is_company_vehicle }}
+                        <label for="{{ form.is_company_vehicle.id_for_label }}" class="form-check-label">
+                            Company Vehicle
+                        </label>
+                    </div>
+                    {% if form.is_company_vehicle.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.is_company_vehicle.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Information -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Purchase Information</h2>
+            <p>Purchase and financial details</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.purchase_date.id_for_label }}" class="form-label">Purchase Date</label>
+                    {{ form.purchase_date }}
+                    {% if form.purchase_date.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.purchase_date.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.purchase_price.id_for_label }}" class="form-label">Purchase Price</label>
+                    {{ form.purchase_price }}
+                    {% if form.purchase_price.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.purchase_price.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.current_value.id_for_label }}" class="form-label">Current Value</label>
+                    {{ form.current_value }}
+                    {% if form.current_value.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.current_value.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insurance & Registration -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Insurance & Registration</h2>
+            <p>Insurance policy and registration details</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.insurance_company.id_for_label }}" class="form-label">Insurance Company</label>
+                    {{ form.insurance_company }}
+                    {% if form.insurance_company.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.insurance_company.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.insurance_policy_number.id_for_label }}" class="form-label">Policy Number</label>
+                    {{ form.insurance_policy_number }}
+                    {% if form.insurance_policy_number.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.insurance_policy_number.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.insurance_expiry.id_for_label }}" class="form-label">Insurance Expiry</label>
+                    {{ form.insurance_expiry }}
+                    {% if form.insurance_expiry.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.insurance_expiry.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.registration_expiry.id_for_label }}" class="form-label">Registration Expiry</label>
+                    {{ form.registration_expiry }}
+                    {% if form.registration_expiry.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.registration_expiry.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Schedule -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Maintenance Schedule</h2>
+            <p>Service and maintenance planning</p>
+        </div>
+        <div class="section-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.last_service_date.id_for_label }}" class="form-label">Last Service Date</label>
+                    {{ form.last_service_date }}
+                    {% if form.last_service_date.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.last_service_date.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.next_service_due.id_for_label }}" class="form-label">Next Service Due</label>
+                    {{ form.next_service_due }}
+                    {% if form.next_service_due.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.next_service_due.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.service_interval_km.id_for_label }}" class="form-label">Service Interval</label>
+                    {{ form.service_interval_km }}
+                    {% if form.service_interval_km.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.service_interval_km.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-help">Service interval in kilometers</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Notes -->
+    <div class="form-section">
+        <div class="section-header">
+            <h2>Additional Notes</h2>
+            <p>Any additional information about the vehicle</p>
+        </div>
+        <div class="section-content">
+            <div class="form-group">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.notes.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined me-2">save</span>
+            {% if vehicle %}Update Vehicle{% else %}Create Vehicle{% endif %}
+        </button>
+        <a href="{% if vehicle %}{% url 'transportation:vehicle_detail' vehicle.slug %}{% else %}{% url 'transportation:vehicle_list' %}{% endif %}" class="btn btn-outline-secondary">
+            <span class="material-symbols-outlined me-2">cancel</span>
+            Cancel
+        </a>
+    </div>
+</div>

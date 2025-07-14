@@ -1,0 +1,130 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Create Purchase Order - {{ shopping_list.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h1 class="h4 mb-0">Create Purchase Order</h1>
+            <small>Convert approved shopping list to purchase order</small>
+        </div>
+        <div class="card-body">
+
+            <div class="mb-4">
+                <h2 class="h5">Shopping List Summary</h2>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Total Items</h5>
+                                <p class="card-text">{{ shopping_list.items.count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Total Cost</h5>
+                                <p class="card-text">${{ shopping_list.total_cost|floatformat:2 }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Priority</h5>
+                                <p class="card-text">{{ shopping_list.get_priority_display }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Approved By</h5>
+                                <p class="card-text">{{ shopping_list.approved_by.profile.first_name }} {{ shopping_list.approved_by.profile.last_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h2 class="h5">Items Preview</h2>
+                <ul class="list-group">
+                    {% for item in shopping_list.items.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ item.item_name }}</strong>
+                                <small class="text-muted">Qty: {{ item.quantity }}{% if item.category %} | {{ item.category.name }}{% endif %}{% if item.supplier %} | {{ item.supplier }}{% endif %}</small>
+                            </div>
+                            <span class="badge bg-success">${{ item.estimated_cost|floatformat:2 }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-center text-muted">No items in this shopping list</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.supplier.id_for_label }}" class="form-label">{{ form.supplier.label }}</label>
+                        {{ form.supplier }}
+                        {% if form.supplier.errors %}
+                            <div class="text-danger">
+                                {% for error in form.supplier.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.expected_delivery_date.id_for_label }}" class="form-label">{{ form.expected_delivery_date.label }}</label>
+                        {{ form.expected_delivery_date }}
+                        {% if form.expected_delivery_date.errors %}
+                            <div class="text-danger">
+                                {% for error in form.expected_delivery_date.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.delivery_address.id_for_label }}" class="form-label">{{ form.delivery_address.label }}</label>
+                    {{ form.delivery_address }}
+                    {% if form.delivery_address.errors %}
+                        <div class="text-danger">
+                            {% for error in form.delivery_address.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <div class="text-danger">
+                            {% for error in form.notes.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'service_management:shopping_list_detail' shopping_list.slug %}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-success">Create Purchase Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+<!-- Success Response for Vehicle Type Creation -->
+<script>
+// Update all vehicle type select options across the application
+function updateVehicleTypeSelects() {
+    fetch('{% url "transportation:vehicle_type_options_ajax" %}')
+        .then(response => response.text())
+        .then(html => {
+            // Update type select in vehicle model modal
+            const vehicleModelTypeSelect = document.querySelector('#vehicleModelModal #id_vehicle_type');
+            if (vehicleModelTypeSelect) {
+                vehicleModelTypeSelect.innerHTML = html;
+                vehicleModelTypeSelect.value = '{{ vehicle_type.id }}';
+                
+                // Trigger change event
+                const changeEvent = new Event('change', { bubbles: true });
+                vehicleModelTypeSelect.dispatchEvent(changeEvent);
+                
+                console.log('Vehicle type select in modal updated:', '{{ vehicle_type.get_name_display }}');
+            }
+            
+            // Update any other type selects in the DOM
+            const allTypeSelects = document.querySelectorAll('select[name="vehicle_type"], #id_vehicle_type');
+            allTypeSelects.forEach(select => {
+                if (select !== vehicleModelTypeSelect) {
+                    const currentValue = select.value;
+                    select.innerHTML = html;
+                    // Restore previous selection or select new one
+                    select.value = currentValue || '{{ vehicle_type.id }}';
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error updating vehicle type options:', error);
+        });
+}
+
+// Close the vehicle type modal
+const vehicleTypeModal = bootstrap.Modal.getInstance(document.getElementById('vehicleTypeModal'));
+if (vehicleTypeModal) {
+    vehicleTypeModal.hide();
+    
+    // Wait for modal to close before updating
+    document.getElementById('vehicleTypeModal').addEventListener('hidden.bs.modal', function() {
+        updateVehicleTypeSelects();
+    }, { once: true });
+} else {
+    // If modal instance doesn't exist, update immediately
+    updateVehicleTypeSelects();
+}
+
+// Show success message
+function showTypeSuccessMessage() {
+    // Try to show in vehicle model modal first
+    const vehicleModelModal = document.getElementById('vehicleModelModal');
+    let alertContainer = null;
+    
+    if (vehicleModelModal && vehicleModelModal.classList.contains('show')) {
+        alertContainer = vehicleModelModal.querySelector('.modal-body');
+    } else {
+        // Fallback to main form container
+        alertContainer = document.querySelector('.vehicle-form-container, .form-container');
+    }
+    
+    if (alertContainer) {
+        const existingAlert = alertContainer.querySelector('.alert-success');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show mb-3';
+        alert.innerHTML = `
+            <span class="material-symbols-outlined me-2">check_circle</span>
+            Vehicle type "{{ vehicle_type.get_name_display }}" created successfully!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        alertContainer.insertBefore(alert, alertContainer.firstChild);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+}
+
+// Show success message after a short delay
+setTimeout(showTypeSuccessMessage, 100);
+</script>

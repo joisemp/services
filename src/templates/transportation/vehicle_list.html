@@ -1,0 +1,91 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Vehicle List{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/transportation/vehicle_list/vehicle_list.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+    {% include 'navbar/navbar_central_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="vehicle-list-container">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Vehicle Fleet</h1>
+            <a href="{% url 'transportation:vehicle_create' %}" class="btn btn-primary">
+                <span class="material-symbols-outlined me-2">add</span>
+                Add Vehicle
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input type="text" id="search" name="search" value="{{ search_query }}" 
+                       placeholder="Search by license plate, VIN, make, or model..."
+                       hx-get="{% url 'transportation:vehicle_list' %}"
+                       hx-target="#vehicle-list"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-include="[name='status'], [name='type']">
+            </div>
+        </div>
+        
+        <div class="filter-controls">
+            <select name="status" id="status" 
+                    hx-get="{% url 'transportation:vehicle_list' %}"
+                    hx-target="#vehicle-list"
+                    hx-include="[name='search'], [name='type']">
+                <option value="">All Statuses</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            
+            <select name="type" id="type" 
+                    hx-get="{% url 'transportation:vehicle_list' %}"
+                    hx-target="#vehicle-list"
+                    hx-include="[name='search'], [name='status']">
+                <option value="">All Types</option>
+                {% for vehicle_type in vehicle_types %}
+                    <option value="{{ vehicle_type.slug }}" {% if type_filter == vehicle_type.slug %}selected{% endif %}>
+                        {{ vehicle_type.get_name_display }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Vehicle List -->
+    <div id="vehicle-list">
+        {% include 'transportation/partials/vehicle_list_partial.html' %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus search input
+    document.getElementById('search').focus();
+});
+
+// Handle HTMX events
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful) {
+        // Re-initialize any JavaScript components if needed
+        console.log('Vehicle list updated');
+    }
+});
+</script>
+{% endblock scripts %}
