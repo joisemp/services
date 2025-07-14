@@ -1,0 +1,320 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Component Inspection - Transportation Management{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/transportation/maintenance_form/maintenance_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="inspection-form-container">
+    <!-- Page Header -->
+    <div class="form-header">
+        <div class="header-content">
+            <div class="header-info">
+                <div class="breadcrumb">
+                    <a href="{% url 'transportation:dashboard' %}">Transportation</a>
+                    <span class="separator">></span>
+                    <a href="{% url 'transportation:vehicle_detail' vehicle.slug %}">{{ vehicle.make }} {{ vehicle.model }}</a>
+                    <span class="separator">></span>
+                    <span class="current">Component Inspection</span>
+                </div>
+                <h1>Component Inspection</h1>
+                <p class="page-description">Record inspection results for {{ component.name }} on {{ vehicle.make }} {{ vehicle.model }}</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'transportation:vehicle_detail' vehicle.slug %}" class="btn btn-outline-secondary">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back to Vehicle
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Component Info -->
+    <div class="component-info-card">
+        <div class="component-header">
+            <div class="component-icon">
+                <span class="material-symbols-outlined">build</span>
+            </div>
+            <div class="component-details">
+                <h3>{{ component.name }}</h3>
+                <p class="component-meta">
+                    <span class="component-code">{{ component.part_number }}</span>
+                    <span class="component-category">{{ component.get_category_display }}</span>
+                </p>
+                <p class="component-description">{{ component.description|truncatewords:20 }}</p>
+            </div>
+        </div>
+        <div class="component-stats">
+            <div class="stat-item">
+                <span class="stat-label">Installation Date</span>
+                <span class="stat-value">{{ instance.installation_date|date:"M d, Y" }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Last Inspection</span>
+                <span class="stat-value">{{ instance.last_inspection_date|date:"M d, Y"|default:"Never" }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Status</span>
+                <span class="stat-value status-{{ instance.status }}">{{ instance.get_status_display }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection Form -->
+    <div class="form-content">
+        <form method="post" enctype="multipart/form-data" class="inspection-form" id="inspection-form">
+            {% csrf_token %}
+            
+            <!-- Inspection Details -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2>Inspection Details</h2>
+                    <p>Record the inspection findings and recommendations</p>
+                </div>
+                <div class="section-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.inspection_date.id_for_label }}">Inspection Date *</label>
+                            {{ form.inspection_date }}
+                            {% if form.inspection_date.errors %}
+                            <div class="error-message">{{ form.inspection_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.inspector.id_for_label }}">Inspector *</label>
+                            {{ form.inspector }}
+                            {% if form.inspector.errors %}
+                            <div class="error-message">{{ form.inspector.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.condition.id_for_label }}">Condition *</label>
+                            {{ form.condition }}
+                            {% if form.condition.errors %}
+                            <div class="error-message">{{ form.condition.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.next_inspection_due.id_for_label }}">Next Inspection Due</label>
+                            {{ form.next_inspection_due }}
+                            {% if form.next_inspection_due.errors %}
+                            <div class="error-message">{{ form.next_inspection_due.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inspection Results -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2>Inspection Results</h2>
+                    <p>Detailed findings and observations</p>
+                </div>
+                <div class="section-content">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.findings.id_for_label }}">Findings *</label>
+                            {{ form.findings }}
+                            {% if form.findings.errors %}
+                            <div class="error-message">{{ form.findings.errors.0 }}</div>
+                            {% endif %}
+                            <div class="field-help">Detailed description of inspection findings</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.recommendations.id_for_label }}">Recommendations</label>
+                            {{ form.recommendations }}
+                            {% if form.recommendations.errors %}
+                            <div class="error-message">{{ form.recommendations.errors.0 }}</div>
+                            {% endif %}
+                            <div class="field-help">Actions recommended based on inspection results</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files & Documentation -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2>Documentation</h2>
+                    <p>Upload photos and supporting documents</p>
+                </div>
+                <div class="section-content">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="{{ form.photos.id_for_label }}">Photos</label>
+                            {{ form.photos }}
+                            {% if form.photos.errors %}
+                            <div class="error-message">{{ form.photos.errors.0 }}</div>
+                            {% endif %}
+                            <div class="field-help">Upload photos of the component during inspection</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="{{ form.documents.id_for_label }}">Documents</label>
+                            {{ form.documents }}
+                            {% if form.documents.errors %}
+                            <div class="error-message">{{ form.documents.errors.0 }}</div>
+                            {% endif %}
+                            <div class="field-help">Upload relevant inspection documents or certificates</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <span class="material-symbols-outlined">save</span>
+                    Save Inspection
+                </button>
+                <a href="{% url 'transportation:vehicle_detail' vehicle.slug %}" class="btn btn-outline-secondary">
+                    <span class="material-symbols-outlined">cancel</span>
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'utils/transportation/transportation.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('inspection-form');
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let valid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                valid = false;
+                field.classList.add('error');
+            } else {
+                field.classList.remove('error');
+            }
+        });
+        
+        if (!valid) {
+            e.preventDefault();
+            showToast('Please fill in all required fields', 'error');
+        }
+    });
+    
+    // Real-time validation
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('error');
+            } else {
+                this.classList.remove('error');
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('error') && this.value.trim()) {
+                this.classList.remove('error');
+            }
+        });
+    });
+    
+    // Date validation
+    const inspectionDate = document.getElementById('id_inspection_date');
+    const nextInspectionDate = document.getElementById('id_next_inspection_due');
+    
+    if (inspectionDate) {
+        inspectionDate.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            
+            if (selectedDate > today) {
+                this.classList.add('error');
+                showToast('Inspection date cannot be in the future', 'error');
+            } else {
+                this.classList.remove('error');
+            }
+            
+            // Auto-set next inspection date (3 months from inspection date)
+            if (nextInspectionDate && !nextInspectionDate.value) {
+                const nextDate = new Date(selectedDate);
+                nextDate.setMonth(nextDate.getMonth() + 3);
+                nextInspectionDate.value = nextDate.toISOString().split('T')[0];
+            }
+        });
+    }
+    
+    if (nextInspectionDate) {
+        nextInspectionDate.addEventListener('change', function() {
+            const inspectionDateValue = inspectionDate ? new Date(inspectionDate.value) : new Date();
+            const selectedDate = new Date(this.value);
+            
+            if (selectedDate <= inspectionDateValue) {
+                this.classList.add('error');
+                showToast('Next inspection date must be after the current inspection date', 'error');
+            } else {
+                this.classList.remove('error');
+            }
+        });
+    }
+    
+    // Condition-based recommendations
+    const conditionSelect = document.getElementById('id_condition');
+    const recommendationsField = document.getElementById('id_recommendations');
+    
+    if (conditionSelect && recommendationsField) {
+        conditionSelect.addEventListener('change', function() {
+            const condition = this.value;
+            let suggestedRecommendations = '';
+            
+            switch (condition) {
+                case 'poor':
+                    suggestedRecommendations = 'Immediate replacement required. Component poses safety risk.';
+                    break;
+                case 'fair':
+                    suggestedRecommendations = 'Monitor closely. Schedule replacement within next service interval.';
+                    break;
+                case 'good':
+                    suggestedRecommendations = 'Continue regular maintenance schedule. No immediate action required.';
+                    break;
+                case 'excellent':
+                    suggestedRecommendations = 'Component in optimal condition. Maintain current maintenance schedule.';
+                    break;
+            }
+            
+            if (suggestedRecommendations && !recommendationsField.value) {
+                recommendationsField.value = suggestedRecommendations;
+            }
+        });
+    }
+    
+    // File upload handling
+    const fileInputs = form.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const files = this.files;
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            for (let file of files) {
+                if (file.size > maxSize) {
+                    this.classList.add('error');
+                    showToast('File size must be less than 5MB', 'error');
+                    this.value = '';
+                    break;
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

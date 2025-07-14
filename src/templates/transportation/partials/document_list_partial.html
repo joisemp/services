@@ -1,0 +1,86 @@
+<!-- Document List Partial -->
+<div class="documents-grid">
+    {% for document in documents %}
+    <div class="document-card" data-category="{{ document.category }}">
+        <div class="document-header">
+            <div class="document-icon">
+                {% if document.category == 'insurance' %}
+                <span class="material-symbols-outlined">security</span>
+                {% elif document.category == 'registration' %}
+                <span class="material-symbols-outlined">assignment</span>
+                {% elif document.category == 'maintenance' %}
+                <span class="material-symbols-outlined">build</span>
+                {% elif document.category == 'inspection' %}
+                <span class="material-symbols-outlined">fact_check</span>
+                {% else %}
+                <span class="material-symbols-outlined">description</span>
+                {% endif %}
+            </div>
+            <div class="document-title">
+                <h4>{{ document.name }}</h4>
+                <span class="document-category">{{ document.get_category_display }}</span>
+            </div>
+        </div>
+        
+        <div class="document-details">
+            <div class="detail-row">
+                <span class="label">Upload Date:</span>
+                <span class="value">{{ document.uploaded_at|date:"M d, Y" }}</span>
+            </div>
+            {% if document.expiry_date %}
+            <div class="detail-row">
+                <span class="label">Expires:</span>
+                <span class="value {% if document.is_expired %}text-danger{% elif document.expires_soon %}text-warning{% endif %}">
+                    {{ document.expiry_date|date:"M d, Y" }}
+                    {% if document.is_expired %}
+                    <span class="badge badge-danger">Expired</span>
+                    {% elif document.expires_soon %}
+                    <span class="badge badge-warning">Expires Soon</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if document.description %}
+            <div class="detail-row">
+                <span class="label">Description:</span>
+                <span class="value">{{ document.description|truncatewords:10 }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="document-actions">
+            <a href="{{ document.file.url }}" target="_blank" class="btn btn-outline-primary">
+                <span class="material-symbols-outlined">download</span>
+                Download
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="{{ document.file.url }}" target="_blank" class="dropdown-item">
+                        <span class="material-symbols-outlined">visibility</span>
+                        View
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <span class="material-symbols-outlined">edit</span>
+                        Edit
+                    </a>
+                    <a href="#" class="dropdown-item text-danger">
+                        <span class="material-symbols-outlined">delete</span>
+                        Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <span class="material-symbols-outlined">description</span>
+        </div>
+        <h3>No Documents Found</h3>
+        <p>No documents match your current filter criteria.</p>
+    </div>
+    {% endfor %}
+</div>

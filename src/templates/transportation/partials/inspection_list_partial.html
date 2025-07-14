@@ -1,0 +1,91 @@
+<!-- Inspection List Partial -->
+<div class="inspections-list">
+    {% for inspection in inspections %}
+    <div class="inspection-card" data-condition="{{ inspection.condition }}">
+        <div class="inspection-header">
+            <div class="inspection-icon">
+                {% if inspection.condition == 'excellent' %}
+                <span class="material-symbols-outlined text-success">check_circle</span>
+                {% elif inspection.condition == 'good' %}
+                <span class="material-symbols-outlined text-success">check</span>
+                {% elif inspection.condition == 'fair' %}
+                <span class="material-symbols-outlined text-warning">warning</span>
+                {% else %}
+                <span class="material-symbols-outlined text-danger">error</span>
+                {% endif %}
+            </div>
+            <div class="inspection-title">
+                <h4>{{ inspection.component.name }}</h4>
+                <span class="inspection-date">{{ inspection.inspection_date|date:"M d, Y" }}</span>
+            </div>
+            <div class="inspection-condition">
+                <span class="condition-badge condition-{{ inspection.condition }}">
+                    {{ inspection.get_condition_display }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="inspection-details">
+            <div class="detail-row">
+                <span class="label">Inspector:</span>
+                <span class="value">{{ inspection.inspector.get_full_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Component:</span>
+                <span class="value">{{ inspection.component.name }} ({{ inspection.component.part_number }})</span>
+            </div>
+            {% if inspection.next_inspection_due %}
+            <div class="detail-row">
+                <span class="label">Next Due:</span>
+                <span class="value {% if inspection.is_overdue %}text-danger{% elif inspection.due_soon %}text-warning{% endif %}">
+                    {{ inspection.next_inspection_due|date:"M d, Y" }}
+                    {% if inspection.is_overdue %}
+                    <span class="badge badge-danger">Overdue</span>
+                    {% elif inspection.due_soon %}
+                    <span class="badge badge-warning">Due Soon</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="label">Findings:</span>
+                <span class="value">{{ inspection.findings|truncatewords:15 }}</span>
+            </div>
+        </div>
+        
+        <div class="inspection-actions">
+            <button class="btn btn-outline-primary" data-inspection-id="{{ inspection.id }}" data-action="view-details">
+                <span class="material-symbols-outlined">visibility</span>
+                View Details
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item">
+                        <span class="material-symbols-outlined">edit</span>
+                        Edit
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <span class="material-symbols-outlined">content_copy</span>
+                        Duplicate
+                    </a>
+                    <a href="#" class="dropdown-item text-danger">
+                        <span class="material-symbols-outlined">delete</span>
+                        Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <span class="material-symbols-outlined">fact_check</span>
+        </div>
+        <h3>No Inspections Found</h3>
+        <p>No inspections match your current filter criteria.</p>
+    </div>
+    {% endfor %}
+</div>

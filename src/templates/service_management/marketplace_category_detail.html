@@ -1,0 +1,309 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{{ category.name }} - Service Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .category-info {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .professionals-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .professional-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .professional-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .professional-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .professional-contact {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    
+    .skill-badge {
+        background: #e3f2fd;
+        color: #1565c0;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+    
+    .btn-primary-custom {
+        background: #667eea;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: background 0.3s ease;
+    }
+    
+    .btn-primary-custom:hover {
+        background: #5a67d8;
+    }
+    
+    .back-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        color: #5a67d8;
+        text-decoration: underline;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .user-skill-status {
+        background: #d4edda;
+        color: #155724;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .no-professionals {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb text-white-50">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'service_management:marketplace' %}" class="text-white">Marketplace</a>
+                </li>
+                <li class="breadcrumb-item active text-white">{{ category.name }}</li>
+            </ol>
+        </nav>
+        <h1 class="mb-2">{{ category.name }}</h1>
+        <p class="mb-0">Service Details and Available Professionals</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Category Information -->
+    <div class="category-info">
+        <div class="row">
+            <div class="col-md-8">
+                <h2>Service Description</h2>
+                <p class="lead">
+                    {{ category.description|default:"No description available for this service category." }}
+                </p>
+                
+                {% if user_has_skill %}
+                <div class="user-skill-status">
+                    <i class="fas fa-check-circle me-2"></i>
+                    You have skills in this category
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ skilled_users.count }}</div>
+                        <div class="stat-label">Skilled Professional{{ skilled_users.count|pluralize }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Professionals -->
+    <div class="professionals-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Available Professionals</h2>
+            <a href="{% url 'service_management:marketplace_request_service' category.slug %}" 
+               class="btn btn-primary-custom">
+                <i class="fas fa-plus me-2"></i>Request Service
+            </a>
+        </div>
+        
+        {% if skilled_users %}
+            <div class="row">
+                {% for professional in skilled_users %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="professional-card">
+                            <div class="professional-name">
+                                {{ professional.first_name }} {{ professional.last_name }}
+                            </div>
+                            <div class="professional-contact">
+                                {% if professional.user.email %}
+                                    <i class="fas fa-envelope me-2"></i>{{ professional.user.email }}
+                                {% endif %}
+                                {% if professional.user.phone %}
+                                    <br><i class="fas fa-phone me-2"></i>{{ professional.user.phone }}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <strong>Skills:</strong><br>
+                                {% for skill in professional.skills.all %}
+                                    <span class="skill-badge">{{ skill.name }}</span>
+                                {% empty %}
+                                    <span class="text-muted">No skills listed</span>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        onclick="requestFromProfessional('{{ professional.slug }}', '{{ professional.first_name }} {{ professional.last_name }}')">
+                                    Request Service
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-professionals">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h3>No professionals available</h3>
+                <p>There are currently no skilled professionals available for this service category.</p>
+                <a href="{% url 'service_management:marketplace' %}" class="btn btn-outline-primary">
+                    Browse Other Services
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'service_management:marketplace' %}" class="back-link">
+                <i class="fas fa-arrow-left me-2"></i>Back to Marketplace
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Request Service Modal -->
+<div class="modal fade" id="requestServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Request service from <strong id="professionalName"></strong>?</p>
+                <form id="serviceRequestForm">
+                    <div class="mb-3">
+                        <label for="requestDescription" class="form-label">Describe your request:</label>
+                        <textarea class="form-control" id="requestDescription" rows="3" 
+                                  placeholder="Please describe what you need help with..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="urgency" class="form-label">Urgency Level:</label>
+                        <select class="form-select" id="urgency">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitServiceRequest()">
+                    Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedProfessional = null;
+
+function requestFromProfessional(professionalSlug, professionalName) {
+    selectedProfessional = professionalSlug;
+    document.getElementById('professionalName').textContent = professionalName;
+    new bootstrap.Modal(document.getElementById('requestServiceModal')).show();
+}
+
+function submitServiceRequest() {
+    const description = document.getElementById('requestDescription').value;
+    const urgency = document.getElementById('urgency').value;
+    
+    if (!description.trim()) {
+        alert('Please describe your request');
+        return;
+    }
+    
+    // Here you would typically send an AJAX request to submit the service request
+    // For now, we'll just show a success message and redirect
+    
+    alert('Service request submitted successfully!');
+    window.location.href = "{% url 'service_management:marketplace_request_service' category.slug %}";
+}
+</script>
+{% endblock %}

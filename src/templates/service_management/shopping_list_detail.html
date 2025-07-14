@@ -1,0 +1,216 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}{{ shopping_list.name }} - Shopping List{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-info-circle me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h2 class="h5 mb-1">{{ shopping_list.name }}</h2>
+                    <span class="badge bg-secondary me-2">{{ shopping_list.get_priority_display }} Priority</span>
+                </div>
+                <span class="badge 
+                    {% if shopping_list.status == 'draft' %}bg-light text-dark
+                    {% elif shopping_list.status == 'pending' %}bg-warning text-dark
+                    {% elif shopping_list.status == 'approved' %}bg-success
+                    {% elif shopping_list.status == 'rejected' %}bg-danger
+                    {% elif shopping_list.status == 'purchase_created' %}bg-info text-dark
+                    {% endif %}">
+                    {{ shopping_list.get_status_display }}
+                </span>
+            </div>
+            <p class="mb-2 text-muted">{{ shopping_list.description|default:"No description provided." }}</p>
+            <div class="row text-center mb-3">
+                <div class="col">
+                    <div class="fw-bold">{{ items.count }}</div>
+                    <small class="text-muted">Total Items</small>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">${{ estimated_total|floatformat:2 }}</div>
+                    <small class="text-muted">Estimated Total</small>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">
+                        {% if shopping_list.budget_limit %}
+                            ${{ shopping_list.budget_limit|floatformat:2 }}
+                        {% else %}
+                            No Limit
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Budget Limit</small>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">{{ shopping_list.created_at|date:"M d, Y" }}</div>
+                    <small class="text-muted">Created Date</small>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <small class="text-muted">Created by:</small> {{ shopping_list.created_by.profile.first_name }} {{ shopping_list.created_by.profile.last_name }}
+                    {% if shopping_list.approved_by %}
+                        <br><small class="text-muted">Approved by:</small> {{ shopping_list.approved_by.profile.first_name }} {{ shopping_list.approved_by.profile.last_name }}
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    {% if shopping_list.status == 'draft' and can_edit %}
+                        <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
+                        {% if shopping_list.items.exists %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" name="action" value="submit_for_approval" class="btn btn-success btn-sm">Submit for Approval</button>
+                            </form>
+                        {% endif %}
+                    {% elif shopping_list.status == 'rejected' and can_edit %}
+                        <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
+                        {% if shopping_list.items.exists %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" name="action" value="submit_for_approval" class="btn btn-success btn-sm">Resubmit for Approval</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                    {% if shopping_list.status == 'pending' and can_approve %}
+                        <a href="{% url 'service_management:approve_shopping_list' shopping_list.slug %}" class="btn btn-warning btn-sm">Review & Approve</a>
+                    {% endif %}
+                    {% if shopping_list.status == 'approved' or shopping_list.status == 'purchase_created' and has_remaining_items %}
+                        <a href="{% url 'service_management:create_purchase' shopping_list.slug %}" class="btn btn-success btn-sm">Create Purchase Order</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if shopping_list.status == 'pending' %}
+        <div class="alert alert-info">Pending Approval: This shopping list is waiting for approval from an administrator.</div>
+    {% elif shopping_list.status == 'rejected' %}
+        <div class="alert alert-danger">Rejected: This shopping list has been rejected and can be edited and resubmitted.</div>
+    {% elif shopping_list.status == 'approved' %}
+        <div class="alert alert-success">
+            Approved: This shopping list has been approved and is ready for purchase order creation.
+            <div class="mt-2">
+                <span class="text-muted">You can now create purchase orders for different suppliers, specifying which items to buy from each.</span>
+            </div>
+        </div>
+    {% elif shopping_list.status == 'purchase_created' %}
+        <div class="alert alert-info">
+            Purchase Order Created: One or more purchase orders have been created from this shopping list.
+            {% if shopping_list.purchases.exists %}
+                <div class="mt-2">
+                    <strong>Created purchase orders:</strong>
+                    {% for purchase in shopping_list.purchases.all %}
+                        <a href="{% url 'service_management:purchase_detail' purchase.slug %}" class="badge bg-secondary text-white text-decoration-none me-1">{{ purchase.purchase_id }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% if has_remaining_items %}
+                <div class="mt-2">
+                    <a href="{% url 'service_management:create_purchase' shopping_list.slug %}" class="btn btn-sm btn-outline-success">Create Another Purchase Order</a>
+                    <small class="text-muted d-block mt-1">Some items still have remaining quantities available for purchase.</small>
+                </div>
+            {% else %}
+                <div class="mt-2">
+                    <small class="text-muted">All items in this shopping list have been fully included in purchase orders.</small>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 mb-0">Items ({{ items.count }})</h3>
+                {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
+                    <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Item</a>
+                {% endif %}
+            </div>
+            {% if items %}
+                {% for item in items %}
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="fw-bold">{{ item.item_name }}</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="text-success">{% if item.estimated_cost %}${{ item.estimated_cost|floatformat:2 }}{% else %}<span class="text-muted">No cost estimate</span>{% endif %}</div>
+                                    {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
+                                        <a href="{% url 'service_management:edit_shopping_list_item' shopping_list.slug item.slug %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if item.description %}
+                                <div class="text-muted small mb-1">{{ item.description }}</div>
+                            {% endif %}
+                            <div class="d-flex flex-wrap gap-3 small text-muted mb-1">
+                                <span>Qty: {{ item.quantity }}</span>
+                                {% if item.estimated_cost %}
+                                    <span>Unit price: ${{ item|unit_cost }}</span>
+                                    <span>Total: ${{ item.estimated_cost|floatformat:2 }}</span>
+                                {% endif %}
+                                {% if item.category %}<span>{{ item.category.name }}</span>{% endif %}
+                                {% if item.supplier %}<span>{{ item.supplier }}</span>{% endif %}
+                                <span>Added {{ item.created_at|date:"M d, Y" }}</span>
+                            </div>
+                            {% if item.notes %}
+                                <div class="small"><strong>Notes:</strong> {{ item.notes }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-5">
+                    <div class="mb-2"><i class="fas fa-shopping-cart fa-2x"></i></div>
+                    <div>No items in this shopping list</div>
+                    {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
+                        <div class="mt-2">
+                            <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-primary btn-sm">Add First Item</a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if status_history %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="h6 mb-3">Status History</h3>
+                {% for history in status_history %}
+                    <div class="border-start border-primary ps-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ history.get_old_status_display }} → {{ history.get_new_status_display }}</strong>
+                                <small class="text-muted d-block">
+                                    by {{ history.changed_by.profile.first_name }} {{ history.changed_by.profile.last_name }}
+                                    on {{ history.created_at|date:"M d, Y g:i A" }}
+                                </small>
+                            </div>
+                        </div>
+                        {% if history.comment %}
+                            <div class="mt-2 text-muted">
+                                <em>"{{ history.comment }}"</em>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <a href="{% url 'service_management:shopping_list_list' %}" class="btn btn-link"><i class="fas fa-arrow-left me-2"></i>Back to Shopping Lists</a>
+    </div>
+</div>
+{% endblock %}
