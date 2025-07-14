@@ -5,6 +5,7 @@ from django.utils.text import slugify
 from django.core.validators import RegexValidator
 from django.urls import reverse
 from config.utils import generate_unique_slug
+from core.models import Organisation
 
 
 class VehicleType(models.Model):
@@ -22,7 +23,8 @@ class VehicleType(models.Model):
         ('other', 'Other'),
     ]
     
-    name = models.CharField(max_length=50, choices=TYPE_CHOICES, unique=True)
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_types')
+    name = models.CharField(max_length=50, choices=TYPE_CHOICES)
     description = models.TextField(blank=True, null=True)
     slug = models.SlugField(unique=True, db_index=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,22 +32,24 @@ class VehicleType(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.get_name_display())
+            base_slug = slugify(f"{self.organisation.code}-{self.get_name_display()}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['name']
+        ordering = ['organisation', 'name']
+        unique_together = ['organisation', 'name']
         verbose_name = 'Vehicle Type'
         verbose_name_plural = 'Vehicle Types'
     
     def __str__(self):
-        return self.get_name_display()
+        return f"{self.organisation.name} - {self.get_name_display()}"
 
 
 class VehicleMake(models.Model):
     """Model to store vehicle manufacturers/makes"""
-    name = models.CharField(max_length=100, unique=True)
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_makes')
+    name = models.CharField(max_length=100)
     country = models.CharField(max_length=100, blank=True, null=True)
     founded_year = models.IntegerField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
@@ -55,21 +59,23 @@ class VehicleMake(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.name)
+            base_slug = slugify(f"{self.organisation.code}-{self.name}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['name']
+        ordering = ['organisation', 'name']
+        unique_together = ['organisation', 'name']
         verbose_name = 'Vehicle Make'
         verbose_name_plural = 'Vehicle Makes'
     
     def __str__(self):
-        return self.name
+        return f"{self.organisation.name} - {self.name}"
 
 
 class VehicleModel(models.Model):
     """Model to store specific vehicle models"""
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_models')
     make = models.ForeignKey(VehicleMake, on_delete=models.CASCADE, related_name='models')
     name = models.CharField(max_length=100)
     vehicle_type = models.ForeignKey(VehicleType, on_delete=models.CASCADE, related_name='models')
@@ -82,13 +88,13 @@ class VehicleModel(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.make.name}-{self.name}")
+            base_slug = slugify(f"{self.organisation.code}-{self.make.name}-{self.name}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['make__name', 'name']
-        unique_together = ['make', 'name']
+        ordering = ['organisation', 'make__name', 'name']
+        unique_together = ['organisation', 'make', 'name']
         verbose_name = 'Vehicle Model'
         verbose_name_plural = 'Vehicle Models'
     
@@ -127,10 +133,10 @@ class Vehicle(models.Model):
     ]
     
     # Basic Information
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicles')
     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name='vehicles')
     license_plate = models.CharField(
-        max_length=20, 
-        unique=True,
+        max_length=20,
         validators=[RegexValidator(
             regex=r'^[A-Z0-9\-\s]+$',
             message='License plate can only contain letters, numbers, hyphens, and spaces'
@@ -186,12 +192,13 @@ class Vehicle(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.vehicle_model.make.name}-{self.vehicle_model.name}-{self.license_plate}")
+            base_slug = slugify(f"{self.organisation.code}-{self.vehicle_model.make.name}-{self.vehicle_model.name}-{self.license_plate}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['organisation', '-created_at']
+        unique_together = ['organisation', 'license_plate']
         verbose_name = 'Vehicle'
         verbose_name_plural = 'Vehicles'
     
@@ -239,6 +246,7 @@ class VehicleDocument(models.Model):
         ('other', 'Other'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_documents')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
     title = models.CharField(max_length=200)
@@ -251,12 +259,12 @@ class VehicleDocument(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.vehicle.license_plate}-{self.title}")
+            base_slug = slugify(f"{self.organisation.code}-{self.vehicle.license_plate}-{self.title}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['organisation', '-created_at']
         verbose_name = 'Vehicle Document'
         verbose_name_plural = 'Vehicle Documents'
     
@@ -285,6 +293,7 @@ class MaintenanceRecord(models.Model):
         ('other', 'Other'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='maintenance_records')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='maintenance_records')
     maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPES)
     date = models.DateField()
@@ -301,12 +310,12 @@ class MaintenanceRecord(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.vehicle.license_plate}-{self.get_maintenance_type_display()}-{self.date}")
+            base_slug = slugify(f"{self.organisation.code}-{self.vehicle.license_plate}-{self.get_maintenance_type_display()}-{self.date}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['-date']
+        ordering = ['organisation', '-date']
         verbose_name = 'Maintenance Record'
         verbose_name_plural = 'Maintenance Records'
     
@@ -338,6 +347,7 @@ class VehicleComponent(models.Model):
         ('other', 'Other'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_components')
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=COMPONENT_CATEGORIES)
     description = models.TextField(blank=True, null=True)
@@ -348,13 +358,13 @@ class VehicleComponent(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.name}-{self.get_category_display()}")
+            base_slug = slugify(f"{self.organisation.code}-{self.name}-{self.get_category_display()}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['category', 'name']
-        unique_together = ['name', 'category']
+        ordering = ['organisation', 'category', 'name']
+        unique_together = ['organisation', 'name', 'category']
         verbose_name = 'Vehicle Component'
         verbose_name_plural = 'Vehicle Components'
     
@@ -374,6 +384,7 @@ class VehicleComponentInstance(models.Model):
         ('removed', 'Removed'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_component_instances')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='component_instances')
     component = models.ForeignKey(VehicleComponent, on_delete=models.CASCADE, related_name='instances')
     serial_number = models.CharField(max_length=100, blank=True, null=True)
@@ -397,7 +408,7 @@ class VehicleComponentInstance(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.vehicle.license_plate}-{self.component.name}-{self.pk or 'new'}")
+            base_slug = slugify(f"{self.organisation.code}-{self.vehicle.license_plate}-{self.component.name}-{self.pk or 'new'}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
@@ -421,7 +432,7 @@ class VehicleComponentInstance(models.Model):
         return None
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['organisation', '-created_at']
         verbose_name = 'Vehicle Component Instance'
         verbose_name_plural = 'Vehicle Component Instances'
     
@@ -444,6 +455,7 @@ class VehicleChangeLog(models.Model):
         ('other', 'Other'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='vehicle_change_logs')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='change_logs')
     component_instance = models.ForeignKey(VehicleComponentInstance, on_delete=models.CASCADE, related_name='change_logs', blank=True, null=True)
     change_type = models.CharField(max_length=30, choices=CHANGE_TYPES)
@@ -462,12 +474,12 @@ class VehicleChangeLog(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.vehicle.license_plate}-{self.get_change_type_display()}-{self.created_at or timezone.now()}")
+            base_slug = slugify(f"{self.organisation.code}-{self.vehicle.license_plate}-{self.get_change_type_display()}-{self.created_at or timezone.now()}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['organisation', '-created_at']
         verbose_name = 'Vehicle Change Log'
         verbose_name_plural = 'Vehicle Change Logs'
     
@@ -484,6 +496,7 @@ class ComponentInspection(models.Model):
         ('critical', 'Critical - Immediate Action Required'),
     ]
     
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='component_inspections')
     component_instance = models.ForeignKey(VehicleComponentInstance, on_delete=models.CASCADE, related_name='inspections')
     inspection_date = models.DateField()
     inspector = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
@@ -514,12 +527,12 @@ class ComponentInspection(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.component_instance.vehicle.license_plate}-{self.component_instance.component.name}-inspection-{self.inspection_date}")
+            base_slug = slugify(f"{self.organisation.code}-{self.component_instance.vehicle.license_plate}-{self.component_instance.component.name}-inspection-{self.inspection_date}")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
     
     class Meta:
-        ordering = ['-inspection_date']
+        ordering = ['organisation', '-inspection_date']
         verbose_name = 'Component Inspection'
         verbose_name_plural = 'Component Inspections'
     

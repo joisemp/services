@@ -23,27 +23,58 @@ from .forms import (
 @login_required
 def transportation_dashboard(request):
     """Dashboard view for transportation management"""
-    # Get summary statistics
-    total_vehicles = Vehicle.objects.count()
-    active_vehicles = Vehicle.objects.filter(status='active').count()
-    maintenance_due = Vehicle.objects.filter(
-        next_service_due__lte=timezone.now().date()
-    ).count()
-    insurance_expiring = Vehicle.objects.filter(
-        insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)
-    ).count()
+    user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
     
-    # Recent maintenance records
-    recent_maintenance = MaintenanceRecord.objects.select_related(
-        'vehicle', 'performed_by'
-    ).order_by('-date')[:5]
-    
-    # Vehicles needing attention
-    vehicles_needing_attention = Vehicle.objects.filter(
-        Q(next_service_due__lte=timezone.now().date()) |
-        Q(insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)) |
-        Q(registration_expiry__lte=timezone.now().date() + timezone.timedelta(days=30))
-    ).select_related('vehicle_model__make')[:10]
+    # Get summary statistics filtered by organisation
+    if user_organisation:
+        total_vehicles = Vehicle.objects.filter(organisation=user_organisation).count()
+        active_vehicles = Vehicle.objects.filter(organisation=user_organisation, status='active').count()
+        maintenance_due = Vehicle.objects.filter(
+            organisation=user_organisation,
+            next_service_due__lte=timezone.now().date()
+        ).count()
+        insurance_expiring = Vehicle.objects.filter(
+            organisation=user_organisation,
+            insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)
+        ).count()
+        
+        # Recent maintenance records
+        recent_maintenance = MaintenanceRecord.objects.filter(
+            organisation=user_organisation
+        ).select_related(
+            'vehicle', 'performed_by'
+        ).order_by('-date')[:5]
+        
+        # Vehicles needing attention
+        vehicles_needing_attention = Vehicle.objects.filter(
+            organisation=user_organisation
+        ).filter(
+            Q(next_service_due__lte=timezone.now().date()) |
+            Q(insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)) |
+            Q(registration_expiry__lte=timezone.now().date() + timezone.timedelta(days=30))
+        ).select_related('vehicle_model__make')[:10]
+    else:
+        # Fallback for users without organisation
+        total_vehicles = Vehicle.objects.count()
+        active_vehicles = Vehicle.objects.filter(status='active').count()
+        maintenance_due = Vehicle.objects.filter(
+            next_service_due__lte=timezone.now().date()
+        ).count()
+        insurance_expiring = Vehicle.objects.filter(
+            insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)
+        ).count()
+        
+        # Recent maintenance records
+        recent_maintenance = MaintenanceRecord.objects.select_related(
+            'vehicle', 'performed_by'
+        ).order_by('-date')[:5]
+        
+        # Vehicles needing attention
+        vehicles_needing_attention = Vehicle.objects.filter(
+            Q(next_service_due__lte=timezone.now().date()) |
+            Q(insurance_expiry__lte=timezone.now().date() + timezone.timedelta(days=30)) |
+            Q(registration_expiry__lte=timezone.now().date() + timezone.timedelta(days=30))
+        ).select_related('vehicle_model__make')[:10]
     
     context = {
         'total_vehicles': total_vehicles,
@@ -60,9 +91,15 @@ def transportation_dashboard(request):
 @login_required
 def vehicle_list(request):
     """List all vehicles with filtering and search"""
+    user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+    
+    # Filter vehicles by organisation
     vehicles = Vehicle.objects.select_related(
         'vehicle_model__make', 'owner', 'assigned_to'
     ).order_by('-created_at')
+    
+    if user_organisation:
+        vehicles = vehicles.filter(organisation=user_organisation)
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -89,8 +126,11 @@ def vehicle_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get filter options
-    vehicle_types = VehicleType.objects.all()
+    # Get filter options filtered by organisation
+    if user_organisation:
+        vehicle_types = VehicleType.objects.filter(organisation=user_organisation)
+    else:
+        vehicle_types = VehicleType.objects.all()
     status_choices = Vehicle.STATUS_CHOICES
     
     context = {
@@ -146,7 +186,11 @@ def vehicle_create(request):
     if request.method == 'POST':
         form = VehicleForm(request.POST)
         if form.is_valid():
-            vehicle = form.save()
+            vehicle = form.save(commit=False)
+            # Set organisation from user profile
+            if hasattr(request.user, 'profile') and request.user.profile.org:
+                vehicle.organisation = request.user.profile.org
+            vehicle.save()
             messages.success(request, f'Vehicle {vehicle.license_plate} created successfully!')
             
             if request.headers.get('HX-Request'):
@@ -157,6 +201,11 @@ def vehicle_create(request):
             return redirect('transportation:vehicle_detail', slug=vehicle.slug)
     else:
         form = VehicleForm()
+        # Pre-populate form with user's organisation context
+        if hasattr(request.user, 'profile') and request.user.profile.org:
+            form.fields['vehicle_model'].queryset = VehicleModel.objects.filter(
+                organisation=request.user.profile.org
+            )
     
     context = {'form': form}
     
@@ -299,6 +348,9 @@ def maintenance_create(request, vehicle_slug=None):
             try:
                 maintenance = form.save(commit=False)
                 maintenance.performed_by = request.user
+                # Set organisation from user profile
+                if hasattr(request.user, 'profile') and request.user.profile.org:
+                    maintenance.organisation = request.user.profile.org
                 # Ensure vehicle is set if pre-selected
                 if vehicle:
                     maintenance.vehicle = vehicle
@@ -325,6 +377,12 @@ def maintenance_create(request, vehicle_slug=None):
         if vehicle:
             initial_data['vehicle'] = vehicle.pk
         form = MaintenanceRecordForm(initial=initial_data)
+        
+        # Filter vehicles by user's organisation
+        if hasattr(request.user, 'profile') and request.user.profile.org:
+            form.fields['vehicle'].queryset = Vehicle.objects.filter(
+                organisation=request.user.profile.org
+            )
     
     context = {'form': form, 'vehicle': vehicle}
     
@@ -402,6 +460,9 @@ def document_create(request, vehicle_slug):
         if form.is_valid():
             document = form.save(commit=False)
             document.vehicle = vehicle
+            # Set organisation from user profile
+            if hasattr(request.user, 'profile') and request.user.profile.org:
+                document.organisation = request.user.profile.org
             document.save()
             messages.success(request, 'Document uploaded successfully!')
             
@@ -425,7 +486,12 @@ def document_create(request, vehicle_slug):
 @login_required
 def component_list(request):
     """List vehicle components"""
+    user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+    
+    # Filter components by organisation
     components = VehicleComponent.objects.order_by('category', 'name')
+    if user_organisation:
+        components = components.filter(organisation=user_organisation)
     
     # Filter by category
     category_filter = request.GET.get('category', '')
@@ -490,6 +556,9 @@ def inspection_create(request, instance_slug):
             inspection = form.save(commit=False)
             inspection.component_instance = instance
             inspection.inspector = request.user
+            # Set organisation from user profile
+            if hasattr(request.user, 'profile') and request.user.profile.org:
+                inspection.organisation = request.user.profile.org
             inspection.save()
             messages.success(request, 'Inspection record created successfully!')
             
@@ -513,9 +582,15 @@ def inspection_create(request, instance_slug):
 @login_required
 def vehicle_model_list(request):
     """List vehicle models"""
+    user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+    
+    # Filter models by organisation
     models = VehicleModel.objects.select_related(
         'make', 'vehicle_type'
     ).order_by('make__name', 'name')
+    
+    if user_organisation:
+        models = models.filter(organisation=user_organisation)
     
     # Filter by make
     make_filter = request.GET.get('make', '')
@@ -540,9 +615,13 @@ def vehicle_model_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get filter options
-    makes = VehicleMake.objects.all().order_by('name')
-    vehicle_types = VehicleType.objects.all()
+    # Get filter options filtered by organisation
+    if user_organisation:
+        makes = VehicleMake.objects.filter(organisation=user_organisation).order_by('name')
+        vehicle_types = VehicleType.objects.filter(organisation=user_organisation)
+    else:
+        makes = VehicleMake.objects.all().order_by('name')
+        vehicle_types = VehicleType.objects.all()
     
     context = {
         'page_obj': page_obj,
@@ -565,7 +644,11 @@ def vehicle_model_create(request):
     if request.method == 'POST':
         form = VehicleModelForm(request.POST)
         if form.is_valid():
-            model = form.save()
+            model = form.save(commit=False)
+            # Set organisation from user profile
+            if hasattr(request.user, 'profile') and request.user.profile.org:
+                model.organisation = request.user.profile.org
+            model.save()
             messages.success(request, f'Vehicle model {model.name} created successfully!')
             
             if request.headers.get('HX-Request'):
@@ -576,6 +659,14 @@ def vehicle_model_create(request):
             return redirect('transportation:vehicle_model_list')
     else:
         form = VehicleModelForm()
+        # Filter makes and types by user's organisation
+        if hasattr(request.user, 'profile') and request.user.profile.org:
+            form.fields['make'].queryset = VehicleMake.objects.filter(
+                organisation=request.user.profile.org
+            )
+            form.fields['vehicle_type'].queryset = VehicleType.objects.filter(
+                organisation=request.user.profile.org
+            )
     
     context = {'form': form}
     
@@ -592,7 +683,11 @@ def vehicle_model_create_ajax(request):
         form = QuickVehicleModelForm(request.POST)
         if form.is_valid():
             try:
-                vehicle_model = form.save()
+                vehicle_model = form.save(commit=False)
+                # Set organisation from user profile
+                if hasattr(request.user, 'profile') and request.user.profile.org:
+                    vehicle_model.organisation = request.user.profile.org
+                vehicle_model.save()
                 print(f"DEBUG: Vehicle model created successfully: {vehicle_model}")
                 
                 # Return JavaScript to update the select and close modal
@@ -610,6 +705,14 @@ def vehicle_model_create_ajax(request):
             return render(request, 'transportation/partials/vehicle_model_form.html', {'form': form})
     else:
         form = QuickVehicleModelForm()
+        # Filter makes and types by user's organisation
+        if hasattr(request.user, 'profile') and request.user.profile.org:
+            form.fields['make'].queryset = VehicleMake.objects.filter(
+                organisation=request.user.profile.org
+            )
+            form.fields['vehicle_type'].queryset = VehicleType.objects.filter(
+                organisation=request.user.profile.org
+            )
         return render(request, 'transportation/partials/vehicle_model_form.html', {'form': form})
 
 
@@ -617,6 +720,14 @@ def vehicle_model_create_ajax(request):
 def vehicle_model_form_modal(request):
     """Return the modal form for creating a new vehicle model"""
     form = QuickVehicleModelForm()
+    # Filter makes and types by user's organisation
+    if hasattr(request.user, 'profile') and request.user.profile.org:
+        form.fields['make'].queryset = VehicleMake.objects.filter(
+            organisation=request.user.profile.org
+        )
+        form.fields['vehicle_type'].queryset = VehicleType.objects.filter(
+            organisation=request.user.profile.org
+        )
     return render(request, 'transportation/partials/vehicle_model_modal.html', {'form': form})
 
 
@@ -627,7 +738,11 @@ def vehicle_make_create_ajax(request):
         form = QuickVehicleMakeForm(request.POST)
         if form.is_valid():
             try:
-                vehicle_make = form.save()
+                vehicle_make = form.save(commit=False)
+                # Set organisation from user profile
+                if hasattr(request.user, 'profile') and request.user.profile.org:
+                    vehicle_make.organisation = request.user.profile.org
+                vehicle_make.save()
                 print(f"DEBUG: Vehicle make created successfully: {vehicle_make}")
                 
                 # Return JavaScript to update the select and close modal
@@ -661,18 +776,33 @@ def vehicle_type_create_ajax(request):
     """Create a new vehicle type via HTMX"""
     if request.method == 'POST':
         print(f"DEBUG: POST request received with data: {request.POST}")
-        form = QuickVehicleTypeForm(request.POST)
+        user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+        form = QuickVehicleTypeForm(request.POST, organisation=user_organisation)
         print(f"DEBUG: Form created, is_valid: {form.is_valid()}")
         if form.is_valid():
             try:
-                # Check if this type already exists
-                existing_type = VehicleType.objects.filter(name=form.cleaned_data['name']).first()
+                # Check if this type already exists for the user's organisation
+                user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+                existing_type = None
+                if user_organisation:
+                    existing_type = VehicleType.objects.filter(
+                        name=form.cleaned_data['name'],
+                        organisation=user_organisation
+                    ).first()
+                else:
+                    existing_type = VehicleType.objects.filter(name=form.cleaned_data['name']).first()
+                
                 if existing_type:
                     print(f"DEBUG: Type already exists: {existing_type}")
                     form.add_error('name', 'This vehicle type already exists.')
                     
                     # Pass context for error case
-                    existing_types = VehicleType.objects.values_list('name', flat=True)
+                    if user_organisation:
+                        existing_types = VehicleType.objects.filter(
+                            organisation=user_organisation
+                        ).values_list('name', flat=True)
+                    else:
+                        existing_types = VehicleType.objects.values_list('name', flat=True)
                     available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
                     context = {
                         'form': form,
@@ -681,7 +811,11 @@ def vehicle_type_create_ajax(request):
                     }
                     return render(request, 'transportation/partials/vehicle_type_form.html', context)
                 
-                vehicle_type = form.save()
+                vehicle_type = form.save(commit=False)
+                # Set organisation from user profile
+                if user_organisation:
+                    vehicle_type.organisation = user_organisation
+                vehicle_type.save()
                 print(f"DEBUG: Vehicle type created successfully: {vehicle_type}")
                 
                 # Return JavaScript to update the select and close modal
@@ -697,7 +831,13 @@ def vehicle_type_create_ajax(request):
             print(f"DEBUG: Form errors: {form.errors}")
         
         # Return form with errors
-        existing_types = VehicleType.objects.values_list('name', flat=True)
+        user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+        if user_organisation:
+            existing_types = VehicleType.objects.filter(
+                organisation=user_organisation
+            ).values_list('name', flat=True)
+        else:
+            existing_types = VehicleType.objects.values_list('name', flat=True)
         available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
         context = {
             'form': form,
@@ -710,8 +850,21 @@ def vehicle_type_create_ajax(request):
         form = QuickVehicleTypeForm()
         print(f"DEBUG: Available choices: {form.fields['name'].widget.choices}")
         
-        existing_types = VehicleType.objects.values_list('name', flat=True)
+        user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+        if user_organisation:
+            existing_types = VehicleType.objects.filter(
+                organisation=user_organisation
+            ).values_list('name', flat=True)
+        else:
+            existing_types = VehicleType.objects.values_list('name', flat=True)
         available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
+        
+        # Update form choices to exclude existing types for this organisation
+        form.fields['name'].widget.choices = [('', 'Select vehicle type')] + available_choices
+        if not available_choices:
+            form.fields['name'].widget.choices = [('', 'All vehicle types are already created')]
+            form.fields['name'].widget.attrs['disabled'] = True
+        
         context = {
             'form': form,
             'has_available_types': len(available_choices) > 0,
@@ -723,10 +876,16 @@ def vehicle_type_create_ajax(request):
 @login_required
 def vehicle_type_form_modal(request):
     """Return the modal form for creating a new vehicle type"""
-    form = QuickVehicleTypeForm()
+    user_organisation = request.user.profile.org if hasattr(request.user, 'profile') else None
+    form = QuickVehicleTypeForm(organisation=user_organisation)
     
-    # Check if there are available types to create
-    existing_types = VehicleType.objects.values_list('name', flat=True)
+    # Check if there are available types to create for this organisation
+    if user_organisation:
+        existing_types = VehicleType.objects.filter(
+            organisation=user_organisation
+        ).values_list('name', flat=True)
+    else:
+        existing_types = VehicleType.objects.values_list('name', flat=True)
     available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
     has_available_types = len(available_choices) > 0
     

@@ -23,6 +23,7 @@ class VehicleForm(forms.ModelForm):
             'next_service_due', 'service_interval_km', 'notes', 'is_company_vehicle'
         ]
         widgets = {
+            'vehicle_model': forms.Select(attrs={'class': 'form-select'}),
             'license_plate': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter license plate'
@@ -219,6 +220,7 @@ class MaintenanceRecordForm(forms.ModelForm):
         ]
         widgets = {
             'vehicle': forms.Select(attrs={'class': 'form-select'}),
+            'vehicle': forms.Select(attrs={'class': 'form-select'}),
             'maintenance_type': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -260,6 +262,11 @@ class VehicleComponentForm(forms.ModelForm):
         model = VehicleComponent
         fields = ['name', 'category', 'description', 'is_critical']
         widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Component name'
+            }),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Component name'
@@ -434,9 +441,16 @@ class QuickVehicleTypeForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        organisation = kwargs.pop('organisation', None)
         super().__init__(*args, **kwargs)
+        
         # Get existing vehicle types to exclude them from choices
-        existing_types = VehicleType.objects.values_list('name', flat=True)
+        if organisation:
+            existing_types = VehicleType.objects.filter(
+                organisation=organisation
+            ).values_list('name', flat=True)
+        else:
+            existing_types = VehicleType.objects.values_list('name', flat=True)
         available_choices = [choice for choice in VehicleType.TYPE_CHOICES if choice[0] not in existing_types]
         
         self.fields['name'].widget.choices = [('', 'Select vehicle type')] + available_choices
