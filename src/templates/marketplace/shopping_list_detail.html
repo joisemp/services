@@ -67,7 +67,7 @@
                 </div>
                 <div class="d-flex gap-2">
                     {% if shopping_list.status == 'draft' and can_edit %}
-                        <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
+                        <a href="{% url 'marketplace:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
                         {% if shopping_list.items.exists %}
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
@@ -75,7 +75,7 @@
                             </form>
                         {% endif %}
                     {% elif shopping_list.status == 'rejected' and can_edit %}
-                        <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
+                        <a href="{% url 'marketplace:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Items</a>
                         {% if shopping_list.items.exists %}
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
@@ -84,10 +84,10 @@
                         {% endif %}
                     {% endif %}
                     {% if shopping_list.status == 'pending' and can_approve %}
-                        <a href="{% url 'service_management:approve_shopping_list' shopping_list.slug %}" class="btn btn-warning btn-sm">Review & Approve</a>
+                        <a href="{% url 'marketplace:approve_shopping_list' shopping_list.slug %}" class="btn btn-warning btn-sm">Review & Approve</a>
                     {% endif %}
                     {% if shopping_list.status == 'approved' or shopping_list.status == 'purchase_created' and has_remaining_items %}
-                        <a href="{% url 'service_management:create_purchase' shopping_list.slug %}" class="btn btn-success btn-sm">Create Purchase Order</a>
+                        <a href="{% url 'marketplace:create_purchase' shopping_list.slug %}" class="btn btn-success btn-sm">Create Purchase Order</a>
                     {% endif %}
                 </div>
             </div>
@@ -112,13 +112,13 @@
                 <div class="mt-2">
                     <strong>Created purchase orders:</strong>
                     {% for purchase in shopping_list.purchases.all %}
-                        <a href="{% url 'service_management:purchase_detail' purchase.slug %}" class="badge bg-secondary text-white text-decoration-none me-1">{{ purchase.purchase_id }}</a>
+                        <a href="{% url 'marketplace:purchase_detail' purchase.slug %}" class="badge bg-secondary text-white text-decoration-none me-1">{{ purchase.purchase_id }}</a>
                     {% endfor %}
                 </div>
             {% endif %}
             {% if has_remaining_items %}
                 <div class="mt-2">
-                    <a href="{% url 'service_management:create_purchase' shopping_list.slug %}" class="btn btn-sm btn-outline-success">Create Another Purchase Order</a>
+                    <a href="{% url 'marketplace:create_purchase' shopping_list.slug %}" class="btn btn-sm btn-outline-success">Create Another Purchase Order</a>
                     <small class="text-muted d-block mt-1">Some items still have remaining quantities available for purchase.</small>
                 </div>
             {% else %}
@@ -134,7 +134,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="h6 mb-0">Items ({{ items.count }})</h3>
                 {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
-                    <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Item</a>
+                    <a href="{% url 'marketplace:add_shopping_list_item' shopping_list.slug %}" class="btn btn-outline-primary btn-sm">Add Item</a>
                 {% endif %}
             </div>
             {% if items %}
@@ -146,7 +146,7 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="text-success">{% if item.estimated_cost %}${{ item.estimated_cost|floatformat:2 }}{% else %}<span class="text-muted">No cost estimate</span>{% endif %}</div>
                                     {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
-                                        <a href="{% url 'service_management:edit_shopping_list_item' shopping_list.slug item.slug %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <a href="{% url 'marketplace:edit_shopping_list_item' shopping_list.slug item.slug %}" class="btn btn-sm btn-outline-primary">Edit</a>
                                     {% endif %}
                                 </div>
                             </div>
@@ -175,7 +175,7 @@
                     <div>No items in this shopping list</div>
                     {% if shopping_list.status == 'draft' and can_edit or shopping_list.status == 'rejected' and can_edit %}
                         <div class="mt-2">
-                            <a href="{% url 'service_management:add_shopping_list_item' shopping_list.slug %}" class="btn btn-primary btn-sm">Add First Item</a>
+                            <a href="{% url 'marketplace:add_shopping_list_item' shopping_list.slug %}" class="btn btn-primary btn-sm">Add First Item</a>
                         </div>
                     {% endif %}
                 </div>
@@ -210,7 +210,7 @@
     {% endif %}
 
     <div class="mb-3">
-        <a href="{% url 'service_management:shopping_list_list' %}" class="btn btn-link"><i class="fas fa-arrow-left me-2"></i>Back to Shopping Lists</a>
+        <a href="{% url 'marketplace:shopping_list_list' %}" class="btn btn-link"><i class="fas fa-arrow-left me-2"></i>Back to Shopping Lists</a>
     </div>
 </div>
 {% endblock %}

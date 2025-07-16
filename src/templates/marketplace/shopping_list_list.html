@@ -80,7 +80,7 @@
                 {% if status_filter %}
                     <span class="badge bg-secondary ms-2">Status: {{ status_filter|title }}</span>
                 {% endif %}
-                <a href="{% url 'service_management:shopping_list_list' %}" class="btn btn-sm btn-outline-secondary ms-2">Clear All</a>
+                <a href="{% url 'marketplace:shopping_list_list' %}" class="btn btn-sm btn-outline-secondary ms-2">Clear All</a>
             </div>
             {% endif %}
         </div>
@@ -112,15 +112,15 @@
                                 <li><i class="fas fa-calendar me-2"></i>{{ list.created_at|date:"M d, Y" }}</li>
                             </ul>
                             <div class="d-flex gap-2">
-                                <a href="{% url 'service_management:shopping_list_detail' list.slug %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                <a href="{% url 'marketplace:shopping_list_detail' list.slug %}" class="btn btn-outline-primary btn-sm">View Details</a>
                                 {% if list.status == 'draft' or list.status == 'rejected' %}
-                                    <a href="{% url 'service_management:add_shopping_list_item' list.slug %}" class="btn btn-outline-success btn-sm">Add Items</a>
+                                    <a href="{% url 'marketplace:add_shopping_list_item' list.slug %}" class="btn btn-outline-success btn-sm">Add Items</a>
                                 {% endif %}
                                 {% if list.status == 'pending' and can_approve %}
-                                    <a href="{% url 'service_management:approve_shopping_list' list.slug %}" class="btn btn-warning btn-sm">Review</a>
+                                    <a href="{% url 'marketplace:approve_shopping_list' list.slug %}" class="btn btn-warning btn-sm">Review</a>
                                 {% endif %}
                                 {% if list.status == 'approved' %}
-                                    <a href="{% url 'service_management:create_purchase' list.slug %}" class="btn btn-success btn-sm">Create Purchase</a>
+                                    <a href="{% url 'marketplace:create_purchase' list.slug %}" class="btn btn-success btn-sm">Create Purchase</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -165,7 +165,7 @@
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
             <h3>No shopping lists found</h3>
             <p>No shopping lists match your current search criteria.</p>
-            <a href="{% url 'service_management:create_shopping_list' %}" class="btn btn-primary">Create New List</a>
+            <a href="{% url 'marketplace:create_shopping_list' %}" class="btn btn-primary">Create New List</a>
         </div>
     {% endif %}
 </div>

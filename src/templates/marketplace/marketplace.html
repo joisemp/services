@@ -67,8 +67,8 @@
 
         <!-- Actions -->
         <div class="text-center mb-4">
-            <a href="{% url 'service_management:create_shopping_list' %}" class="btn btn-primary me-2">New List</a>
-            <a href="{% url 'service_management:shopping_list_list' %}" class="btn btn-secondary">View Lists</a>
+            <a href="{% url 'marketplace:create_shopping_list' %}" class="btn btn-primary me-2">New List</a>
+            <a href="{% url 'marketplace:shopping_list_list' %}" class="btn btn-secondary">View Lists</a>
         </div>
 
         <!-- Recent Purchases -->
@@ -81,7 +81,7 @@
                     {% for purchase in recent_purchases %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><a href="{% url 'service_management:purchase_detail' purchase.slug %}">{{ purchase.purchase_id }}</a></strong> - {{ purchase.shopping_list.name }}<br>
+                                <strong><a href="{% url 'marketplace:purchase_detail' purchase.slug %}">{{ purchase.purchase_id }}</a></strong> - {{ purchase.shopping_list.name }}<br>
                                 <small>{{ purchase.created_at|date:"M d, Y" }} - ${{ purchase.total_amount|floatformat:2 }}</small>
                             </div>
                             <span class="purchase-status status-{{ purchase.status }}">{{ purchase.get_status_display }}</span>
@@ -94,7 +94,7 @@
                 <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
                 <h3>No recent purchases</h3>
                 <p>Create your first shopping list to get started!</p>
-                <a href="{% url 'service_management:create_shopping_list' %}" class="btn btn-primary">Create Shopping List</a>
+                <a href="{% url 'marketplace:create_shopping_list' %}" class="btn btn-primary">Create Shopping List</a>
             </div>
         {% endif %}
     {% else %}

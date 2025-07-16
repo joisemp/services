@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import WorkCategory, ShoppingList, ShoppingListItem, ShoppingListStatusHistory, Spaces, SpaceSettings
+from .models import WorkCategory, Spaces, SpaceSettings
 
 # Register your models here.
 
