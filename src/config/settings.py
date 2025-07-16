@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'dashboard.apps.DashboardConfig',
     'service_management.apps.ServiceManagementConfig',
     'transportation.apps.TransportationConfig',
+    'marketplace.apps.MarketplaceConfig',
 ]
 
 MIDDLEWARE = [
