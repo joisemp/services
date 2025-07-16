@@ -18,7 +18,7 @@ from decimal import Decimal
 
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
-from .models import WorkCategory, ShoppingList, ShoppingListItem, Purchase, PurchaseItem, ShoppingListStatusHistory
+from .models import WorkCategory, ShoppingList, ShoppingListItem, Purchase, PurchaseItem, ShoppingListStatusHistory, Spaces, SpaceSettings
 from config.helpers import is_central_admin
 
 def can_manage_purchases(user):
@@ -787,4 +787,181 @@ def render_purchase_form_with_errors(request, shopping_list, available_items, pu
         'form_errors': True,  # Flag to indicate there were errors
     }
     return render(request, 'service_management/create_multi_shop_purchase.html', context)
+
+# Spaces Management Views
+@login_required
+@user_passes_test(is_central_admin)
+def spaces_list(request):
+    """List all spaces for central admin"""
+    # Get the organisation(s) managed by this central admin
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    # Get all spaces in these organisations
+    spaces = Spaces.objects.filter(org__in=orgs).select_related('org').prefetch_related('space_admins')
+    
+    # Add search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        spaces = spaces.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(spaces, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'spaces': page_obj,
+        'search_query': search_query,
+        'orgs': orgs,
+    }
+    return render(request, 'service_management/spaces_list.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def space_detail(request, slug):
+    """View details of a specific space"""
+    # Get the organisation(s) managed by this central admin
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    
+    context = {
+        'space': space,
+        'settings': space.settings,
+        'admin_count': space.get_admin_count(),
+    }
+    return render(request, 'service_management/space_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def create_space(request):
+    """Create a new space"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        org_id = request.POST.get('org')
+        
+        if name and org_id:
+            try:
+                org = orgs.get(id=org_id)
+                space = Spaces.objects.create(
+                    name=name,
+                    description=description,
+                    org=org,
+                    created_by=request.user
+                )
+                messages.success(request, f'Space "{space.name}" created successfully!')
+                return redirect('service_management:space_detail', slug=space.slug)
+            except Organisation.DoesNotExist:
+                messages.error(request, 'Invalid organisation selected.')
+            except Exception as e:
+                messages.error(request, f'Error creating space: {str(e)}')
+    
+    context = {
+        'orgs': orgs,
+    }
+    return render(request, 'service_management/create_space.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def edit_space(request, slug):
+    """Edit an existing space"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        is_access_enabled = request.POST.get('is_access_enabled') == 'on'
+        require_approval = request.POST.get('require_approval') == 'on'
+        
+        if name:
+            space.name = name
+            space.description = description
+            space.is_access_enabled = is_access_enabled
+            space.require_approval = require_approval
+            space.save()
+            
+            messages.success(request, f'Space "{space.name}" updated successfully!')
+            return redirect('service_management:space_detail', slug=space.slug)
+    
+    context = {
+        'space': space,
+    }
+    return render(request, 'service_management/edit_space.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def space_settings(request, slug):
+    """Manage space settings"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    settings = space.settings
+    
+    if request.method == 'POST':
+        # Update module access settings
+        settings.enable_dashboard = request.POST.get('enable_dashboard') == 'on'
+        settings.enable_issue_management = request.POST.get('enable_issue_management') == 'on'
+        settings.enable_service_management = request.POST.get('enable_service_management') == 'on'
+        settings.enable_transportation = request.POST.get('enable_transportation') == 'on'
+        settings.updated_by = request.user
+        settings.save()
+        
+        messages.success(request, f'Settings for "{space.name}" updated successfully!')
+        return redirect('service_management:space_detail', slug=space.slug)
+    
+    context = {
+        'space': space,
+        'settings': settings,
+    }
+    return render(request, 'service_management/space_settings.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def manage_space_admins(request, slug):
+    """Manage space administrators"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    
+    # Get potential space admins (users with space_admin user_type in the same org)
+    potential_admins = User.objects.filter(
+        profile__user_type='space_admin',
+        profile__org=space.org
+    ).exclude(administered_spaces=space)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        
+        try:
+            user = User.objects.get(id=user_id, profile__org=space.org)
+            
+            if action == 'add':
+                space.space_admins.add(user)
+                messages.success(request, f'Added {user.profile.first_name} {user.profile.last_name} as space admin.')
+            elif action == 'remove':
+                space.space_admins.remove(user)
+                messages.success(request, f'Removed {user.profile.first_name} {user.profile.last_name} from space admins.')
+                
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('service_management:manage_space_admins', slug=space.slug)
+    
+    context = {
+        'space': space,
+        'current_admins': space.space_admins.all(),
+        'potential_admins': potential_admins,
+    }
+    return render(request, 'service_management/manage_space_admins.html', context)
 

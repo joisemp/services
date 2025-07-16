@@ -12,6 +12,14 @@ urlpatterns = [
     path('work-categories/<slug:category_slug>/edit/', views.update_work_category, name='update_work_category'),
     path('work-categories/<slug:category_slug>/delete/', views.delete_work_category, name='delete_work_category'),
     
+    # Spaces Management URLs
+    path('spaces/', views.spaces_list, name='spaces_list'),
+    path('spaces/create/', views.create_space, name='create_space'),
+    path('spaces/<slug:slug>/', views.space_detail, name='space_detail'),
+    path('spaces/<slug:slug>/edit/', views.edit_space, name='edit_space'),
+    path('spaces/<slug:slug>/settings/', views.space_settings, name='space_settings'),
+    path('spaces/<slug:slug>/admins/', views.manage_space_admins, name='manage_space_admins'),
+    
     # Marketplace URLs (Purchase Management)
     path('marketplace/', views.marketplace, name='marketplace'),
     path('marketplace/shopping-lists/', views.shopping_list_list, name='shopping_list_list'),

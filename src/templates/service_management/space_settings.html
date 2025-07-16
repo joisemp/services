@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Settings - {{ space.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">Module Settings: {{ space.name }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Display messages -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Space Info -->
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle"></i> Space Information</h5>
+                            <p><strong>Space:</strong> {{ space.name }}</p>
+                            <p><strong>Organisation:</strong> {{ space.org.name }}</p>
+                            <p class="mb-0"><strong>Description:</strong> {{ space.description|default:"No description provided" }}</p>
+                        </div>
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            
+                            <h5 class="mb-3">Module Access Settings</h5>
+                            <p class="text-muted">Enable or disable modules for this space. Users will only see enabled modules.</p>
+                            
+                            <!-- Dashboard Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_dashboard" 
+                                               name="enable_dashboard" {% if settings.enable_dashboard %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_dashboard">
+                                            <h6>Dashboard Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Main dashboard with overview and analytics.</p>
+                                </div>
+                            </div>
+
+                            <!-- Issue Management Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_issue_management" 
+                                               name="enable_issue_management" {% if settings.enable_issue_management %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_issue_management">
+                                            <h6>Issue Management Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Create, track, and manage issues and tickets.</p>
+                                </div>
+                            </div>
+
+                            <!-- Service Management Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_service_management" 
+                                               name="enable_service_management" {% if settings.enable_service_management %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_service_management">
+                                            <h6>Service Management Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Manage services, shopping lists, and purchases.</p>
+                                </div>
+                            </div>
+
+                            <!-- Transportation Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_transportation" 
+                                               name="enable_transportation" {% if settings.enable_transportation %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_transportation">
+                                            <h6>Transportation Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Manage transportation requests and logistics.</p>
+                                </div>
+                            </div>
+
+                            <!-- Settings Info -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6>Settings Information</h6>
+                                    <p class="text-muted mb-1">
+                                        <strong>Last Updated:</strong> {{ settings.updated_at|date:"F d, Y g:i A" }}
+                                    </p>
+                                    {% if settings.updated_by %}
+                                    <p class="text-muted mb-0">
+                                        <strong>Updated By:</strong> {{ settings.updated_by.profile.first_name }} {{ settings.updated_by.profile.last_name }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'service_management:space_detail' slug=space.slug %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Space
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

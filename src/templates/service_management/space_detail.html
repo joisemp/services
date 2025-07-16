@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ space.name }} - Space Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1>{{ space.name }}</h1>
+                        <p class="text-muted">{{ space.org.name }}</p>
+                    </div>
+                    <div>
+                        <a href="{% url 'service_management:spaces_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Spaces
+                        </a>
+                        <a href="{% url 'service_management:edit_space' slug=space.slug %}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Edit Space
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Space Status -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Status</h5>
+                                {% if space.is_access_enabled %}
+                                    <span class="badge bg-success fs-6">Active</span>
+                                    <p class="text-muted mt-2">This space is currently active and accessible to users.</p>
+                                {% else %}
+                                    <span class="badge bg-secondary fs-6">Inactive</span>
+                                    <p class="text-muted mt-2">This space is currently inactive and not accessible to users.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Access Control</h5>
+                                {% if space.require_approval %}
+                                    <span class="badge bg-warning fs-6">Requires Approval</span>
+                                    <p class="text-muted mt-2">New users need approval to access this space.</p>
+                                {% else %}
+                                    <span class="badge bg-info fs-6">Open Access</span>
+                                    <p class="text-muted mt-2">Users can access this space without approval.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Space Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Space Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Description</h6>
+                                <p>{{ space.description|default:"No description provided" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Created</h6>
+                                <p>{{ space.created_at|date:"F d, Y" }} by {{ space.created_by.profile.first_name }} {{ space.created_by.profile.last_name }}</p>
+                                
+                                <h6>Last Updated</h6>
+                                <p>{{ space.updated_at|date:"F d, Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Administrators -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Administrators ({{ admin_count }})</h5>
+                        <a href="{% url 'service_management:manage_space_admins' slug=space.slug %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-users"></i> Manage Admins
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if space.space_admins.all %}
+                            <div class="row">
+                                {% for admin in space.space_admins.all %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ admin.profile.first_name }} {{ admin.profile.last_name }}</h6>
+                                            <p class="card-text text-muted">{{ admin.email }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <p class="text-muted">No administrators assigned to this space.</p>
+                                <a href="{% url 'service_management:manage_space_admins' slug=space.slug %}" class="btn btn-primary">
+                                    Add Administrators
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Module Settings -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Module Settings</h5>
+                        <a href="{% url 'service_management:space_settings' slug=space.slug %}" class="btn btn-sm btn-info">
+                            <i class="fas fa-cog"></i> Configure Settings
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {% if settings.enable_dashboard %}checked{% endif %}>
+                                    <label class="form-check-label">
+                                        Dashboard Module
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {% if settings.enable_issue_management %}checked{% endif %}>
+                                    <label class="form-check-label">
+                                        Issue Management Module
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {% if settings.enable_service_management %}checked{% endif %}>
+                                    <label class="form-check-label">
+                                        Service Management Module
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {% if settings.enable_transportation %}checked{% endif %}>
+                                    <label class="form-check-label">
+                                        Transportation Module
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <a href="{% url 'service_management:edit_space' slug=space.slug %}" class="btn btn-warning w-100">
+                                    <i class="fas fa-edit"></i> Edit Space
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'service_management:space_settings' slug=space.slug %}" class="btn btn-info w-100">
+                                    <i class="fas fa-cog"></i> Settings
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'service_management:manage_space_admins' slug=space.slug %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-users"></i> Manage Admins
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'service_management:spaces_list' %}" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
