@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'service_management.apps.ServiceManagementConfig',
     'transportation.apps.TransportationConfig',
     'marketplace.apps.MarketplaceConfig',
+    'finance.apps.FinanceConfig',
 ]
 
 MIDDLEWARE = [
