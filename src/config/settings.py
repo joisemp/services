@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'widget_tweaks',
     'issue_management.apps.IssueManagementConfig',
     'core.apps.CoreConfig',
     'dashboard.apps.DashboardConfig',
@@ -148,4 +149,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Finance Module Settings
+DEFAULT_CURRENCY = 'INR'  # Default currency for the application
 

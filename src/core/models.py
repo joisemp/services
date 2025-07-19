@@ -129,8 +129,17 @@ class UserProfile(models.Model):
     
 
 class Organisation(models.Model):
+    CURRENCY_CHOICES = [
+        ('INR', 'Indian Rupee (₹)'),
+        ('USD', 'US Dollar ($)'),
+        ('EUR', 'Euro (€)'),
+        ('GBP', 'British Pound (£)'),
+        ('JPY', 'Japanese Yen (¥)'),
+    ]
+    
     name = models.CharField(max_length=255, unique=True)
     address = models.TextField(blank=True)
+    currency_code = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='INR')
     central_admins = models.ManyToManyField('User', related_name='managed_organisations', limit_choices_to={'profile__user_type': 'central_admin'})
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -153,6 +162,11 @@ class Organisation(models.Model):
     def is_user_central_admin(self, user):
         """Check if a user is a central admin of this organisation"""
         return self.central_admins.filter(id=user.id).exists()
+    
+    def get_currency_symbol(self):
+        """Get currency symbol for this organisation"""
+        from finance.currency import get_currency_symbol
+        return get_currency_symbol(self.currency_code)
 
 
 @receiver(post_delete, sender=UserProfile)
