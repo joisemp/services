@@ -159,7 +159,7 @@
                 <h1 class="mb-1">Create Purchase Order</h1>
                 <p class="mb-0 opacity-75">From Shopping List: {{ shopping_list.name }}</p>
             </div>
-            <a href="{% url 'service_management:shopping_list_detail' shopping_list.slug %}" 
+            <a href="{% url 'marketplace:shopping_list_detail' shopping_list.slug %}" 
                class="btn btn-outline-light">
                 <i class="fas fa-arrow-left me-2"></i>Back to Shopping List
             </a>
@@ -366,7 +366,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            <a href="{% url 'service_management:shopping_list_detail' shopping_list.slug %}" 
+                            <a href="{% url 'marketplace:shopping_list_detail' shopping_list.slug %}" 
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
