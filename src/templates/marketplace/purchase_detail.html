@@ -1,0 +1,242 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Purchase Order {{ purchase.purchase_id }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    /* Custom styles for the Purchase Order page */
+    .breadcrumb-item a {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: color 0.3s ease;
+    }
+
+    .breadcrumb-item a:hover {
+        color: #e2e3e5;
+    }
+
+    .breadcrumb-item a i {
+        font-size: 1rem;
+    }
+
+    .purchase-status {
+        transition: transform 0.3s ease;
+    }
+
+    .purchase-status:hover {
+        transform: scale(1.1);
+    }
+
+    .meta-info .meta-item {
+        transition: background 0.3s ease;
+    }
+
+    .meta-info .meta-item:hover {
+        background: #e9f7ef;
+    }
+
+    .action-buttons a {
+        position: relative;
+    }
+
+    .action-buttons a[data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: -1.5rem;
+        left: 0;
+        background: #333;
+        color: white;
+        padding: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        z-index: 10;
+    }
+
+    @media (max-width: 768px) {
+        .meta-info {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Purchase Order Header -->
+    <div class="text-center py-4">
+        <h1 class="display-6">Purchase Order {{ purchase.purchase_id }}</h1>
+        <p class="text-muted">Details and Items</p>
+    </div>
+
+    <!-- Purchase Order Information -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Order Information</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Ordered By:</strong> {{ purchase.ordered_by.profile.first_name }} {{ purchase.ordered_by.profile.last_name }}</li>
+                        <li><strong>Supplier:</strong> {{ purchase.supplier_name|default:"Not specified" }}</li>
+                        <li><strong>Priority:</strong> {{ purchase.shopping_list.get_priority_display }}</li>
+                        {% if purchase.approved_by %}
+                        <li><strong>Approved By:</strong> {{ purchase.approved_by.profile.first_name }} {{ purchase.approved_by.profile.last_name }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Delivery Information</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Delivery Address:</strong> {{ purchase.delivery_address|default:"Not specified" }}</li>
+                        {% if purchase.tracking_number %}
+                        <li><strong>Tracking Number:</strong> {{ purchase.tracking_number }}</li>
+                        {% endif %}
+                        {% if purchase.actual_delivery_date %}
+                        <li><strong>Actual Delivery:</strong> {{ purchase.actual_delivery_date|date:"M d, Y" }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status-specific Notices -->
+    {% if purchase.status %}
+    <div class="alert alert-secondary text-center" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Status:</strong> {{ purchase.get_status_display }}
+    </div>
+    {% endif %}
+
+    <!-- Purchase Order Items -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Items ({{ purchase.items.count }})</h5>
+            <span class="badge bg-info">From {{ purchase.supplier_name }}</span>
+        </div>
+        <div class="card-body">
+            {% if purchase.items.all %}
+            <table class="table table-borderless">
+                <thead class="table-light">
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in purchase.items.all %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ item.shopping_list_item.item_name }}</div>
+                            {% if item.shopping_list_item.description %}
+                                <div class="text-muted small">{{ item.shopping_list_item.description }}</div>
+                            {% endif %}
+                            {% if item.shopping_list_item.category %}
+                                <span class="badge bg-light text-dark">{{ item.shopping_list_item.category.name }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ item.quantity_ordered }}</div>
+                            {% if item.quantity_ordered != item.shopping_list_item.quantity %}
+                                <div class="text-muted small">
+                                    of {{ item.shopping_list_item.quantity }} total needed
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>${{ item.unit_cost|floatformat:2 }}</td>
+                        <td class="fw-bold">${{ item.total_cost|floatformat:2 }}</td>
+                        <td>
+                            {% if item.is_received %}
+                                <span class="badge bg-success">Received</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-active">
+                        <td colspan="3"><strong>Total Amount:</strong></td>
+                        <td colspan="2"><strong>${{ purchase.total_amount|floatformat:2 }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h4>No items in this purchase order</h4>
+                <p class="text-muted">This shouldn't happen - purchase orders should have items.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Related Purchase Orders from same Shopping List -->
+    {% with other_purchases=purchase.shopping_list.purchases.all %}
+        {% if other_purchases.count > 1 %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Related Purchase Orders</h5>
+                <span class="badge bg-secondary">From Shopping List: {{ purchase.shopping_list.name }}</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">This shopping list has multiple purchase orders for different suppliers:</p>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Purchase ID</th>
+                                <th>Supplier</th>
+                                <th>Items</th>
+                                <th>Total Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for other in other_purchases %}
+                                <tr {% if other.id == purchase.id %}class="table-active"{% endif %}>
+                                    <td>
+                                        <a href="{% url 'marketplace:purchase_detail' other.slug %}">{{ other.purchase_id }}</a>
+                                        {% if other.id == purchase.id %}<span class="badge bg-info ms-2">Current</span>{% endif %}
+                                    </td>
+                                    <td>{{ other.supplier_name }}</td>
+                                    <td>{{ other.items.count }}</td>
+                                    <td>${{ other.total_amount|floatformat:2 }}</td>
+                                    <td><span class="badge {% if other.status == 'pending' %}bg-warning text-dark{% elif other.status == 'approved' %}bg-success{% elif other.status == 'rejected' %}bg-danger{% else %}bg-info{% endif %}">
+                                        {{ other.get_status_display }}
+                                    </span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    {% if purchase.shopping_list.status == 'approved' or purchase.shopping_list.status == 'purchase_created' %}
+                        <a href="{% url 'marketplace:create_purchase' purchase.shopping_list.slug %}" class="btn btn-sm btn-outline-primary">Create Another Purchase Order</a>
+                    {% endif %}
+                    <a href="{% url 'marketplace:shopping_list_detail' purchase.shopping_list.slug %}" class="btn btn-sm btn-outline-secondary ms-2">View Shopping List</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Back Link -->
+    <div class="text-center mt-4">
+        <a href="{% url 'marketplace:shopping_list_detail' purchase.shopping_list.slug %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Shopping List
+        </a>
+    </div>
+</div>
+
+{% endblock %}

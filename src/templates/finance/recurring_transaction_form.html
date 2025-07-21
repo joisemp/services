@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% load currency_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Recurring Transaction{% else %}New Recurring Transaction{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    {% if form.instance.pk %}
+                        Edit Recurring Transaction
+                    {% else %}
+                        New Recurring Transaction
+                    {% endif %}
+                </h1>
+                <a href="{% url 'finance:recurring_transaction_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recurring Transaction Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">Transaction Title</label>
+                            {{ form.title|add_class:"form-control" }}
+                            {% if form.title.errors %}
+                                <div class="text-danger">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description|add_class:"form-control" }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.amount.id_for_label }}" class="form-label">
+                                        Amount ({{ currency_symbol|default:"₹" }})
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">{{ currency_symbol|default:"₹" }}</span>
+                                        {{ form.amount|add_class:"form-control" }}
+                                    </div>
+                                    {% if form.amount.errors %}
+                                        <div class="text-danger">{{ form.amount.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.transaction_type.id_for_label }}" class="form-label">Transaction Type</label>
+                                    {{ form.transaction_type|add_class:"form-select" }}
+                                    {% if form.transaction_type.errors %}
+                                        <div class="text-danger">{{ form.transaction_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.frequency.id_for_label }}" class="form-label">Frequency</label>
+                                    {{ form.frequency|add_class:"form-select" }}
+                                    {% if form.frequency.errors %}
+                                        <div class="text-danger">{{ form.frequency.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.payment_method.id_for_label }}" class="form-label">Payment Method</label>
+                                    {{ form.payment_method|add_class:"form-select" }}
+                                    {% if form.payment_method.errors %}
+                                        <div class="text-danger">{{ form.payment_method.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">Category (Optional)</label>
+                            <div class="input-group">
+                                {{ form.category|add_class:"form-select" }}
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                                    <i class="fas fa-plus"></i> Add Category
+                                </button>
+                            </div>
+                            {% if form.category.errors %}
+                                <div class="text-danger">{{ form.category.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
+                                    {{ form.start_date|add_class:"form-control" }}
+                                    {% if form.start_date.errors %}
+                                        <div class="text-danger">{{ form.start_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date (Optional)</label>
+                                    {{ form.end_date|add_class:"form-control" }}
+                                    {% if form.end_date.errors %}
+                                        <div class="text-danger">{{ form.end_date.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Leave blank for indefinite recurring</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.is_active|add_class:"form-check-input" }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            Active
+                                        </label>
+                                    </div>
+                                    {% if form.is_active.errors %}
+                                        <div class="text-danger">{{ form.is_active.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.auto_create|add_class:"form-check-input" }}
+                                        <label class="form-check-label" for="{{ form.auto_create.id_for_label }}">
+                                            Auto Create Transactions
+                                        </label>
+                                    </div>
+                                    {% if form.auto_create.errors %}
+                                        <div class="text-danger">{{ form.auto_create.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Automatically create transactions when due</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'finance:recurring_transaction_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if form.instance.pk %}Update Recurring Transaction{% else %}Create Recurring Transaction{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recurring Transaction Guide</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-calendar-alt text-primary"></i>
+                            <strong>Frequency:</strong> How often the transaction repeats
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-play text-success"></i>
+                            <strong>Start Date:</strong> When the recurring starts
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-stop text-danger"></i>
+                            <strong>End Date:</strong> When the recurring stops (optional)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-robot text-info"></i>
+                            <strong>Auto Create:</strong> Automatically creates transactions when due
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if form.instance.pk %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Next Due Date</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="h4 {% if form.instance.is_due %}text-warning{% else %}text-muted{% endif %}">
+                        {{ form.instance.next_due_date|date:"M d, Y" }}
+                    </div>
+                    {% if form.instance.is_due %}
+                        <div class="badge bg-warning">Due Now</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Category Creation Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalLabel">Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="categoryDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="categoryIsActive" name="is_active" checked>
+                            <label class="form-check-label" for="categoryIsActive">
+                                Active Category
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createCategory()">Create Category</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Category creation function
+function createCategory() {
+    const form = document.getElementById('categoryForm');
+    const formData = new FormData(form);
+    
+    fetch('/finance/categories/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add new category to the select dropdown
+            const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+            const newOption = document.createElement('option');
+            newOption.value = data.category.id;
+            newOption.textContent = data.category.name;
+            newOption.selected = true;
+            categorySelect.appendChild(newOption);
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+            modal.hide();
+            form.reset();
+            document.getElementById('categoryIsActive').checked = true; // Reset checkbox to checked
+            
+            // Show success message
+            alert('Category created successfully!');
+        } else {
+            let errorMessage = 'Error creating category:\n';
+            for (let field in data.errors) {
+                errorMessage += `${field}: ${data.errors[field].join(', ')}\n`;
+            }
+            alert(errorMessage);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating category');
+    });
+}
+</script>
+{% endblock %}
