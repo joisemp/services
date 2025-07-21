@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% load currency_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Budget{% else %}New Budget{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    {% if form.instance.pk %}
+                        Edit Budget
+                    {% else %}
+                        New Budget
+                    {% endif %}
+                </h1>
+                <a href="{% url 'finance:budget_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Budget Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">Budget Name</label>
+                                    {{ form.name|add_class:"form-control" }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.period.id_for_label }}" class="form-label">Period</label>
+                                    {{ form.period|add_class:"form-select" }}
+                                    {% if form.period.errors %}
+                                        <div class="text-danger">{{ form.period.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description|add_class:"form-control" }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.budgeted_amount.id_for_label }}" class="form-label">
+                                        Budgeted Amount ({{ currency_symbol|default:"₹" }})
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">{{ currency_symbol|default:"₹" }}</span>
+                                        {{ form.budgeted_amount|add_class:"form-control" }}
+                                    </div>
+                                    {% if form.budgeted_amount.errors %}
+                                        <div class="text-danger">{{ form.budgeted_amount.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.category.id_for_label }}" class="form-label">Category (Optional)</label>
+                                    <div class="input-group">
+                                        {{ form.category|add_class:"form-select" }}
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                                            <i class="fas fa-plus"></i> Add Category
+                                        </button>
+                                    </div>
+                                    {% if form.category.errors %}
+                                        <div class="text-danger">{{ form.category.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Leave blank for overall budget</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
+                                    {{ form.start_date|add_class:"form-control" }}
+                                    {% if form.start_date.errors %}
+                                        <div class="text-danger">{{ form.start_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
+                                    {{ form.end_date|add_class:"form-control" }}
+                                    {% if form.end_date.errors %}
+                                        <div class="text-danger">{{ form.end_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active|add_class:"form-check-input" }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Active Budget
+                                </label>
+                            </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger">{{ form.is_active.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'finance:budget_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if form.instance.pk %}Update Budget{% else %}Create Budget{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Budget Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-lightbulb text-warning"></i>
+                            <strong>Period:</strong> Choose monthly for regular expenses, quarterly for projects
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-chart-pie text-info"></i>
+                            <strong>Category:</strong> Set specific budgets for categories or overall organization budget
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-calendar text-success"></i>
+                            <strong>Dates:</strong> Set realistic start and end dates for your budget period
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-bell text-primary"></i>
+                            <strong>Alerts:</strong> You'll get warnings when spending exceeds 80% of budget
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if form.instance.pk %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <strong>Spent</strong>
+                                <div class="h5 text-danger">{{ form.instance.get_spent_amount|currency }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <strong>Remaining</strong>
+                                <div class="h5 {% if form.instance.get_remaining_amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ form.instance.get_remaining_amount|currency }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar {% if form.instance.is_over_budget %}bg-danger{% elif form.instance.get_percentage_used > 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                             style="width: {{ form.instance.get_percentage_used|floatformat:0 }}%">
+                            {{ form.instance.get_percentage_used|floatformat:0 }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Category Creation Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalLabel">Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="categoryDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="categoryIsActive" name="is_active" checked>
+                            <label class="form-check-label" for="categoryIsActive">
+                                Active Category
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createCategory()">Create Category</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Category creation function
+function createCategory() {
+    const form = document.getElementById('categoryForm');
+    const formData = new FormData(form);
+    
+    fetch('/finance/categories/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add new category to the select dropdown
+            const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+            const newOption = document.createElement('option');
+            newOption.value = data.category.id;
+            newOption.textContent = data.category.name;
+            newOption.selected = true;
+            categorySelect.appendChild(newOption);
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+            modal.hide();
+            form.reset();
+            document.getElementById('categoryIsActive').checked = true; // Reset checkbox to checked
+            
+            // Show success message
+            alert('Category created successfully!');
+        } else {
+            let errorMessage = 'Error creating category:\n';
+            for (let field in data.errors) {
+                errorMessage += `${field}: ${data.errors[field].join(', ')}\n`;
+            }
+            alert(errorMessage);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating category');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates if creating new budget
+    {% if not form.instance.pk %}
+    const startDateInput = document.getElementById('{{ form.start_date.id_for_label }}');
+    const endDateInput = document.getElementById('{{ form.end_date.id_for_label }}');
+    const periodSelect = document.getElementById('{{ form.period.id_for_label }}');
+    
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Update end date when period changes
+    periodSelect.addEventListener('change', function() {
+        if (startDateInput.value) {
+            const startDate = new Date(startDateInput.value);
+            let endDate = new Date(startDate);
+            
+            switch(this.value) {
+                case 'monthly':
+                    endDate.setMonth(endDate.getMonth() + 1);
+                    break;
+                case 'quarterly':
+                    endDate.setMonth(endDate.getMonth() + 3);
+                    break;
+                case 'yearly':
+                    endDate.setFullYear(endDate.getFullYear() + 1);
+                    break;
+            }
+            
+            endDateInput.value = endDate.toISOString().split('T')[0];
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

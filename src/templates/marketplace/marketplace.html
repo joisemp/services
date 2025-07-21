@@ -1,0 +1,108 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Marketplace{% endblock %}
+
+{% block extra_css %}
+<style>
+    .purchase-status {
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-ordered { background: #cce5ff; color: #004085; }
+    .status-completed { background: #e2e3e5; color: #383d41; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-primary text-white py-4 mb-4">
+    <div class="container">
+        <h1 class="mb-2">Marketplace</h1>
+        <p class="mb-0">Manage purchases and track spending</p>
+    </div>
+</div>
+
+<div class="container">
+    {% if org %}
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Pending</h5>
+                        <p class="card-text display-4">{{ pending_lists }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Approved</h5>
+                        <p class="card-text display-4">{{ approved_lists }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Completed</h5>
+                        <p class="card-text display-4">{{ completed_lists }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Spending</h5>
+                        <p class="card-text display-4">${{ monthly_spending|floatformat:2 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="text-center mb-4">
+            <a href="{% url 'marketplace:create_shopping_list' %}" class="btn btn-primary me-2">New List</a>
+            <a href="{% url 'marketplace:shopping_list_list' %}" class="btn btn-secondary">View Lists</a>
+        </div>
+
+        <!-- Recent Purchases -->
+        {% if recent_purchases %}
+            <div class="card">
+                <div class="card-header">
+                    Recent Purchases
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for purchase in recent_purchases %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong><a href="{% url 'marketplace:purchase_detail' purchase.slug %}">{{ purchase.purchase_id }}</a></strong> - {{ purchase.shopping_list.name }}<br>
+                                <small>{{ purchase.created_at|date:"M d, Y" }} - ${{ purchase.total_amount|floatformat:2 }}</small>
+                            </div>
+                            <span class="purchase-status status-{{ purchase.status }}">{{ purchase.get_status_display }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                <h3>No recent purchases</h3>
+                <p>Create your first shopping list to get started!</p>
+                <a href="{% url 'marketplace:create_shopping_list' %}" class="btn btn-primary">Create Shopping List</a>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h3>Organization Required</h3>
+            <p class="text-muted">You must be associated with an organization to access the marketplace.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

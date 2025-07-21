@@ -1,0 +1,532 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Create Purchase Order - {{ shopping_list.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+        border-radius: 10px 10px 0 0 !important;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border-radius: 10px;
+    }
+    
+    .form-control {
+        border: 1px solid #e3e6f0;
+        border-radius: 6px;
+        padding: 0.75rem;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    }
+    
+    .item-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .item-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+    
+    .item-name {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-description {
+        color: #718096;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .category-badge {
+        background: #667eea;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    
+    .total-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid #28a745;
+    }
+    
+    .total-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+    
+    .btn {
+        border-radius: 6px;
+        font-weight: 500;
+        padding: 0.6rem 1.5rem;
+    }
+    
+    .btn-primary {
+        background: #667eea;
+        border-color: #667eea;
+    }
+    
+    .btn-primary:hover {
+        background: #5a67d8;
+        border-color: #5a67d8;
+    }
+    
+    .btn-outline-secondary {
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+    
+    .btn-outline-secondary:hover {
+        background: #6c757d;
+        border-color: #6c757d;
+    }
+    
+    .alert {
+        border-radius: 8px;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+    
+    .quantity-input {
+        width: 80px;
+        text-align: center;
+    }
+    
+    .unit-cost-input {
+        width: 120px;
+    }
+    
+    .unit-cost-input[readonly] {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1">Create Purchase Order</h1>
+                <p class="mb-0 opacity-75">From Shopping List: {{ shopping_list.name }}</p>
+            </div>
+            <a href="{% url 'marketplace:shopping_list_detail' shopping_list.slug %}" 
+               class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-2"></i>Back to Shopping List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar with Shopping List Info -->
+        <div class="col-lg-4 mb-4">
+            <!-- Shopping List Summary -->
+            <div class="summary-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-list-alt me-2"></i>Shopping List Summary
+                </h5>
+                
+                <div class="summary-item">
+                    <span>Total Items</span>
+                    <span class="fw-bold">{{ shopping_list.items.count }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Available Items</span>
+                    <span class="fw-bold">{{ items|length }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Estimated Total</span>
+                    <span class="fw-bold">${{ estimated_total|floatformat:2 }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Budget Limit</span>
+                    <span class="fw-bold">
+                        {% if shopping_list.budget_limit %}
+                            ${{ shopping_list.budget_limit|floatformat:2 }}
+                        {% else %}
+                            No Limit
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="purchaseForm">
+                {% csrf_token %}
+                
+                <!-- Supplier Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-store me-2"></i>Supplier Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ purchase_form.supplier_name.id_for_label }}" class="form-label">
+                                    Supplier/Shop Name *
+                                </label>
+                                {{ purchase_form.supplier_name }}
+                                {% if purchase_form.supplier_name.errors %}
+                                    <div class="text-danger mt-1">{{ purchase_form.supplier_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ purchase_form.supplier_contact.id_for_label }}" class="form-label">
+                                    Contact Information
+                                </label>
+                                {{ purchase_form.supplier_contact }}
+                                {% if purchase_form.supplier_contact.errors %}
+                                    <div class="text-danger mt-1">{{ purchase_form.supplier_contact.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ purchase_form.expected_delivery.id_for_label }}" class="form-label">
+                                    Expected Delivery Date
+                                </label>
+                                {{ purchase_form.expected_delivery }}
+                                {% if purchase_form.expected_delivery.errors %}
+                                    <div class="text-danger mt-1">{{ purchase_form.expected_delivery.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ purchase_form.notes.id_for_label }}" class="form-label">
+                                    Notes
+                                </label>
+                                {{ purchase_form.notes }}
+                                {% if purchase_form.notes.errors %}
+                                    <div class="text-danger mt-1">{{ purchase_form.notes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Items Selection -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-boxes me-2"></i>Select Items for Purchase
+                        </h5>
+                    </div>
+                    
+                    <div class="card-body">
+                        {% if not items %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Items Available</h5>
+                                <p class="text-muted">All items in this shopping list have already been included in purchase orders.</p>
+                            </div>
+                        {% else %}
+                            <div class="row">
+                                {% for item in items %}
+                                    <div class="col-12 mb-3">
+                                        <div class="item-card">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-1">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               id="select_{{ item.id }}" name="select_{{ item.id }}">
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-5">
+                                                    <div class="item-name">{{ item.item_name }}</div>
+                                                    {% if item.description %}
+                                                        <div class="item-description">{{ item.description }}</div>
+                                                    {% endif %}
+                                                    <div class="mt-1">
+                                                        {% if item.category %}
+                                                            <span class="category-badge">{{ item.category.name }}</span>
+                                                        {% endif %}
+                                                        {% if item.estimated_cost %}
+                                                            <small class="text-muted ms-2">
+                                                                <i class="fas fa-tag me-1"></i>Est. ${{ item|unit_cost }}/unit
+                                                            </small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-2 text-center">
+                                                    <small class="text-muted">Available</small>
+                                                    <div class="fw-bold">{{ item.available_quantity|default:item.quantity }}</div>
+                                                </div>
+                                                
+                                                <div class="col-md-2">
+                                                    <label class="form-label small">Quantity</label>
+                                                    <input type="number" class="form-control quantity-input" 
+                                                           id="quantity_{{ item.id }}" name="quantity_{{ item.id }}"
+                                                           min="1" max="{{ item.available_quantity|default:item.quantity }}" 
+                                                           disabled>
+                                                </div>
+                                                
+                                                <div class="col-md-2">
+                                                    <label class="form-label small">Unit Cost ($)</label>
+                                                    <input type="number" class="form-control unit-cost-input" 
+                                                           id="unit_cost_{{ item.id }}" name="unit_cost_{{ item.id }}"
+                                                           step="0.01" min="0.01" 
+                                                           value="{% if item.estimated_cost %}{{ item|unit_cost }}{% endif %}"
+                                                           placeholder="0.00" readonly disabled>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mt-2" id="total_row_{{ item.id }}" style="display: none;">
+                                                <div class="col-12">
+                                                    <div class="text-end">
+                                                        <strong>Item Total: <span id="item_total_{{ item.id }}">$0.00</span></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Order Total -->
+                    <div class="card-footer">
+                        <div class="total-section">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">Purchase Order Total:</h5>
+                                    <small class="text-muted">Total amount for selected items</small>
+                                </div>
+                                <div class="total-amount" id="orderTotal">$0.00</div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'marketplace:shopping_list_detail' shopping_list.slug %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-shopping-cart me-2"></i>Create Purchase Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all checkboxes and set up event listeners
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="select_"]');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.id.replace('select_', '');
+            toggleItem(itemId);
+        });
+    });
+    
+    // Add event listeners to quantity inputs only (unit cost is readonly)
+    const quantityInputs = document.querySelectorAll('input[id^="quantity_"]');
+    
+    quantityInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const itemId = this.id.replace('quantity_', '');
+            calculateTotal(itemId);
+        });
+    });
+
+    // Form validation
+    document.getElementById('purchaseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Check if supplier name is filled
+        const supplierName = document.getElementById('{{ purchase_form.supplier_name.id_for_label }}').value.trim();
+        if (!supplierName) {
+            alert('Please enter a supplier/shop name.');
+            return;
+        }
+        
+        // Check if any items are selected
+        const selectedItems = document.querySelectorAll('input[type="checkbox"][id^="select_"]:checked');
+        if (selectedItems.length === 0) {
+            alert('Please select at least one item for the purchase order.');
+            return;
+        }
+        
+        // Validate selected items have quantity and unit cost
+        let hasErrors = false;
+        selectedItems.forEach(checkbox => {
+            const itemId = checkbox.id.replace('select_', '');
+            const quantityInput = document.getElementById(`quantity_${itemId}`);
+            const unitCostInput = document.getElementById(`unit_cost_${itemId}`);
+            
+            if (!quantityInput.value || parseInt(quantityInput.value) < 1) {
+                alert(`Please enter a valid quantity for the selected item.`);
+                hasErrors = true;
+                return;
+            }
+            
+            if (!unitCostInput.value || parseFloat(unitCostInput.value) <= 0) {
+                alert(`Please enter a valid unit cost for the selected item.`);
+                hasErrors = true;
+                return;
+            }
+        });
+        
+        if (hasErrors) return;
+        
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Order...';
+        submitBtn.disabled = true;
+        
+        // Submit form
+        this.submit();
+    });
+});
+
+function toggleItem(itemId) {
+    const checkbox = document.getElementById(`select_${itemId}`);
+    const quantityInput = document.getElementById(`quantity_${itemId}`);
+    const unitCostInput = document.getElementById(`unit_cost_${itemId}`);
+    const totalRow = document.getElementById(`total_row_${itemId}`);
+    
+    if (checkbox.checked) {
+        // Enable quantity input and unit cost display
+        quantityInput.disabled = false;
+        unitCostInput.disabled = false; // Enable for form submission but keep readonly
+        totalRow.style.display = 'block';
+        
+        // Set default quantity
+        if (!quantityInput.value) quantityInput.value = 1;
+        // Unit cost is already pre-populated and readonly
+        
+        // Calculate total
+        calculateTotal(itemId);
+    } else {
+        // Disable inputs
+        quantityInput.disabled = true;
+        unitCostInput.disabled = true;
+        totalRow.style.display = 'none';
+        
+        // Clear quantity value (keep unit cost as it's pre-populated)
+        quantityInput.value = '';
+        
+        // Update order total
+        updateOrderTotal();
+    }
+}
+
+function calculateTotal(itemId) {
+    const checkbox = document.getElementById(`select_${itemId}`);
+    const quantityInput = document.getElementById(`quantity_${itemId}`);
+    const unitCostInput = document.getElementById(`unit_cost_${itemId}`);
+    const totalSpan = document.getElementById(`item_total_${itemId}`);
+    
+    if (checkbox.checked && quantityInput.value && unitCostInput.value) {
+        const quantity = parseInt(quantityInput.value) || 0;
+        const unitCost = parseFloat(unitCostInput.value) || 0;
+        const total = quantity * unitCost;
+        
+        totalSpan.textContent = `$${total.toFixed(2)}`;
+        
+        // Add visual styling to show it's calculated
+        totalSpan.classList.add('text-success');
+    } else {
+        totalSpan.textContent = '$0.00';
+        totalSpan.classList.remove('text-success');
+    }
+    
+    updateOrderTotal();
+}
+
+function updateOrderTotal() {
+    let total = 0;
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="select_"]');
+    
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const itemId = checkbox.id.replace('select_', '');
+            const quantityInput = document.getElementById(`quantity_${itemId}`);
+            const unitCostInput = document.getElementById(`unit_cost_${itemId}`);
+            
+            if (quantityInput.value && unitCostInput.value) {
+                const quantity = parseInt(quantityInput.value) || 0;
+                const unitCost = parseFloat(unitCostInput.value) || 0;
+                total += quantity * unitCost;
+            }
+        }
+    });
+    
+    document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+}
+</script>
+{% endblock %}
