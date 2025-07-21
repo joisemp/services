@@ -47,6 +47,23 @@
 
 // cards design
 #cards{
+      @media (max-width: 1220.788px) {
+      .row.g-3.mb-4 > [class^='col-'] {
+        min-width: 50% !important;
+        max-width: 50% !important;
+        flex: 0 0 100% !important;
+      }
+    }
+      @media (max-width: 788.98px) {
+      .row.g-3.mb-4 > [class^='col-'] {
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        .card{
+            padding:0%;
+        }
+      }
+    }
     .card{
         padding:5%;
         border-radius:12px; 
