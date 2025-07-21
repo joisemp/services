@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
-from .forms import (AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm)
+from .forms import (AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm, SpaceForm)
 from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
@@ -16,7 +16,7 @@ from decimal import Decimal
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
 from .models import WorkCategory, Spaces, SpaceSettings
-from config.helpers import is_central_admin
+from config.helpers import is_central_admin, is_space_admin
 
 @login_required
 @user_passes_test(is_central_admin)
@@ -220,17 +220,23 @@ def spaces_list(request):
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def space_detail(request, slug):
     """View details of a specific space"""
-    # Get the organisation(s) managed by this central admin
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to view this space.')
     
     context = {
         'space': space,
         'settings': space.settings,
         'admin_count': space.get_admin_count(),
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/space_detail.html', context)
 
@@ -239,70 +245,86 @@ def space_detail(request, slug):
 @user_passes_test(is_central_admin)
 def create_space(request):
     """Create a new space"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
+    # Get the user's organization automatically
+    user_org = request.user.profile.org
+    
+    if not user_org:
+        messages.error(request, 'You must be associated with an organization to create spaces.')
+        return redirect('service_management:spaces_list')
     
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        org_id = request.POST.get('org')
-        
-        if name and org_id:
+        form = SpaceForm(request.POST, user_org=user_org)
+        if form.is_valid():
             try:
-                org = orgs.get(id=org_id)
-                space = Spaces.objects.create(
-                    name=name,
-                    description=description,
-                    org=org,
-                    created_by=request.user
-                )
+                space = form.save(commit=False)
+                space.created_by = request.user
+                space.save()
                 messages.success(request, f'Space "{space.name}" created successfully!')
                 return redirect('service_management:space_detail', slug=space.slug)
-            except Organisation.DoesNotExist:
-                messages.error(request, 'Invalid organisation selected.')
             except Exception as e:
                 messages.error(request, f'Error creating space: {str(e)}')
+    else:
+        form = SpaceForm(user_org=user_org)
     
     context = {
-        'orgs': orgs,
+        'form': form,
+        'user_org': user_org,  # Pass user's organization for display
     }
     return render(request, 'service_management/create_space.html', context)
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def edit_space(request, slug):
     """Edit an existing space"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to edit this space.')
     
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        is_access_enabled = request.POST.get('is_access_enabled') == 'on'
-        require_approval = request.POST.get('require_approval') == 'on'
-        
-        if name:
-            space.name = name
-            space.description = description
-            space.is_access_enabled = is_access_enabled
-            space.require_approval = require_approval
-            space.save()
-            
-            messages.success(request, f'Space "{space.name}" updated successfully!')
-            return redirect('service_management:space_detail', slug=space.slug)
+        form = SpaceForm(request.POST, instance=space, user_org=space.org)
+        if form.is_valid():
+            try:
+                # Handle additional fields not in the form
+                space.is_access_enabled = request.POST.get('is_access_enabled') == 'on'
+                space.require_approval = request.POST.get('require_approval') == 'on'
+                
+                # Save the form data
+                form.save()
+                space.save()  # Save the additional fields
+                
+                messages.success(request, f'Space "{space.name}" updated successfully!')
+                return redirect('service_management:space_detail', slug=space.slug)
+            except Exception as e:
+                messages.error(request, f'Error updating space: {str(e)}')
+    else:
+        form = SpaceForm(instance=space, user_org=space.org)
     
     context = {
+        'form': form,
         'space': space,
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/edit_space.html', context)
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def space_settings(request, slug):
     """Manage space settings"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to manage settings for this space.')
+    
     settings = space.settings
     
     if request.method == 'POST':
@@ -315,11 +337,18 @@ def space_settings(request, slug):
         settings.save()
         
         messages.success(request, f'Settings for "{space.name}" updated successfully!')
-        return redirect('service_management:space_detail', slug=space.slug)
+        
+        # Redirect based on user type
+        if user_is_space_admin:
+            return redirect(f'/dashboard/?user={request.user.profile.slug}&space_slug={space.slug}')
+        else:
+            return redirect('service_management:space_detail', slug=space.slug)
     
     context = {
         'space': space,
         'settings': settings,
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/space_settings.html', context)
 
@@ -364,4 +393,21 @@ def manage_space_admins(request, slug):
         'potential_admins': potential_admins,
     }
     return render(request, 'service_management/manage_space_admins.html', context)
+
+
+@login_required
+def no_spaces_assigned(request):
+    """View for space admins who have no assigned spaces"""
+    # Only space admins should see this page
+    if not request.user.is_authenticated or not is_space_admin(request.user):
+        # Redirect non-space admins to the landing page instead of dashboard
+        return redirect('landing')  # This should be a safe fallback
+    
+    # Get the user's organization for contact info
+    user_org = request.user.profile.org if hasattr(request.user, 'profile') else None
+    
+    context = {
+        'user_org': user_org,
+    }
+    return render(request, 'service_management/no_spaces_assigned.html', context)
 

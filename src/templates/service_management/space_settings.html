@@ -112,8 +112,8 @@
 
                             <!-- Form Actions -->
                             <div class="d-flex justify-content-between">
-                                <a href="{% url 'service_management:space_detail' slug=space.slug %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to Space
+                                <a href="{% url 'dashboard:dashboard' %}?user={{ user.profile.slug }}&space_slug={{ space.slug }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
                                 </a>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Save Settings
