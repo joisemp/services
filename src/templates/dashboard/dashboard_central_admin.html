@@ -31,16 +31,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined"
-                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
                             <span class="user">Category</span>
                             <span class="count">2345</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
                             </span>
                         </div>
                     </div>
@@ -50,16 +48,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined"
-                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
                             <span class="user">Transaction</span>
                             <span class="count">2345</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
                             </span>
                         </div>
                     </div>
@@ -69,16 +65,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined"
-                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
                             <span class="user">Users</span>
                             <span class="count">2345</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
                             </span>
                         </div>
                     </div>
@@ -88,23 +82,122 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined"
-                                style="font-size: 2.5rem; margin-right: 12px;">person</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
                             <span class="user">Issue</span>
                             <span class="count">2345</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined"
-                                    style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="row mt-5">
+            <div class="col-md-8">
+                <div class="card mb-4 p-4" style="min-height: 370px;">
+                    <h5 class="mb-1" style="font-weight: 600;">User Performance</h5>
+                    <span class="text-muted mb-3" style="font-size: 1rem;">June-July</span>
+                    <hr>
+                    <canvas id="userPerformanceChart" height="180"></canvas>
+                    <div class="mt-3" style="font-size: 1rem;">
+                        <span style="color: #2e7d32; font-weight: 500;">Trending up by 5.2% this month</span>
+                        <span class="material-symbols-outlined align-middle" style="font-size: 1.1rem; color: #2e7d32;">north_east</span>
+                        <span class="text-muted ms-2">Showing total visitors for the last 6 months</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-4 p-4 d-flex align-items-center justify-content-center" style="min-height: 370px;">
+                    <h5 class="mb-1" style="font-weight: 600;">Issues Reported</h5>
+                    <span class="text-muted mb-3" style="font-size: 1rem;">June-July</span>
+                    <canvas id="issuesReportedChart" width="200" height="200"></canvas>
+                    <div class="text-center mt-2">
+                        <span style="font-size: 2rem; font-weight: 700;">1,125</span>
+                        <div class="text-muted">Issues</div>
+                    </div>
+                    <div class="mt-3" style="font-size: 1rem;">
+                        <span style="color: #2e7d32; font-weight: 500;">Trending up by 5.2% this month</span>
+                        <span class="material-symbols-outlined align-middle" style="font-size: 1.1rem; color: #2e7d32;">north_east</span>
+                        <span class="text-muted ms-2">Showing total visitors for the last 6 months</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4">
+            <h5 class="mb-3" style="font-weight: 600;">Reported Issues</h5>
+            <input type="text" class="form-control mb-3" placeholder="Filter lines...">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Issue 1</td>
+                  <td>Open</td>
+                  <td>2025-07-01</td>
+                </tr>
+                <tr>
+                  <td>Issue 2</td>
+                  <td>Closed</td>
+                  <td>2025-07-02</td>
+                </tr>
+              </tbody>
+            </table>
+        </div>
     </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // User Performance Bar Chart
+    var ctxBar = document.getElementById('userPerformanceChart').getContext('2d');
+    new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: ['Title', 'Title', 'Title', 'Title', 'Title', 'Title', 'Title', 'Title'],
+            datasets: [{
+                label: 'Users',
+                data: [54, 195, 134, 123, 145, 165, 204, 204],
+                backgroundColor: '#f47c5c',
+                borderRadius: 8,
+                maxBarThickness: 40
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 50 } }
+            }
+        }
+    });
+
+    // Issues Reported Doughnut Chart
+    var ctxDoughnut = document.getElementById('issuesReportedChart').getContext('2d');
+    new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+            labels: ['Open', 'Closed', 'In Progress', 'Other'],
+            datasets: [{
+                data: [400, 300, 250, 175],
+                backgroundColor: ['#f4c542', '#f47c5c', '#2ec4b6', '#334e68'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
 </section>
 
 {% endblock content %}

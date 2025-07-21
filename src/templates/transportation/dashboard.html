@@ -8,194 +8,218 @@
 {% endblock style %}
 
 {% block navbar %}
-    {% include 'navbar/navbar_central_admin.html' %}
+{% include 'navbar/navbar_central_admin.html' %}
 {% endblock navbar %}
 
 {% block sidebar %}
-    {% include 'sidebar/sidebar_central_admin.html' %}
+{% include 'sidebar/sidebar_central_admin.html' %}
 {% endblock sidebar %}
 
 {% block content %}
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1>Transportation Management</h1>
-        <div class="quick-actions">
-            <a href="{% url 'transportation:vehicle_create' %}" class="btn btn-primary">
-                <span class="material-symbols-outlined me-2">add</span>
-                Add Vehicle
-            </a>
-            <a href="{% url 'transportation:maintenance_create' %}" class="btn btn-outline-primary">
-                <span class="material-symbols-outlined me-2">build</span>
-                Log Maintenance
-            </a>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">
-                <span class="material-symbols-outlined">directions_car</span>
-            </div>
-            <div class="stat-content">
-                <h3>{{ total_vehicles }}</h3>
-                <p>Total Vehicles</p>
-            </div>
-        </div>
-        
-        <div class="stat-card active">
-            <div class="stat-icon">
-                <span class="material-symbols-outlined">check_circle</span>
-            </div>
-            <div class="stat-content">
-                <h3>{{ active_vehicles }}</h3>
-                <p>Active Vehicles</p>
-            </div>
-        </div>
-        
-        <div class="stat-card maintenance">
-            <div class="stat-icon">
-                <span class="material-symbols-outlined">build</span>
-            </div>
-            <div class="stat-content">
-                <h3>{{ maintenance_due }}</h3>
-                <p>Maintenance Due</p>
-            </div>
-        </div>
-        
-        <div class="stat-card warning">
-            <div class="stat-icon">
-                <span class="material-symbols-outlined">warning</span>
-            </div>
-            <div class="stat-content">
-                <h3>{{ insurance_expiring }}</h3>
-                <p>Insurance Expiring</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="dashboard-grid">
-        <!-- Recent Maintenance -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h2>Recent Maintenance</h2>
-                <a href="{% url 'transportation:maintenance_list' %}" class="view-all-link">
-                    View All <span class="material-symbols-outlined">arrow_forward</span>
-                </a>
-            </div>
-            <div class="card-content">
-                {% if recent_maintenance %}
-                    <div class="maintenance-list">
-                        {% for maintenance in recent_maintenance %}
-                        <div class="maintenance-item">
-                            <div class="maintenance-info">
-                                <div class="vehicle-name">{{ maintenance.vehicle.license_plate }}</div>
-                                <div class="maintenance-type">{{ maintenance.get_maintenance_type_display }}</div>
-                                <div class="maintenance-date">{{ maintenance.date|date:"M d, Y" }}</div>
-                            </div>
-                            <div class="maintenance-cost">
-                                {% if maintenance.cost %}
-                                    ${{ maintenance.cost|floatformat:2 }}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </div>
+<div class="container">
+    <section id="title-section">
+        <div class="dashboard-header">
+            <div class="head d-flex align-items-center">
+                <h1>Transportation Management</h1>
+                <div class="quick-actions ">
+                    <a href="{% url 'transportation:vehicle_create' %}" class="btn btn-dark btn-sm">
+                        <div class="d-flex">
+                            <span class="material-symbols-outlined me-2">add</span>
+                            <span>Add Vehicle</span>
                         </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state">
-                        <span class="material-symbols-outlined">build</span>
-                        <p>No recent maintenance records</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Vehicles Needing Attention -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h2>Vehicles Needing Attention</h2>
-                <a href="{% url 'transportation:vehicle_list' %}?status=maintenance" class="view-all-link">
-                    View All <span class="material-symbols-outlined">arrow_forward</span>
-                </a>
-            </div>
-            <div class="card-content">
-                {% if vehicles_needing_attention %}
-                    <div class="attention-list">
-                        {% for vehicle in vehicles_needing_attention %}
-                        <div class="attention-item">
-                            <div class="vehicle-info">
-                                <div class="vehicle-name">
-                                    <a href="{% url 'transportation:vehicle_detail' vehicle.slug %}">
-                                        {{ vehicle.license_plate }}
-                                    </a>
-                                </div>
-                                <div class="vehicle-model">{{ vehicle.vehicle_model }}</div>
-                            </div>
-                            <div class="attention-reasons">
-                                {% if vehicle.is_service_due %}
-                                    <span class="badge badge-warning">Service Due</span>
-                                {% endif %}
-                                {% if vehicle.is_insurance_expired %}
-                                    <span class="badge badge-danger">Insurance Expired</span>
-                                {% endif %}
-                                {% if vehicle.is_registration_expired %}
-                                    <span class="badge badge-danger">Registration Expired</span>
-                                {% endif %}
-                            </div>
+                    </a>
+                    <a href="{% url 'transportation:maintenance_create' %}" class="btn btn-outline-dark btn-sm">
+                        <div class="d-flex">
+                            <span class="material-symbols-outlined me-2">build</span>
+                            <span>Log Maintenance</span>
                         </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state">
-                        <span class="material-symbols-outlined">check_circle</span>
-                        <p>All vehicles are up to date!</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Quick Links -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h2>Quick Links</h2>
-            </div>
-            <div class="card-content">
-                <div class="quick-links">
-                    <a href="{% url 'transportation:vehicle_list' %}" class="quick-link">
-                        <span class="material-symbols-outlined">directions_car</span>
-                        <span>All Vehicles</span>
-                    </a>
-                    <a href="{% url 'transportation:maintenance_list' %}" class="quick-link">
-                        <span class="material-symbols-outlined">build</span>
-                        <span>Maintenance Records</span>
-                    </a>
-                    <a href="{% url 'transportation:component_list' %}" class="quick-link">
-                        <span class="material-symbols-outlined">settings</span>
-                        <span>Components</span>
-                    </a>
-                    <a href="{% url 'transportation:vehicle_model_list' %}" class="quick-link">
-                        <span class="material-symbols-outlined">category</span>
-                        <span>Vehicle Models</span>
-                    </a>
-                    <a href="{% url 'transportation:reports' %}" class="quick-link">
-                        <span class="material-symbols-outlined">analytics</span>
-                        <span>Reports</span>
                     </a>
                 </div>
             </div>
         </div>
+        <hr>
+    </section>
+
+    <!-- Statistics Cards -->
+    <section id="cards">
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body  align-items-center gap-3 py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-muted mb-1">Total Vehicles</div>
+                            <div class="icon-total">
+                            <span class="material-symbols-outlined">traffic_jam</span>
+                        </div>
+                        </div>
+                        <div class="fw-bold">{{ total_vehicles }}</div>
+                    </div>
+                </div>
+            </div>
+             <div class="col-12 col-sm-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body  align-items-center gap-3 py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-muted mb-1">Active Vehicles</div>
+                            <div class="icon-active">
+                            <span class="material-symbols-outlined">local_taxi</span>
+                        </div>
+                        </div>
+                        <div class="fw-bold">{{ active_vehicles }}</div>
+                    </div>
+                </div>
+            </div>
+             <div class="col-12 col-sm-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body  align-items-center gap-3 py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-muted mb-1">Maintenace due</div>
+                            <div class="icon-maintain ms-1">
+                            <span class="material-symbols-outlined">construction</span>
+                        </div>
+                        </div>
+                        <div class="fw-bold">{{ maintenance_due }}</div>
+                    </div>
+                </div>
+            </div>
+             <div class="col-12 col-sm-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body  align-items-center gap-3 py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="text-muted mb-1">Insurance Expiring</div>
+                            <div class="icon-alert ms-3">
+                            <span class="material-symbols-outlined">car_crash</span>
+                        </div>
+                        </div>
+                        <div class="fw-bold">{{ insurance_expiring }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Main Content Grid -->
+<div class="dashboard-grid">
+    <!-- Recent Maintenance -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h2>Recent Maintenance</h2>
+            <a href="{% url 'transportation:maintenance_list' %}" class="view-all-link">
+                View All <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+        </div>
+        <div class="card-content">
+            {% if recent_maintenance %}
+            <div class="maintenance-list">
+                {% for maintenance in recent_maintenance %}
+                <div class="maintenance-item">
+                    <div class="maintenance-info">
+                        <div class="vehicle-name">{{ maintenance.vehicle.license_plate }}</div>
+                        <div class="maintenance-type">{{ maintenance.get_maintenance_type_display }}</div>
+                        <div class="maintenance-date">{{ maintenance.date|date:"M d, Y" }}</div>
+                    </div>
+                    <div class="maintenance-cost">
+                        {% if maintenance.cost %}
+                        ${{ maintenance.cost|floatformat:2 }}
+                        {% else %}e
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span class="material-symbols-outlined">build</span>
+                <p>No recent maintenance records</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Vehicles Needing Attention -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h2>Vehicles Needing Attention</h2>
+            <a href="{% url 'transportation:vehicle_list' %}?status=maintenance" class="view-all-link">
+                View All <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+        </div>
+        <div class="card-content">
+            {% if vehicles_needing_attention %}
+            <div class="attention-list">
+                {% for vehicle in vehicles_needing_attention %}
+                <div class="attention-item">
+                    <div class="vehicle-info">
+                        <div class="vehicle-name">
+                            <a href="{% url 'transportation:vehicle_detail' vehicle.slug %}">
+                                {{ vehicle.license_plate }}
+                            </a>
+                        </div>
+                        <div class="vehicle-model">{{ vehicle.vehicle_model }}</div>
+                    </div>
+                    <div class="attention-reasons">
+                        {% if vehicle.is_service_due %}
+                        <span class="badge badge-warning">Service Due</span>
+                        {% endif %}
+                        {% if vehicle.is_insurance_expired %}
+                        <span class="badge badge-danger">Insurance Expired</span>
+                        {% endif %}
+                        {% if vehicle.is_registration_expired %}
+                        <span class="badge badge-danger">Registration Expired</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span class="material-symbols-outlined">check_circle</span>
+                <p>All vehicles are up to date!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h2>Quick Links</h2>
+        </div>
+        <div class="card-content">
+            <div class="quick-links">
+                <a href="{% url 'transportation:vehicle_list' %}" class="quick-link">
+                    <span class="material-symbols-outlined">directions_car</span>
+                    <span>All Vehicles</span>
+                </a>
+                <a href="{% url 'transportation:maintenance_list' %}" class="quick-link">
+                    <span class="material-symbols-outlined">build</span>
+                    <span>Maintenance Records</span>
+                </a>
+                <a href="{% url 'transportation:component_list' %}" class="quick-link">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Components</span>
+                </a>
+                <a href="{% url 'transportation:vehicle_model_list' %}" class="quick-link">
+                    <span class="material-symbols-outlined">category</span>
+                    <span>Vehicle Models</span>
+                </a>
+                <a href="{% url 'transportation:reports' %}" class="quick-link">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Reports</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
+</div>
+
 {% endblock content %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize any dashboard-specific JavaScript here
-    console.log('Transportation dashboard loaded');
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize any dashboard-specific JavaScript here
+        console.log('Transportation dashboard loaded');
+    });
 </script>
 {% endblock scripts %}
