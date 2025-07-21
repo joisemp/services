@@ -1,71 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Space Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-4">
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Space Admin Dashboard{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/space_admin/style.css' %}">
+{% endblock style %}
+
+{% block navbar %}
+{% include 'navbar/navbar_space_admin.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+{% include 'sidebar/sidebar_space_admin.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="container-fluid">
     <!-- Welcome Section -->
-    <div class="alert alert-info">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-user-shield fa-lg me-3"></i>
-            <div>
-                <h6 class="mb-1">Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong></h6>
-                <small class="text-muted">Space Administrator Dashboard</small>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user-shield fa-2x text-primary me-3"></i>
+                    <div>
+                        <h5 class="mb-1">Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong></h5>
+                        <p class="mb-0 text-muted">Space Administrator Dashboard</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     {% if user_spaces.exists %}
-    <!-- Space Context Selector -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-building me-2"></i>
-                Space Context
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <p class="mb-0">Switch between your assigned spaces to view specific details and manage activities.</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    {% if selected_space %}
-                        <div class="badge bg-secondary">
-                            <strong>{{ selected_space.name }}</strong><br>
-                            <small>{{ selected_space.org.name }}</small>
-                        </div>
-                    {% else %}
-                        <span class="badge bg-warning">No Space Selected</span>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-8">
-                    <select class="form-select" id="spaceSelector" onchange="switchSpace(this.value)">
-                        <option value="">Select a space to manage...</option>
-                        {% for space in user_spaces %}
-                            <option value="{{ space.slug }}" 
-                                    {% if selected_space and space.slug == selected_space.slug %}selected{% endif %}>
-                                {{ space.name }} - {{ space.org.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 text-end">
-                    <span class="badge bg-info">
-                        Managing {{ user_spaces.count }} Space{{ user_spaces.count|pluralize }}
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {% if selected_space %}
     <!-- Selected Space Details -->
     <div class="row mb-4">
@@ -149,6 +116,70 @@
         </div>
         <div class="card-body">
             <div class="row">
+                {% if space_settings %}
+                <!-- Issues (only if enabled) -->
+                {% if space_settings.enable_issue_management %}
+                <div class="col-md-3 mb-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <i class="fas fa-bug fa-2x text-primary mb-3"></i>
+                            <h6>Issues</h6>
+                            <a href="{% url 'issue_management:issue_list' %}?space_slug={{ selected_space.slug }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                View Issues
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Transportation (only if enabled) -->
+                {% if space_settings.enable_transportation %}
+                <div class="col-md-3 mb-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <i class="fas fa-car fa-2x text-info mb-3"></i>
+                            <h6>Vehicles</h6>
+                            <a href="{% url 'transportation:vehicle_list' %}?space_slug={{ selected_space.slug }}" 
+                               class="btn btn-outline-info btn-sm">
+                                Manage Fleet
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Finance (only if enabled) -->
+                {% if space_settings.enable_finance %}
+                <div class="col-md-3 mb-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
+                            <h6>Finances</h6>
+                            <a href="{% url 'finance:transaction_list' %}?space_slug={{ selected_space.slug }}" 
+                               class="btn btn-outline-warning btn-sm">
+                                View Transactions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Settings (always show for space admin) -->
+                <div class="col-md-3 mb-3">
+                    <div class="card border-secondary">
+                        <div class="card-body text-center">
+                            <i class="fas fa-cog fa-2x text-secondary mb-3"></i>
+                            <h6>Settings</h6>
+                            <a href="{% url 'service_management:space_settings' selected_space.slug %}" 
+                               class="btn btn-outline-secondary btn-sm">
+                                Space Settings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Show all if no settings available -->
                 <div class="col-md-3 mb-3">
                     <div class="card border-primary">
                         <div class="card-body text-center">
@@ -197,6 +228,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -206,21 +238,27 @@
         <div class="card-body text-center py-5">
             <i class="fas fa-hand-pointer fa-3x text-muted mb-4"></i>
             <h4 class="text-muted">Select a Space to Begin</h4>
-            <p class="text-muted">Choose a space from the dropdown above to view its details and manage activities.</p>
+            <p class="text-muted">Choose a space from the switcher in the navigation bar to view its details and manage activities.</p>
         </div>
     </div>
     {% endif %}
 
     {% else %}
     <!-- No Spaces Assigned -->
-    <div class="alert alert-warning text-center">
-        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-        <h5>No Spaces Assigned</h5>
-        <p class="mb-0">Contact your organization administrator to assign spaces to your account.</p>
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                <h5>No Spaces Assigned</h5>
+                <p class="mb-0">Contact your organization administrator to assign spaces to your account.</p>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
+{% endblock content %}
 
+{% block scripts %}
 <script>
 function switchSpace(spaceSlug) {
     if (spaceSlug) {
@@ -234,5 +272,4 @@ function switchSpace(spaceSlug) {
     }
 }
 </script>
-</body>
-</html>
+{% endblock scripts %}

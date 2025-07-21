@@ -329,10 +329,12 @@ def space_settings(request, slug):
     
     if request.method == 'POST':
         # Update module access settings
-        settings.enable_dashboard = request.POST.get('enable_dashboard') == 'on'
         settings.enable_issue_management = request.POST.get('enable_issue_management') == 'on'
         settings.enable_service_management = request.POST.get('enable_service_management') == 'on'
         settings.enable_transportation = request.POST.get('enable_transportation') == 'on'
+        settings.enable_finance = request.POST.get('enable_finance') == 'on'
+        settings.enable_marketplace = request.POST.get('enable_marketplace') == 'on'
+        settings.enable_asset_management = request.POST.get('enable_asset_management') == 'on'
         settings.updated_by = request.user
         settings.save()
         

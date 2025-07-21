@@ -44,7 +44,8 @@ def dashboard_view(request):
             'user_type': user_type, 
             'space_admin_message': 'Space admin context.',
             'selected_space': selected_space,
-            'user_spaces': user.administered_spaces.all() if user_type == 'space_admin' else None
+            'user_spaces': user.administered_spaces.all() if user_type == 'space_admin' else None,
+            'space_settings': selected_space.settings if selected_space else None
         },
         'maintainer': {'user': user, 'user_type': user_type, 'maintainer_message': 'Maintainer context.'},
         'general_user': {'user': user, 'user_type': user_type, 'general_message': 'General user context.'},
