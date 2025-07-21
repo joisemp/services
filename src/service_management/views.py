@@ -220,17 +220,23 @@ def spaces_list(request):
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def space_detail(request, slug):
     """View details of a specific space"""
-    # Get the organisation(s) managed by this central admin
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to view this space.')
     
     context = {
         'space': space,
         'settings': space.settings,
         'admin_count': space.get_admin_count(),
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/space_detail.html', context)
 
@@ -268,11 +274,16 @@ def create_space(request):
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def edit_space(request, slug):
     """Edit an existing space"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to edit this space.')
     
     if request.method == 'POST':
         form = SpaceForm(request.POST, instance=space, user_org=space.org)
@@ -296,16 +307,24 @@ def edit_space(request, slug):
     context = {
         'form': form,
         'space': space,
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/edit_space.html', context)
 
 
 @login_required
-@user_passes_test(is_central_admin)
 def space_settings(request, slug):
     """Manage space settings"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
-    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    space = get_object_or_404(Spaces, slug=slug)
+    
+    # Check permissions: central admin of the org OR space admin of this space
+    user_is_central_admin = is_central_admin(request.user) and space.org.central_admins.filter(id=request.user.id).exists()
+    user_is_space_admin = is_space_admin(request.user) and space.space_admins.filter(id=request.user.id).exists()
+    
+    if not (user_is_central_admin or user_is_space_admin):
+        return HttpResponseForbidden('You do not have permission to manage settings for this space.')
+    
     settings = space.settings
     
     if request.method == 'POST':
@@ -318,11 +337,18 @@ def space_settings(request, slug):
         settings.save()
         
         messages.success(request, f'Settings for "{space.name}" updated successfully!')
-        return redirect('service_management:space_detail', slug=space.slug)
+        
+        # Redirect based on user type
+        if user_is_space_admin:
+            return redirect(f'/dashboard/?user={request.user.profile.slug}&space_slug={space.slug}')
+        else:
+            return redirect('service_management:space_detail', slug=space.slug)
     
     context = {
         'space': space,
         'settings': settings,
+        'user_is_central_admin': user_is_central_admin,
+        'user_is_space_admin': user_is_space_admin,
     }
     return render(request, 'service_management/space_settings.html', context)
 
