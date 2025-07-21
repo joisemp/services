@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
-from .forms import (AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm)
+from .forms import (AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm, SpaceForm)
 from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
@@ -239,31 +239,30 @@ def space_detail(request, slug):
 @user_passes_test(is_central_admin)
 def create_space(request):
     """Create a new space"""
-    orgs = Organisation.objects.filter(central_admins=request.user)
+    # Get the user's organization automatically
+    user_org = request.user.profile.org
+    
+    if not user_org:
+        messages.error(request, 'You must be associated with an organization to create spaces.')
+        return redirect('service_management:spaces_list')
     
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        org_id = request.POST.get('org')
-        
-        if name and org_id:
+        form = SpaceForm(request.POST, user_org=user_org)
+        if form.is_valid():
             try:
-                org = orgs.get(id=org_id)
-                space = Spaces.objects.create(
-                    name=name,
-                    description=description,
-                    org=org,
-                    created_by=request.user
-                )
+                space = form.save(commit=False)
+                space.created_by = request.user
+                space.save()
                 messages.success(request, f'Space "{space.name}" created successfully!')
                 return redirect('service_management:space_detail', slug=space.slug)
-            except Organisation.DoesNotExist:
-                messages.error(request, 'Invalid organisation selected.')
             except Exception as e:
                 messages.error(request, f'Error creating space: {str(e)}')
+    else:
+        form = SpaceForm(user_org=user_org)
     
     context = {
-        'orgs': orgs,
+        'form': form,
+        'user_org': user_org,  # Pass user's organization for display
     }
     return render(request, 'service_management/create_space.html', context)
 
@@ -276,22 +275,26 @@ def edit_space(request, slug):
     space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
     
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        is_access_enabled = request.POST.get('is_access_enabled') == 'on'
-        require_approval = request.POST.get('require_approval') == 'on'
-        
-        if name:
-            space.name = name
-            space.description = description
-            space.is_access_enabled = is_access_enabled
-            space.require_approval = require_approval
-            space.save()
-            
-            messages.success(request, f'Space "{space.name}" updated successfully!')
-            return redirect('service_management:space_detail', slug=space.slug)
+        form = SpaceForm(request.POST, instance=space, user_org=space.org)
+        if form.is_valid():
+            try:
+                # Handle additional fields not in the form
+                space.is_access_enabled = request.POST.get('is_access_enabled') == 'on'
+                space.require_approval = request.POST.get('require_approval') == 'on'
+                
+                # Save the form data
+                form.save()
+                space.save()  # Save the additional fields
+                
+                messages.success(request, f'Space "{space.name}" updated successfully!')
+                return redirect('service_management:space_detail', slug=space.slug)
+            except Exception as e:
+                messages.error(request, f'Error updating space: {str(e)}')
+    else:
+        form = SpaceForm(instance=space, user_org=space.org)
     
     context = {
+        'form': form,
         'space': space,
     }
     return render(request, 'service_management/edit_space.html', context)
