@@ -19,7 +19,7 @@
                         {{ user.phone }}
                     {% endif %}
                 </strong>
-                <a href="{% url 'dashboard:dashboard' %}?user={{ user.profile.slug }}" class="btn btn-info ms-3">Go to Dashboard</a>
+                <a href="{% url 'dashboard:dashboard' %}" class="btn btn-info ms-3">Go to Dashboard</a>
             </div>
         {% endif %}
         <h3>Welcome to Issue Reporter</h3>

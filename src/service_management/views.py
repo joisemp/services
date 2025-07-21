@@ -340,9 +340,11 @@ def space_settings(request, slug):
         
         messages.success(request, f'Settings for "{space.name}" updated successfully!')
         
-        # Redirect based on user type
+        # Redirect based on user type  
         if user_is_space_admin:
-            return redirect(f'/dashboard/?user={request.user.profile.slug}&space_slug={space.slug}')
+            # Update the user's active space and redirect to dashboard
+            request.user.profile.switch_active_space(space)
+            return redirect('dashboard:dashboard')
         else:
             return redirect('service_management:space_detail', slug=space.slug)
     

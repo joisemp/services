@@ -84,9 +84,31 @@
 <script>
 function switchSpace(spaceSlug) {
     if (spaceSlug) {
-        const currentUrl = new URL(window.location);
-        currentUrl.searchParams.set('space_slug', spaceSlug);
-        window.location.href = currentUrl.toString();
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch('{% url "dashboard:switch_space" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken,
+            },
+            body: `space_slug=${encodeURIComponent(spaceSlug)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to reflect the new space context
+                window.location.reload();
+            } else {
+                console.error('Failed to switch space:', data.error);
+                alert('Failed to switch space: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while switching spaces');
+        });
     }
 }
 </script>

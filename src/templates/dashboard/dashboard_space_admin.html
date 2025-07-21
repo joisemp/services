@@ -16,6 +16,7 @@
 {% endblock sidebar %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
     <!-- Welcome Section -->
     <div class="row mb-4">
@@ -257,19 +258,3 @@
     {% endif %}
 </div>
 {% endblock content %}
-
-{% block scripts %}
-<script>
-function switchSpace(spaceSlug) {
-    if (spaceSlug) {
-        const currentUrl = new URL(window.location);
-        currentUrl.searchParams.set('space_slug', spaceSlug);
-        window.location.href = currentUrl.toString();
-    } else {
-        const currentUrl = new URL(window.location);
-        currentUrl.searchParams.delete('space_slug');
-        window.location.href = currentUrl.toString();
-    }
-}
-</script>
-{% endblock scripts %}
