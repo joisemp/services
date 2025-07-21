@@ -16,7 +16,7 @@ from decimal import Decimal
 from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
 from .models import WorkCategory, Spaces, SpaceSettings
-from config.helpers import is_central_admin
+from config.helpers import is_central_admin, is_space_admin
 
 @login_required
 @user_passes_test(is_central_admin)
@@ -367,4 +367,21 @@ def manage_space_admins(request, slug):
         'potential_admins': potential_admins,
     }
     return render(request, 'service_management/manage_space_admins.html', context)
+
+
+@login_required
+def no_spaces_assigned(request):
+    """View for space admins who have no assigned spaces"""
+    # Only space admins should see this page
+    if not request.user.is_authenticated or not is_space_admin(request.user):
+        # Redirect non-space admins to the landing page instead of dashboard
+        return redirect('landing')  # This should be a safe fallback
+    
+    # Get the user's organization for contact info
+    user_org = request.user.profile.org if hasattr(request.user, 'profile') else None
+    
+    context = {
+        'user_org': user_org,
+    }
+    return render(request, 'service_management/no_spaces_assigned.html', context)
 
