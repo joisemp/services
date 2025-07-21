@@ -18,10 +18,14 @@
     <div class="initial-wrap">
 
         <!-- Navbar -->
-        {% block navbar %}{% endblock navbar %}
+        {% block navbar %}
+            {% include 'navbar/navbar_conditional.html' %}
+        {% endblock navbar %}
 
         <!-- Sidebar -->
-        {% block sidebar %}{% endblock sidebar %}
+        {% block sidebar %}
+            {% include 'sidebar/sidebar_conditional.html' %}
+        {% endblock sidebar %}
 
         <!-- Main Content -->
         <section class="main-content">

@@ -11,6 +11,7 @@ class Issue(models.Model):
     voice = models.FileField(upload_to='issue_voices/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     org = models.ForeignKey(Organisation, related_name='issues', on_delete=models.CASCADE, null=True, blank=True)
+    space = models.ForeignKey('service_management.Spaces', related_name='issues', on_delete=models.CASCADE, null=True, blank=True, help_text="Space where this issue was reported")
     slug = models.SlugField(unique=True, db_index=True, blank=True)
     created_by = models.ForeignKey('core.User', related_name='created_issues', on_delete=models.SET_NULL, null=True, blank=True)
     maintainer = models.ForeignKey('core.User', related_name='assigned_issues', on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'profile__user_type': 'maintainer'})

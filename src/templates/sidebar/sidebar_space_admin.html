@@ -1,7 +1,7 @@
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
         <!-- Dashboard -->
-        <a class="navlink active" href="{% url 'dashboard:dashboard' %}">
+        <a class="navlink {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
@@ -11,7 +11,7 @@
         {% if space_settings %}
         <!-- Issues (only if enabled) -->
         {% if space_settings.enable_issue_management %}
-        <a class="navlink" href="{% if selected_space %}{% url 'issue_management:issue_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink {% if request.resolver_match.url_name == 'issue_list' %}active{% endif %}" href="{% url 'issue_management:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
@@ -21,7 +21,7 @@
 
         <!-- Finance (only if enabled) -->
         {% if space_settings.enable_finance %}
-        <a class="navlink" href="{% if selected_space %}{% url 'finance:transaction_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}" href="{% url 'finance:transaction_list' %}">
             <span class="material-symbols-outlined me-2">
                 finance_mode
             </span>
@@ -31,7 +31,7 @@
 
         <!-- Transportation/Vehicles (only if enabled) -->
         {% if space_settings.enable_transportation %}
-        <a class="navlink" href="{% if selected_space %}{% url 'transportation:vehicle_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}" href="{% url 'transportation:vehicle_list' %}">
             <span class="material-symbols-outlined me-2">
                 commute
             </span>
@@ -41,7 +41,7 @@
 
         <!-- Marketplace (only if enabled) -->
         {% if space_settings.enable_marketplace %}
-        <a class="navlink" href="{% if selected_space %}{% url 'marketplace:marketplace' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
             <span class="material-symbols-outlined me-2">
                 storefront
             </span>
@@ -61,7 +61,7 @@
         {% else %}
         <!-- Show all links if no space is selected or no settings available -->
         <!-- Issues -->
-        <a class="navlink" href="{% if selected_space %}{% url 'issue_management:issue_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink" href="{% url 'issue_management:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
@@ -69,7 +69,7 @@
         </a>
 
         <!-- Finance -->
-        <a class="navlink" href="{% if selected_space %}{% url 'finance:transaction_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink" href="{% url 'finance:transaction_list' %}">
             <span class="material-symbols-outlined me-2">
                 finance_mode
             </span>
@@ -77,7 +77,7 @@
         </a>
 
         <!-- Transportation -->
-        <a class="navlink" href="{% if selected_space %}{% url 'transportation:vehicle_list' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink" href="{% url 'transportation:vehicle_list' %}">
             <span class="material-symbols-outlined me-2">
                 commute
             </span>
@@ -85,7 +85,7 @@
         </a>
 
         <!-- Marketplace -->
-        <a class="navlink" href="{% if selected_space %}{% url 'marketplace:marketplace' %}?space_slug={{ selected_space.slug }}{% else %}#{% endif %}">
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
             <span class="material-symbols-outlined me-2">
                 storefront
             </span>

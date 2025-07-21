@@ -1,0 +1,12 @@
+{% comment %}
+Conditional sidebar include based on user type
+{% endcomment %}
+
+{% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
+    {% include 'sidebar/sidebar_central_admin.html' %}
+{% elif user.is_authenticated and user.profile.user_type == 'space_admin' %}
+    {% include 'sidebar/sidebar_space_admin.html' %}
+{% else %}
+    {% comment %}Default to space admin sidebar for other users{% endcomment %}
+    {% include 'sidebar/sidebar_space_admin.html' %}
+{% endif %}

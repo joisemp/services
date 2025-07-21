@@ -7,14 +7,6 @@
 <link rel="stylesheet" href="{% static 'styles/dashboard/space_admin/style.css' %}">
 {% endblock style %}
 
-{% block navbar %}
-{% include 'navbar/navbar_space_admin.html' %}
-{% endblock navbar %}
-
-{% block sidebar %}
-{% include 'sidebar/sidebar_space_admin.html' %}
-{% endblock sidebar %}
-
 {% block content %}
 {% csrf_token %}
 <div class="container-fluid">
@@ -125,7 +117,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-bug fa-2x text-primary mb-3"></i>
                             <h6>Issues</h6>
-                            <a href="{% url 'issue_management:issue_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'issue_management:issue_list' %}" 
                                class="btn btn-outline-primary btn-sm">
                                 View Issues
                             </a>
@@ -141,7 +133,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-car fa-2x text-info mb-3"></i>
                             <h6>Vehicles</h6>
-                            <a href="{% url 'transportation:vehicle_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'transportation:vehicle_list' %}" 
                                class="btn btn-outline-info btn-sm">
                                 Manage Fleet
                             </a>
@@ -157,7 +149,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
                             <h6>Finances</h6>
-                            <a href="{% url 'finance:transaction_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'finance:transaction_list' %}" 
                                class="btn btn-outline-warning btn-sm">
                                 View Transactions
                             </a>
@@ -186,7 +178,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-bug fa-2x text-primary mb-3"></i>
                             <h6>Issues</h6>
-                            <a href="{% url 'issue_management:issue_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'issue_management:issue_list' %}" 
                                class="btn btn-outline-primary btn-sm">
                                 View Issues
                             </a>
@@ -198,7 +190,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-car fa-2x text-info mb-3"></i>
                             <h6>Vehicles</h6>
-                            <a href="{% url 'transportation:vehicle_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'transportation:vehicle_list' %}" 
                                class="btn btn-outline-info btn-sm">
                                 Manage Fleet
                             </a>
@@ -210,7 +202,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
                             <h6>Finances</h6>
-                            <a href="{% url 'finance:transaction_list' %}?space_slug={{ selected_space.slug }}" 
+                            <a href="{% url 'finance:transaction_list' %}" 
                                class="btn btn-outline-warning btn-sm">
                                 View Transactions
                             </a>
