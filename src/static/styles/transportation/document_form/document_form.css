@@ -23,6 +23,12 @@
   justify-content: space-between;
   padding: 1rem;
 }
+@media screen and (max-width: 430px) {
+  .initial-wrap .sidebar-collapsed {
+    margin-left: -100%;
+    transition: margin-left 0.3s;
+  }
+}
 .initial-wrap .sidebar {
   width: 220px;
   background-color: white;
@@ -33,18 +39,25 @@
   z-index: 999;
   border-right: 1px solid #e5e5e5;
   overflow-y: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  transition: margin-left 0.3s;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
 }
 .initial-wrap .sidebar::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
+  /* Safari and Chrome */
 }
 .initial-wrap .sidebar:hover {
-  scrollbar-width: thin; /* Firefox */
-  -ms-overflow-style: auto; /* Internet Explorer 10+ */
+  scrollbar-width: thin;
+  /* Firefox */
+  -ms-overflow-style: auto;
+  /* Internet Explorer 10+ */
 }
 .initial-wrap .sidebar:hover::-webkit-scrollbar {
-  display: block; /* Safari and Chrome */
+  display: block;
+  /* Safari and Chrome */
   width: 8px;
 }
 .initial-wrap .sidebar:hover::-webkit-scrollbar-thumb {
@@ -423,7 +436,7 @@ tr {
   color: white;
 }
 .document-form-container .form-actions .btn-secondary:hover {
-  background: #d7d7d7;
+  background: rgb(214.5, 214.5, 214.5);
 }
 .document-form-container .form-actions .btn-primary {
   background: #000000;
