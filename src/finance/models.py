@@ -78,6 +78,7 @@ class FinancialTransaction(models.Model, CurrencyMixin):
     
     # Organization and user
     org = models.ForeignKey('core.Organisation', related_name='financial_transactions', on_delete=models.CASCADE)
+    space = models.ForeignKey('service_management.Spaces', related_name='financial_transactions', on_delete=models.CASCADE, null=True, blank=True, help_text="Space where this transaction was recorded")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='created_transactions', on_delete=models.SET_NULL, null=True, blank=True)
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='approved_transactions', on_delete=models.SET_NULL, null=True, blank=True)
     

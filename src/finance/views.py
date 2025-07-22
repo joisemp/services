@@ -144,9 +144,53 @@ class TransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 25
     
     def get_queryset(self):
-        queryset = FinancialTransaction.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-transaction_date')
+        # Initialize default values
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return FinancialTransaction.objects.none()
+        
+        if user.profile.user_type == 'central_admin':
+            # Central admin sees all transactions from their organization
+            queryset = FinancialTransaction.objects.filter(org=user.profile.org)
+            
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all transactions
+            elif space_filter == 'no_space':
+                # Filter for transactions without space assignment
+                queryset = queryset.filter(space__isnull=True)
+                
+        elif user.profile.user_type == 'space_admin':
+            # Space admin sees transactions from their managed spaces
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                # Filter transactions by the selected space
+                queryset = FinancialTransaction.objects.filter(space=selected_space)
+            else:
+                # No spaces available
+                queryset = FinancialTransaction.objects.none()
+        else:
+            # Regular users see transactions they created from their organization
+            queryset = FinancialTransaction.objects.filter(
+                created_by=user,
+                org=user.profile.org
+            )
+            
+        queryset = queryset.order_by('-transaction_date')
         
         # Apply search filters
         search_form = TransactionSearchForm(self.request.GET, user=self.request.user)
@@ -195,10 +239,46 @@ class TransactionListView(LoginRequiredMixin, ListView):
         context['search_form'] = TransactionSearchForm(self.request.GET, user=self.request.user)
         context['bulk_form'] = BulkTransactionForm()
         
+        # Space admin context (similar to issues)
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
         # Summary stats for current filter
         queryset = self.get_queryset()
-        context['total_count'] = queryset.count()
-        context['total_amount'] = queryset.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['total_transactions'] = queryset.count()
+        context['total_income'] = queryset.filter(transaction_type='income').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['total_expenses'] = queryset.filter(transaction_type='expense').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['net_balance'] = context['total_income'] - context['total_expenses']
+        
+        # Add space context
+        context['selected_space'] = selected_space
+        context['space_settings'] = space_settings
+        context['user_spaces'] = user_spaces
         
         # Add currency context
         context.update(get_template_currency_context(self.request.user.profile.org))

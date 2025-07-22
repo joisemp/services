@@ -28,7 +28,7 @@ class FinancialTransactionForm(forms.ModelForm):
         model = FinancialTransaction
         fields = [
             'title', 'description', 'amount', 'transaction_type', 'payment_method',
-            'status', 'category', 'transaction_date', 'reference_number',
+            'status', 'category', 'space', 'transaction_date', 'reference_number',
             'receipt_image', 'notes'
         ]
         widgets = {
@@ -39,6 +39,7 @@ class FinancialTransactionForm(forms.ModelForm):
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'space': forms.Select(attrs={'class': 'form-select'}),
             'transaction_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'reference_number': forms.TextInput(attrs={'class': 'form-control'}),
             'receipt_image': forms.FileInput(attrs={'class': 'form-control'}),
@@ -50,9 +51,35 @@ class FinancialTransactionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if user and hasattr(user, 'profile') and user.profile.org:
+            # Filter categories by organization
             self.fields['category'].queryset = TransactionCategory.objects.filter(
                 org=user.profile.org, is_active=True
             )
+            
+            # Handle space field based on user type
+            if user.profile.user_type == 'central_admin':
+                # Central admin can select any space or leave as organization-wide
+                space_choices = [('', 'Organization-wide (No Space)')] + [
+                    (space.id, space.name) for space in user.profile.org.spaces.all()
+                ]
+                self.fields['space'].choices = space_choices
+                self.fields['space'].required = False
+            elif user.profile.user_type == 'space_admin':
+                # Space admin can only select their current active space
+                if user.profile.current_active_space:
+                    self.fields['space'].initial = user.profile.current_active_space
+                    self.fields['space'].widget = forms.HiddenInput()
+                    self.fields['space'].queryset = user.profile.org.spaces.filter(
+                        id=user.profile.current_active_space.id
+                    )
+                else:
+                    # If no active space, show dropdown of available spaces
+                    self.fields['space'].queryset = user.profile.org.spaces.all()
+                    self.fields['space'].required = True
+            else:
+                # For other user types, hide space field
+                self.fields['space'].widget = forms.HiddenInput()
+                self.fields['space'].required = False
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
