@@ -39,15 +39,61 @@ from .currency import get_template_currency_context
 @login_required
 def dashboard(request):
     """Main finance dashboard with overview stats"""
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        # Refresh user profile from database to get latest space context
+        request.user.profile.refresh_from_db()
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     user_org = request.user.profile.org
     
     # Get current month data
     current_month = timezone.now().replace(day=1)
     next_month = (current_month + timedelta(days=32)).replace(day=1)
     
-    # Calculate stats
+    # Base filter for transactions
+    base_filter = Q(org=user_org)
+    
+    # Apply space filtering based on user type and context
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        base_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            base_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            base_filter &= Q(space=selected_space)
+        # If no filter specified, show all transactions for central admin
+    
+    # Calculate stats with space filtering
     total_income = FinancialTransaction.objects.filter(
-        org=user_org,
+        base_filter,
         transaction_type='income',
         status='completed',
         transaction_date__gte=current_month,
@@ -55,32 +101,48 @@ def dashboard(request):
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     total_expenses = FinancialTransaction.objects.filter(
-        org=user_org,
+        base_filter,
         transaction_type='expense',
         status='completed',
         transaction_date__gte=current_month,
         transaction_date__lt=next_month
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    # Recent transactions
+    # Recent transactions with space filtering
     recent_transactions = FinancialTransaction.objects.filter(
-        org=user_org
+        base_filter
     ).order_by('-transaction_date')[:10]
     
-    # Due recurring transactions
-    due_recurring = RecurringTransaction.objects.filter(
-        org=user_org,
-        is_active=True,
-        next_due_date__lte=timezone.now().date()
-    )
+    # Due recurring transactions with space filtering
+    due_recurring_filter = Q(org=user_org, is_active=True, next_due_date__lte=timezone.now().date())
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        due_recurring_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            due_recurring_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            due_recurring_filter &= Q(space=selected_space)
     
-    # Budget analysis
-    active_budgets = Budget.objects.filter(
+    due_recurring = RecurringTransaction.objects.filter(due_recurring_filter)
+    
+    # Budget analysis with space filtering
+    budget_filter = Q(
         org=user_org,
         is_active=True,
         start_date__lte=timezone.now().date(),
         end_date__gte=timezone.now().date()
     )
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        budget_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            budget_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            budget_filter &= Q(space=selected_space)
+    
+    active_budgets = Budget.objects.filter(budget_filter)
     
     # Calculate budget status
     budget_data = []
@@ -97,19 +159,31 @@ def dashboard(request):
             'is_over': budget.is_over_budget()
         })
     
-    # Monthly expense trends (last 6 months)
+    # Monthly expense trends (last 6 months) with space filtering
     monthly_trends = []
     for i in range(6):
         month_start = (current_month - timedelta(days=i*30)).replace(day=1)
         month_end = (month_start + timedelta(days=32)).replace(day=1)
         
-        month_expenses = FinancialTransaction.objects.filter(
+        month_filter = Q(
             org=user_org,
             transaction_type='expense',
             status='completed',
             transaction_date__gte=month_start,
             transaction_date__lt=month_end
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        )
+        
+        # Apply space filtering for monthly trends
+        if request.user.profile.user_type == 'space_admin' and selected_space:
+            month_filter &= Q(space=selected_space)
+        elif request.user.profile.user_type == 'central_admin':
+            space_filter = request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                month_filter &= Q(space__isnull=True)
+            elif space_filter and selected_space:
+                month_filter &= Q(space=selected_space)
+        
+        month_expenses = FinancialTransaction.objects.filter(month_filter).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         
         monthly_trends.append({
             'month': month_start.strftime('%B %Y'),
@@ -129,6 +203,10 @@ def dashboard(request):
         'monthly_trends': monthly_trends,
         'monthly_trends_json': json.dumps(monthly_trends),
         'current_month': current_month.strftime('%B %Y'),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     # Add currency context
@@ -305,6 +383,13 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Transaction created successfully!')
         return super().form_valid(form)
 
@@ -380,13 +465,77 @@ class RecurringTransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 25
     
     def get_queryset(self):
-        return RecurringTransaction.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-next_due_date')
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return RecurringTransaction.objects.none()
+        
+        # Base queryset for user's organization
+        queryset = RecurringTransaction.objects.filter(org=user.profile.org)
+        
+        # Apply space filtering based on user type
+        if user.profile.user_type == 'space_admin':
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                queryset = queryset.filter(space=selected_space)
+            else:
+                queryset = RecurringTransaction.objects.none()
+                
+        elif user.profile.user_type == 'central_admin':
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                queryset = queryset.filter(space__isnull=True)
+            elif space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all
+        
+        return queryset.order_by('-next_due_date')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_org = self.request.user.profile.org
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
         
         # Get recurring transactions
         recurring_transactions = self.get_queryset()
@@ -414,6 +563,10 @@ class RecurringTransactionListView(LoginRequiredMixin, ListView):
             'monthly_income': monthly_income,
             'monthly_expenses': monthly_expenses,
             'due_count': due_count,
+            # Add space context
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
         })
         
         # Add currency context
@@ -437,6 +590,13 @@ class RecurringTransactionCreateView(LoginRequiredMixin, CreateView):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
         form.instance.next_due_date = form.instance.start_date
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Recurring transaction created successfully!')
         return super().form_valid(form)
 
@@ -497,12 +657,76 @@ class BudgetListView(LoginRequiredMixin, ListView):
     paginate_by = 25
     
     def get_queryset(self):
-        return Budget.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-start_date')
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return Budget.objects.none()
+        
+        # Base queryset for user's organization
+        queryset = Budget.objects.filter(org=user.profile.org)
+        
+        # Apply space filtering based on user type
+        if user.profile.user_type == 'space_admin':
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                queryset = queryset.filter(space=selected_space)
+            else:
+                queryset = Budget.objects.none()
+                
+        elif user.profile.user_type == 'central_admin':
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                queryset = queryset.filter(space__isnull=True)
+            elif space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all
+        
+        return queryset.order_by('-start_date')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
         
         # Calculate budget summaries
         budgets = context['budgets']
@@ -511,6 +735,13 @@ class BudgetListView(LoginRequiredMixin, ListView):
             budget.remaining_amount = budget.get_remaining_amount()
             budget.percentage_used = budget.get_percentage_used()
             budget.is_over = budget.is_over_budget()
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
         
         # Add currency context
         context.update(get_template_currency_context(self.request.user.profile.org))
@@ -537,6 +768,13 @@ class BudgetCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Budget created successfully!')
         return super().form_valid(form)
 
@@ -579,8 +817,19 @@ def budget_detail(request, slug):
         transaction_date__lte=budget.end_date
     )
     
+    # Filter by category if specified
     if budget.category:
         transactions = transactions.filter(category=budget.category)
+    else:
+        # If no category specified, include only transactions without category
+        transactions = transactions.filter(category__isnull=True)
+    
+    # Filter by space if this budget is space-specific
+    if budget.space:
+        transactions = transactions.filter(space=budget.space)
+    else:
+        # If budget is organization-wide (no space), include only transactions without space
+        transactions = transactions.filter(space__isnull=True)
     
     # Calculate spending over time
     spending_data = []

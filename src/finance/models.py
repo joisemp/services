@@ -155,6 +155,7 @@ class RecurringTransaction(models.Model, CurrencyMixin):
     
     # Organization and user
     org = models.ForeignKey('core.Organisation', related_name='recurring_transactions', on_delete=models.CASCADE)
+    space = models.ForeignKey('service_management.Spaces', related_name='recurring_transactions', on_delete=models.CASCADE, null=True, blank=True, help_text="Space where this recurring transaction applies")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='created_recurring_transactions', on_delete=models.SET_NULL, null=True, blank=True)
     
     # Status
@@ -263,6 +264,7 @@ class Budget(models.Model, CurrencyMixin):
     
     # Organization
     org = models.ForeignKey('core.Organisation', related_name='budgets', on_delete=models.CASCADE)
+    space = models.ForeignKey('service_management.Spaces', related_name='budgets', on_delete=models.CASCADE, null=True, blank=True, help_text="Space where this budget applies")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='created_budgets', on_delete=models.SET_NULL, null=True, blank=True)
     
     # Status
@@ -296,12 +298,24 @@ class Budget(models.Model, CurrencyMixin):
             org=self.org,
             transaction_type='expense',
             status='completed',
-            transaction_date__gte=self.start_date,
-            transaction_date__lte=self.end_date
+            transaction_date__date__gte=self.start_date,
+            transaction_date__date__lte=self.end_date
         )
         
+        # Filter by category if specified
         if self.category:
             transactions = transactions.filter(category=self.category)
+        else:
+            # If no category specified, include only transactions without category
+            transactions = transactions.filter(category__isnull=True)
+        
+        # Filter by space if this budget is space-specific
+        if self.space:
+            transactions = transactions.filter(space=self.space)
+        else:
+            # If budget is organization-wide (no space), include only transactions without space
+            # This means organization-wide budgets track organization-level expenses
+            transactions = transactions.filter(space__isnull=True)
         
         total = transactions.aggregate(total=models.Sum('amount'))['total']
         return total or Decimal('0.00')

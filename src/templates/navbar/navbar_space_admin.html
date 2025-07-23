@@ -84,8 +84,15 @@
 <script>
 function switchSpace(spaceSlug) {
     if (spaceSlug) {
-        // Get CSRF token
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        // Get CSRF token from meta tag or form
+        let csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            csrfToken = csrfToken.getAttribute('content');
+        } else {
+            // Fallback to form field
+            const csrfField = document.querySelector('[name=csrfmiddlewaretoken]');
+            csrfToken = csrfField ? csrfField.value : '';
+        }
         
         fetch('{% url "dashboard:switch_space" %}', {
             method: 'POST',
