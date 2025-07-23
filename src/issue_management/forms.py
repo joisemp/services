@@ -87,6 +87,85 @@ class IssueUpdateForm(forms.ModelForm):
                 org=self.instance.org, 
                 is_active=True
             )
+            
+            # Limit status choices based on user type and current status
+            if user.profile.user_type == 'maintainer':
+                current_status = self.instance.status
+                if current_status == 'open':
+                    # Maintainers can only set to 'in_progress' from 'open'
+                    status_choices = [('open', 'Open'), ('in_progress', 'In Progress')]
+                elif current_status == 'in_progress':
+                    # Maintainers can resolve or escalate from 'in_progress'
+                    status_choices = [('in_progress', 'In Progress'), ('resolved', 'Resolved'), ('escalated', 'Escalated')]
+                else:
+                    # Once resolved or escalated, maintainers cannot change status
+                    status_choices = [(current_status, dict(Issue.STATUS_CHOICES)[current_status])]
+                
+                self.fields['status'].choices = status_choices
+            
+            # Central admins have full control over escalated issues
+            elif user.profile.user_type == 'central_admin':
+                # Central admins can manage all statuses
+                pass
+
+class IssueEscalationForm(forms.ModelForm):
+    """Form for escalating issues by maintainers"""
+    class Meta:
+        model = Issue
+        fields = ['escalation_reason']
+        widgets = {
+            'escalation_reason': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 4, 
+                'placeholder': 'Please explain why this issue needs to be escalated...',
+                'required': True
+            }),
+        }
+        labels = {
+            'escalation_reason': 'Escalation Reason'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['escalation_reason'].required = True
+
+class EscalatedIssueReassignmentForm(forms.ModelForm):
+    """Form for central admins to reassign escalated issues to maintainers"""
+    reassignment_message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Add a message for the assigned maintainer about handling this escalated issue...'
+        }),
+        label='Message to Maintainer',
+        help_text='Provide context and instructions for the maintainer',
+        required=True
+    )
+    
+    class Meta:
+        model = Issue
+        fields = ['maintainer']
+        widgets = {
+            'maintainer': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'maintainer': 'Assign to Maintainer'
+        }
+
+    def __init__(self, *args, **kwargs):
+        org = kwargs.pop('org', None)
+        super().__init__(*args, **kwargs)
+        
+        if org:
+            self.fields['maintainer'].queryset = User.objects.filter(
+                profile__user_type='maintainer', 
+                profile__org=org
+            )
+            self.fields['maintainer'].empty_label = "Select a maintainer..."
+        else:
+            self.fields['maintainer'].queryset = User.objects.none()
+        
+        self.fields['maintainer'].required = True
 
 class IssueCommentForm(forms.ModelForm):
     """Form for adding comments to issues"""

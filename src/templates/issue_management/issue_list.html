@@ -148,6 +148,7 @@
                                 <option value="">All Status</option>
                                 <option value="open" {% if current_filters.status == 'open' %}selected{% endif %}>Open</option>
                                 <option value="in_progress" {% if current_filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="escalated" {% if current_filters.status == 'escalated' %}selected{% endif %}>Escalated</option>
                                 <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
                                 <option value="closed" {% if current_filters.status == 'closed' %}selected{% endif %}>Closed</option>
                                 <option value="cancelled" {% if current_filters.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
@@ -238,7 +239,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
                     <i class="fas fa-clock fa-2x text-danger mb-2"></i>
@@ -247,7 +248,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
                     <i class="fas fa-spinner fa-2x text-warning mb-2"></i>
@@ -256,7 +257,16 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-arrow-up fa-2x text-danger mb-2"></i>
+                    <h6 class="card-title">Escalated</h6>
+                    <h4 class="text-danger">{{ escalated_count|default:0 }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
                     <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
@@ -381,11 +391,18 @@
                                         <i class="fas fa-eye me-1"></i> View Details
                                     </a>
                                     {% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
-                                    <a href="{% url 'issue_management:assign_issue' issue.slug %}" 
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-user-plus me-1"></i>
-                                        {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
-                                    </a>
+                                        {% if issue.is_escalated %}
+                                            <a href="{% url 'issue_management:reassign_escalated_issue' issue.slug %}" 
+                                               class="btn btn-sm btn-danger">
+                                                <i class="fas fa-user-cog me-1"></i> Reassign
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'issue_management:assign_issue' issue.slug %}" 
+                                               class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-user-plus me-1"></i>
+                                                {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
+                                            </a>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </div>

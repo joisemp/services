@@ -80,16 +80,49 @@
                 </div>
             </div>
             <div class="text-end">
-                {% if can_edit %}
+                <!-- Only central admins and space admins can update issues, not maintainers -->
+                {% if can_edit and user.profile.user_type != 'maintainer' %}
                     <a href="{% url 'issue_management:update_issue' issue.slug %}" class="btn btn-primary btn-sm">
                         <i class="fas fa-edit"></i> Update Issue
                     </a>
                 {% endif %}
-                {% if user.profile.user_type == 'central_admin' %}
-                    <a href="{% url 'issue_management:assign_issue' issue.slug %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-user-plus"></i> 
-                        {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
+                
+                <!-- Status Change Buttons for Maintainers -->
+                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
+                    {% if issue.status == 'open' %}
+                        <button class="btn btn-info btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                            <i class="fas fa-play"></i> Start Working
+                        </button>
+                    {% elif issue.status == 'in_progress' %}
+                        <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
+                            <i class="fas fa-check"></i> Mark Resolved
+                        </button>
+                        <button class="btn btn-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
+                            <i class="fas fa-pause"></i> Set Open
+                        </button>
+                    {% endif %}
+                    <!-- No reopen option for resolved issues - maintainers cannot reopen resolved issues -->
+                {% endif %}
+                
+                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and issue.can_be_escalated %}
+                    <a href="{% url 'issue_management:escalate_issue' issue.slug %}" class="btn btn-warning btn-sm ms-2">
+                        <i class="fas fa-arrow-up"></i> Escalate Issue
                     </a>
+                {% endif %}
+                
+                {% if user.profile.user_type == 'central_admin' %}
+                    {% if issue.is_escalated %}
+                        <!-- Escalated issue management -->
+                        <a href="{% url 'issue_management:reassign_escalated_issue' issue.slug %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-user-cog"></i> Reassign Escalated Issue
+                        </a>
+                    {% else %}
+                        <!-- Regular issue management -->
+                        <a href="{% url 'issue_management:assign_issue' issue.slug %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-user-plus"></i> 
+                            {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
+                        </a>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -233,11 +266,56 @@
                         <div class="col-7">
                             {% if issue.maintainer %}
                                 {{ issue.maintainer.profile.first_name }} {{ issue.maintainer.profile.last_name }}
+                            {% elif issue.is_escalated %}
+                                <em class="text-danger">Escalated to Central Admin</em>
                             {% else %}
                                 <em class="text-muted">Unassigned</em>
                             {% endif %}
                         </div>
                     </div>
+                    {% if issue.is_escalated %}
+                        <div class="row mb-2">
+                            <div class="col-5"><strong>Escalated By:</strong></div>
+                            <div class="col-7">
+                                {% if issue.escalated_by %}
+                                    {{ issue.escalated_by.profile.first_name }} {{ issue.escalated_by.profile.last_name }}
+                                {% else %}
+                                    <em class="text-muted">Unknown</em>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-5"><strong>Escalated On:</strong></div>
+                            <div class="col-7">
+                                {% if issue.escalated_at %}
+                                    {{ issue.escalated_at|date:"M d, Y \a\\t g:i A" }}
+                                {% else %}
+                                    <em class="text-muted">Unknown</em>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if issue.escalation_reason %}
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <strong>Escalation Reason:</strong>
+                                    <div class="mt-1 p-2 bg-light rounded small">
+                                        {{ issue.escalation_reason|linebreaks }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% elif issue.was_previously_escalated %}
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <div class="alert alert-info py-2 px-3 mb-0">
+                                    <small>
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Note:</strong> This issue was previously escalated {{ issue.escalation_count }} time{{ issue.escalation_count|pluralize }} and has been reassigned for normal workflow management.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                     {% if issue.due_date %}
                         <div class="row mb-2">
                             <div class="col-5"><strong>Due Date:</strong></div>
@@ -262,7 +340,7 @@
 
             <!-- Activity History -->
             {% if status_history %}
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header">
                         <h6 class="mb-0">Activity History</h6>
                     </div>
@@ -292,6 +370,36 @@
                     </div>
                 </div>
             {% endif %}
+
+            <!-- Escalation History -->
+            {% if escalation_history %}
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-arrow-up me-1 text-warning"></i>
+                            Escalation History ({{ escalation_history.count }} escalation{{ escalation_history.count|pluralize }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% for escalation in escalation_history %}
+                            <div class="border-start border-warning border-3 ps-3 mb-3">
+                                <div class="small">
+                                    <strong class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Escalation #{{ forloop.revcounter }}
+                                    </strong>
+                                    <div class="text-muted mt-1">{{ escalation.created_at|date:"M d, Y \a\\t g:i A" }}</div>
+                                    {% if escalation.comment %}
+                                        <div class="mt-2 p-2 bg-light rounded">
+                                            {{ escalation.comment|linebreaks }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -308,6 +416,37 @@
     <img id="imagePreviewFull" src="" alt="Full Preview" style="max-width:96vw;max-height:96vh;border-radius:12px;"/>
     <button onclick="hideImagePreview()" class="btn btn-light position-absolute top-0 end-0 m-3" style="font-size:1.5rem;">&times;</button>
 </div>
+
+<!-- Status Change Modal for Maintainers -->
+{% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="" id="statusChangeForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusChangeModalLabel">Change Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="statusComment" class="form-label">Add a comment (optional)</label>
+                        <textarea class="form-control" id="statusComment" name="comment" rows="3" placeholder="Describe what you did or any notes about this status change..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Action:</strong> <span id="actionDescription"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="confirmStatusChange">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock content %}
 
 {% block scripts %}
@@ -322,5 +461,37 @@ function showImagePreview(url) {
 function hideImagePreview() {
     document.getElementById('imagePreviewOverlay').style.display = 'none';
 }
+
+// Handle status change modal
+document.addEventListener('DOMContentLoaded', function() {
+    const statusChangeModal = document.getElementById('statusChangeModal');
+    if (statusChangeModal) {
+        statusChangeModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const status = button.getAttribute('data-status');
+            const action = button.getAttribute('data-action');
+            
+            // Update modal content
+            document.getElementById('actionDescription').textContent = action;
+            document.getElementById('confirmStatusChange').textContent = action;
+            
+            // Update textarea placeholder and label based on action
+            const commentTextarea = document.getElementById('statusComment');
+            const commentLabel = document.querySelector('label[for="statusComment"]');
+            
+            if (status === 'resolved') {
+                commentLabel.textContent = 'Resolution notes (optional)';
+                commentTextarea.placeholder = 'Describe how you resolved this issue, what you did, or any important notes...';
+            } else {
+                commentLabel.textContent = 'Add a comment (optional)';
+                commentTextarea.placeholder = 'Describe what you did or any notes about this status change...';
+            }
+            
+            // Update form action
+            const form = document.getElementById('statusChangeForm');
+            form.action = "{% url 'issue_management:change_status_with_comment' issue.slug 'PLACEHOLDER' %}".replace('PLACEHOLDER', status);
+        });
+    }
+});
 </script>
 {% endblock scripts %}

@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory
-from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm
+from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
 
 def issue_list(request):
     # Initialize default values
@@ -64,8 +64,11 @@ def issue_list(request):
             issues = Issue.objects.none()
             
     elif request.user.profile.user_type == 'maintainer':
-        # Maintainer sees only assigned issues
-        issues = Issue.objects.filter(maintainer=request.user).order_by('-created_at')
+        # Maintainer sees only assigned issues that are not escalated
+        # Escalated issues are handled by central admins only
+        issues = Issue.objects.filter(
+            maintainer=request.user
+        ).exclude(status='escalated').order_by('-created_at')
         
     else:
         # Regular users see issues they created from their organization
@@ -105,6 +108,7 @@ def issue_list(request):
     pending_count = base_issues.filter(status='open').count()
     in_progress_count = base_issues.filter(status='in_progress').count()
     resolved_count = base_issues.filter(status='resolved').count()
+    escalated_count = base_issues.filter(status='escalated').count()
     
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
         if request.user.profile.user_type == 'maintainer':
@@ -124,6 +128,7 @@ def issue_list(request):
         'pending_count': pending_count,
         'in_progress_count': in_progress_count,
         'resolved_count': resolved_count,
+        'escalated_count': escalated_count,
         'my_issues_count': my_issues_count,
         'selected_space': selected_space,
         'space_settings': space_settings,
@@ -226,6 +231,9 @@ def issue_detail(request, slug):
     # Get status history
     status_history = issue.status_history.all()[:10]  # Last 10 changes
     
+    # Get escalation history
+    escalation_history = issue.escalation_history
+    
     context = {
         'issue': issue,
         'can_edit': can_edit,
@@ -233,6 +241,7 @@ def issue_detail(request, slug):
         'comment_form': comment_form,
         'comments': comments,
         'status_history': status_history,
+        'escalation_history': escalation_history,
     }
     
     return render(request, 'issue_management/issue_detail.html', context)
@@ -252,9 +261,12 @@ def update_issue(request, slug):
     if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
         can_edit = True
     elif user_profile.user_type == 'maintainer' and issue.maintainer == request.user:
-        can_edit = True
+        # Maintainers can only edit if issue is not escalated
+        can_edit = issue.status != 'escalated'
     
     if not can_edit:
+        if issue.status == 'escalated' and user_profile.user_type == 'maintainer':
+            return HttpResponseForbidden('This issue has been escalated and can only be managed by central admin.')
         return HttpResponseForbidden('You do not have permission to edit this issue.')
     
     if request.method == 'POST':
@@ -329,6 +341,126 @@ def assign_issue(request, issue_slug):
         form = IssueAssignmentForm(instance=issue)
     return render(request, 'issue_management/assign_issue.html', {'form': form, 'issue': issue})
 
+@login_required
+def escalate_issue(request, slug):
+    """Escalate an issue to central admin"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only assigned maintainers can escalate
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Access denied.')
+    
+    user_profile = request.user.profile
+    
+    # Only maintainers assigned to the issue can escalate it
+    if user_profile.user_type != 'maintainer' or issue.maintainer != request.user:
+        return HttpResponseForbidden('You do not have permission to escalate this issue.')
+    
+    # Can only escalate issues that are in progress
+    if not issue.can_be_escalated:
+        messages.error(request, 'This issue cannot be escalated. It must be in progress.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    if request.method == 'POST':
+        form = IssueEscalationForm(request.POST, instance=issue)
+        if form.is_valid():
+            # Track changes for history
+            old_status = issue.status
+            
+            # Update issue status and escalation details
+            issue = form.save(commit=False)
+            issue.status = 'escalated'
+            issue.escalated_by = request.user
+            issue.escalation_count += 1  # Increment escalation count
+            issue.save()
+            
+            # Clear maintainer assignment since it's now escalated
+            old_maintainer = issue.maintainer
+            issue.maintainer = None
+            issue.save()
+            
+            # Create status history
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status=old_status,
+                new_status='escalated',
+                old_maintainer=request.user,
+                new_maintainer=None,
+                comment=f"Escalated by {request.user.profile.first_name} {request.user.profile.last_name} (Escalation #{issue.escalation_count}). Reason: {issue.escalation_reason}"
+            )
+            
+            messages.success(request, 'Issue has been escalated successfully. Central admin will now manage this issue.')
+            return redirect('issue_management:issue_detail', slug=slug)
+    else:
+        form = IssueEscalationForm(instance=issue)
+    
+    return render(request, 'issue_management/escalate_issue.html', {
+        'form': form, 
+        'issue': issue
+    })
+
+@login_required
+def reassign_escalated_issue(request, slug):
+    """Reassign an escalated issue to a maintainer (Central Admin only)"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only central admins can reassign escalated issues
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Access denied.')
+    
+    user_profile = request.user.profile
+    
+    # Only central admins can reassign escalated issues
+    if user_profile.user_type != 'central_admin' or issue.org != user_profile.org:
+        return HttpResponseForbidden('You do not have permission to reassign this issue.')
+    
+    # Can only reassign escalated issues
+    if not issue.is_escalated:
+        messages.error(request, 'This issue has not been escalated and cannot be reassigned through this process.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    if request.method == 'POST':
+        form = EscalatedIssueReassignmentForm(request.POST, instance=issue, org=issue.org)
+        if form.is_valid():
+            # Track changes for history
+            old_maintainer = issue.maintainer
+            new_maintainer = form.cleaned_data['maintainer']
+            reassignment_message = form.cleaned_data['reassignment_message']
+            
+            # Reset issue from escalated status to normal workflow
+            issue.maintainer = new_maintainer
+            issue.status = 'open'  # Reset to open so maintainer can manage normally
+            
+            # Clear current escalation fields but preserve escalation_count for history
+            issue.escalated_by = None
+            issue.escalated_at = None
+            issue.escalation_reason = ''
+            # Note: We keep escalation_count to track total escalations
+            
+            issue.save()
+            
+            # Create status history
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status='escalated',
+                new_status='open',  # Reset to open status
+                old_maintainer=old_maintainer,
+                new_maintainer=new_maintainer,
+                comment=f"Escalated issue reassigned by {request.user.profile.first_name} {request.user.profile.last_name} to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}. Issue reset to normal workflow (Total escalations: {issue.escalation_count}). Message: {reassignment_message}"
+            )
+            
+            messages.success(request, f'Escalated issue has been reassigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name} and reset to normal workflow.')
+            return redirect('issue_management:issue_detail', slug=slug)
+    else:
+        form = EscalatedIssueReassignmentForm(instance=issue, org=issue.org)
+    
+    return render(request, 'issue_management/reassign_escalated_issue.html', {
+        'form': form, 
+        'issue': issue
+    })
+
 # Category Management Views
 @login_required
 def category_list(request):
@@ -395,3 +527,162 @@ def delete_category(request, slug):
         return redirect('issue_management:category_list')
     
     return render(request, 'issue_management/delete_category.html', {'category': category})
+
+@login_required
+def change_status(request, slug, new_status):
+    """Change issue status - for maintainers only (central admins use update form)"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only assigned maintainer can use quick status change
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Invalid user profile.')
+    
+    # Only maintainer assigned to the issue (and not escalated) can use quick actions
+    if not (request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            not issue.is_escalated):
+        return HttpResponseForbidden('You do not have permission to change this issue status.')
+    
+    # Validate the new status
+    valid_statuses = [choice[0] for choice in Issue.STATUS_CHOICES]
+    if new_status not in valid_statuses:
+        messages.error(request, 'Invalid status.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Prevent changing to escalated status (use escalate_issue view for that)
+    if new_status == 'escalated':
+        messages.error(request, 'Use the escalate button to escalate issues.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Prevent maintainers from reopening resolved issues
+    if issue.status == 'resolved' and new_status in ['open', 'in_progress']:
+        messages.error(request, 'Maintainers cannot reopen resolved issues. Contact central admin if needed.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Record the old status for history
+    old_status = issue.status
+    old_maintainer = issue.maintainer  # Track maintainer change
+    
+    # Update the issue status
+    issue.status = new_status
+    
+    # Clear maintainer assignment when issue is resolved
+    if new_status == 'resolved':
+        issue.maintainer = None
+    
+    issue.save()
+    
+    # Create status history record
+    history_comment = f"Status changed from {dict(Issue.STATUS_CHOICES)[old_status]} to {dict(Issue.STATUS_CHOICES)[new_status]} by maintainer"
+    if new_status == 'resolved':
+        history_comment += f"\n\nMaintainer assignment cleared (issue resolved)."
+    
+    IssueStatusHistory.objects.create(
+        issue=issue,
+        changed_by=request.user,
+        old_status=old_status,
+        new_status=new_status,
+        old_maintainer=old_maintainer,
+        new_maintainer=issue.maintainer,  # Will be None if resolved
+        comment=history_comment
+    )
+    
+    # Success message
+    status_display = dict(Issue.STATUS_CHOICES)[new_status]
+    messages.success(request, f'Issue status changed to "{status_display}".')
+    
+    return redirect('issue_management:issue_detail', slug=slug)
+
+@login_required
+def change_status_with_comment(request, slug, new_status):
+    """Change issue status with optional comment - for maintainers to track activity"""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only assigned maintainer can change status (and not escalated)
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Invalid user profile.')
+    
+    if not (request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            not issue.is_escalated):
+        return HttpResponseForbidden('You do not have permission to change this issue status.')
+    
+    # Validate the new status
+    valid_statuses = [choice[0] for choice in Issue.STATUS_CHOICES]
+    if new_status not in valid_statuses:
+        messages.error(request, 'Invalid status.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Prevent changing to escalated status (use escalate_issue view for that)
+    if new_status == 'escalated':
+        messages.error(request, 'Use the escalate button to escalate issues.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Prevent maintainers from reopening resolved issues
+    if issue.status == 'resolved' and new_status in ['open', 'in_progress']:
+        messages.error(request, 'Maintainers cannot reopen resolved issues. Contact central admin if needed.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Get the comment from the form
+    comment = request.POST.get('comment', '').strip()
+    
+    # Record the old status for history
+    old_status = issue.status
+    old_maintainer = issue.maintainer  # Track maintainer change
+    
+    # Update the issue status
+    issue.status = new_status
+    
+    # If setting to resolved and comment provided, save it as resolution notes
+    if new_status == 'resolved' and comment:
+        issue.resolution_notes = comment
+    
+    # Clear maintainer assignment when issue is resolved
+    if new_status == 'resolved':
+        issue.maintainer = None
+    
+    issue.save()
+    
+    # Create status history record with comment
+    history_comment = f"Status changed from {dict(Issue.STATUS_CHOICES)[old_status]} to {dict(Issue.STATUS_CHOICES)[new_status]} by maintainer"
+    if comment:
+        history_comment += f"\n\nMaintainer notes: {comment}"
+    
+    # Add note about maintainer being cleared if resolved
+    if new_status == 'resolved':
+        history_comment += f"\n\nMaintainer assignment cleared (issue resolved)."
+    
+    IssueStatusHistory.objects.create(
+        issue=issue,
+        changed_by=request.user,
+        old_status=old_status,
+        new_status=new_status,
+        old_maintainer=old_maintainer,
+        new_maintainer=issue.maintainer,  # Will be None if resolved
+        comment=history_comment
+    )
+    
+    # Also create a comment if the maintainer added one
+    if comment:
+        comment_content = f"Status changed to '{dict(Issue.STATUS_CHOICES)[new_status]}'"
+        if new_status == 'resolved':
+            comment_content += f" with resolution notes:\n\n{comment}"
+        else:
+            comment_content += f"\n\n{comment}"
+            
+        IssueComment.objects.create(
+            issue=issue,
+            author=request.user,
+            content=comment_content,
+            is_internal=False
+        )
+    
+    # Success message
+    status_display = dict(Issue.STATUS_CHOICES)[new_status]
+    messages.success(request, f'Issue status changed to "{status_display}".')
+    
+    return redirect('issue_management:issue_detail', slug=slug)

@@ -3,11 +3,11 @@ from .models import Issue, IssueCategory, IssueComment, IssueStatusHistory
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
-    list_display = ('title', 'status', 'priority', 'category', 'org', 'created_by', 'maintainer', 'created_at')
-    list_filter = ('status', 'priority', 'category', 'org', 'maintainer', 'created_at')
-    search_fields = ('title', 'description')
-    autocomplete_fields = ['org', 'created_by', 'maintainer', 'category', 'space']
-    readonly_fields = ('slug', 'created_at', 'updated_at', 'resolved_at')
+    list_display = ('title', 'status', 'priority', 'category', 'org', 'created_by', 'maintainer', 'escalated_by', 'created_at')
+    list_filter = ('status', 'priority', 'category', 'org', 'maintainer', 'escalated_by', 'created_at')
+    search_fields = ('title', 'description', 'escalation_reason')
+    autocomplete_fields = ['org', 'created_by', 'maintainer', 'escalated_by', 'category', 'space']
+    readonly_fields = ('slug', 'created_at', 'updated_at', 'resolved_at', 'escalated_at')
     
     fieldsets = (
         (None, {
@@ -18,6 +18,10 @@ class IssueAdmin(admin.ModelAdmin):
         }),
         ('Assignment', {
             'fields': ('org', 'space', 'created_by', 'maintainer')
+        }),
+        ('Escalation', {
+            'fields': ('escalated_by', 'escalated_at', 'escalation_reason', 'escalation_count'),
+            'classes': ('collapse',)
         }),
         ('Resolution', {
             'fields': ('resolution_notes', 'resolved_at'),

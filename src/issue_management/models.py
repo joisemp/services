@@ -35,6 +35,7 @@ class Issue(models.Model):
         ('open', 'Open'),
         ('in_progress', 'In Progress'),
         ('resolved', 'Resolved'),
+        ('escalated', 'Escalated'),
         ('closed', 'Closed'),
         ('cancelled', 'Cancelled'),
     ]
@@ -60,6 +61,9 @@ class Issue(models.Model):
     due_date = models.DateTimeField(null=True, blank=True, help_text="Expected resolution date")
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolution_notes = models.TextField(blank=True, help_text="Notes about how the issue was resolved")
+    escalated_at = models.DateTimeField(null=True, blank=True)
+    escalation_reason = models.TextField(blank=True, help_text="Reason for escalating the issue")
+    escalation_count = models.PositiveIntegerField(default=0, help_text="Number of times this issue has been escalated")
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,6 +74,7 @@ class Issue(models.Model):
     space = models.ForeignKey('service_management.Spaces', related_name='issues', on_delete=models.CASCADE, null=True, blank=True, help_text="Space where this issue was reported")
     created_by = models.ForeignKey('core.User', related_name='created_issues', on_delete=models.SET_NULL, null=True, blank=True)
     maintainer = models.ForeignKey('core.User', related_name='assigned_issues', on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'profile__user_type': 'maintainer'})
+    escalated_by = models.ForeignKey('core.User', related_name='escalated_issues', on_delete=models.SET_NULL, null=True, blank=True, help_text="Maintainer who escalated the issue")
     
     # Slug for URLs
     slug = models.SlugField(unique=True, db_index=True, blank=True)
@@ -84,12 +89,33 @@ class Issue(models.Model):
         return self.due_date and self.due_date < timezone.now() and self.status in ['open', 'in_progress']
     
     @property
+    def can_be_escalated(self):
+        """Check if issue can be escalated by maintainer"""
+        return self.status == 'in_progress' and self.maintainer is not None
+    
+    @property
+    def is_escalated(self):
+        """Check if issue has been escalated"""
+        return self.status == 'escalated'
+    
+    @property
+    def was_previously_escalated(self):
+        """Check if issue has escalation history (even if reassigned)"""
+        return self.escalation_count > 0 or self.is_escalated
+    
+    @property
+    def escalation_history(self):
+        """Get all escalation events from status history"""
+        return self.status_history.filter(new_status='escalated').order_by('-created_at')
+    
+    @property
     def status_color(self):
         """Get color for status badge"""
         colors = {
             'open': 'danger',
             'in_progress': 'warning', 
             'resolved': 'success',
+            'escalated': 'danger',
             'closed': 'secondary',
             'cancelled': 'dark'
         }
@@ -113,6 +139,13 @@ class Issue(models.Model):
             self.resolved_at = timezone.now()
         elif self.status != 'resolved':
             self.resolved_at = None
+        
+        # Set escalated_at when status changes to escalated
+        if self.status == 'escalated' and not self.escalated_at:
+            from django.utils import timezone
+            self.escalated_at = timezone.now()
+        elif self.status != 'escalated':
+            self.escalated_at = None
             
         if not self.slug:
             base_slug = slugify(self.title)

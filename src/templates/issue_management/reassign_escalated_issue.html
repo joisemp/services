@@ -1,0 +1,159 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Reassign Escalated Issue - {{ issue.title }}{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+<style>
+    .escalation-info {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .escalation-info .info-icon {
+        color: #721c24;
+        font-size: 1.2em;
+        margin-right: 10px;
+    }
+    .escalation-reason {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-cog"></i> Reassign Escalated Issue
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Issue Summary -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h5>{{ issue.title }}</h5>
+                        <p class="text-muted mb-2">{{ issue.description|truncatewords:30 }}</p>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-{{ issue.status_color }}">{{ issue.get_status_display }}</span>
+                            <span class="badge bg-{{ issue.priority_color }}">{{ issue.get_priority_display }} Priority</span>
+                            {% if issue.escalation_count > 0 %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-history"></i> Escalation #{{ issue.escalation_count }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Escalation Information -->
+                    <div class="escalation-info">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle info-icon"></i>
+                            <div>
+                                <h6><strong>Escalation Details</strong></h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Escalated by:</strong> 
+                                            {% if issue.escalated_by %}
+                                                {{ issue.escalated_by.profile.first_name }} {{ issue.escalated_by.profile.last_name }}
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
+                                        </p>
+                                        <p class="mb-0"><strong>Escalated on:</strong> 
+                                            {% if issue.escalated_at %}
+                                                {{ issue.escalated_at|date:"M d, Y \a\\t g:i A" }}
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                {% if issue.escalation_reason %}
+                                    <div class="mt-2">
+                                        <strong>Escalation Reason:</strong>
+                                        <div class="escalation-reason">
+                                            {{ issue.escalation_reason|linebreaks }}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reassignment Instructions -->
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <div>
+                                <h6><strong>Reassignment Process</strong></h6>
+                                <p class="mb-2">
+                                    You are about to reassign this escalated issue to a maintainer. This will:
+                                </p>
+                                <ul class="mb-0">
+                                    <li>Change the issue status from "Escalated" to "Open"</li>
+                                    <li>Assign the selected maintainer to handle the issue</li>
+                                    <li>Clear all escalation information (reset to normal workflow)</li>
+                                    <li>Allow the maintainer to manage it as a regular issue</li>
+                                    <li>Record your message in the issue history</li>
+                                    <li>The maintainer can now follow normal workflow: Open → In Progress → Resolved</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.maintainer.id_for_label }}" class="form-label">
+                                <i class="fas fa-user"></i> {{ form.maintainer.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.maintainer }}
+                            <div class="form-text">
+                                Select a maintainer who has the skills and availability to handle this escalated issue.
+                            </div>
+                            {% if form.maintainer.errors %}
+                                <div class="text-danger small">{{ form.maintainer.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.reassignment_message.id_for_label }}" class="form-label">
+                                <i class="fas fa-comment-alt"></i> {{ form.reassignment_message.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.reassignment_message }}
+                            <div class="form-text">
+                                {{ form.reassignment_message.help_text }}
+                                Include any specific instructions, context, or priority information that will help the maintainer handle this issue effectively.
+                                The issue will be reset to normal workflow, so the maintainer can manage it from "Open" status.
+                            </div>
+                            {% if form.reassignment_message.errors %}
+                                <div class="text-danger small">{{ form.reassignment_message.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'issue_management:issue_detail' issue.slug %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-user-cog"></i> Reassign Issue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
