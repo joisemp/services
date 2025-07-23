@@ -68,6 +68,14 @@
         font-size: 0.75rem;
         padding: 0.4em 0.8em;
     }
+    .filters-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+    .overdue-indicator {
+        color: #dc3545;
+        font-weight: bold;
+    }
 </style>
 {% endblock style %}
 
@@ -101,11 +109,85 @@
                     </p>
                     {% endif %}
                 </div>
-                <div>
+                <div class="d-flex gap-2">
+                    {% if user.profile.user_type == 'central_admin' %}
+                        <a href="{% url 'issue_management:category_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-tags me-2"></i>
+                            Manage Categories
+                        </a>
+                    {% endif %}
                     <a href="{% url 'issue_management:report_issue' %}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>
                         Report Issue
                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filters-card">
+                <div class="card-body">
+                    <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+                        <!-- Preserve space filter -->
+                        {% if request.GET.space_filter %}
+                            <input type="hidden" name="space_filter" value="{{ request.GET.space_filter }}">
+                        {% endif %}
+                        
+                        <div class="flex-fill" style="min-width: 200px;">
+                            <label class="form-label small">Search</label>
+                            <input type="text" name="search" class="form-control form-control-sm" 
+                                   placeholder="Search issues..." value="{{ current_filters.search }}">
+                        </div>
+                        
+                        <div style="min-width: 120px;">
+                            <label class="form-label small">Status</label>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">All Status</option>
+                                <option value="open" {% if current_filters.status == 'open' %}selected{% endif %}>Open</option>
+                                <option value="in_progress" {% if current_filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                <option value="closed" {% if current_filters.status == 'closed' %}selected{% endif %}>Closed</option>
+                                <option value="cancelled" {% if current_filters.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        
+                        <div style="min-width: 120px;">
+                            <label class="form-label small">Priority</label>
+                            <select name="priority" class="form-select form-select-sm">
+                                <option value="">All Priority</option>
+                                <option value="low" {% if current_filters.priority == 'low' %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if current_filters.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if current_filters.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="critical" {% if current_filters.priority == 'critical' %}selected{% endif %}>Critical</option>
+                            </select>
+                        </div>
+                        
+                        <div style="min-width: 150px;">
+                            <label class="form-label small">Category</label>
+                            <select name="category" class="form-select form-select-sm">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.slug }}" 
+                                            {% if current_filters.category == category.slug %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <a href="{% url 'issue_management:issue_list' %}{% if request.GET.space_filter %}?space_filter={{ request.GET.space_filter }}{% endif %}" 
+                               class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -159,27 +241,27 @@
         <div class="col-md-3">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
-                    <i class="fas fa-clock fa-2x text-info mb-2"></i>
-                    <h6 class="card-title">Pending</h6>
-                    <h4 class="text-warning">{{ pending_count|default:0 }}</h4>
+                    <i class="fas fa-clock fa-2x text-danger mb-2"></i>
+                    <h6 class="card-title">Open</h6>
+                    <h4 class="text-danger">{{ pending_count|default:0 }}</h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
-                    <i class="fas fa-tools fa-2x text-success mb-2"></i>
-                    <h6 class="card-title">Assigned</h6>
-                    <h4 class="text-success">{{ assigned_count|default:0 }}</h4>
+                    <i class="fas fa-spinner fa-2x text-warning mb-2"></i>
+                    <h6 class="card-title">In Progress</h6>
+                    <h4 class="text-warning">{{ in_progress_count|default:0 }}</h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card border-0 bg-light">
                 <div class="card-body text-center">
-                    <i class="fas fa-user-cog fa-2x text-secondary mb-2"></i>
-                    <h6 class="card-title">My Issues</h6>
-                    <h4 class="text-secondary">{{ my_issues_count|default:0 }}</h4>
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <h6 class="card-title">Resolved</h6>
+                    <h4 class="text-success">{{ resolved_count|default:0 }}</h4>
                 </div>
             </div>
         </div>
@@ -200,10 +282,32 @@
                     <div class="col-12 col-lg-6 mb-3">
                         <div class="issue-card h-100">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5>{{ issue.title }}</h5>
-                                <span class="badge bg-warning badge-status">
-                                    {% if issue.maintainer %}Assigned{% else %}Pending{% endif %}
-                                </span>
+                                <div class="flex-grow-1">
+                                    <h5>
+                                        <a href="{% url 'issue_management:issue_detail' issue.slug %}" 
+                                           class="text-decoration-none text-dark">
+                                            {{ issue.title }}
+                                        </a>
+                                    </h5>
+                                    <div class="d-flex gap-1 mb-2">
+                                        <span class="badge bg-{{ issue.status_color }} badge-status">
+                                            {{ issue.get_status_display }}
+                                        </span>
+                                        <span class="badge bg-{{ issue.priority_color }} badge-status">
+                                            {{ issue.get_priority_display }}
+                                        </span>
+                                        {% if issue.category %}
+                                            <span class="badge badge-status" style="background-color: {{ issue.category.color }}; color: white;">
+                                                {{ issue.category.name }}
+                                            </span>
+                                        {% endif %}
+                                        {% if issue.is_overdue %}
+                                            <span class="badge bg-danger badge-status">
+                                                <i class="fas fa-clock"></i> Overdue
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                             
                             <p>{{ issue.description|truncatewords:30 }}</p>
@@ -220,7 +324,7 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            
+
                             <!-- Voice Recording -->
                             {% if issue.voice %}
                             <div class="mb-3">
@@ -231,7 +335,7 @@
                             </div>
                             {% endif %}
                             
-                            <!-- Issue Info -->
+                            <!-- Issue Info footer -->
                             <div class="border-top pt-3">
                                 <div class="row text-center">
                                     <div class="col-3">
@@ -254,7 +358,7 @@
                                             {% if issue.space %}
                                                 {{ issue.space.name }}
                                             {% else %}
-                                                <em class="text-muted">Unassigned</em>
+                                                <em class="text-muted">Organization</em>
                                             {% endif %}
                                         </strong>
                                     </div>
@@ -271,15 +375,19 @@
                                 </div>
                                 
                                 <!-- Action Buttons -->
-                                {% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
                                 <div class="mt-3 text-center">
+                                    <a href="{% url 'issue_management:issue_detail' issue.slug %}" 
+                                       class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-eye me-1"></i> View Details
+                                    </a>
+                                    {% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
                                     <a href="{% url 'issue_management:assign_issue' issue.slug %}" 
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm btn-outline-secondary">
                                         <i class="fas fa-user-plus me-1"></i>
                                         {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
                                     </a>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                     </div>

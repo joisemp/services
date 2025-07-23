@@ -140,6 +140,40 @@
                 <textarea name="description" cols="40" rows="4" class="form-control" id="id_description" required placeholder="Detailed description of the issue, steps to reproduce, etc."></textarea>
             </div>
             
+            <!-- Priority and Category fields -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="id_priority" class="form-label">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Priority
+                        </label>
+                        {{ form.priority }}
+                        <div class="form-text">How urgent is this issue?</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="id_category" class="form-label">
+                            <i class="fas fa-tag me-1"></i>
+                            Category
+                        </label>
+                        {{ form.category }}
+                        <div class="form-text">Select the type of issue (optional).</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Due date field -->
+            <div class="mb-3">
+                <label for="id_due_date" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>
+                    Expected Resolution Date
+                </label>
+                {{ form.due_date }}
+                <div class="form-text">When do you expect this issue to be resolved? (optional)</div>
+            </div>
+            
             <!-- Space Selection Field -->
             {% if form.space.field.widget.input_type != 'hidden' %}
             <div class="mb-3">
