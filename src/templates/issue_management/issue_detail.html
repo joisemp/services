@@ -94,6 +94,9 @@
                             <i class="fas fa-play"></i> Start Working
                         </button>
                     {% elif issue.status == 'in_progress' %}
+                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm ms-2">
+                            <i class="fas fa-bullseye"></i> Focus Mode
+                        </a>
                         <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
                             <i class="fas fa-check"></i> Mark Resolved
                         </button>

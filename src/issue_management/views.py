@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+from django.template.loader import render_to_string
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
@@ -609,6 +611,10 @@ def change_status(request, slug, new_status):
     status_display = dict(Issue.STATUS_CHOICES)[new_status]
     messages.success(request, f'Issue status changed to "{status_display}".')
     
+    # Redirect to focus mode if starting work on an issue
+    if new_status == 'in_progress':
+        return redirect('issue_management:focus_mode', slug=slug)
+    
     return redirect('issue_management:issue_detail', slug=slug)
 
 @login_required
@@ -719,4 +725,79 @@ def change_status_with_comment(request, slug, new_status):
     status_display = dict(Issue.STATUS_CHOICES)[new_status]
     messages.success(request, f'Issue status changed to "{status_display}".')
     
+    # Redirect to focus mode if starting work on an issue
+    if new_status == 'in_progress':
+        return redirect('issue_management:focus_mode', slug=slug)
+    
     return redirect('issue_management:issue_detail', slug=slug)
+
+@login_required
+def focus_mode(request, slug):
+    """Focus mode for maintainers working on an issue"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only assigned maintainer can enter focus mode
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Invalid user profile.')
+    
+    if not (request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            issue.status == 'in_progress'):
+        messages.error(request, 'Focus mode is only available for issues you are actively working on.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Get recent comments for the issue
+    recent_comments = issue.comments.all().order_by('-created_at')[:5]
+    
+    # Set focus mode start time in session
+    if 'focus_start_time' not in request.session:
+        request.session['focus_start_time'] = timezone.now().isoformat()
+    
+    context = {
+        'issue': issue,
+        'recent_comments': recent_comments,
+        'focus_start_time': timezone.now(),
+    }
+    
+    return render(request, 'issue_management/focus_mode.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def add_progress_note(request, slug):
+    """Add progress note via HTMX without leaving focus mode"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions - only assigned maintainer can add progress notes in focus mode
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Invalid user profile.')
+    
+    if not (request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            issue.status == 'in_progress'):
+        return HttpResponseForbidden('You can only add progress notes to issues you are actively working on.')
+    
+    content = request.POST.get('content', '').strip()
+    is_internal = request.POST.get('is_internal') == 'on'
+    
+    if content:
+        # Create the comment
+        comment = IssueComment.objects.create(
+            issue=issue,
+            author=request.user,
+            content=content,
+            is_internal=is_internal
+        )
+        
+        # Get updated recent comments
+        recent_comments = issue.comments.all().order_by('-created_at')[:5]
+        
+        # Return updated comments list
+        context = {
+            'recent_comments': recent_comments,
+        }
+        
+        return render(request, 'issue_management/partials/recent_comments.html', context)
+    
+    # If no content, return error
+    return HttpResponse('<div class="alert alert-danger">Please enter a progress note.</div>', status=400)

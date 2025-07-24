@@ -7,6 +7,8 @@ urlpatterns = [
     # Issue views
     path('issues/', views.issue_list, name='issue_list'),
     path('issues/<slug:slug>/', views.issue_detail, name='issue_detail'),
+    path('issues/<slug:slug>/focus/', views.focus_mode, name='focus_mode'),
+    path('issues/<slug:slug>/focus/add-note/', views.add_progress_note, name='add_progress_note'),
     path('issues/<slug:slug>/update/', views.update_issue, name='update_issue'),
     path('issues/<slug:slug>/escalate/', views.escalate_issue, name='escalate_issue'),
     path('issues/<slug:slug>/reassign-escalated/', views.reassign_escalated_issue, name='reassign_escalated_issue'),
