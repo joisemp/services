@@ -99,6 +99,66 @@
         </div>
     </div>
 
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-bug fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-0">{{ stats.total_issues }}</h5>
+                            <small>Total Issues</small>
+                        </div>
+                    </div>
+                    <small class="d-block mt-2">{{ stats.issues_last_30_days }} this month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-0">{{ stats.resolved_issues }}</h5>
+                            <small>Resolved</small>
+                        </div>
+                    </div>
+                    <small class="d-block mt-2">{{ stats.closed_issues }} closed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-clock fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-0">{{ stats.in_progress_issues }}</h5>
+                            <small>In Progress</small>
+                        </div>
+                    </div>
+                    <small class="d-block mt-2">{{ stats.open_issues }} open</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-0">{{ stats.escalated_issues }}</h5>
+                            <small>Escalated</small>
+                        </div>
+                    </div>
+                    <small class="d-block mt-2">Need attention</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions for Selected Space -->
     <div class="card">
         <div class="card-header bg-success text-white">
@@ -225,6 +285,80 @@
             </div>
         </div>
     </div>
+
+    <!-- Recent Issues for Selected Space -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Recent Issues in {{ selected_space.name }}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if stats.recent_issues %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Reporter</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in stats.recent_issues %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <strong>{{ issue.title|truncatechars:40 }}</strong>
+                                    {% if issue.category %}
+                                        <small class="text-muted d-block">{{ issue.category.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ issue.status_color }}">
+                                    {{ issue.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ issue.priority_color }}">
+                                    {{ issue.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>{{ issue.created_at|date:"M d, H:i" }}</td>
+                            <td>
+                                {% if issue.created_by %}
+                                    {{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <a href="{% url 'issue_management:issue_list' %}" class="btn btn-outline-primary">
+                    View All Issues
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No Issues Found</h6>
+                <p class="text-muted">This space has no issues reported yet.</p>
+                <a href="{% url 'issue_management:issue_create' %}" class="btn btn-primary">
+                    Report First Issue
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
     {% else %}
     <!-- No Space Selected -->
     <div class="card">

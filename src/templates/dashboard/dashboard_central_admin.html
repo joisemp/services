@@ -31,14 +31,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
-                            <span class="user">Category</span>
-                            <span class="count">2345</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">category</span>
+                            <span class="user">Categories</span>
+                            <span class="count">{{ stats.total_categories }}</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
-                            <span class="days">Last 30 days</span>
+                            <span class="days">Total count</span>
                             <span class="label">
-                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">info</span>Active
                             </span>
                         </div>
                     </div>
@@ -48,14 +48,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
-                            <span class="user">Transaction</span>
-                            <span class="count">2345</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">attach_money</span>
+                            <span class="user">Transactions</span>
+                            <span class="count">{{ stats.total_transactions }}</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>{{ stats.transactions_last_30_days }}
                             </span>
                         </div>
                     </div>
@@ -67,12 +67,12 @@ Central Admin Dashboard
                         <div class="d-flex align-items-center mb-3">
                             <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
                             <span class="user">Users</span>
-                            <span class="count">2345</span>
+                            <span class="count">{{ stats.total_users }}</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>{{ stats.users_last_30_days }}
                             </span>
                         </div>
                     </div>
@@ -82,14 +82,14 @@ Central Admin Dashboard
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">person</span>
-                            <span class="user">Issue</span>
-                            <span class="count">2345</span>
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem; margin-right: 12px;">report_problem</span>
+                            <span class="user">Issues</span>
+                            <span class="count">{{ stats.total_issues }}</span>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="days">Last 30 days</span>
                             <span class="label">
-                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>150
+                                <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 5px;">north_east</span>{{ stats.issues_last_30_days }}
                             </span>
                         </div>
                     </div>
@@ -99,56 +99,83 @@ Central Admin Dashboard
         <div class="row mt-5">
             <div class="col-md-8">
                 <div class="card mb-4 p-4" style="min-height: 370px;">
-                    <h5 class="mb-1" style="font-weight: 600;">User Performance</h5>
-                    <span class="text-muted mb-3" style="font-size: 1rem;">June-July</span>
+                    <h5 class="mb-1" style="font-weight: 600;">Issues Trend</h5>
+                    <span class="text-muted mb-3" style="font-size: 1rem;">Last 6 months</span>
                     <hr>
                     <canvas id="userPerformanceChart" height="180"></canvas>
                     <div class="mt-3" style="font-size: 1rem;">
-                        <span style="color: #2e7d32; font-weight: 500;">Trending up by 5.2% this month</span>
-                        <span class="material-symbols-outlined align-middle" style="font-size: 1.1rem; color: #2e7d32;">north_east</span>
-                        <span class="text-muted ms-2">Showing total visitors for the last 6 months</span>
+                        {% if stats.issues_last_30_days > 0 %}
+                            <span style="color: #2e7d32; font-weight: 500;">{{ stats.issues_last_30_days }} issues reported this month</span>
+                            <span class="material-symbols-outlined align-middle" style="font-size: 1.1rem; color: #2e7d32;">trending_up</span>
+                        {% else %}
+                            <span style="color: #666; font-weight: 500;">No new issues this month</span>
+                        {% endif %}
+                        <span class="text-muted ms-2">Showing issue trends for the last 6 months</span>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card mb-4 p-4 d-flex align-items-center justify-content-center" style="min-height: 370px;">
-                    <h5 class="mb-1" style="font-weight: 600;">Issues Reported</h5>
-                    <span class="text-muted mb-3" style="font-size: 1rem;">June-July</span>
+                    <h5 class="mb-1" style="font-weight: 600;">Issues by Status</h5>
+                    <span class="text-muted mb-3" style="font-size: 1rem;">Current distribution</span>
                     <canvas id="issuesReportedChart" width="200" height="200"></canvas>
                     <div class="text-center mt-2">
-                        <span style="font-size: 2rem; font-weight: 700;">1,125</span>
-                        <div class="text-muted">Issues</div>
+                        <span style="font-size: 2rem; font-weight: 700;">{{ stats.total_issues }}</span>
+                        <div class="text-muted">Total Issues</div>
                     </div>
                     <div class="mt-3" style="font-size: 1rem;">
-                        <span style="color: #2e7d32; font-weight: 500;">Trending up by 5.2% this month</span>
-                        <span class="material-symbols-outlined align-middle" style="font-size: 1.1rem; color: #2e7d32;">north_east</span>
-                        <span class="text-muted ms-2">Showing total visitors for the last 6 months</span>
+                        <div><span style="color: #f4c542;">●</span> Open: {{ stats.open_issues }}</div>
+                        <div><span style="color: #f47c5c;">●</span> Closed: {{ stats.closed_issues }}</div>
+                        <div><span style="color: #2ec4b6;">●</span> In Progress: {{ stats.in_progress_issues }}</div>
+                        <div><span style="color: #334e68;">●</span> Escalated: {{ stats.escalated_issues }}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="mt-4">
-            <h5 class="mb-3" style="font-weight: 600;">Reported Issues</h5>
-            <input type="text" class="form-control mb-3" placeholder="Filter lines...">
+            <h5 class="mb-3" style="font-weight: 600;">Recent Issues</h5>
+            <input type="text" class="form-control mb-3" placeholder="Filter issues..." id="issueFilter">
             <table class="table table-striped">
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Title</th>
                   <th>Status</th>
+                  <th>Priority</th>
+                  <th>Space</th>
                   <th>Date</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="issuesTableBody">
+                {% for issue in stats.recent_issues %}
                 <tr>
-                  <td>Issue 1</td>
-                  <td>Open</td>
-                  <td>2025-07-01</td>
+                  <td>
+                    <div>
+                      <strong>{{ issue.title|truncatechars:50 }}</strong>
+                      {% if issue.category %}
+                        <small class="text-muted d-block">{{ issue.category.name }}</small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ issue.status_color }}">{{ issue.get_status_display }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ issue.priority_color }}">{{ issue.get_priority_display }}</span>
+                  </td>
+                  <td>
+                    {% if issue.space %}
+                      {{ issue.space.name|truncatechars:30 }}
+                    {% else %}
+                      <span class="text-muted">No space</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ issue.created_at|date:"Y-m-d H:i" }}</td>
                 </tr>
+                {% empty %}
                 <tr>
-                  <td>Issue 2</td>
-                  <td>Closed</td>
-                  <td>2025-07-02</td>
+                  <td colspan="5" class="text-center text-muted">No issues found</td>
                 </tr>
+                {% endfor %}
               </tbody>
             </table>
         </div>
@@ -157,15 +184,15 @@ Central Admin Dashboard
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // User Performance Bar Chart
+    // Issues Trend Bar Chart
     var ctxBar = document.getElementById('userPerformanceChart').getContext('2d');
     new Chart(ctxBar, {
         type: 'bar',
         data: {
-            labels: ['Title', 'Title', 'Title', 'Title', 'Title', 'Title', 'Title', 'Title'],
+            labels: ['6 months ago', '5 months ago', '4 months ago', '3 months ago', '2 months ago', 'Last month'],
             datasets: [{
-                label: 'Users',
-                data: [54, 195, 134, 123, 145, 165, 204, 204],
+                label: 'Issues',
+                data: {{ stats.monthly_issues_data|safe }},
                 backgroundColor: '#f47c5c',
                 borderRadius: 8,
                 maxBarThickness: 40
@@ -174,19 +201,19 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 50 } }
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
             }
         }
     });
 
-    // Issues Reported Doughnut Chart
+    // Issues by Status Doughnut Chart
     var ctxDoughnut = document.getElementById('issuesReportedChart').getContext('2d');
     new Chart(ctxDoughnut, {
         type: 'doughnut',
         data: {
-            labels: ['Open', 'Closed', 'In Progress', 'Other'],
+            labels: ['Open', 'Closed', 'In Progress', 'Escalated'],
             datasets: [{
-                data: [400, 300, 250, 175],
+                data: {{ stats.issue_status_data|safe }},
                 backgroundColor: ['#f4c542', '#f47c5c', '#2ec4b6', '#334e68'],
                 borderWidth: 0
             }]
@@ -195,6 +222,21 @@ document.addEventListener('DOMContentLoaded', function() {
             cutout: '70%',
             plugins: { legend: { display: false } }
         }
+    });
+
+    // Filter functionality for issues table
+    document.getElementById('issueFilter').addEventListener('keyup', function() {
+        var filter = this.value.toLowerCase();
+        var rows = document.querySelectorAll('#issuesTableBody tr');
+        
+        rows.forEach(function(row) {
+            var text = row.textContent.toLowerCase();
+            if (text.includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
     });
 });
 </script>
