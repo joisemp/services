@@ -16,19 +16,24 @@ def get_dashboard_stats(user, selected_space=None):
     stats = {}
     thirty_days_ago = timezone.now() - timedelta(days=30)
     
+    # Initialize default queries
+    resolved_issues_base = Issue.objects.none()
+    
     # Base queries depending on user type and context
     if user.profile.user_type == 'central_admin':
         # Central admin sees org-wide stats
         org = user.profile.org
-        issues_base = Issue.objects.filter(org=org)
+        issues_base = Issue.objects.filter(org=org).exclude(status='resolved')  # Exclude resolved issues from main stats
+        resolved_issues_base = Issue.objects.filter(org=org, status='resolved')  # Separate resolved issues
         users_base = User.objects.filter(profile__org=org)
         transactions_base = FinancialTransaction.objects.filter(org=org)
         categories_base = IssueCategory.objects.filter(org=org)
         spaces_base = Spaces.objects.filter(org=org)
         
     elif user.profile.user_type == 'space_admin' and selected_space:
-        # Space admin sees space-specific stats
-        issues_base = Issue.objects.filter(space=selected_space)
+        # Space admin sees space-specific stats with same privileges as central admin within their space
+        issues_base = Issue.objects.filter(space=selected_space).exclude(status='resolved')  # Exclude resolved issues from main stats
+        resolved_issues_base = Issue.objects.filter(space=selected_space, status='resolved')  # Separate resolved issues
         users_base = User.objects.filter(profile__org=selected_space.org)
         transactions_base = FinancialTransaction.objects.filter(space=selected_space)
         categories_base = IssueCategory.objects.filter(org=selected_space.org)
@@ -36,7 +41,8 @@ def get_dashboard_stats(user, selected_space=None):
         
     elif user.profile.user_type == 'general_user':
         # General users only see their own issues
-        issues_base = Issue.objects.filter(created_by=user)
+        issues_base = Issue.objects.filter(created_by=user).exclude(status='resolved')  # Exclude resolved issues from main stats
+        resolved_issues_base = Issue.objects.filter(created_by=user, status='resolved')  # Separate resolved issues
         users_base = User.objects.filter(id=user.id)  # Only themselves
         transactions_base = FinancialTransaction.objects.filter(created_by=user)
         categories_base = IssueCategory.objects.filter(org=user.profile.org) if user.profile.org else IssueCategory.objects.none()
@@ -45,14 +51,16 @@ def get_dashboard_stats(user, selected_space=None):
     elif user.profile.user_type == 'maintainer':
         # Maintainers see issues assigned to them and org-wide context
         if user.profile.org:
-            issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org))
+            issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org)).exclude(status='resolved')  # Exclude resolved issues from main stats
+            resolved_issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org), status='resolved')  # Separate resolved issues
             users_base = User.objects.filter(profile__org=user.profile.org)
             transactions_base = FinancialTransaction.objects.filter(org=user.profile.org)
             categories_base = IssueCategory.objects.filter(org=user.profile.org)
             spaces_base = Spaces.objects.filter(org=user.profile.org)
         else:
             # No org context, only see assigned issues
-            issues_base = Issue.objects.filter(maintainer=user)
+            issues_base = Issue.objects.filter(maintainer=user).exclude(status='resolved')  # Exclude resolved issues from main stats
+            resolved_issues_base = Issue.objects.filter(maintainer=user, status='resolved')  # Separate resolved issues
             users_base = User.objects.filter(id=user.id)
             transactions_base = FinancialTransaction.objects.none()
             categories_base = IssueCategory.objects.none()
@@ -61,7 +69,8 @@ def get_dashboard_stats(user, selected_space=None):
     else:
         # Other user types get org-wide stats if they have an org
         if user.profile.org:
-            issues_base = Issue.objects.filter(org=user.profile.org)
+            issues_base = Issue.objects.filter(org=user.profile.org).exclude(status='resolved')  # Exclude resolved issues from main stats
+            resolved_issues_base = Issue.objects.filter(org=user.profile.org, status='resolved')  # Separate resolved issues
             users_base = User.objects.filter(profile__org=user.profile.org)
             transactions_base = FinancialTransaction.objects.filter(org=user.profile.org)
             categories_base = IssueCategory.objects.filter(org=user.profile.org)
@@ -73,9 +82,11 @@ def get_dashboard_stats(user, selected_space=None):
                 'total_users': 0,
                 'total_transactions': 0,
                 'total_categories': 0,
+                'total_resolved_issues': 0,
                 'issues_last_30_days': 0,
                 'users_last_30_days': 0,
                 'transactions_last_30_days': 0,
+                'resolved_issues_last_30_days': 0,
                 'open_issues': 0,
                 'closed_issues': 0,
                 'in_progress_issues': 0,
@@ -87,12 +98,14 @@ def get_dashboard_stats(user, selected_space=None):
                 'low_issues': 0,
                 'total_transaction_amount': 0,
                 'recent_issues': [],
+                'recent_resolved_issues': [],
                 'issue_status_data': [],
                 'monthly_issues_data': [],
             }
     
     # Calculate statistics
-    stats['total_issues'] = issues_base.count()
+    stats['total_issues'] = issues_base.count()  # Active issues only (excluding resolved)
+    stats['total_resolved_issues'] = resolved_issues_base.count()  # Resolved issues count
     stats['total_users'] = users_base.count()
     stats['total_transactions'] = transactions_base.count()
     stats['total_categories'] = categories_base.count()
@@ -100,15 +113,16 @@ def get_dashboard_stats(user, selected_space=None):
     
     # Last 30 days stats
     stats['issues_last_30_days'] = issues_base.filter(created_at__gte=thirty_days_ago).count()
+    stats['resolved_issues_last_30_days'] = resolved_issues_base.filter(created_at__gte=thirty_days_ago).count()
     stats['users_last_30_days'] = users_base.filter(date_joined__gte=thirty_days_ago).count()
     stats['transactions_last_30_days'] = transactions_base.filter(created_at__gte=thirty_days_ago).count()
     
-    # Issue status breakdown
+    # Issue status breakdown (for active issues only)
     stats['open_issues'] = issues_base.filter(status='open').count()
     stats['closed_issues'] = issues_base.filter(status='closed').count()
     stats['in_progress_issues'] = issues_base.filter(status='in_progress').count()
     stats['escalated_issues'] = issues_base.filter(status='escalated').count()
-    stats['resolved_issues'] = issues_base.filter(status='resolved').count()
+    stats['resolved_issues'] = resolved_issues_base.count()  # Count from separate resolved query
     
     # Priority breakdown (useful for maintainer dashboard)
     stats['critical_issues'] = issues_base.filter(priority='critical').count()
@@ -121,8 +135,11 @@ def get_dashboard_stats(user, selected_space=None):
     stats['total_transaction_amount'] = completed_transactions.aggregate(
         total=Sum('amount'))['total'] or 0
     
-    # Recent issues for table
+    # Recent issues for table (active issues only)
     stats['recent_issues'] = issues_base.select_related('category', 'created_by', 'space').order_by('-created_at')[:10]
+    
+    # Recent resolved issues for separate display
+    stats['recent_resolved_issues'] = resolved_issues_base.select_related('category', 'created_by', 'space').order_by('-updated_at')[:10]
     
     # Issue status data for charts
     stats['issue_status_data'] = [
@@ -132,8 +149,9 @@ def get_dashboard_stats(user, selected_space=None):
         stats['escalated_issues']
     ]
     
-    # Monthly issues data for the last 6 months
+    # Monthly issues data for the last 6 months (including both active and resolved)
     monthly_data = []
+    monthly_resolved_data = []
     for i in range(6):
         month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
         month_end = month_start + timedelta(days=30)
@@ -141,9 +159,15 @@ def get_dashboard_stats(user, selected_space=None):
             created_at__gte=month_start,
             created_at__lt=month_end
         ).count()
+        month_resolved = resolved_issues_base.filter(
+            created_at__gte=month_start,
+            created_at__lt=month_end
+        ).count()
         monthly_data.insert(0, month_issues)
+        monthly_resolved_data.insert(0, month_resolved)
     
     stats['monthly_issues_data'] = monthly_data
+    stats['monthly_resolved_data'] = monthly_resolved_data
     
     return stats
 

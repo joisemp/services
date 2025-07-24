@@ -24,13 +24,17 @@ def issue_list(request):
     priority_filter = request.GET.get('priority')
     category_filter = request.GET.get('category')
     search = request.GET.get('search')
+    view_type = request.GET.get('view', 'active')  # 'active' or 'resolved'
     
     if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
         # Anonymous users see no issues
         issues = Issue.objects.none()
     elif request.user.profile.user_type == 'central_admin':
         # Central admin sees all issues from their organization
-        issues = Issue.objects.filter(org=request.user.profile.org).order_by('-created_at')
+        if view_type == 'resolved':
+            issues = Issue.objects.filter(org=request.user.profile.org, status='resolved').order_by('-updated_at')
+        else:
+            issues = Issue.objects.filter(org=request.user.profile.org).exclude(status='resolved').order_by('-created_at')
         
         # Handle space filter for central admin
         space_filter = request.GET.get('space_filter')
@@ -60,27 +64,43 @@ def issue_list(request):
         if selected_space:
             space_settings = selected_space.settings
             # Filter issues by the selected space
-            issues = Issue.objects.filter(space=selected_space).order_by('-created_at')
+            if view_type == 'resolved':
+                issues = Issue.objects.filter(space=selected_space, status='resolved').order_by('-updated_at')
+            else:
+                issues = Issue.objects.filter(space=selected_space).exclude(status='resolved').order_by('-created_at')
         else:
             # No spaces available
             issues = Issue.objects.none()
             
     elif request.user.profile.user_type == 'maintainer':
-        # Maintainer sees only assigned issues that are not escalated or resolved
-        # Escalated and resolved issues are handled by central admins only
-        issues = Issue.objects.filter(
-            maintainer=request.user
-        ).exclude(status__in=['escalated', 'resolved']).order_by('-created_at')
+        # Maintainer sees assigned issues - can view resolved ones separately
+        if view_type == 'resolved':
+            issues = Issue.objects.filter(
+                maintainer=request.user,
+                status='resolved'
+            ).order_by('-updated_at')
+        else:
+            # Active issues only (excluding escalated and resolved for normal view)
+            issues = Issue.objects.filter(
+                maintainer=request.user
+            ).exclude(status__in=['escalated', 'resolved']).order_by('-created_at')
         
     else:
         # Regular users see issues they created from their organization
-        issues = Issue.objects.filter(
-            created_by=request.user,
-            org=request.user.profile.org
-        ).order_by('-created_at')
+        if view_type == 'resolved':
+            issues = Issue.objects.filter(
+                created_by=request.user,
+                org=request.user.profile.org,
+                status='resolved'
+            ).order_by('-updated_at')
+        else:
+            issues = Issue.objects.filter(
+                created_by=request.user,
+                org=request.user.profile.org
+            ).exclude(status='resolved').order_by('-created_at')
     
     # Apply additional filters
-    if status_filter:
+    if status_filter and view_type != 'resolved':  # Don't filter by status for resolved view
         issues = issues.filter(status=status_filter)
     if priority_filter:
         issues = issues.filter(priority=priority_filter)
@@ -102,17 +122,20 @@ def issue_list(request):
         if request.user.profile.user_type == 'space_admin' and selected_space:
             base_issues = Issue.objects.filter(space=selected_space)
         elif request.user.profile.user_type == 'maintainer':
-            # For maintainers, only count issues they can actually work on (exclude resolved and escalated)
-            base_issues = Issue.objects.filter(maintainer=request.user).exclude(status__in=['escalated', 'resolved'])
+            # For maintainers, count all their assigned issues for stats
+            base_issues = Issue.objects.filter(maintainer=request.user)
         elif request.user.profile.user_type not in ['central_admin']:
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
     
-    assigned_count = base_issues.filter(maintainer__isnull=False).count()
-    pending_count = base_issues.filter(status='open').count()
-    in_progress_count = base_issues.filter(status='in_progress').count()
-    # For maintainers, resolved_count will be 0 since they can't see resolved issues
-    resolved_count = base_issues.filter(status='resolved').count()
-    escalated_count = base_issues.filter(status='escalated').count()
+    # Separate counts for active and resolved issues
+    active_issues = base_issues.exclude(status='resolved')
+    resolved_issues = base_issues.filter(status='resolved')
+    
+    assigned_count = active_issues.filter(maintainer__isnull=False).count()
+    pending_count = active_issues.filter(status='open').count()
+    in_progress_count = active_issues.filter(status='in_progress').count()
+    resolved_count = resolved_issues.count()
+    escalated_count = active_issues.filter(status='escalated').count()
     
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
         if request.user.profile.user_type == 'maintainer':
@@ -138,11 +161,13 @@ def issue_list(request):
         'space_settings': space_settings,
         'user_spaces': user_spaces,
         'categories': categories,
+        'view_type': view_type,  # Add view type to context
         'current_filters': {
             'status': status_filter,
             'priority': priority_filter,
             'category': category_filter,
             'search': search,
+            'view': view_type,
         }
     }
     
@@ -202,7 +227,7 @@ def issue_detail(request, slug):
         can_view = can_edit = can_comment = True
     elif user_profile.user_type == 'space_admin':
         if issue.space and issue.space in request.user.administered_spaces.all():
-            can_view = can_comment = True
+            can_view = can_edit = can_comment = True  # Space admins now have same privileges as central admin within their space
     elif user_profile.user_type == 'maintainer':
         if issue.maintainer == request.user:
             can_view = can_edit = can_comment = True
@@ -229,7 +254,7 @@ def issue_detail(request, slug):
     
     # Get comments (filter internal comments based on user type)
     comments = issue.comments.all()
-    if user_profile.user_type not in ['maintainer', 'central_admin']:
+    if user_profile.user_type not in ['maintainer', 'central_admin', 'space_admin']:
         comments = comments.filter(is_internal=False)
     
     # Get status history
@@ -264,13 +289,17 @@ def update_issue(request, slug):
     
     if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
         can_edit = True
+    elif user_profile.user_type == 'space_admin':
+        # Space admins can edit issues within their managed spaces (same as central admin within space)
+        if issue.space and issue.space in request.user.administered_spaces.all():
+            can_edit = True
     elif user_profile.user_type == 'maintainer' and issue.maintainer == request.user:
         # Maintainers can only edit if issue is not escalated
         can_edit = issue.status != 'escalated'
     
     if not can_edit:
         if issue.status == 'escalated' and user_profile.user_type == 'maintainer':
-            return HttpResponseForbidden('This issue has been escalated and can only be managed by central admin.')
+            return HttpResponseForbidden('This issue has been escalated and can only be managed by central admin or space admin.')
         return HttpResponseForbidden('You do not have permission to edit this issue.')
     
     if request.method == 'POST':
@@ -316,8 +345,22 @@ def voice_record(request):
 @login_required
 def assign_issue(request, issue_slug):
     issue = get_object_or_404(Issue, slug=issue_slug)
-    if not request.user.is_authenticated or not hasattr(request.user, 'profile') or request.user.profile.user_type != 'central_admin':
+    
+    # Check permissions - central admins and space admins can assign issues
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
         return HttpResponseForbidden('You do not have permission to assign issues.')
+    
+    user_profile = request.user.profile
+    can_assign = False
+    
+    if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
+        can_assign = True
+    elif user_profile.user_type == 'space_admin':
+        if issue.space and issue.space in request.user.administered_spaces.all():
+            can_assign = True
+    
+    if not can_assign:
+        return HttpResponseForbidden('You do not have permission to assign this issue.')
     if request.method == 'POST':
         form = IssueAssignmentForm(request.POST, instance=issue)
         if form.is_valid():
@@ -406,17 +449,24 @@ def escalate_issue(request, slug):
 
 @login_required
 def reassign_escalated_issue(request, slug):
-    """Reassign an escalated issue to a maintainer (Central Admin only)"""
+    """Reassign an escalated issue to a maintainer (Central Admin and Space Admin)"""
     issue = get_object_or_404(Issue, slug=slug)
     
-    # Check permissions - only central admins can reassign escalated issues
+    # Check permissions - central admins and space admins can reassign escalated issues
     if not hasattr(request.user, 'profile'):
         return HttpResponseForbidden('Access denied.')
     
     user_profile = request.user.profile
     
-    # Only central admins can reassign escalated issues
-    if user_profile.user_type != 'central_admin' or issue.org != user_profile.org:
+    # Central admins can reassign escalated issues in their org
+    if user_profile.user_type == 'central_admin' and issue.org != user_profile.org:
+        return HttpResponseForbidden('You do not have permission to reassign this issue.')
+    # Space admins can reassign escalated issues in their managed spaces
+    elif user_profile.user_type == 'space_admin':
+        if not (issue.space and issue.space in request.user.administered_spaces.all()):
+            return HttpResponseForbidden('You do not have permission to reassign this issue.')
+    # Other user types cannot reassign escalated issues
+    elif user_profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden('You do not have permission to reassign this issue.')
     
     # Can only reassign escalated issues
@@ -469,7 +519,7 @@ def reassign_escalated_issue(request, slug):
 @login_required
 def category_list(request):
     """List all issue categories for the organization"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin']:
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden('You do not have permission to manage categories.')
     
     categories = IssueCategory.objects.filter(org=request.user.profile.org).order_by('name')
@@ -478,7 +528,7 @@ def category_list(request):
 @login_required
 def create_category(request):
     """Create a new issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin']:
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden('You do not have permission to create categories.')
     
     if request.method == 'POST':
@@ -497,7 +547,7 @@ def create_category(request):
 @login_required
 def update_category(request, slug):
     """Update an existing issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin']:
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden('You do not have permission to edit categories.')
     
     category = get_object_or_404(IssueCategory, slug=slug, org=request.user.profile.org)
@@ -519,7 +569,7 @@ def update_category(request, slug):
 @login_required
 def delete_category(request, slug):
     """Delete an issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin']:
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden('You do not have permission to delete categories.')
     
     category = get_object_or_404(IssueCategory, slug=slug, org=request.user.profile.org)

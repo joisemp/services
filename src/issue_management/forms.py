@@ -103,9 +103,9 @@ class IssueUpdateForm(forms.ModelForm):
                 
                 self.fields['status'].choices = status_choices
             
-            # Central admins have full control over escalated issues
-            elif user.profile.user_type == 'central_admin':
-                # Central admins can manage all statuses
+            # Central admins and space admins have full control over escalated issues
+            elif user.profile.user_type in ['central_admin', 'space_admin']:
+                # Central admins and space admins can manage all statuses
                 pass
 
 class IssueEscalationForm(forms.ModelForm):
@@ -185,9 +185,9 @@ class IssueCommentForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # Only show internal comment option to maintainers and admins
+        # Only show internal comment option to maintainers and admins (including space admins)
         if not (user and hasattr(user, 'profile') and 
-                user.profile.user_type in ['maintainer', 'central_admin']):
+                user.profile.user_type in ['maintainer', 'central_admin', 'space_admin']):
             self.fields['is_internal'].widget = forms.HiddenInput()
             self.fields['is_internal'].initial = False
 

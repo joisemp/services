@@ -113,7 +113,7 @@
                     </a>
                 {% endif %}
                 
-                {% if user.profile.user_type == 'central_admin' %}
+                {% if user.profile.user_type in 'central_admin,space_admin' %}
                     {% if issue.is_escalated %}
                         <!-- Escalated issue management -->
                         <a href="{% url 'issue_management:reassign_escalated_issue' issue.slug %}" class="btn btn-danger btn-sm">
@@ -222,7 +222,7 @@
                                 <div class="mb-3">
                                     {{ comment_form.content }}
                                 </div>
-                                {% if user.profile.user_type in 'maintainer,central_admin' %}
+                                {% if user.profile.user_type in 'maintainer,central_admin,space_admin' %}
                                     <div class="form-check mb-3">
                                         {{ comment_form.is_internal }}
                                         <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">
