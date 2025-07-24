@@ -165,12 +165,50 @@
                         <i class="fas fa-lock me-1"></i>
                         Navigation Locked - Focus Mode Active
                     </span>
+                    <span class="badge bg-info text-white ms-2">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Refresh Protection: ON
+                    </span>
+                    <span class="badge bg-success text-white ms-2" id="sessionStatus">
+                        <i class="fas fa-save me-1"></i>
+                        Session Saved
+                    </span>
                 </div>
             </div>
 
             <div class="focus-content">
-                <!-- Timer Display -->
-                <div class="timer-display" id="workTimer">00:00:00</div>
+                <!-- Session Info -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <!-- Timer Display -->
+                        <div class="timer-display" id="workTimer">00:00:00</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-light p-3 rounded">
+                            <h6 class="mb-2"><i class="fas fa-chart-line me-2"></i>Session Stats</h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="fw-bold text-primary">{{ current_session.work_sessions_count }}</div>
+                                    <small class="text-muted">Sessions</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fw-bold text-success">{{ issue.total_work_time_detailed|default:"0 seconds" }}</div>
+                                    <small class="text-muted">Total Work</small>
+                                </div>
+                            </div>
+                            <div class="row text-center mt-2">
+                                <div class="col-6">
+                                    <div class="fw-bold text-warning">{{ issue.total_break_time_detailed|default:"0 seconds" }}</div>
+                                    <small class="text-muted">Total Breaks</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fw-bold text-info">{{ current_session.started_at|date:"H:i" }}</div>
+                                    <small class="text-muted">Started</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Progress Indicator -->
                 <div class="progress-indicator">
@@ -439,93 +477,167 @@
 
     <script src="{% static 'utils/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script>
-        // Focus Mode Management
+        // Focus Mode Management with Timer Persistence
         let focusStartTime = new Date();
         let workTimer;
         let secondsElapsed = 0;
         let isOnBreak = false;
+        const sessionKey = 'focus_session_{{ issue.slug }}';
+        
+        // Initialize timer with persistence
+        function initializeTimer() {
+            const savedSession = localStorage.getItem(sessionKey);
+            if (savedSession) {
+                const sessionData = JSON.parse(savedSession);
+                focusStartTime = new Date(sessionData.startTime);
+                const now = new Date();
+                secondsElapsed = Math.floor((now - focusStartTime) / 1000);
+                
+                // Validate session (not older than 24 hours)
+                if (secondsElapsed < 86400) {
+                    updateTimerDisplay();
+                    updateProgressBar();
+                } else {
+                    // Reset if too old
+                    resetSession();
+                }
+            } else {
+                // Save new session
+                saveSession();
+            }
+        }
+        
+        function saveSession() {
+            const sessionData = {
+                startTime: focusStartTime.toISOString(),
+                issueSlug: '{{ issue.slug }}',
+                lastActive: new Date().toISOString()
+            };
+            localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+            
+            // Update session status indicator
+            const statusBadge = document.getElementById('sessionStatus');
+            if (statusBadge) {
+                statusBadge.innerHTML = '<i class="fas fa-check me-1"></i>Session Saved';
+                statusBadge.className = 'badge bg-success text-white ms-2';
+                
+                // Flash the badge to show it was updated
+                setTimeout(() => {
+                    statusBadge.style.opacity = '0.5';
+                    setTimeout(() => {
+                        statusBadge.style.opacity = '1';
+                    }, 200);
+                }, 100);
+            }
+        }
+        
+        function resetSession() {
+            localStorage.removeItem(sessionKey);
+            focusStartTime = new Date();
+            secondsElapsed = 0;
+            saveSession();
+        }
+        
+        function endSession() {
+            localStorage.removeItem(sessionKey);
+        }
 
+        // Enhanced page refresh prevention
+        let refreshAttempts = 0;
+        
         // Prevent navigation away from focus mode
         window.addEventListener('beforeunload', function(e) {
             if (!isOnBreak) {
-                const message = 'You are in focus mode. Are you sure you want to leave?';
+                saveSession(); // Save current state
+                const message = 'You are in focus mode. Leaving will pause your session. Are you sure?';
                 e.returnValue = message;
                 return message;
             }
         });
-
-        // Block back button and navigation attempts
-        window.addEventListener('popstate', function(e) {
-            if (!isOnBreak) {
-                showFocusOverlay();
-                history.pushState(null, null, location.href);
-            }
-        });
-
-        // Push initial state to prevent back navigation
-        history.pushState(null, null, location.href);
-
-        // Disable right-click context menu
-        document.addEventListener('contextmenu', function(e) {
-            if (!isOnBreak) {
-                e.preventDefault();
-            }
-        });
-
-        // Disable common keyboard shortcuts that could navigate away
-        document.addEventListener('keydown', function(e) {
-            if (isOnBreak) return; // Allow shortcuts when on break or completing forms
+        
+        // Detect refresh attempts and prevent them
+        window.addEventListener('keydown', function(e) {
+            if (isOnBreak) return;
             
-            // Disable F5, Ctrl+R (refresh)
-            if ((e.key === 'F5') || (e.ctrlKey && e.key === 'r')) {
+            // Enhanced refresh prevention
+            if ((e.key === 'F5') || (e.ctrlKey && e.key === 'r') || (e.ctrlKey && e.key === 'R')) {
+                e.preventDefault();
+                e.stopPropagation();
+                refreshAttempts++;
+                showRefreshWarning();
+                return false;
+            }
+            
+            // Prevent other navigation shortcuts
+            if (e.ctrlKey && (e.key === 'w' || e.key === 'W')) {
                 e.preventDefault();
                 showFocusOverlay();
                 return false;
             }
             
-            // Disable Ctrl+W (close tab)
-            if (e.ctrlKey && e.key === 'w') {
-                e.preventDefault();
-                showFocusOverlay();
-                return false;
-            }
-            
-            // Disable Alt+F4 (close window)
             if (e.altKey && e.key === 'F4') {
                 e.preventDefault();
                 showFocusOverlay();
                 return false;
             }
             
-            // Disable Ctrl+T (new tab), Ctrl+N (new window)
-            if (e.ctrlKey && (e.key === 't' || e.key === 'n')) {
+            if (e.ctrlKey && (e.key === 't' || e.key === 'T' || e.key === 'n' || e.key === 'N')) {
                 e.preventDefault();
                 showFocusOverlay();
                 return false;
             }
             
-            // Disable Ctrl+L (address bar), Ctrl+D (bookmark)
-            if (e.ctrlKey && (e.key === 'l' || e.key === 'd')) {
-                e.preventDefault();
-                showFocusOverlay();
-                return false;
-            }
-            
-            // Disable Alt+Tab (task switching) - attempt to block
-            if (e.altKey && e.key === 'Tab') {
+            if (e.ctrlKey && (e.key === 'l' || e.key === 'L' || e.key === 'd' || e.key === 'D')) {
                 e.preventDefault();
                 showFocusOverlay();
                 return false;
             }
         });
+        
+        // Show warning for refresh attempts
+        function showRefreshWarning() {
+            const warningHtml = `
+                <div class="alert alert-warning alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999; max-width: 350px;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Focus Mode Active!</strong><br>
+                    Refresh is disabled to maintain your work session. 
+                    ${refreshAttempts > 1 ? `(${refreshAttempts} attempts blocked)` : ''}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Remove existing warning
+            const existingWarning = document.querySelector('.refresh-warning');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+            
+            // Add new warning
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'refresh-warning';
+            warningDiv.innerHTML = warningHtml;
+            document.body.appendChild(warningDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const warning = document.querySelector('.refresh-warning');
+                if (warning) warning.remove();
+            }, 5000);
+        }
 
-        // Start the work timer
+        // Start the work timer with persistence
         function startTimer() {
             workTimer = setInterval(function() {
                 if (!isOnBreak) {
                     secondsElapsed++;
                     updateTimerDisplay();
                     updateProgressBar();
+                    
+                    // Save session every minute
+                    if (secondsElapsed % 60 === 0) {
+                        saveSession();
+                    }
                 }
             }, 1000);
         }
@@ -559,8 +671,29 @@
         }
 
         function takeBreak() {
-            isOnBreak = true;
-            
+            // Start break tracking
+            fetch("{% url 'issue_management:start_break' issue.slug %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: 'break_type=manual'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    isOnBreak = true;
+                    showBreakModal();
+                }
+            })
+            .catch(error => {
+                console.error('Error starting break:', error);
+                showBreakModal(); // Show modal anyway for user experience
+            });
+        }
+        
+        function showBreakModal() {
             // Show a more user-friendly break notification
             const breakModal = document.createElement('div');
             breakModal.className = 'modal fade';
@@ -685,6 +818,22 @@
         }
 
         function resumeWork() {
+            // End break tracking
+            fetch("{% url 'issue_management:end_break' issue.slug %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Break ended. Duration:', data.break_duration);
+                }
+            })
+            .catch(error => console.error('Error ending break:', error));
+            
             isOnBreak = false;
             
             // Clear break intervals and timeouts
@@ -724,9 +873,35 @@
         }
 
         function escalateIssue() {
-            // Allow escalation by temporarily enabling navigation
-            isOnBreak = true;
-            window.location.href = '{% url "issue_management:escalate_issue" issue.slug %}';
+            // End work session before escalating
+            endWorkSession().then(() => {
+                window.location.href = '{% url "issue_management:escalate_issue" issue.slug %}';
+            });
+        }
+        
+        function endWorkSession() {
+            // Clear the saved session when ending work
+            endSession();
+            
+            return fetch("{% url 'issue_management:end_work_session' issue.slug %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Work session ended. Total work time:', data.work_time);
+                    console.log('Total break time:', data.break_time);
+                }
+                return data;
+            })
+            .catch(error => {
+                console.error('Error ending work session:', error);
+                return { success: false };
+            });
         }
 
         function viewFullIssue() {
@@ -743,13 +918,42 @@
 
         // Initialize timer when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize timer with persistence
+            initializeTimer();
             startTimer();
+            
+            // Block back button and navigation attempts
+            window.addEventListener('popstate', function(e) {
+                if (!isOnBreak) {
+                    showFocusOverlay();
+                    history.pushState(null, null, location.href);
+                }
+            });
+
+            // Push initial state to prevent back navigation
+            history.pushState(null, null, location.href);
+
+            // Disable right-click context menu in focus mode
+            document.addEventListener('contextmenu', function(e) {
+                if (!isOnBreak) {
+                    e.preventDefault();
+                }
+            });
             
             // Auto-save progress every 5 minutes
             setInterval(function() {
-                // Could implement auto-save functionality here
-                console.log('Auto-save checkpoint: ' + secondsElapsed + ' seconds worked');
+                if (!isOnBreak) {
+                    saveSession();
+                    console.log('Auto-save checkpoint: ' + secondsElapsed + ' seconds worked');
+                }
             }, 5 * 60 * 1000);
+            
+            // Save session on page visibility change
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden && !isOnBreak) {
+                    saveSession();
+                }
+            });
         });
 
         // Handle form submissions to allow legitimate navigation
@@ -758,15 +962,23 @@
             
             // Only allow specific forms to proceed
             if (form.action.includes('change-status')) {
-                // Allow pause/resolve actions - completely disable focus mode restrictions
-                isOnBreak = true;
+                e.preventDefault(); // Prevent immediate submission
                 
-                // Remove all event listeners to allow normal navigation
-                window.removeEventListener('beforeunload', arguments.callee);
-                window.removeEventListener('popstate', arguments.callee);
-                document.removeEventListener('keydown', arguments.callee);
+                // End work session first
+                endWorkSession().then(() => {
+                    // Allow pause/resolve actions - completely disable focus mode restrictions
+                    isOnBreak = true;
+                    
+                    // Remove all event listeners to allow normal navigation
+                    window.removeEventListener('beforeunload', arguments.callee);
+                    window.removeEventListener('popstate', arguments.callee);
+                    document.removeEventListener('keydown', arguments.callee);
+                    
+                    // Submit the form
+                    form.submit();
+                });
                 
-                return true;
+                return false;
             }
             
             // For HTMX forms (like progress notes), prevent default navigation

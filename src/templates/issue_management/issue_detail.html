@@ -338,8 +338,89 @@
                         <div class="col-5"><strong>Updated:</strong></div>
                         <div class="col-7">{{ issue.updated_at|date:"M d, Y" }}</div>
                     </div>
+                    {% if issue.total_work_time %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Work Time:</strong></div>
+                        <div class="col-7 text-success">
+                            <div>{{ issue.total_work_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.total_work_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if issue.total_break_time %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Break Time:</strong></div>
+                        <div class="col-7 text-warning">
+                            <div>{{ issue.total_break_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.total_break_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if issue.resolution_time and issue.status == 'resolved' %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Resolution Time:</strong></div>
+                        <div class="col-7 text-info">
+                            <div>{{ issue.resolution_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.resolution_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
+
+            <!-- Work Sessions History -->
+            {% if issue.work_sessions.all %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-clock me-1"></i>
+                            Work Sessions ({{ issue.work_sessions_count }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% for session in issue.work_sessions.all %}
+                            <div class="d-flex justify-content-between align-items-start mb-3 p-2 {% if not session.ended_at %}bg-light border rounded{% else %}border-bottom{% endif %}">
+                                <div>
+                                    <div class="fw-bold">
+                                        {{ session.maintainer.profile.first_name }} {{ session.maintainer.profile.last_name }}
+                                        {% if session.is_focus_mode %}
+                                            <span class="badge bg-primary ms-1">Focus Mode</span>
+                                        {% endif %}
+                                        {% if not session.ended_at %}
+                                            <span class="badge bg-success ms-1">Active</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Started: {{ session.started_at|date:"M d, Y H:i" }}
+                                        {% if session.ended_at %}
+                                            • Ended: {{ session.ended_at|date:"M d, Y H:i" }}
+                                        {% endif %}
+                                    </div>
+                                    {% if session.session_notes %}
+                                        <div class="small mt-1">{{ session.session_notes }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    {% if session.ended_at %}
+                                        <div class="fw-bold text-success">{{ session.net_work_time_detailed }}</div>
+                                        <div class="small text-muted">({{ session.net_work_time_compact }})</div>
+                                        {% if session.total_break_time %}
+                                            <div class="small text-warning mt-1">
+                                                <div>{{ session.total_break_time_detailed }}</div>
+                                                <div class="text-muted">({{ session.total_break_time_compact }}) breaks</div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="fw-bold text-primary">In Progress</div>
+                                        <div class="small text-success">{{ session.session_duration_detailed }}</div>
+                                        <div class="small text-muted">({{ session.session_duration_compact }})</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
 
             <!-- Activity History -->
             {% if status_history %}

@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 
-from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory
+from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
 
 def issue_list(request):
@@ -746,17 +746,29 @@ def focus_mode(request, slug):
         messages.error(request, 'Focus mode is only available for issues you are actively working on.')
         return redirect('issue_management:issue_detail', slug=slug)
     
+    # Get or create current work session
+    current_session = issue.current_work_session
+    if not current_session:
+        current_session = IssueWorkSession.objects.create(
+            issue=issue,
+            maintainer=request.user,
+            is_focus_mode=True
+        )
+        messages.info(request, 'Started new focus work session.')
+    
     # Get recent comments for the issue
     recent_comments = issue.comments.all().order_by('-created_at')[:5]
     
     # Set focus mode start time in session
-    if 'focus_start_time' not in request.session:
-        request.session['focus_start_time'] = timezone.now().isoformat()
+    session_key = f'focus_start_time_{issue.id}'
+    if session_key not in request.session:
+        request.session[session_key] = current_session.started_at.isoformat()
     
     context = {
         'issue': issue,
         'recent_comments': recent_comments,
-        'focus_start_time': timezone.now(),
+        'focus_start_time': current_session.started_at,
+        'current_session': current_session,
     }
     
     return render(request, 'issue_management/focus_mode.html', context)
@@ -801,3 +813,120 @@ def add_progress_note(request, slug):
     
     # If no content, return error
     return HttpResponse('<div class="alert alert-danger">Please enter a progress note.</div>', status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def start_break(request, slug):
+    """Start a break session via HTMX"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions
+    if not (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            issue.status == 'in_progress'):
+        return HttpResponseForbidden('You can only start breaks for issues you are actively working on.')
+    
+    # Get current work session
+    current_session = issue.current_work_session
+    if not current_session:
+        return HttpResponse('<div class="alert alert-danger">No active work session found.</div>', status=400)
+    
+    # Check if there's already an active break
+    active_break = current_session.breaks.filter(ended_at__isnull=True).first()
+    if active_break:
+        return HttpResponse('<div class="alert alert-warning">Break already in progress.</div>', status=400)
+    
+    # Create new break session
+    break_type = request.POST.get('break_type', 'manual')
+    break_session = IssueBreakSession.objects.create(
+        work_session=current_session,
+        break_type=break_type
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'break_id': break_session.id,
+        'started_at': break_session.started_at.isoformat()
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def end_break(request, slug):
+    """End a break session via HTMX"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions
+    if not (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user and 
+            issue.status == 'in_progress'):
+        return HttpResponseForbidden('You can only end breaks for issues you are actively working on.')
+    
+    # Get current work session
+    current_session = issue.current_work_session
+    if not current_session:
+        return HttpResponse('<div class="alert alert-danger">No active work session found.</div>', status=400)
+    
+    # Get active break
+    active_break = current_session.breaks.filter(ended_at__isnull=True).first()
+    if not active_break:
+        return HttpResponse('<div class="alert alert-warning">No active break found.</div>', status=400)
+    
+    # End the break
+    active_break.ended_at = timezone.now()
+    active_break.save()
+    
+    # Update work session's total break time
+    total_break_time = sum([
+        break_session.duration for break_session in current_session.breaks.filter(duration__isnull=False)
+    ], timezone.timedelta())
+    current_session.total_break_time = total_break_time
+    current_session.save()
+    
+    return JsonResponse({
+        'success': True,
+        'break_duration': str(active_break.duration),
+        'total_break_time': str(current_session.total_break_time)
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def end_work_session(request, slug):
+    """End current work session when leaving focus mode"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions
+    if not (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type == 'maintainer' and 
+            issue.maintainer == request.user):
+        return HttpResponseForbidden('You can only end work sessions for issues assigned to you.')
+    
+    # Get current work session
+    current_session = issue.current_work_session
+    if not current_session:
+        return JsonResponse({'success': False, 'error': 'No active work session found.'})
+    
+    # End any active breaks
+    active_break = current_session.breaks.filter(ended_at__isnull=True).first()
+    if active_break:
+        active_break.ended_at = timezone.now()
+        active_break.save()
+    
+    # End the work session
+    current_session.ended_at = timezone.now()
+    
+    # Calculate total work time (session duration minus break time)
+    session_duration = current_session.session_duration
+    current_session.total_work_time = session_duration - current_session.total_break_time
+    current_session.save()
+    
+    return JsonResponse({
+        'success': True,
+        'session_duration': str(session_duration),
+        'work_time': str(current_session.total_work_time),
+        'break_time': str(current_session.total_break_time)
+    })
