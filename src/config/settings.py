@@ -155,3 +155,14 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Finance Module Settings
 DEFAULT_CURRENCY = 'INR'  # Default currency for the application
 
+# Django Messages Framework Configuration
+# Map Django message levels to Bootstrap CSS classes
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',
+}
+

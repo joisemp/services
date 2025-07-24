@@ -64,11 +64,11 @@ def issue_list(request):
             issues = Issue.objects.none()
             
     elif request.user.profile.user_type == 'maintainer':
-        # Maintainer sees only assigned issues that are not escalated
-        # Escalated issues are handled by central admins only
+        # Maintainer sees only assigned issues that are not escalated or resolved
+        # Escalated and resolved issues are handled by central admins only
         issues = Issue.objects.filter(
             maintainer=request.user
-        ).exclude(status='escalated').order_by('-created_at')
+        ).exclude(status__in=['escalated', 'resolved']).order_by('-created_at')
         
     else:
         # Regular users see issues they created from their organization
@@ -100,13 +100,15 @@ def issue_list(request):
         if request.user.profile.user_type == 'space_admin' and selected_space:
             base_issues = Issue.objects.filter(space=selected_space)
         elif request.user.profile.user_type == 'maintainer':
-            base_issues = Issue.objects.filter(maintainer=request.user)
+            # For maintainers, only count issues they can actually work on (exclude resolved and escalated)
+            base_issues = Issue.objects.filter(maintainer=request.user).exclude(status__in=['escalated', 'resolved'])
         elif request.user.profile.user_type not in ['central_admin']:
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
     
     assigned_count = base_issues.filter(maintainer__isnull=False).count()
     pending_count = base_issues.filter(status='open').count()
     in_progress_count = base_issues.filter(status='in_progress').count()
+    # For maintainers, resolved_count will be 0 since they can't see resolved issues
     resolved_count = base_issues.filter(status='resolved').count()
     escalated_count = base_issues.filter(status='escalated').count()
     
@@ -559,6 +561,22 @@ def change_status(request, slug, new_status):
         messages.error(request, 'Maintainers cannot reopen resolved issues. Contact central admin if needed.')
         return redirect('issue_management:issue_detail', slug=slug)
     
+    # Enforce single issue workflow - maintainer can only work on one issue at a time
+    if new_status == 'in_progress':
+        # Check if maintainer already has another issue in progress
+        current_in_progress = Issue.objects.filter(
+            maintainer=request.user,
+            status='in_progress'
+        ).exclude(id=issue.id)
+        
+        if current_in_progress.exists():
+            in_progress_issue = current_in_progress.first()
+            messages.error(request, 
+                f'You already have an issue in progress: "{in_progress_issue.title}". '
+                f'Please set it to "Open" or complete it before starting work on this issue.'
+            )
+            return redirect('issue_management:issue_detail', slug=slug)
+    
     # Record the old status for history
     old_status = issue.status
     old_maintainer = issue.maintainer  # Track maintainer change
@@ -626,6 +644,22 @@ def change_status_with_comment(request, slug, new_status):
     if issue.status == 'resolved' and new_status in ['open', 'in_progress']:
         messages.error(request, 'Maintainers cannot reopen resolved issues. Contact central admin if needed.')
         return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Enforce single issue workflow - maintainer can only work on one issue at a time
+    if new_status == 'in_progress':
+        # Check if maintainer already has another issue in progress
+        current_in_progress = Issue.objects.filter(
+            maintainer=request.user,
+            status='in_progress'
+        ).exclude(id=issue.id)
+        
+        if current_in_progress.exists():
+            in_progress_issue = current_in_progress.first()
+            messages.error(request, 
+                f'You already have an issue in progress: "{in_progress_issue.title}". '
+                f'Please set it to "Open" or complete it before starting work on this issue.'
+            )
+            return redirect('issue_management:issue_detail', slug=slug)
     
     # Get the comment from the form
     comment = request.POST.get('comment', '').strip()

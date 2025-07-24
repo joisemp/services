@@ -437,6 +437,10 @@
                         <i class="fas fa-info-circle"></i>
                         <strong>Action:</strong> <span id="actionDescription"></span>
                     </div>
+                    <div class="alert alert-warning" id="singleIssueAlert" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> You can only work on one issue at a time. If you have another issue "In Progress", please set it to "Open" first before starting work on this issue.
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -478,13 +482,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update textarea placeholder and label based on action
             const commentTextarea = document.getElementById('statusComment');
             const commentLabel = document.querySelector('label[for="statusComment"]');
+            const singleIssueAlert = document.getElementById('singleIssueAlert');
             
             if (status === 'resolved') {
                 commentLabel.textContent = 'Resolution notes (optional)';
                 commentTextarea.placeholder = 'Describe how you resolved this issue, what you did, or any important notes...';
+                singleIssueAlert.style.display = 'none';
+            } else if (status === 'in_progress') {
+                commentLabel.textContent = 'Work notes (optional)';
+                commentTextarea.placeholder = 'Describe what you plan to do or any notes about starting work...';
+                singleIssueAlert.style.display = 'block';
             } else {
                 commentLabel.textContent = 'Add a comment (optional)';
                 commentTextarea.placeholder = 'Describe what you did or any notes about this status change...';
+                singleIssueAlert.style.display = 'none';
             }
             
             // Update form action
