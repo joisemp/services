@@ -15,21 +15,5 @@
             </span>
             <span class="menu-text">Issues</span>
         </a>
-
-        <!-- Marketplace (basic access for users) -->
-        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
-            <span class="material-symbols-outlined me-2">
-                storefront
-            </span>
-            <span class="menu-text">Marketplace</span>
-        </a>
-
-        <!-- Transportation (basic view access) -->
-        <a class="navlink {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}" href="{% url 'transportation:vehicle_list' %}">
-            <span class="material-symbols-outlined me-2">
-                commute
-            </span>
-            <span class="menu-text">Vehicles</span>
-        </a>
     </div>
 </section>
