@@ -1,40 +1,63 @@
 @import '../../sidebar_base';
 
 #dashboard-admin {
+    .notification{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
     .col{
         padding:5px !important;
-        .card {
+        .card{
         max-width:100%; 
-        border-radius: 5px;
-        border: 2px solid #d1d5db; 
-        background: #ffffff;
+        border-radius: 7px;
+        border: 2px solid #d1d5db64; 
+        }
         .card-body {
             padding: 1.2rem;
         }
-        .user {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-right: 1rem;
-        }
-        .count {
-            margin-left: auto;
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-        .days {
-            color: #888;
-            font-size: 12px;
-        }
-        .label {
-            background: #111;
-            color: #fff;
-            border-radius: 2rem;
-            padding: 5px 18px;
+        .card-info{
             display: flex;
             align-items: center;
-            font-size: 12px;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            h2{
+                font-weight: 700;
+                color:aliceblue;
+            }
+            .alert-icon{
+            font-size: 2.3rem;
+            color:rgb(255, 118, 118); 
+        }
+         .space-icon{
+            font-size: 2.3rem;
+            color:rgb(255, 241, 118); 
+        }
+        .people-icon{
+            font-size: 2.3rem;
+            color:rgb(159, 118, 255); 
+        }
+        }
+         .card-text{
+                text-align: right;
+               span{
+                font-size: 23px;
+                color: aliceblue;
+            }
+            }
+    }
+     .card-alert{
+            background: linear-gradient(to right, #B21E1E,#4C0D0D );
+        }
+     .card-space{
+            margin: 10px;
+            background: linear-gradient(to right, #afaf1e,#7d8a1e);
+            color: aliceblue;
+        }
+     .card-people{
+            margin: 10px;
+            background: linear-gradient(to right, #8713A8,#430D52);
+            color: aliceblue;
         }
     }
-    }
-    
-}
+   
