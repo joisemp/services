@@ -28,7 +28,7 @@ class FinancialTransactionForm(forms.ModelForm):
         model = FinancialTransaction
         fields = [
             'title', 'description', 'amount', 'transaction_type', 'payment_method',
-            'status', 'category', 'transaction_date', 'reference_number',
+            'status', 'category', 'space', 'transaction_date', 'reference_number',
             'receipt_image', 'notes'
         ]
         widgets = {
@@ -39,6 +39,7 @@ class FinancialTransactionForm(forms.ModelForm):
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'space': forms.Select(attrs={'class': 'form-select'}),
             'transaction_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'reference_number': forms.TextInput(attrs={'class': 'form-control'}),
             'receipt_image': forms.FileInput(attrs={'class': 'form-control'}),
@@ -50,9 +51,34 @@ class FinancialTransactionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if user and hasattr(user, 'profile') and user.profile.org:
+            # Filter categories by organization
             self.fields['category'].queryset = TransactionCategory.objects.filter(
                 org=user.profile.org, is_active=True
             )
+            
+            # Handle space field based on user type
+            if user.profile.user_type == 'central_admin':
+                # Central admin can select any space or leave as organization-wide
+                from service_management.models import Spaces
+                self.fields['space'].queryset = Spaces.objects.filter(org=user.profile.org)
+                self.fields['space'].required = False
+                self.fields['space'].empty_label = "Organization-wide (No Space)"
+            elif user.profile.user_type == 'space_admin':
+                # Space admin: auto-assign their current active space
+                if user.profile.current_active_space:
+                    self.fields['space'].initial = user.profile.current_active_space
+                    self.fields['space'].widget = forms.HiddenInput()
+                    self.fields['space'].queryset = user.profile.org.spaces.filter(
+                        id=user.profile.current_active_space.id
+                    )
+                else:
+                    # If no active space, show dropdown of administered spaces
+                    self.fields['space'].queryset = user.administered_spaces.all()
+                    self.fields['space'].required = True
+            else:
+                # For other user types, hide space field
+                self.fields['space'].widget = forms.HiddenInput()
+                self.fields['space'].required = False
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
@@ -73,7 +99,7 @@ class RecurringTransactionForm(forms.ModelForm):
         fields = [
             'title', 'description', 'amount', 'frequency', 'start_date',
             'end_date', 'transaction_type', 'payment_method', 'category',
-            'is_active', 'auto_create'
+            'space', 'is_active', 'auto_create'
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
@@ -85,6 +111,7 @@ class RecurringTransactionForm(forms.ModelForm):
             'transaction_type': forms.Select(attrs={'class': 'form-select'}),
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'space': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'auto_create': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -97,6 +124,31 @@ class RecurringTransactionForm(forms.ModelForm):
             self.fields['category'].queryset = TransactionCategory.objects.filter(
                 org=user.profile.org, is_active=True
             )
+            
+            # Handle space field based on user type (similar to FinancialTransactionForm)
+            if user.profile.user_type == 'central_admin':
+                # Central admin can select any space or leave as organization-wide
+                from service_management.models import Spaces
+                self.fields['space'].queryset = Spaces.objects.filter(org=user.profile.org)
+                self.fields['space'].required = False
+                self.fields['space'].empty_label = "Organization-wide (No Space)"
+            elif user.profile.user_type == 'space_admin':
+                # Space admin: auto-assign their current active space
+                if user.profile.current_active_space:
+                    self.fields['space'].initial = user.profile.current_active_space
+                    self.fields['space'].widget = forms.HiddenInput()
+                    self.fields['space'].queryset = user.profile.org.spaces.filter(
+                        id=user.profile.current_active_space.id
+                    )
+                else:
+                    # If no active space, show dropdown of administered spaces
+                    self.fields['space'].queryset = user.administered_spaces.all()
+                    self.fields['space'].required = True
+            else:
+                # For other user types, hide space field
+                self.fields['space'].widget = forms.HiddenInput()
+                self.fields['space'].required = False
+                self.fields['space'].required = False
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
@@ -126,7 +178,7 @@ class BudgetForm(forms.ModelForm):
         model = Budget
         fields = [
             'name', 'description', 'category', 'budgeted_amount', 'period',
-            'start_date', 'end_date', 'is_active'
+            'start_date', 'end_date', 'space', 'is_active'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -136,6 +188,7 @@ class BudgetForm(forms.ModelForm):
             'period': forms.Select(attrs={'class': 'form-select'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'space': forms.Select(attrs={'class': 'form-select'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -149,6 +202,30 @@ class BudgetForm(forms.ModelForm):
             )
             # Add empty option for overall budget
             self.fields['category'].empty_label = "Overall Budget (All Categories)"
+            
+            # Handle space field based on user type (similar to other forms)
+            if user.profile.user_type == 'central_admin':
+                # Central admin can select any space or leave as organization-wide
+                from service_management.models import Spaces
+                self.fields['space'].queryset = Spaces.objects.filter(org=user.profile.org)
+                self.fields['space'].required = False
+                self.fields['space'].empty_label = "Organization-wide (No Space)"
+            elif user.profile.user_type == 'space_admin':
+                # Space admin: auto-assign their current active space
+                if user.profile.current_active_space:
+                    self.fields['space'].initial = user.profile.current_active_space
+                    self.fields['space'].widget = forms.HiddenInput()
+                    self.fields['space'].queryset = user.profile.org.spaces.filter(
+                        id=user.profile.current_active_space.id
+                    )
+                else:
+                    # If no active space, show dropdown of administered spaces
+                    self.fields['space'].queryset = user.administered_spaces.all()
+                    self.fields['space'].required = True
+            else:
+                # For other user types, hide space field
+                self.fields['space'].widget = forms.HiddenInput()
+                self.fields['space'].required = False
 
     def clean_budgeted_amount(self):
         amount = self.cleaned_data.get('budgeted_amount')

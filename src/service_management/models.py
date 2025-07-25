@@ -125,7 +125,9 @@ class SpaceSettings(models.Model):
     enable_issue_management = models.BooleanField(default=True, help_text="Enable/disable issue management")
     enable_service_management = models.BooleanField(default=True, help_text="Enable/disable service management")
     enable_transportation = models.BooleanField(default=False, help_text="Enable/disable transportation")
-    enable_dashboard = models.BooleanField(default=True, help_text="Enable/disable dashboard")
+    enable_finance = models.BooleanField(default=True, help_text="Enable/disable finance management")
+    enable_marketplace = models.BooleanField(default=True, help_text="Enable/disable marketplace")
+    enable_asset_management = models.BooleanField(default=False, help_text="Enable/disable asset management")
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -142,23 +144,29 @@ class SpaceSettings(models.Model):
     def get_enabled_modules(self):
         """Return a list of enabled modules for this space"""
         enabled_modules = []
-        if self.enable_dashboard:
-            enabled_modules.append('dashboard')
         if self.enable_issue_management:
             enabled_modules.append('issue_management')
         if self.enable_service_management:
             enabled_modules.append('service_management')
         if self.enable_transportation:
             enabled_modules.append('transportation')
+        if self.enable_finance:
+            enabled_modules.append('finance')
+        if self.enable_marketplace:
+            enabled_modules.append('marketplace')
+        if self.enable_asset_management:
+            enabled_modules.append('asset_management')
         return enabled_modules
     
     def is_module_enabled(self, module_name):
         """Check if a specific module is enabled"""
         module_mapping = {
-            'dashboard': self.enable_dashboard,
             'issue_management': self.enable_issue_management,
             'service_management': self.enable_service_management,
             'transportation': self.enable_transportation,
+            'finance': self.enable_finance,
+            'marketplace': self.enable_marketplace,
+            'asset_management': self.enable_asset_management,
         }
         return module_mapping.get(module_name, False)
     

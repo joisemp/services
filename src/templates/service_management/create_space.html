@@ -28,30 +28,41 @@
                         <form method="POST">
                             {% csrf_token %}
                             
-                            <!-- Organisation Selection -->
+                            <!-- Organisation Display (Read-only) -->
                             <div class="mb-3">
-                                <label for="org" class="form-label">Organisation <span class="text-danger">*</span></label>
-                                <select class="form-select" id="org" name="org" required>
-                                    <option value="">Select an organisation...</option>
-                                    {% for org in orgs %}
-                                        <option value="{{ org.id }}">{{ org.name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label">Organisation</label>
+                                <div class="form-control-plaintext bg-light p-3 rounded border">
+                                    <strong>{{ user_org.name }}</strong>
+                                    {% if user_org.address %}
+                                        <br><small class="text-muted">{{ user_org.address }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text">Spaces will be created under your organization automatically.</div>
                             </div>
 
                             <!-- Space Name -->
                             <div class="mb-3">
-                                <label for="name" class="form-label">Space Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" required 
-                                       placeholder="Enter space name">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    Space Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                                 <div class="form-text">Choose a descriptive name for your space.</div>
                             </div>
 
                             <!-- Description -->
                             <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="4" 
-                                          placeholder="Enter space description (optional)"></textarea>
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.description.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                                 <div class="form-text">Provide a brief description of what this space is for.</div>
                             </div>
 

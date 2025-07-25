@@ -1,17 +1,390 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Maintainer Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-    <div class="alert alert-primary">
-        Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong>!
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Maintainer Dashboard{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/maintainer/style.css' %}">
+{% endblock style %}
+
+{% block content %}
+<div class="maintainer-dashboard">
+    <div class="container-fluid">
+        <!-- Welcome Section -->
+        <div class="welcome-section mb-4">
+            <div class="alert border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="welcome-icon me-3">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1 fw-bold">Welcome back, {{ user.profile.first_name }}!</h5>
+                        <p class="mb-0 text-muted">Here's your work overview for today</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card card-assigned h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon me-3">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-number">{{ stats.total_issues }}</div>
+                            <div class="stat-label">Total Assigned</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card card-completed h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon me-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-number">{{ stats.resolved_issues }}</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card card-progress h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon me-3">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-number">{{ stats.in_progress_issues }}</div>
+                            <div class="stat-label">In Progress</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card card-escalated h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon me-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-number">{{ stats.escalated_issues }}</div>
+                            <div class="stat-label">Escalated</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <!-- Work Progress Chart -->
+            <div class="col-lg-8">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h6 class="chart-title">Work Progress Trend</h6>
+                        <p class="chart-subtitle">Issues completed over the last 6 months</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="workProgressChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Priority Distribution -->
+            <div class="col-lg-4">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h6 class="chart-title">Priority Distribution</h6>
+                        <p class="chart-subtitle">Current workload by priority</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="priorityChart"></canvas>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Critical</small>
+                                <span class="badge bg-danger">{{ stats.critical_issues|default:0 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">High</small>
+                                <span class="badge bg-warning">{{ stats.high_issues|default:0 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Medium</small>
+                                <span class="badge bg-info">{{ stats.medium_issues|default:0 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Low</small>
+                                <span class="badge bg-success">{{ stats.low_issues|default:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Queue -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card work-queue-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="queue-title">My Work Queue</h6>
+                        <div class="filter-dropdown">
+                            <div class="dropdown">
+                                <button class="btn dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+                                    Filter by Status
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="filterIssues('all')">All Issues</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterIssues('in_progress')">In Progress</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterIssues('open')">Open</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterIssues('high')">High Priority</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if stats.recent_issues %}
+                        <div class="table-responsive">
+                            <table class="table" id="issuesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Issue</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th>Space</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for issue in stats.recent_issues %}
+                                    <tr data-status="{{ issue.status }}" data-priority="{{ issue.priority }}">
+                                        <td>
+                                            <div>
+                                                <div class="issue-title">{{ issue.title|truncatechars:40 }}</div>
+                                                {% if issue.category %}
+                                                    <div class="issue-category">{{ issue.category.name }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ issue.status_color }}">
+                                                {{ issue.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ issue.priority_color }}">
+                                                {{ issue.get_priority_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if issue.space %}
+                                                <span class="text-truncate d-inline-block" style="max-width: 120px;">
+                                                    {{ issue.space.name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">No space</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ issue.created_at|date:"M d, H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn btn-outline-primary btn-sm" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                {% if issue.status == 'open' %}
+                                                    <button class="btn btn-outline-success btn-sm" title="Start Work">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                {% elif issue.status == 'in_progress' %}
+                                                    <button class="btn btn-outline-warning btn-sm" title="Update Progress">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-top bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Showing {{ stats.recent_issues|length }} of {{ stats.total_issues }} issues</small>
+                                <a href="{% url 'issue_management:issue_list' %}" class="btn btn-primary btn-sm">
+                                    View All Issues
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <h6 class="empty-title">No Issues Assigned</h6>
+                            <p class="empty-text">You don't have any issues assigned to you at the moment. Check back later or contact your supervisor.</p>
+                            <a href="{% url 'issue_management:issue_list' %}" class="btn btn-outline-primary">
+                                Browse All Issues
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <h2 class="mb-4">Maintainer Dashboard</h2>
-    <p>This is your Maintainer dashboard. (Add maintainer info here.)</p>
 </div>
-</body>
-</html>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Work Progress Chart
+    const workProgressCtx = document.getElementById('workProgressChart').getContext('2d');
+    new Chart(workProgressCtx, {
+        type: 'line',
+        data: {
+            labels: ['6mo ago', '5mo ago', '4mo ago', '3mo ago', '2mo ago', 'Last month'],
+            datasets: [{
+                label: 'Completed Issues',
+                data: {{ stats.monthly_issues_data|safe }},
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#28a745',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: '#f1f3f4'
+                    },
+                    ticks: {
+                        color: '#6c757d',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#6c757d',
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: '#ffffff'
+                }
+            }
+        }
+    });
+
+    // Priority Distribution Chart
+    const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+    const priorityData = [
+        {{ stats.critical_issues|default:0 }},
+        {{ stats.high_issues|default:0 }},
+        {{ stats.medium_issues|default:0 }},
+        {{ stats.low_issues|default:0 }}
+    ];
+    
+    new Chart(priorityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: priorityData,
+                backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745'],
+                borderWidth: 0,
+                cutout: '70%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+
+// Filter functionality
+function filterIssues(filter) {
+    const rows = document.querySelectorAll('#issuesTable tbody tr');
+    
+    rows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        const priority = row.getAttribute('data-priority');
+        
+        let shouldShow = false;
+        
+        switch(filter) {
+            case 'all':
+                shouldShow = true;
+                break;
+            case 'in_progress':
+                shouldShow = status === 'in_progress';
+                break;
+            case 'open':
+                shouldShow = status === 'open';
+                break;
+            case 'high':
+                shouldShow = priority === 'high' || priority === 'critical';
+                break;
+        }
+        
+        row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Update dropdown text
+    const filterText = {
+        'all': 'All Issues',
+        'in_progress': 'In Progress',
+        'open': 'Open',
+        'high': 'High Priority'
+    };
+    
+    document.getElementById('filterDropdown').textContent = filterText[filter] || 'Filter by Status';
+}
+</script>
+{% endblock content %}

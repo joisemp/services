@@ -89,7 +89,7 @@ def user_login_view(request):
         user = authenticate(request, email=email, password=password)
         if user is not None:
             login(request, user)
-            return redirect(reverse('landing'))
+            return redirect(f"{reverse('dashboard:dashboard')}?user={user.profile.slug}")
         else:
             error = 'Invalid credentials.'
     return render(request, 'core/user_login.html', {'form': form, 'error': error})
@@ -103,7 +103,7 @@ def general_user_login_view(request):
         try:
             user = User.objects.get(phone=phone, profile__user_type='general_user')
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect(reverse('landing'))
+            return redirect(f"{reverse('dashboard:dashboard')}?user={user.profile.slug}")
         except User.DoesNotExist:
             error = 'No general user found with this phone number.'
     return render(request, 'core/general_user_login.html', {'form': form, 'error': error})

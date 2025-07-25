@@ -19,6 +19,9 @@ urlpatterns = [
     path('spaces/<slug:slug>/edit/', views.edit_space, name='edit_space'),
     path('spaces/<slug:slug>/settings/', views.space_settings, name='space_settings'),
     path('spaces/<slug:slug>/admins/', views.manage_space_admins, name='manage_space_admins'),
+    
+    # Space Admin Access Control
+    path('no-spaces-assigned/', views.no_spaces_assigned, name='no_spaces_assigned'),
 ]
 
 urlpatterns += [

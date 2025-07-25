@@ -4,6 +4,10 @@
 
 {% block title %}Create Purchase Order - {{ shopping_list.name }}{% endblock %}
 
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/marketplace/base/style.css' %}">
+{% endblock style %}
+
 {% block extra_css %}
 <style>
     .card {
