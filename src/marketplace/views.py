@@ -14,16 +14,16 @@ from .models import ShoppingList, ShoppingListItem, Purchase, PurchaseItem, Shop
 from config.helpers import is_central_admin
 
 def can_manage_purchases(user):
-    """Check if user can manage purchases (central_admin, institution_admin, or maintainer)"""
+    """Check if user can manage purchases (central_admin, space_admin, institution_admin, or maintainer)"""
     if not hasattr(user, 'profile'):
         return False
-    return user.profile.user_type in ['central_admin', 'institution_admin', 'maintainer']
+    return user.profile.user_type in ['central_admin', 'space_admin', 'institution_admin', 'maintainer']
 
 def can_approve_purchases(user):
-    """Check if user can approve purchases (central_admin or institution_admin)"""
+    """Check if user can approve purchases (central_admin, space_admin, or institution_admin)"""
     if not hasattr(user, 'profile'):
         return False
-    return user.profile.user_type in ['central_admin', 'institution_admin']
+    return user.profile.user_type in ['central_admin', 'space_admin', 'institution_admin']
 
 @login_required
 @user_passes_test(can_manage_purchases)

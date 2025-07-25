@@ -13,35 +13,28 @@
             <span class="menu-text">People</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'service_management:spaces_list' %}">
             <span class="material-symbols-outlined me-2">
                 workspaces
             </span>
             <span class="menu-text">Space</span>
         </a>
 
-        <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                finance_mode
-            </span>
-            <span class="menu-text">Finance</span>
-        </a>
-
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
             <span class="material-symbols-outlined me-2">
                 storefront
             </span>
             <span class="menu-text">Market</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink {% if request.resolver_match.url_name == 'issue_list' %}active{% endif %}" href="{% url 'issue_management:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
         </a>
 
-        <a class="navlink" href="{% url 'service_management:people_list' %}">
+        <a class="navlink {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}" href="{% url 'transportation:vehicle_list' %}">
             <span class="material-symbols-outlined me-2">
                 commute
             </span>
@@ -68,6 +61,6 @@
             </span>
             <span class="menu-text">Settings</span>
         </a>
-        
+
     </div>
 </section>
