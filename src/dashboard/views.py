@@ -51,7 +51,7 @@ def get_dashboard_stats(user, selected_space=None):
     elif user.profile.user_type == 'maintainer':
         # Maintainers see issues assigned to them and org-wide context
         if user.profile.org:
-            issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org)).exclude(status='resolved')  # Exclude resolved issues from main stats
+            issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org)).exclude(status__in=['resolved', 'escalated'])  # Exclude resolved and escalated issues from main stats
             resolved_issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org), status='resolved')  # Separate resolved issues
             users_base = User.objects.filter(profile__org=user.profile.org)
             transactions_base = FinancialTransaction.objects.filter(org=user.profile.org)
@@ -59,7 +59,7 @@ def get_dashboard_stats(user, selected_space=None):
             spaces_base = Spaces.objects.filter(org=user.profile.org)
         else:
             # No org context, only see assigned issues
-            issues_base = Issue.objects.filter(maintainer=user).exclude(status='resolved')  # Exclude resolved issues from main stats
+            issues_base = Issue.objects.filter(maintainer=user).exclude(status__in=['resolved', 'escalated'])  # Exclude resolved and escalated issues from main stats
             resolved_issues_base = Issue.objects.filter(maintainer=user, status='resolved')  # Separate resolved issues
             users_base = User.objects.filter(id=user.id)
             transactions_base = FinancialTransaction.objects.none()
@@ -180,7 +180,7 @@ def dashboard_view(request):
     user = request.user
     user_type = getattr(user.profile, 'user_type', None)
     
-    # Space context handling for space admins
+    # Space context handling for space admins and maintainers
     selected_space = None
     if user_type == 'space_admin':
         user_spaces = user.administered_spaces.all()
@@ -194,6 +194,9 @@ def dashboard_view(request):
                 selected_space = user_spaces.first()
                 # Update profile with the new active space
                 user.profile.switch_active_space(selected_space)
+    elif user_type == 'maintainer':
+        # Maintainers can also have an active space context
+        selected_space = user.profile.current_active_space
     
     # Get dashboard statistics
     dashboard_stats = get_dashboard_stats(user, selected_space)
@@ -242,6 +245,7 @@ def dashboard_view(request):
         'maintainer': {
             **base_context,
             'maintainer_message': 'Maintainer context.',
+            'selected_space': selected_space,
         },
         'general_user': {
             **base_context,
