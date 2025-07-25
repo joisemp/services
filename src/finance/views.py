@@ -401,6 +401,44 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
         context.update(get_template_currency_context(self.request.user.profile.org))
         return context
     
@@ -443,6 +481,44 @@ class TransactionUpdateView(LoginRequiredMixin, UpdateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
         context.update(get_template_currency_context(self.request.user.profile.org))
         return context
     
@@ -489,6 +565,36 @@ def transaction_detail(request, slug):
         org=request.user.profile.org
     )
     
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     # Get related transactions if any
     related_transactions = FinancialTransaction.objects.filter(
         org=request.user.profile.org,
@@ -498,6 +604,10 @@ def transaction_detail(request, slug):
     context = {
         'transaction': transaction,
         'related_transactions': related_transactions,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     # Add currency context
@@ -653,6 +763,48 @@ class RecurringTransactionCreateView(LoginRequiredMixin, CreateView):
         kwargs['user'] = self.request.user
         return kwargs
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
+    
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
@@ -690,6 +842,48 @@ class RecurringTransactionUpdateView(LoginRequiredMixin, UpdateView):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
     
     def form_valid(self, form):
         messages.success(self.request, 'Recurring transaction updated successfully!')
@@ -863,6 +1057,44 @@ class BudgetCreateView(LoginRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
         context.update(get_template_currency_context(self.request.user.profile.org))
         return context
     
@@ -905,6 +1137,44 @@ class BudgetUpdateView(LoginRequiredMixin, UpdateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
         context.update(get_template_currency_context(self.request.user.profile.org))
         return context
     
@@ -924,6 +1194,36 @@ def budget_detail(request, slug):
         return HttpResponseForbidden("You do not have permission to access the finance module.")
     
     budget = get_object_or_404(Budget, slug=slug, org=request.user.profile.org)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     # Get transactions for this budget
     transactions = FinancialTransaction.objects.filter(
@@ -976,6 +1276,10 @@ def budget_detail(request, slug):
         'remaining_amount': budget.get_remaining_amount(),
         'percentage_used': budget.get_percentage_used(),
         'is_over_budget': budget.is_over_budget(),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     # Add currency context
@@ -1004,6 +1308,48 @@ class CategoryListView(LoginRequiredMixin, ListView):
         return TransactionCategory.objects.filter(
             org=self.request.user.profile.org
         ).order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
 
 
 class CategoryCreateView(LoginRequiredMixin, CreateView):
@@ -1020,6 +1366,48 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
             return HttpResponseForbidden("You do not have permission to access the finance module.")
         
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
     
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
@@ -1068,6 +1456,106 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
     def get_queryset(self):
         return TransactionCategory.objects.filter(org=self.request.user.profile.org)
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Category updated successfully!')
+        return super().form_valid(form)
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        return TransactionCategory.objects.filter(org=self.request.user.profile.org)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
+        
+        return context
+    
     def form_valid(self, form):
         messages.success(self.request, 'Category updated successfully!')
         return super().form_valid(form)
@@ -1086,6 +1574,36 @@ def reports_dashboard(request):
     
     user_org = request.user.profile.org
     
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     # Get recent reports
     recent_reports = FinancialReport.objects.filter(
         org=user_org
@@ -1094,6 +1612,10 @@ def reports_dashboard(request):
     context = {
         'recent_reports': recent_reports,
         'report_types': FinancialReport.REPORT_TYPES,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'finance/reports_dashboard.html', context)
@@ -1108,6 +1630,36 @@ def generate_report(request):
     
     if request.user.profile.user_type not in ['central_admin', 'space_admin']:
         return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     if request.method == 'POST':
         form = FinancialReportForm(request.POST, user=request.user)
@@ -1126,7 +1678,15 @@ def generate_report(request):
     else:
         form = FinancialReportForm(user=request.user)
     
-    return render(request, 'finance/generate_report.html', {'form': form})
+    context = {
+        'form': form,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
+    }
+    
+    return render(request, 'finance/generate_report.html', context)
 
 
 def generate_report_data(report):
@@ -1276,7 +1836,45 @@ def report_detail(request, slug):
     
     report = get_object_or_404(FinancialReport, slug=slug, org=request.user.profile.org)
     
-    return render(request, 'finance/report_detail.html', {'report': report})
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
+    context = {
+        'report': report,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
+    }
+    
+    return render(request, 'finance/report_detail.html', context)
 
 
 @login_required

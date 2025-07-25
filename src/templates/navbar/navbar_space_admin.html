@@ -13,7 +13,7 @@
         
         <div class="d-flex align-items-center">
             <!-- Space Switcher - Responsive -->
-            {% if user_spaces.exists %}
+            {% if user_spaces.exists and not disable_space_switching %}
             <div class="me-2 me-md-3">
                 <!-- Mobile: Icon button with dropdown -->
                 <div class="d-block d-lg-none">
