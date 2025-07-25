@@ -1,7 +1,7 @@
 from django import forms
 from core.models import UserProfile
 from django.contrib.auth import get_user_model
-from .models import WorkCategory
+from .models import WorkCategory, Spaces
 
 User = get_user_model()
 
@@ -39,3 +39,35 @@ class WorkCategoryForm(forms.ModelForm):
     class Meta:
         model = WorkCategory
         fields = ['name', 'description']
+
+
+class SpaceForm(forms.ModelForm):
+    """Form for creating and editing spaces"""
+    class Meta:
+        model = Spaces
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter space name',
+                'required': True
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Enter space description (optional)'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        # Remove org from kwargs if passed, as it will be set automatically
+        self.user_org = kwargs.pop('user_org', None)
+        super().__init__(*args, **kwargs)
+        
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user_org:
+            instance.org = self.user_org
+        if commit:
+            instance.save()
+        return instance

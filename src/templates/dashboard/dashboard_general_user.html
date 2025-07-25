@@ -1,17 +1,174 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>General User Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-    <div class="alert alert-primary">
-        Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong>!
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}General User Dashboard{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/general_user/style.css' %}">
+{% endblock style %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user fa-2x text-primary me-3"></i>
+                    <div>
+                        <h5 class="mb-1">Welcome, <strong>{{ user.profile.first_name }} {{ user.profile.last_name }}</strong></h5>
+                        <p class="mb-0 text-muted">General User Dashboard</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <h2 class="mb-4">General User Dashboard</h2>
-    <p>This is your General User dashboard. (Add general user info here.)</p>
+
+    <!-- My Issues Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                My Issues
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_issues }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-bug fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Resolved
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.resolved_issues }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                In Progress
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.in_progress_issues }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Open
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.open_issues }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Recent Issues -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">My Recent Issues</h6>
+                </div>
+                <div class="card-body">
+                    {% if stats.recent_issues %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Space</th>
+                                    <th>Date Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for issue in stats.recent_issues %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ issue.title|truncatechars:50 }}</strong>
+                                        {% if issue.category %}
+                                            <br><small class="text-muted">{{ issue.category.name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ issue.status_color }}">
+                                            {{ issue.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ issue.priority_color }}">
+                                            {{ issue.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if issue.space %}
+                                            {{ issue.space.name }}
+                                        {% else %}
+                                            <span class="text-muted">No space</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ issue.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'issue_management:issue_list' %}" class="btn btn-primary">
+                            View All My Issues
+                        </a>
+                        <a href="{% url 'issue_management:issue_create' %}" class="btn btn-success">
+                            Report New Issue
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Issues Reported Yet</h5>
+                        <p class="text-muted">You haven't reported any issues yet. Click below to report your first issue.</p>
+                        <a href="{% url 'issue_management:issue_create' %}" class="btn btn-primary">
+                            Report Your First Issue
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-</body>
-</html>
+{% endblock content %}

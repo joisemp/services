@@ -4,6 +4,7 @@
     <title>Report Issue</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             background: #f7f9fa;
@@ -87,38 +88,181 @@
             justify-content: center;
             z-index: 9999;
         }
+        .space-selection {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .space-info {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-4 mb-4">
-        <h3 class="mb-4">Report a New Issue</h3>
+        <div class="text-center mb-4">
+            <h3 class="mb-2">
+                <i class="fas fa-bug me-2 text-primary"></i>
+                Report a New Issue
+            </h3>
+            {% if user.is_authenticated and user.profile %}
+            <p class="text-muted mb-0">
+                <i class="fas fa-building me-1"></i>
+                {{ user.profile.org.name }}
+                {% if user.profile.user_type == 'space_admin' and user.profile.current_active_space %}
+                    - {{ user.profile.current_active_space.name }}
+                {% endif %}
+            </p>
+            {% endif %}
+        </div>
         <form method="post" enctype="multipart/form-data" id="issueForm">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="id_title" class="form-label">{{ form.title.label }}</label>
-                <input type="text" name="title" maxlength="255" class="form-control" id="id_title" required>
+                <label for="id_title" class="form-label">
+                    <i class="fas fa-heading me-1"></i>
+                    {{ form.title.label }}
+                    <span class="text-danger">*</span>
+                </label>
+                <input type="text" name="title" maxlength="255" class="form-control" id="id_title" required placeholder="Brief description of the issue">
             </div>
             <div class="mb-3">
-                <label for="id_description" class="form-label">{{ form.description.label }}</label>
-                <textarea name="description" cols="40" rows="4" class="form-control" id="id_description" required></textarea>
+                <label for="id_description" class="form-label">
+                    <i class="fas fa-align-left me-1"></i>
+                    {{ form.description.label }}
+                    <span class="text-danger">*</span>
+                </label>
+                <textarea name="description" cols="40" rows="4" class="form-control" id="id_description" required placeholder="Detailed description of the issue, steps to reproduce, etc."></textarea>
             </div>
+            
+            <!-- Priority and Category fields -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="id_priority" class="form-label">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Priority
+                        </label>
+                        {{ form.priority }}
+                        <div class="form-text">How urgent is this issue?</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="id_category" class="form-label">
+                            <i class="fas fa-tag me-1"></i>
+                            Category
+                        </label>
+                        {{ form.category }}
+                        <div class="form-text">Select the type of issue (optional).</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Due date field -->
             <div class="mb-3">
-                <label for="imageInput" class="form-label">{{ form.image.label }}</label><br>
+                <label for="id_due_date" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>
+                    Expected Resolution Date
+                </label>
+                {{ form.due_date }}
+                <div class="form-text">When do you expect this issue to be resolved? (optional)</div>
+            </div>
+            
+            <!-- Space Selection Field -->
+            {% if form.space.field.widget.input_type != 'hidden' %}
+            <div class="mb-3">
+                <label for="id_space" class="form-label">
+                    <i class="fas fa-building me-1"></i>
+                    {{ form.space.label }}
+                    <span class="text-muted">(Optional)</span>
+                </label>
+                
+                {% if user.profile.user_type == 'space_admin' and user.profile.current_active_space %}
+                <!-- Space Admin: Show locked space selection -->
+                <div class="space-info">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This issue will be reported to: <strong>{{ user.profile.current_active_space.name }}</strong>
+                </div>
+                {{ form.space }}
+                {% else %}
+                <!-- Central Admin: Show space dropdown -->
+                <div class="space-selection">
+                    {{ form.space }}
+                    <div class="form-text mt-1">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Select a space for this issue, or leave blank for organization-wide issues.
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if form.space.errors %}
+                <div class="text-danger small mt-1">
+                    {% for error in form.space.errors %}
+                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            {{ form.space }}
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="imageInput" class="form-label">
+                    <i class="fas fa-images me-1"></i>
+                    Images (Optional)
+                </label>
                 <input type="file" id="imageInput" name="image" accept="image/*" class="form-control" multiple>
+                <div class="form-text">You can upload up to 3 images to help describe the issue.</div>
                 <div id="imagePreviewContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Voice Note:</label><br>
-                <a href="{% url 'issue_management:voice_record' %}" target="_blank" class="btn btn-primary btn-sm mb-2" onclick="window.open(this.href, 'VoiceRecorder', 'width=400,height=300'); return false;">Record Voice in Browser</a><br>
+                <label class="form-label">
+                    <i class="fas fa-microphone me-1"></i>
+                    Voice Note (Optional):
+                </label><br>
+                <a href="{% url 'issue_management:voice_record' %}" target="_blank" class="btn btn-primary btn-sm mb-2" onclick="window.open(this.href, 'VoiceRecorder', 'width=400,height=300'); return false;">
+                    <i class="fas fa-record-vinyl me-1"></i>
+                    Record Voice in Browser
+                </a><br>
                 <input type="file" id="voiceInput" name="voice" accept="audio/*" class="form-control" onchange="previewVoice(this)" style="display:none;">
+                <div class="form-text">Record a voice note to provide additional context.</div>
                 <div class="preview">
                     <audio id="audioPreview" controls style="display:none;"></audio>
                     <button type="button" id="deleteVoiceBtn" class="btn btn-danger btn-sm mt-3" style="display:none;" onclick="deleteVoice()">Delete Voice</button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-success w-100">Submit</button>
+            <button type="submit" class="btn btn-success w-100 py-2">
+                <i class="fas fa-paper-plane me-2"></i>
+                Submit Issue Report
+            </button>
         </form>
-        <a href="{% url 'issue_management:issue_list' %}" class="back-link">Back to Issue List</a>
+        
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+            <h6><i class="fas fa-exclamation-triangle me-1"></i>Please correct the following errors:</h6>
+            <ul class="mb-0">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field|title }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="text-center mt-3">
+            <a href="{% url 'issue_management:issue_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>
+                Back to Issue List
+            </a>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <div id="fullscreenOverlay" onclick="closeFullscreen()">
@@ -148,8 +292,32 @@
             alert('You can only upload a maximum of 3 images.');
         }
         updateInputFiles();
-        renderImagePreviews();
+        updatePreview();
     });
+
+    // Form validation enhancement
+    document.getElementById('issueForm').addEventListener('submit', function(e) {
+        const title = document.getElementById('id_title').value.trim();
+        const description = document.getElementById('id_description').value.trim();
+        
+        if (!title) {
+            alert('Please enter a title for the issue.');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!description) {
+            alert('Please provide a description of the issue.');
+            e.preventDefault();
+            return false;
+        }
+        
+        return true;
+    });
+
+    function updatePreview() {
+        renderImagePreviews();
+    }
 
     function renderImagePreviews() {
         imagePreviewContainer.innerHTML = '';

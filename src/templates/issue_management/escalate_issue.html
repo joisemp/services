@@ -1,0 +1,112 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Escalate Issue - {{ issue.title }}{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+<style>
+    .escalation-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .escalation-warning .warning-icon {
+        color: #f39c12;
+        font-size: 1.2em;
+        margin-right: 10px;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Escalate Issue
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Issue Summary -->
+                    <div class="bg-light p-3 rounded mb-4">
+                        <h5>{{ issue.title }}</h5>
+                        <p class="text-muted mb-2">{{ issue.description|truncatewords:30 }}</p>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-{{ issue.status_color }}">{{ issue.get_status_display }}</span>
+                            <span class="badge bg-{{ issue.priority_color }}">{{ issue.get_priority_display }} Priority</span>
+                            {% if issue.escalation_count > 0 %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-history"></i> Previously Escalated {{ issue.escalation_count }} time{{ issue.escalation_count|pluralize }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Escalation Warning -->
+                    <div class="escalation-warning">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-triangle warning-icon"></i>
+                            <div>
+                                <h6><strong>
+                                    {% if issue.escalation_count > 0 %}
+                                        Escalation Notice (This will be escalation #{{ issue.escalation_count|add:1 }})
+                                    {% else %}
+                                        Important Notice
+                                    {% endif %}
+                                </strong></h6>
+                                <p class="mb-2">
+                                    By escalating this issue, you are indicating that you cannot resolve it with your current resources or authority.
+                                    {% if issue.escalation_count > 0 %}
+                                        <strong>Note:</strong> This issue has been escalated {{ issue.escalation_count }} time{{ issue.escalation_count|pluralize }} previously.
+                                    {% endif %}
+                                </p>
+                                <ul class="mb-0">
+                                    <li>The issue will be transferred to central administration</li>
+                                    <li>You will no longer be the assigned maintainer</li>
+                                    <li>Only central admins will be able to manage this issue</li>
+                                    <li>The escalation will be tracked in the issue history</li>
+                                    {% if issue.escalation_count > 0 %}
+                                        <li>Central admin will see the complete escalation history</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.escalation_reason.id_for_label }}" class="form-label">
+                                <i class="fas fa-comment-alt"></i> {{ form.escalation_reason.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.escalation_reason }}
+                            <div class="form-text">
+                                Please provide a detailed explanation of why this issue needs to be escalated. 
+                                Include any attempts made to resolve it and what additional resources or authority might be needed.
+                            </div>
+                            {% if form.escalation_reason.errors %}
+                                <div class="text-danger small">{{ form.escalation_reason.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'issue_management:issue_detail' issue.slug %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to escalate this issue? This action cannot be undone by maintainers.')">
+                                <i class="fas fa-arrow-up"></i> Escalate Issue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count
@@ -39,15 +39,67 @@ from .currency import get_template_currency_context
 @login_required
 def dashboard(request):
     """Main finance dashboard with overview stats"""
+    # Check permissions - only central admin and space admin can access finance module
+    if not (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type in ['central_admin', 'space_admin']):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Access denied. Finance module is only available to administrators.')
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        # Refresh user profile from database to get latest space context
+        request.user.profile.refresh_from_db()
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     user_org = request.user.profile.org
     
     # Get current month data
     current_month = timezone.now().replace(day=1)
     next_month = (current_month + timedelta(days=32)).replace(day=1)
     
-    # Calculate stats
+    # Base filter for transactions
+    base_filter = Q(org=user_org)
+    
+    # Apply space filtering based on user type and context
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        base_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            base_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            base_filter &= Q(space=selected_space)
+        # If no filter specified, show all transactions for central admin
+    
+    # Calculate stats with space filtering
     total_income = FinancialTransaction.objects.filter(
-        org=user_org,
+        base_filter,
         transaction_type='income',
         status='completed',
         transaction_date__gte=current_month,
@@ -55,32 +107,48 @@ def dashboard(request):
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     total_expenses = FinancialTransaction.objects.filter(
-        org=user_org,
+        base_filter,
         transaction_type='expense',
         status='completed',
         transaction_date__gte=current_month,
         transaction_date__lt=next_month
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    # Recent transactions
+    # Recent transactions with space filtering
     recent_transactions = FinancialTransaction.objects.filter(
-        org=user_org
+        base_filter
     ).order_by('-transaction_date')[:10]
     
-    # Due recurring transactions
-    due_recurring = RecurringTransaction.objects.filter(
-        org=user_org,
-        is_active=True,
-        next_due_date__lte=timezone.now().date()
-    )
+    # Due recurring transactions with space filtering
+    due_recurring_filter = Q(org=user_org, is_active=True, next_due_date__lte=timezone.now().date())
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        due_recurring_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            due_recurring_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            due_recurring_filter &= Q(space=selected_space)
     
-    # Budget analysis
-    active_budgets = Budget.objects.filter(
+    due_recurring = RecurringTransaction.objects.filter(due_recurring_filter)
+    
+    # Budget analysis with space filtering
+    budget_filter = Q(
         org=user_org,
         is_active=True,
         start_date__lte=timezone.now().date(),
         end_date__gte=timezone.now().date()
     )
+    if request.user.profile.user_type == 'space_admin' and selected_space:
+        budget_filter &= Q(space=selected_space)
+    elif request.user.profile.user_type == 'central_admin':
+        space_filter = request.GET.get('space_filter')
+        if space_filter == 'no_space':
+            budget_filter &= Q(space__isnull=True)
+        elif space_filter and selected_space:
+            budget_filter &= Q(space=selected_space)
+    
+    active_budgets = Budget.objects.filter(budget_filter)
     
     # Calculate budget status
     budget_data = []
@@ -97,19 +165,31 @@ def dashboard(request):
             'is_over': budget.is_over_budget()
         })
     
-    # Monthly expense trends (last 6 months)
+    # Monthly expense trends (last 6 months) with space filtering
     monthly_trends = []
     for i in range(6):
         month_start = (current_month - timedelta(days=i*30)).replace(day=1)
         month_end = (month_start + timedelta(days=32)).replace(day=1)
         
-        month_expenses = FinancialTransaction.objects.filter(
+        month_filter = Q(
             org=user_org,
             transaction_type='expense',
             status='completed',
             transaction_date__gte=month_start,
             transaction_date__lt=month_end
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        )
+        
+        # Apply space filtering for monthly trends
+        if request.user.profile.user_type == 'space_admin' and selected_space:
+            month_filter &= Q(space=selected_space)
+        elif request.user.profile.user_type == 'central_admin':
+            space_filter = request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                month_filter &= Q(space__isnull=True)
+            elif space_filter and selected_space:
+                month_filter &= Q(space=selected_space)
+        
+        month_expenses = FinancialTransaction.objects.filter(month_filter).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         
         monthly_trends.append({
             'month': month_start.strftime('%B %Y'),
@@ -129,6 +209,10 @@ def dashboard(request):
         'monthly_trends': monthly_trends,
         'monthly_trends_json': json.dumps(monthly_trends),
         'current_month': current_month.strftime('%B %Y'),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     # Add currency context
@@ -143,10 +227,63 @@ class TransactionListView(LoginRequiredMixin, ListView):
     context_object_name = 'transactions'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
-        queryset = FinancialTransaction.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-transaction_date')
+        # Initialize default values
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return FinancialTransaction.objects.none()
+        
+        if user.profile.user_type == 'central_admin':
+            # Central admin sees all transactions from their organization
+            queryset = FinancialTransaction.objects.filter(org=user.profile.org)
+            
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all transactions
+            elif space_filter == 'no_space':
+                # Filter for transactions without space assignment
+                queryset = queryset.filter(space__isnull=True)
+                
+        elif user.profile.user_type == 'space_admin':
+            # Space admin sees transactions from their managed spaces
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                # Filter transactions by the selected space
+                queryset = FinancialTransaction.objects.filter(space=selected_space)
+            else:
+                # No spaces available
+                queryset = FinancialTransaction.objects.none()
+        else:
+            # Regular users see transactions they created from their organization
+            queryset = FinancialTransaction.objects.filter(
+                created_by=user,
+                org=user.profile.org
+            )
+            
+        queryset = queryset.order_by('-transaction_date')
         
         # Apply search filters
         search_form = TransactionSearchForm(self.request.GET, user=self.request.user)
@@ -195,10 +332,46 @@ class TransactionListView(LoginRequiredMixin, ListView):
         context['search_form'] = TransactionSearchForm(self.request.GET, user=self.request.user)
         context['bulk_form'] = BulkTransactionForm()
         
+        # Space admin context (similar to issues)
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
+        
         # Summary stats for current filter
         queryset = self.get_queryset()
-        context['total_count'] = queryset.count()
-        context['total_amount'] = queryset.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['total_transactions'] = queryset.count()
+        context['total_income'] = queryset.filter(transaction_type='income').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['total_expenses'] = queryset.filter(transaction_type='expense').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        context['net_balance'] = context['total_income'] - context['total_expenses']
+        
+        # Add space context
+        context['selected_space'] = selected_space
+        context['space_settings'] = space_settings
+        context['user_spaces'] = user_spaces
         
         # Add currency context
         context.update(get_template_currency_context(self.request.user.profile.org))
@@ -211,6 +384,15 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     form_class = FinancialTransactionForm
     template_name = 'finance/transaction_form.html'
     success_url = reverse_lazy('finance:transaction_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -225,6 +407,13 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Transaction created successfully!')
         return super().form_valid(form)
 
@@ -234,6 +423,15 @@ class TransactionUpdateView(LoginRequiredMixin, UpdateView):
     form_class = FinancialTransactionForm
     template_name = 'finance/transaction_form.html'
     success_url = reverse_lazy('finance:transaction_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         return FinancialTransaction.objects.filter(org=self.request.user.profile.org)
@@ -258,6 +456,15 @@ class TransactionDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'finance/transaction_confirm_delete.html'
     success_url = reverse_lazy('finance:transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return FinancialTransaction.objects.filter(org=self.request.user.profile.org)
     
@@ -269,6 +476,13 @@ class TransactionDeleteView(LoginRequiredMixin, DeleteView):
 @login_required
 def transaction_detail(request, slug):
     """Detailed view of a transaction"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     transaction = get_object_or_404(
         FinancialTransaction,
         slug=slug,
@@ -299,14 +513,87 @@ class RecurringTransactionListView(LoginRequiredMixin, ListView):
     context_object_name = 'recurring_transactions'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
-        return RecurringTransaction.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-next_due_date')
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return RecurringTransaction.objects.none()
+        
+        # Base queryset for user's organization
+        queryset = RecurringTransaction.objects.filter(org=user.profile.org)
+        
+        # Apply space filtering based on user type
+        if user.profile.user_type == 'space_admin':
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                queryset = queryset.filter(space=selected_space)
+            else:
+                queryset = RecurringTransaction.objects.none()
+                
+        elif user.profile.user_type == 'central_admin':
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                queryset = queryset.filter(space__isnull=True)
+            elif space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all
+        
+        return queryset.order_by('-next_due_date')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_org = self.request.user.profile.org
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
         
         # Get recurring transactions
         recurring_transactions = self.get_queryset()
@@ -334,6 +621,10 @@ class RecurringTransactionListView(LoginRequiredMixin, ListView):
             'monthly_income': monthly_income,
             'monthly_expenses': monthly_expenses,
             'due_count': due_count,
+            # Add space context
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
         })
         
         # Add currency context
@@ -348,6 +639,15 @@ class RecurringTransactionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'finance/recurring_transaction_form.html'
     success_url = reverse_lazy('finance:recurring_transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -357,6 +657,13 @@ class RecurringTransactionCreateView(LoginRequiredMixin, CreateView):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
         form.instance.next_due_date = form.instance.start_date
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Recurring transaction created successfully!')
         return super().form_valid(form)
 
@@ -366,6 +673,15 @@ class RecurringTransactionUpdateView(LoginRequiredMixin, UpdateView):
     form_class = RecurringTransactionForm
     template_name = 'finance/recurring_transaction_form.html'
     success_url = reverse_lazy('finance:recurring_transaction_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         return RecurringTransaction.objects.filter(org=self.request.user.profile.org)
@@ -384,6 +700,13 @@ class RecurringTransactionUpdateView(LoginRequiredMixin, UpdateView):
 @require_http_methods(["POST"])
 def process_recurring_transactions(request):
     """Process all due recurring transactions"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     user_org = request.user.profile.org
     
     due_recurring = RecurringTransaction.objects.filter(
@@ -416,13 +739,86 @@ class BudgetListView(LoginRequiredMixin, ListView):
     context_object_name = 'budgets'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
-        return Budget.objects.filter(
-            org=self.request.user.profile.org
-        ).order_by('-start_date')
+        user = self.request.user
+        if not user.is_authenticated or not hasattr(user, 'profile'):
+            return Budget.objects.none()
+        
+        # Base queryset for user's organization
+        queryset = Budget.objects.filter(org=user.profile.org)
+        
+        # Apply space filtering based on user type
+        if user.profile.user_type == 'space_admin':
+            user_spaces = user.administered_spaces.all()
+            selected_space = user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                queryset = queryset.filter(space=selected_space)
+            else:
+                queryset = Budget.objects.none()
+                
+        elif user.profile.user_type == 'central_admin':
+            # Handle space filter for central admin
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter == 'no_space':
+                queryset = queryset.filter(space__isnull=True)
+            elif space_filter:
+                try:
+                    from service_management.models import Spaces
+                    filtered_space = Spaces.objects.get(slug=space_filter, org=user.profile.org)
+                    queryset = queryset.filter(space=filtered_space)
+                except Spaces.DoesNotExist:
+                    pass  # Invalid filter, show all
+        
+        return queryset.order_by('-start_date')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Initialize space context variables
+        selected_space = None
+        space_settings = None
+        user_spaces = None
+        
+        # Handle space context for different user types
+        if (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+            self.request.user.profile.user_type == 'space_admin'):
+            user_spaces = self.request.user.administered_spaces.all()
+            selected_space = self.request.user.profile.current_active_space
+            
+            # If no active space is set or user can't access it, set to first available
+            if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+                if user_spaces.exists():
+                    selected_space = user_spaces.first()
+                    self.request.user.profile.switch_active_space(selected_space)
+            
+            if selected_space:
+                space_settings = selected_space.settings
+        elif (self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and 
+              self.request.user.profile.user_type == 'central_admin'):
+            # For central admin, check if filtering by specific space
+            space_filter = self.request.GET.get('space_filter')
+            if space_filter and space_filter != 'no_space':
+                try:
+                    from service_management.models import Spaces
+                    selected_space = Spaces.objects.get(slug=space_filter, org=self.request.user.profile.org)
+                except Spaces.DoesNotExist:
+                    pass
         
         # Calculate budget summaries
         budgets = context['budgets']
@@ -431,6 +827,13 @@ class BudgetListView(LoginRequiredMixin, ListView):
             budget.remaining_amount = budget.get_remaining_amount()
             budget.percentage_used = budget.get_percentage_used()
             budget.is_over = budget.is_over_budget()
+        
+        # Add space context
+        context.update({
+            'selected_space': selected_space,
+            'space_settings': space_settings,
+            'user_spaces': user_spaces,
+        })
         
         # Add currency context
         context.update(get_template_currency_context(self.request.user.profile.org))
@@ -443,6 +846,15 @@ class BudgetCreateView(LoginRequiredMixin, CreateView):
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -457,6 +869,13 @@ class BudgetCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
         form.instance.created_by = self.request.user
+        
+        # Auto-assign space for space admins if not already set
+        if (self.request.user.profile.user_type == 'space_admin' and 
+            not form.instance.space and 
+            self.request.user.profile.current_active_space):
+            form.instance.space = self.request.user.profile.current_active_space
+        
         messages.success(self.request, 'Budget created successfully!')
         return super().form_valid(form)
 
@@ -466,6 +885,15 @@ class BudgetUpdateView(LoginRequiredMixin, UpdateView):
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         return Budget.objects.filter(org=self.request.user.profile.org)
@@ -488,6 +916,13 @@ class BudgetUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def budget_detail(request, slug):
     """Detailed view of a budget with spending analysis"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     budget = get_object_or_404(Budget, slug=slug, org=request.user.profile.org)
     
     # Get transactions for this budget
@@ -499,8 +934,19 @@ def budget_detail(request, slug):
         transaction_date__lte=budget.end_date
     )
     
+    # Filter by category if specified
     if budget.category:
         transactions = transactions.filter(category=budget.category)
+    else:
+        # If no category specified, include only transactions without category
+        transactions = transactions.filter(category__isnull=True)
+    
+    # Filter by space if this budget is space-specific
+    if budget.space:
+        transactions = transactions.filter(space=budget.space)
+    else:
+        # If budget is organization-wide (no space), include only transactions without space
+        transactions = transactions.filter(space__isnull=True)
     
     # Calculate spending over time
     spending_data = []
@@ -545,6 +991,15 @@ class CategoryListView(LoginRequiredMixin, ListView):
     context_object_name = 'categories'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return TransactionCategory.objects.filter(
             org=self.request.user.profile.org
@@ -556,6 +1011,15 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
     form_class = TransactionCategoryForm
     template_name = 'finance/category_form.html'
     success_url = reverse_lazy('finance:category_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
@@ -592,6 +1056,15 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'finance/category_form.html'
     success_url = reverse_lazy('finance:category_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return TransactionCategory.objects.filter(org=self.request.user.profile.org)
     
@@ -604,6 +1077,13 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def reports_dashboard(request):
     """Finance reports dashboard"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     user_org = request.user.profile.org
     
     # Get recent reports
@@ -622,6 +1102,13 @@ def reports_dashboard(request):
 @login_required
 def generate_report(request):
     """Generate a new financial report"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     if request.method == 'POST':
         form = FinancialReportForm(request.POST, user=request.user)
         if form.is_valid():
@@ -780,6 +1267,13 @@ def generate_report_data(report):
 @login_required
 def report_detail(request, slug):
     """View a generated report"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     report = get_object_or_404(FinancialReport, slug=slug, org=request.user.profile.org)
     
     return render(request, 'finance/report_detail.html', {'report': report})
@@ -788,6 +1282,13 @@ def report_detail(request, slug):
 @login_required
 def export_transactions_csv(request):
     """Export transactions to CSV"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     user_org = request.user.profile.org
     
     # Apply same filters as transaction list
@@ -857,6 +1358,13 @@ def export_transactions_csv(request):
 @require_http_methods(["POST"])
 def bulk_transaction_action(request):
     """Handle bulk actions on transactions"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     form = BulkTransactionForm(request.POST)
     if form.is_valid():
         action = form.cleaned_data['action']
@@ -908,6 +1416,13 @@ def bulk_transaction_action(request):
 @login_required
 def api_transaction_stats(request):
     """API endpoint for transaction statistics"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'error': 'You do not have permission to access the finance module.'}, status=403)
+    
     user_org = request.user.profile.org
     
     # Get date range from request
@@ -959,6 +1474,13 @@ def api_transaction_stats(request):
 @require_http_methods(["POST"])
 def mark_transaction_complete(request, slug):
     """Mark a single transaction as complete"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     transaction = get_object_or_404(
         FinancialTransaction,
         slug=slug,

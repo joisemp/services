@@ -18,8 +18,8 @@ class SpacesAdmin(admin.ModelAdmin):
 
 @admin.register(SpaceSettings)
 class SpaceSettingsAdmin(admin.ModelAdmin):
-    list_display = ['space', 'enable_dashboard', 'enable_issue_management', 'enable_service_management', 'enable_transportation']
-    list_filter = ['enable_dashboard', 'enable_issue_management', 'enable_service_management', 'enable_transportation']
+    list_display = ['space', 'enable_issue_management', 'enable_service_management', 'enable_transportation', 'enable_finance', 'enable_marketplace', 'enable_asset_management']
+    list_filter = ['enable_issue_management', 'enable_service_management', 'enable_transportation', 'enable_finance', 'enable_marketplace', 'enable_asset_management']
     search_fields = ['space__name', 'space__org__name']
     readonly_fields = ['created_at', 'updated_at']
     
@@ -28,10 +28,18 @@ class SpaceSettingsAdmin(admin.ModelAdmin):
             'fields': ('space',)
         }),
         ('Module Access', {
-            'fields': ('enable_dashboard', 'enable_issue_management', 'enable_service_management', 'enable_transportation')
+            'fields': ('enable_issue_management', 'enable_service_management', 'enable_transportation', 'enable_finance', 'enable_marketplace', 'enable_asset_management')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at', 'updated_by'),
             'classes': ('collapse',)
         })
     )
+
+
+@admin.register(WorkCategory)
+class WorkCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'org', 'slug']
+    list_filter = ['org']
+    search_fields = ['name', 'description', 'org__name']
+    readonly_fields = ['slug']

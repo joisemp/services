@@ -1,0 +1,116 @@
+<section class="sidebar sidebar-collapsed">
+    <div class="nav">
+        <!-- Dashboard -->
+        <a class="navlink {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:dashboard' %}">
+            <span class="material-symbols-outlined me-2">
+                dashboard
+            </span>
+            <span class="menu-text">Dashboard</span>
+        </a>
+
+        {% if space_settings %}
+        <!-- Issues (only if enabled) -->
+        {% if space_settings.enable_issue_management %}
+        <a class="navlink {% if request.resolver_match.url_name == 'issue_list' %}active{% endif %}" href="{% url 'issue_management:issue_list' %}">
+            <span class="material-symbols-outlined me-2">
+                report
+            </span>
+            <span class="menu-text">Issues</span>
+        </a>
+        {% endif %}
+
+        <!-- Finance (only if enabled) -->
+        {% if space_settings.enable_finance %}
+        <a class="navlink {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}" href="{% url 'finance:transaction_list' %}">
+            <span class="material-symbols-outlined me-2">
+                finance_mode
+            </span>
+            <span class="menu-text">Finance</span>
+        </a>
+        {% endif %}
+
+        <!-- Transportation/Vehicles (only if enabled) -->
+        {% if space_settings.enable_transportation %}
+        <a class="navlink {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}" href="{% url 'transportation:vehicle_list' %}">
+            <span class="material-symbols-outlined me-2">
+                commute
+            </span>
+            <span class="menu-text">Vehicles</span>
+        </a>
+        {% endif %}
+
+        <!-- Marketplace (only if enabled) -->
+        {% if space_settings.enable_marketplace %}
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
+            <span class="material-symbols-outlined me-2">
+                storefront
+            </span>
+            <span class="menu-text">Marketplace</span>
+        </a>
+        {% endif %}
+
+        <!-- Assets (only if enabled) -->
+        {% if space_settings.enable_asset_management %}
+        <a class="navlink" href="#" title="Assets management coming soon">
+            <span class="material-symbols-outlined me-2">
+                inventory_2
+            </span>
+            <span class="menu-text">Assets</span>
+        </a>
+        {% endif %}
+        {% else %}
+        <!-- Show all links if no space is selected or no settings available -->
+        <!-- Issues -->
+        <a class="navlink" href="{% url 'issue_management:issue_list' %}">
+            <span class="material-symbols-outlined me-2">
+                report
+            </span>
+            <span class="menu-text">Issues</span>
+        </a>
+
+        <!-- Finance -->
+        <a class="navlink" href="{% url 'finance:transaction_list' %}">
+            <span class="material-symbols-outlined me-2">
+                finance_mode
+            </span>
+            <span class="menu-text">Finance</span>
+        </a>
+
+        <!-- Transportation -->
+        <a class="navlink" href="{% url 'transportation:vehicle_list' %}">
+            <span class="material-symbols-outlined me-2">
+                commute
+            </span>
+            <span class="menu-text">Vehicles</span>
+        </a>
+
+        <!-- Marketplace -->
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
+            <span class="material-symbols-outlined me-2">
+                storefront
+            </span>
+            <span class="menu-text">Marketplace</span>
+        </a>
+
+        <!-- Assets -->
+        <a class="navlink" href="#" title="Assets management coming soon">
+            <span class="material-symbols-outlined me-2">
+                inventory_2
+            </span>
+            <span class="menu-text">Assets</span>
+        </a>
+        {% endif %}
+
+        <div class="nav-divider"></div>
+        
+        <!-- Space Settings -->
+        <a class="navlink" href="{% if selected_space %}{% url 'service_management:space_settings' selected_space.slug %}{% else %}#{% endif %}">
+            <span class="material-symbols-outlined me-2">
+                settings
+            </span>
+            <span class="menu-text">Settings</span>
+        </a>
+
+
+    </div>
+</section>

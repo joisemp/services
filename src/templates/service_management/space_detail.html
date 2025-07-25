@@ -125,12 +125,6 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" disabled {% if settings.enable_dashboard %}checked{% endif %}>
-                                    <label class="form-check-label">
-                                        Dashboard Module
-                                    </label>
-                                </div>
-                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" disabled {% if settings.enable_issue_management %}checked{% endif %}>
                                     <label class="form-check-label">
                                         Issue Management Module
@@ -172,6 +166,7 @@
                                     <i class="fas fa-cog"></i> Settings
                                 </a>
                             </div>
+                            {% if user_is_central_admin %}
                             <div class="col-md-3">
                                 <a href="{% url 'service_management:manage_space_admins' slug=space.slug %}" class="btn btn-primary w-100">
                                     <i class="fas fa-users"></i> Manage Admins
@@ -182,6 +177,14 @@
                                     <i class="fas fa-arrow-left"></i> Back to List
                                 </a>
                             </div>
+                            {% endif %}
+                            {% if user_is_space_admin %}
+                            <div class="col-md-6">
+                                <a href="{% url 'dashboard:dashboard' %}" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                </a>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

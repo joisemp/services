@@ -1,0 +1,592 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{{ issue.title }}{% endblock title %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+<style>
+    .issue-header {
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .comment-card {
+        border-left: 3px solid #007bff;
+        margin-bottom: 1rem;
+    }
+    .internal-comment {
+        border-left-color: #ffc107;
+        background-color: #fff8e1;
+    }
+    .activity-item {
+        border-left: 2px solid #e5e7eb;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+    }
+    .overdue {
+        color: #dc3545;
+        font-weight: bold;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Issue Header -->
+    <div class="issue-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">{{ issue.title }}</h2>
+                <div class="d-flex gap-2 mb-2">
+                    <span class="badge bg-{{ issue.status_color }} status-badge">
+                        {{ issue.get_status_display }}
+                    </span>
+                    <span class="badge bg-{{ issue.priority_color }} priority-badge">
+                        {{ issue.get_priority_display }} Priority
+                    </span>
+                    {% if issue.category %}
+                        <span class="badge" style="background-color: {{ issue.category.color }}; color: white;">
+                            {{ issue.category.name }}
+                        </span>
+                    {% endif %}
+                    {% if issue.is_overdue %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-clock"></i> Overdue
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="text-muted small">
+                    <i class="fas fa-user"></i> Reported by 
+                    {% if issue.created_by %}
+                        {{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}
+                    {% else %}
+                        Unknown
+                    {% endif %}
+                    on {{ issue.created_at|date:"M d, Y \a\\t g:i A" }}
+                    {% if issue.space %}
+                        <span class="ms-2">
+                            <i class="fas fa-building"></i> {{ issue.space.name }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-end">
+                <!-- Only central admins and space admins can update issues, not maintainers -->
+                {% if can_edit and user.profile.user_type != 'maintainer' %}
+                    <a href="{% url 'issue_management:update_issue' issue.slug %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit"></i> Update Issue
+                    </a>
+                {% endif %}
+                
+                <!-- Status Change Buttons for Maintainers -->
+                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
+                    {% if issue.status == 'open' %}
+                        <button class="btn btn-info btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                            <i class="fas fa-play"></i> Start Working
+                        </button>
+                    {% elif issue.status == 'in_progress' %}
+                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm ms-2">
+                            <i class="fas fa-bullseye"></i> Focus Mode
+                        </a>
+                        <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
+                            <i class="fas fa-check"></i> Mark Resolved
+                        </button>
+                        <button class="btn btn-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
+                            <i class="fas fa-pause"></i> Set Open
+                        </button>
+                    {% endif %}
+                    <!-- No reopen option for resolved issues - maintainers cannot reopen resolved issues -->
+                {% endif %}
+                
+                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and issue.can_be_escalated %}
+                    <a href="{% url 'issue_management:escalate_issue' issue.slug %}" class="btn btn-warning btn-sm ms-2">
+                        <i class="fas fa-arrow-up"></i> Escalate Issue
+                    </a>
+                {% endif %}
+                
+                {% if user.profile.user_type in 'central_admin,space_admin' %}
+                    {% if issue.is_escalated %}
+                        <!-- Escalated issue management -->
+                        <a href="{% url 'issue_management:reassign_escalated_issue' issue.slug %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-user-cog"></i> Reassign Escalated Issue
+                        </a>
+                    {% else %}
+                        <!-- Regular issue management -->
+                        <a href="{% url 'issue_management:assign_issue' issue.slug %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-user-plus"></i> 
+                            {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Issue Description -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Description</h5>
+                    <p>{{ issue.description|linebreaks }}</p>
+                    
+                    <!-- Images -->
+                    {% if issue.images.all %}
+                        <div class="mt-3">
+                            <h6>Attached Images</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for img in issue.images.all %}
+                                    <img src="{{ img.image.url }}" 
+                                         alt="Issue Image" 
+                                         class="img-thumbnail" 
+                                         style="width:120px;height:120px;object-fit:cover;cursor:pointer;" 
+                                         onclick="showImagePreview('{{ img.image.url }}')" />
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Voice Recording -->
+                    {% if issue.voice %}
+                        <div class="mt-3">
+                            <h6>Voice Recording</h6>
+                            <audio controls class="w-100">
+                                <source src="{{ issue.voice.url }}">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Resolution Notes -->
+            {% if issue.resolution_notes %}
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            <i class="fas fa-check-circle"></i> Resolution
+                        </h5>
+                        <p>{{ issue.resolution_notes|linebreaks }}</p>
+                        {% if issue.resolved_at %}
+                            <small class="text-muted">
+                                Resolved on {{ issue.resolved_at|date:"M d, Y \a\\t g:i A" }}
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Comments Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> Comments ({{ comments.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if comments %}
+                        {% for comment in comments %}
+                            <div class="comment-card card p-3 {% if comment.is_internal %}internal-comment{% endif %}">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ comment.author.profile.first_name }} {{ comment.author.profile.last_name }}</strong>
+                                        {% if comment.is_internal %}
+                                            <span class="badge bg-warning ms-2">Internal</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ comment.created_at|date:"M d, Y \a\\t g:i A" }}</small>
+                                </div>
+                                <div class="mt-2">{{ comment.content|linebreaks }}</div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No comments yet.</p>
+                    {% endif %}
+
+                    <!-- Add Comment Form -->
+                    {% if can_comment and comment_form %}
+                        <div class="mt-4">
+                            <h6>Add Comment</h6>
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    {{ comment_form.content }}
+                                </div>
+                                {% if user.profile.user_type in 'maintainer,central_admin,space_admin' %}
+                                    <div class="form-check mb-3">
+                                        {{ comment_form.is_internal }}
+                                        <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">
+                                            Internal comment (visible only to maintainers and admins)
+                                        </label>
+                                    </div>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-comment"></i> Add Comment
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Issue Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Status:</strong></div>
+                        <div class="col-7">
+                            <span class="badge bg-{{ issue.status_color }}">
+                                {{ issue.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Priority:</strong></div>
+                        <div class="col-7">
+                            <span class="badge bg-{{ issue.priority_color }}">
+                                {{ issue.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Assignee:</strong></div>
+                        <div class="col-7">
+                            {% if issue.maintainer %}
+                                {{ issue.maintainer.profile.first_name }} {{ issue.maintainer.profile.last_name }}
+                            {% elif issue.is_escalated %}
+                                <em class="text-danger">Escalated to Central Admin</em>
+                            {% else %}
+                                <em class="text-muted">Unassigned</em>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if issue.is_escalated %}
+                        <div class="row mb-2">
+                            <div class="col-5"><strong>Escalated By:</strong></div>
+                            <div class="col-7">
+                                {% if issue.escalated_by %}
+                                    {{ issue.escalated_by.profile.first_name }} {{ issue.escalated_by.profile.last_name }}
+                                {% else %}
+                                    <em class="text-muted">Unknown</em>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-5"><strong>Escalated On:</strong></div>
+                            <div class="col-7">
+                                {% if issue.escalated_at %}
+                                    {{ issue.escalated_at|date:"M d, Y \a\\t g:i A" }}
+                                {% else %}
+                                    <em class="text-muted">Unknown</em>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if issue.escalation_reason %}
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <strong>Escalation Reason:</strong>
+                                    <div class="mt-1 p-2 bg-light rounded small">
+                                        {{ issue.escalation_reason|linebreaks }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% elif issue.was_previously_escalated %}
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <div class="alert alert-info py-2 px-3 mb-0">
+                                    <small>
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Note:</strong> This issue was previously escalated {{ issue.escalation_count }} time{{ issue.escalation_count|pluralize }} and has been reassigned for normal workflow management.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if issue.due_date %}
+                        <div class="row mb-2">
+                            <div class="col-5"><strong>Due Date:</strong></div>
+                            <div class="col-7 {% if issue.is_overdue %}overdue{% endif %}">
+                                {{ issue.due_date|date:"M d, Y" }}
+                                {% if issue.is_overdue %}
+                                    <br><small>Overdue!</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Created:</strong></div>
+                        <div class="col-7">{{ issue.created_at|date:"M d, Y" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Updated:</strong></div>
+                        <div class="col-7">{{ issue.updated_at|date:"M d, Y" }}</div>
+                    </div>
+                    {% if issue.total_work_time %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Work Time:</strong></div>
+                        <div class="col-7 text-success">
+                            <div>{{ issue.total_work_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.total_work_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if issue.total_break_time %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Break Time:</strong></div>
+                        <div class="col-7 text-warning">
+                            <div>{{ issue.total_break_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.total_break_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if issue.resolution_time and issue.status == 'resolved' %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Resolution Time:</strong></div>
+                        <div class="col-7 text-info">
+                            <div>{{ issue.resolution_time_detailed }}</div>
+                            <small class="text-muted">({{ issue.resolution_time_compact }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Work Sessions History -->
+            {% if issue.work_sessions.all %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-clock me-1"></i>
+                            Work Sessions ({{ issue.work_sessions_count }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% for session in issue.work_sessions.all %}
+                            <div class="d-flex justify-content-between align-items-start mb-3 p-2 {% if not session.ended_at %}bg-light border rounded{% else %}border-bottom{% endif %}">
+                                <div>
+                                    <div class="fw-bold">
+                                        {{ session.maintainer.profile.first_name }} {{ session.maintainer.profile.last_name }}
+                                        {% if session.is_focus_mode %}
+                                            <span class="badge bg-primary ms-1">Focus Mode</span>
+                                        {% endif %}
+                                        {% if not session.ended_at %}
+                                            <span class="badge bg-success ms-1">Active</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Started: {{ session.started_at|date:"M d, Y H:i" }}
+                                        {% if session.ended_at %}
+                                            • Ended: {{ session.ended_at|date:"M d, Y H:i" }}
+                                        {% endif %}
+                                    </div>
+                                    {% if session.session_notes %}
+                                        <div class="small mt-1">{{ session.session_notes }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    {% if session.ended_at %}
+                                        <div class="fw-bold text-success">{{ session.net_work_time_detailed }}</div>
+                                        <div class="small text-muted">({{ session.net_work_time_compact }})</div>
+                                        {% if session.total_break_time %}
+                                            <div class="small text-warning mt-1">
+                                                <div>{{ session.total_break_time_detailed }}</div>
+                                                <div class="text-muted">({{ session.total_break_time_compact }}) breaks</div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="fw-bold text-primary">In Progress</div>
+                                        <div class="small text-success">{{ session.session_duration_detailed }}</div>
+                                        <div class="small text-muted">({{ session.session_duration_compact }})</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Activity History -->
+            {% if status_history %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">Activity History</h6>
+                    </div>
+                    <div class="card-body">
+                        {% for history in status_history %}
+                            <div class="activity-item">
+                                <div class="small">
+                                    <strong>{{ history.changed_by.profile.first_name }} {{ history.changed_by.profile.last_name }}</strong>
+                                    {% if history.old_status != history.new_status %}
+                                        changed status from <strong>{{ history.get_old_status_display }}</strong> to <strong>{{ history.get_new_status_display }}</strong>
+                                    {% elif history.old_maintainer != history.new_maintainer %}
+                                        {% if history.new_maintainer %}
+                                            assigned to <strong>{{ history.new_maintainer.profile.first_name }} {{ history.new_maintainer.profile.last_name }}</strong>
+                                        {% else %}
+                                            unassigned the issue
+                                        {% endif %}
+                                    {% elif history.old_priority != history.new_priority %}
+                                        changed priority from <strong>{{ history.get_old_priority_display }}</strong> to <strong>{{ history.get_new_priority_display }}</strong>
+                                    {% endif %}
+                                    <div class="text-muted">{{ history.created_at|date:"M d, Y \a\\t g:i A" }}</div>
+                                    {% if history.comment %}
+                                        <div class="mt-1">{{ history.comment }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Escalation History -->
+            {% if escalation_history %}
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-arrow-up me-1 text-warning"></i>
+                            Escalation History ({{ escalation_history.count }} escalation{{ escalation_history.count|pluralize }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% for escalation in escalation_history %}
+                            <div class="border-start border-warning border-3 ps-3 mb-3">
+                                <div class="small">
+                                    <strong class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Escalation #{{ forloop.revcounter }}
+                                    </strong>
+                                    <div class="text-muted mt-1">{{ escalation.created_at|date:"M d, Y \a\\t g:i A" }}</div>
+                                    {% if escalation.comment %}
+                                        <div class="mt-2 p-2 bg-light rounded">
+                                            {{ escalation.comment|linebreaks }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'issue_management:issue_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Issues
+        </a>
+    </div>
+</div>
+
+<!-- Image Preview Modal (same as in issue_list.html) -->
+<div id="imagePreviewOverlay" onclick="hideImagePreview()" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;">
+    <img id="imagePreviewFull" src="" alt="Full Preview" style="max-width:96vw;max-height:96vh;border-radius:12px;"/>
+    <button onclick="hideImagePreview()" class="btn btn-light position-absolute top-0 end-0 m-3" style="font-size:1.5rem;">&times;</button>
+</div>
+
+<!-- Status Change Modal for Maintainers -->
+{% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="" id="statusChangeForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusChangeModalLabel">Change Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="statusComment" class="form-label">Add a comment (optional)</label>
+                        <textarea class="form-control" id="statusComment" name="comment" rows="3" placeholder="Describe what you did or any notes about this status change..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Action:</strong> <span id="actionDescription"></span>
+                    </div>
+                    <div class="alert alert-warning" id="singleIssueAlert" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> You can only work on one issue at a time. If you have another issue "In Progress", please set it to "Open" first before starting work on this issue.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="confirmStatusChange">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block scripts %}
+<script>
+function showImagePreview(url) {
+    const overlay = document.getElementById('imagePreviewOverlay');
+    const img = document.getElementById('imagePreviewFull');
+    img.src = url;
+    overlay.style.display = 'flex';
+}
+
+function hideImagePreview() {
+    document.getElementById('imagePreviewOverlay').style.display = 'none';
+}
+
+// Handle status change modal
+document.addEventListener('DOMContentLoaded', function() {
+    const statusChangeModal = document.getElementById('statusChangeModal');
+    if (statusChangeModal) {
+        statusChangeModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const status = button.getAttribute('data-status');
+            const action = button.getAttribute('data-action');
+            
+            // Update modal content
+            document.getElementById('actionDescription').textContent = action;
+            document.getElementById('confirmStatusChange').textContent = action;
+            
+            // Update textarea placeholder and label based on action
+            const commentTextarea = document.getElementById('statusComment');
+            const commentLabel = document.querySelector('label[for="statusComment"]');
+            const singleIssueAlert = document.getElementById('singleIssueAlert');
+            
+            if (status === 'resolved') {
+                commentLabel.textContent = 'Resolution notes (optional)';
+                commentTextarea.placeholder = 'Describe how you resolved this issue, what you did, or any important notes...';
+                singleIssueAlert.style.display = 'none';
+            } else if (status === 'in_progress') {
+                commentLabel.textContent = 'Work notes (optional)';
+                commentTextarea.placeholder = 'Describe what you plan to do or any notes about starting work...';
+                singleIssueAlert.style.display = 'block';
+            } else {
+                commentLabel.textContent = 'Add a comment (optional)';
+                commentTextarea.placeholder = 'Describe what you did or any notes about this status change...';
+                singleIssueAlert.style.display = 'none';
+            }
+            
+            // Update form action
+            const form = document.getElementById('statusChangeForm');
+            form.action = "{% url 'issue_management:change_status_with_comment' issue.slug 'PLACEHOLDER' %}".replace('PLACEHOLDER', status);
+        });
+    }
+});
+</script>
+{% endblock scripts %}

@@ -39,20 +39,6 @@
                             <h5 class="mb-3">Module Access Settings</h5>
                             <p class="text-muted">Enable or disable modules for this space. Users will only see enabled modules.</p>
                             
-                            <!-- Dashboard Module -->
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="enable_dashboard" 
-                                               name="enable_dashboard" {% if settings.enable_dashboard %}checked{% endif %}>
-                                        <label class="form-check-label" for="enable_dashboard">
-                                            <h6>Dashboard Module</h6>
-                                        </label>
-                                    </div>
-                                    <p class="text-muted mb-0">Main dashboard with overview and analytics.</p>
-                                </div>
-                            </div>
-
                             <!-- Issue Management Module -->
                             <div class="card mb-3">
                                 <div class="card-body">
@@ -95,6 +81,48 @@
                                 </div>
                             </div>
 
+                            <!-- Finance Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_finance" 
+                                               name="enable_finance" {% if settings.enable_finance %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_finance">
+                                            <h6>Finance Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Manage financial transactions and budgets.</p>
+                                </div>
+                            </div>
+
+                            <!-- Marketplace Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_marketplace" 
+                                               name="enable_marketplace" {% if settings.enable_marketplace %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_marketplace">
+                                            <h6>Marketplace Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Manage marketplace and shopping lists.</p>
+                                </div>
+                            </div>
+
+                            <!-- Asset Management Module -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_asset_management" 
+                                               name="enable_asset_management" {% if settings.enable_asset_management %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_asset_management">
+                                            <h6>Asset Management Module</h6>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted mb-0">Manage organizational assets and inventory.</p>
+                                </div>
+                            </div>
+
                             <!-- Settings Info -->
                             <div class="card mb-3">
                                 <div class="card-body">
@@ -112,8 +140,8 @@
 
                             <!-- Form Actions -->
                             <div class="d-flex justify-content-between">
-                                <a href="{% url 'service_management:space_detail' slug=space.slug %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to Space
+                                <a href="{% url 'dashboard:dashboard' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
                                 </a>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Save Settings
