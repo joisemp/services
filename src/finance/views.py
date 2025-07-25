@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count
@@ -39,6 +39,12 @@ from .currency import get_template_currency_context
 @login_required
 def dashboard(request):
     """Main finance dashboard with overview stats"""
+    # Check permissions - only central admin and space admin can access finance module
+    if not (hasattr(request.user, 'profile') and 
+            request.user.profile.user_type in ['central_admin', 'space_admin']):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Access denied. Finance module is only available to administrators.')
+    
     # Initialize space context variables
     selected_space = None
     space_settings = None
@@ -221,6 +227,15 @@ class TransactionListView(LoginRequiredMixin, ListView):
     context_object_name = 'transactions'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         # Initialize default values
         user = self.request.user
@@ -370,6 +385,15 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'finance/transaction_form.html'
     success_url = reverse_lazy('finance:transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -400,6 +424,15 @@ class TransactionUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'finance/transaction_form.html'
     success_url = reverse_lazy('finance:transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return FinancialTransaction.objects.filter(org=self.request.user.profile.org)
     
@@ -423,6 +456,15 @@ class TransactionDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'finance/transaction_confirm_delete.html'
     success_url = reverse_lazy('finance:transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return FinancialTransaction.objects.filter(org=self.request.user.profile.org)
     
@@ -434,6 +476,13 @@ class TransactionDeleteView(LoginRequiredMixin, DeleteView):
 @login_required
 def transaction_detail(request, slug):
     """Detailed view of a transaction"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     transaction = get_object_or_404(
         FinancialTransaction,
         slug=slug,
@@ -463,6 +512,15 @@ class RecurringTransactionListView(LoginRequiredMixin, ListView):
     template_name = 'finance/recurring_transaction_list.html'
     context_object_name = 'recurring_transactions'
     paginate_by = 25
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         user = self.request.user
@@ -581,6 +639,15 @@ class RecurringTransactionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'finance/recurring_transaction_form.html'
     success_url = reverse_lazy('finance:recurring_transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -607,6 +674,15 @@ class RecurringTransactionUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'finance/recurring_transaction_form.html'
     success_url = reverse_lazy('finance:recurring_transaction_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return RecurringTransaction.objects.filter(org=self.request.user.profile.org)
     
@@ -624,6 +700,13 @@ class RecurringTransactionUpdateView(LoginRequiredMixin, UpdateView):
 @require_http_methods(["POST"])
 def process_recurring_transactions(request):
     """Process all due recurring transactions"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     user_org = request.user.profile.org
     
     due_recurring = RecurringTransaction.objects.filter(
@@ -655,6 +738,15 @@ class BudgetListView(LoginRequiredMixin, ListView):
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
     paginate_by = 25
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         user = self.request.user
@@ -755,6 +847,15 @@ class BudgetCreateView(LoginRequiredMixin, CreateView):
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -785,6 +886,15 @@ class BudgetUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return Budget.objects.filter(org=self.request.user.profile.org)
     
@@ -806,6 +916,13 @@ class BudgetUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def budget_detail(request, slug):
     """Detailed view of a budget with spending analysis"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     budget = get_object_or_404(Budget, slug=slug, org=request.user.profile.org)
     
     # Get transactions for this budget
@@ -874,6 +991,15 @@ class CategoryListView(LoginRequiredMixin, ListView):
     context_object_name = 'categories'
     paginate_by = 25
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return TransactionCategory.objects.filter(
             org=self.request.user.profile.org
@@ -885,6 +1011,15 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
     form_class = TransactionCategoryForm
     template_name = 'finance/category_form.html'
     success_url = reverse_lazy('finance:category_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
         form.instance.org = self.request.user.profile.org
@@ -921,6 +1056,15 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'finance/category_form.html'
     success_url = reverse_lazy('finance:category_list')
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+            return self.handle_no_permission()
+        
+        if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+            return HttpResponseForbidden("You do not have permission to access the finance module.")
+        
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return TransactionCategory.objects.filter(org=self.request.user.profile.org)
     
@@ -933,6 +1077,13 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def reports_dashboard(request):
     """Finance reports dashboard"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     user_org = request.user.profile.org
     
     # Get recent reports
@@ -951,6 +1102,13 @@ def reports_dashboard(request):
 @login_required
 def generate_report(request):
     """Generate a new financial report"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     if request.method == 'POST':
         form = FinancialReportForm(request.POST, user=request.user)
         if form.is_valid():
@@ -1109,6 +1267,13 @@ def generate_report_data(report):
 @login_required
 def report_detail(request, slug):
     """View a generated report"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     report = get_object_or_404(FinancialReport, slug=slug, org=request.user.profile.org)
     
     return render(request, 'finance/report_detail.html', {'report': report})
@@ -1117,6 +1282,13 @@ def report_detail(request, slug):
 @login_required
 def export_transactions_csv(request):
     """Export transactions to CSV"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return redirect('core:login')
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return HttpResponseForbidden("You do not have permission to access the finance module.")
+    
     user_org = request.user.profile.org
     
     # Apply same filters as transaction list
@@ -1186,6 +1358,13 @@ def export_transactions_csv(request):
 @require_http_methods(["POST"])
 def bulk_transaction_action(request):
     """Handle bulk actions on transactions"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     form = BulkTransactionForm(request.POST)
     if form.is_valid():
         action = form.cleaned_data['action']
@@ -1237,6 +1416,13 @@ def bulk_transaction_action(request):
 @login_required
 def api_transaction_stats(request):
     """API endpoint for transaction statistics"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'error': 'You do not have permission to access the finance module.'}, status=403)
+    
     user_org = request.user.profile.org
     
     # Get date range from request
@@ -1288,6 +1474,13 @@ def api_transaction_stats(request):
 @require_http_methods(["POST"])
 def mark_transaction_complete(request, slug):
     """Mark a single transaction as complete"""
+    # Check user permissions
+    if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    if request.user.profile.user_type not in ['central_admin', 'space_admin']:
+        return JsonResponse({'success': False, 'error': 'You do not have permission to access the finance module.'})
+    
     transaction = get_object_or_404(
         FinancialTransaction,
         slug=slug,

@@ -6,7 +6,11 @@ Conditional sidebar include based on user type
     {% include 'sidebar/sidebar_central_admin.html' %}
 {% elif user.is_authenticated and user.profile.user_type == 'space_admin' %}
     {% include 'sidebar/sidebar_space_admin.html' %}
+{% elif user.is_authenticated and user.profile.user_type == 'maintainer' %}
+    {% include 'sidebar/sidebar_maintainer.html' %}
+{% elif user.is_authenticated and user.profile.user_type == 'general_user' %}
+    {% include 'sidebar/sidebar_general_user.html' %}
 {% else %}
-    {% comment %}Default to space admin sidebar for other users{% endcomment %}
-    {% include 'sidebar/sidebar_space_admin.html' %}
+    {% comment %}Default to general user sidebar for other user types{% endcomment %}
+    {% include 'sidebar/sidebar_general_user.html' %}
 {% endif %}
