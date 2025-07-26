@@ -33,6 +33,36 @@ def marketplace(request):
     """
     org = getattr(request.user.profile, 'org', None)
     
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     # Get shopping lists summary
     shopping_lists = ShoppingList.objects.filter(org=org) if org else ShoppingList.objects.none()
     
@@ -65,6 +95,10 @@ def marketplace(request):
         'recent_purchases': recent_purchases,
         'monthly_spending': monthly_spending,
         'can_approve': can_approve_purchases(request.user),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'marketplace/marketplace.html', context)
@@ -75,6 +109,36 @@ def marketplace(request):
 def shopping_list_list(request):
     """List all shopping lists for the organization"""
     org = getattr(request.user.profile, 'org', None)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     # Filter by status if provided
     status_filter = request.GET.get('status', '')
@@ -109,6 +173,10 @@ def shopping_list_list(request):
         'search_query': search_query,
         'status_choices': ShoppingList.STATUS_CHOICES,
         'can_approve': can_approve_purchases(request.user),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'marketplace/shopping_list_list.html', context)
@@ -121,6 +189,36 @@ def create_shopping_list(request):
     if not org:
         messages.error(request, 'You must be associated with an organization to create shopping lists.')
         return redirect('marketplace:marketplace')
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     if request.method == 'POST':
         form = ShoppingListForm(request.POST)
@@ -137,6 +235,10 @@ def create_shopping_list(request):
     context = {
         'form': form,
         'org': org,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'marketplace/create_shopping_list.html', context)
 
@@ -205,6 +307,36 @@ def shopping_list_detail(request, slug):
     # Get status history
     status_history = shopping_list.status_history.all()
     
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     context = {
         'shopping_list': shopping_list,
         'items': items,
@@ -214,6 +346,10 @@ def shopping_list_detail(request, slug):
         'can_approve': can_approve_purchases(request.user),
         'can_edit': (shopping_list.created_by == request.user or 
                     request.user.profile.user_type in ['central_admin', 'institution_admin']),
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'marketplace/shopping_list_detail.html', context)
@@ -234,6 +370,36 @@ def add_shopping_list_item(request, slug):
     if shopping_list.status not in ['draft', 'rejected']:
         messages.error(request, 'Cannot add items to a shopping list that is not in draft or rejected status.')
         return redirect('marketplace:shopping_list_detail', slug=slug)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     if request.method == 'POST':
         form = ShoppingListItemForm(request.POST, org=org)
@@ -258,6 +424,10 @@ def add_shopping_list_item(request, slug):
     context = {
         'form': form,
         'shopping_list': shopping_list,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'marketplace/add_shopping_list_item.html', context)
 
@@ -271,6 +441,36 @@ def approve_shopping_list(request, slug):
     if shopping_list.status != 'pending':
         messages.error(request, 'Only pending shopping lists can be approved or rejected.')
         return redirect('marketplace:shopping_list_detail', slug=slug)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     if request.method == 'POST':
         form = ShoppingListApprovalForm(request.POST, instance=shopping_list)
@@ -320,6 +520,10 @@ def approve_shopping_list(request, slug):
         'items': items,
         'item_details': item_details,
         'estimated_total': estimated_total,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'marketplace/approve_shopping_list.html', context)
 
@@ -336,6 +540,36 @@ def purchase_detail(request, slug):
     """View purchase order details"""
     org = getattr(request.user.profile, 'org', None)
     purchase = get_object_or_404(Purchase, slug=slug, shopping_list__org=org)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     # Get all related purchase orders from the same shopping list
     related_purchases = Purchase.objects.filter(shopping_list=purchase.shopping_list).exclude(id=purchase.id)
@@ -361,6 +595,10 @@ def purchase_detail(request, slug):
         'can_approve': can_approve_purchases(request.user),
         'related_purchases': related_purchases,
         'remaining_items': remaining_items,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'marketplace/purchase_detail.html', context)
@@ -382,6 +620,36 @@ def edit_shopping_list_item(request, slug, item_slug):
     if shopping_list.status not in ['draft', 'rejected']:
         messages.error(request, 'Cannot edit items in a shopping list that is not in draft or rejected status.')
         return redirect('marketplace:shopping_list_detail', slug=slug)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     if request.method == 'POST':
         form = ShoppingListItemForm(request.POST, instance=item, org=org)
@@ -414,7 +682,11 @@ def edit_shopping_list_item(request, slug, item_slug):
         'form': form,
         'shopping_list': shopping_list,
         'item': item,
-        'is_edit': True
+        'is_edit': True,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'marketplace/edit_shopping_list_item.html', context)
 
@@ -429,6 +701,36 @@ def create_multi_shop_purchase(request, slug):
     if shopping_list.status != 'approved' and shopping_list.status != 'purchase_created':
         messages.error(request, 'Only approved shopping lists can be converted to purchase orders.')
         return redirect('marketplace:shopping_list_detail', slug=slug)
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
     
     # Get available items (those that haven't been fully purchased)
     available_items = []
@@ -466,6 +768,10 @@ def create_multi_shop_purchase(request, slug):
         'shopping_list': shopping_list,
         'items': available_items,
         'estimated_total': estimated_total,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     
     return render(request, 'marketplace/create_multi_shop_purchase.html', context)
@@ -598,6 +904,36 @@ def update_shopping_list_status(request, shopping_list, purchase):
 
 def render_purchase_form_with_errors(request, shopping_list, available_items, purchase_form, item_form):
     """Render the form with validation errors"""
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                from service_management.models import Spaces
+                selected_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     estimated_total = sum(item.estimated_cost or 0 for item in shopping_list.items.all())
     
     context = {
@@ -607,5 +943,9 @@ def render_purchase_form_with_errors(request, shopping_list, available_items, pu
         'items': available_items,
         'estimated_total': estimated_total,
         'form_errors': True,  # Flag to indicate there were errors
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'marketplace/create_multi_shop_purchase.html', context)

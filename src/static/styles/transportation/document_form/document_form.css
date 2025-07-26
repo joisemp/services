@@ -436,7 +436,7 @@ tr {
   color: white;
 }
 .document-form-container .form-actions .btn-secondary:hover {
-  background: rgb(214.5, 214.5, 214.5);
+  background: #d7d7d7;
 }
 .document-form-container .form-actions .btn-primary {
   background: #000000;

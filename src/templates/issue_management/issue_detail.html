@@ -36,6 +36,94 @@
         color: #dc3545;
         font-weight: bold;
     }
+    
+    /* Mobile responsive improvements */
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    
+    @media (max-width: 768px) {
+        .issue-header {
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .issue-header .d-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        .issue-header .text-end {
+            width: 100%;
+            text-align: left !important;
+            margin-top: 1rem;
+        }
+        
+        .action-buttons {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        
+        .action-buttons .btn {
+            flex: 1;
+            min-width: auto;
+            max-width: 200px;
+        }
+        
+        .status-badge, .priority-badge {
+            margin-bottom: 0.25rem;
+        }
+        
+        .d-flex.gap-2 {
+            flex-wrap: wrap;
+            gap: 0.25rem !important;
+        }
+        
+        .comment-card {
+            margin-bottom: 0.75rem;
+        }
+        
+        .card {
+            margin-bottom: 1rem;
+        }
+        
+        /* Stack columns on mobile */
+        .col-lg-8, .col-lg-4 {
+            margin-bottom: 1rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .container-fluid {
+            padding: 0.5rem;
+        }
+        
+        .action-buttons .btn {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .issue-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .status-badge, .priority-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .text-muted.small {
+            font-size: 0.8rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+    }
 </style>
 {% endblock style %}
 
@@ -79,7 +167,14 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="text-end">
+            <div class="action-buttons">
+                <!-- Delete button for general users (within 15 minutes) -->
+                {% if can_delete %}
+                    <a href="{% url 'issue_management:delete_issue' issue.slug %}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
+                {% endif %}
+                
                 <!-- Only central admins and space admins can update issues, not maintainers -->
                 {% if can_edit and user.profile.user_type != 'maintainer' %}
                     <a href="{% url 'issue_management:update_issue' issue.slug %}" class="btn btn-primary btn-sm">
@@ -90,17 +185,17 @@
                 <!-- Status Change Buttons for Maintainers -->
                 {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
                     {% if issue.status == 'open' %}
-                        <button class="btn btn-info btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
                             <i class="fas fa-play"></i> Start Working
                         </button>
                     {% elif issue.status == 'in_progress' %}
-                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm ms-2">
+                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm">
                             <i class="fas fa-bullseye"></i> Focus Mode
                         </a>
-                        <button class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
+                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
                             <i class="fas fa-check"></i> Mark Resolved
                         </button>
-                        <button class="btn btn-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
+                        <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
                             <i class="fas fa-pause"></i> Set Open
                         </button>
                     {% endif %}
@@ -108,7 +203,7 @@
                 {% endif %}
                 
                 {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and issue.can_be_escalated %}
-                    <a href="{% url 'issue_management:escalate_issue' issue.slug %}" class="btn btn-warning btn-sm ms-2">
+                    <a href="{% url 'issue_management:escalate_issue' issue.slug %}" class="btn btn-warning btn-sm">
                         <i class="fas fa-arrow-up"></i> Escalate Issue
                     </a>
                 {% endif %}

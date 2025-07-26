@@ -54,12 +54,15 @@ class IssueForm(forms.ModelForm):
                         'disabled': True,
                         'class': 'form-control bg-light'
                     })
+                    self.fields['space'].required = False
                 else:
-                    # No active space, hide field
-                    self.fields['space'].widget = forms.HiddenInput()
+                    # No active space, show dropdown for all spaces in org
+                    self.fields['space'].queryset = Spaces.objects.filter(org=user.profile.org)
+                    self.fields['space'].required = True
             else:
-                # Other user types don't see space selection
-                self.fields['space'].widget = forms.HiddenInput()
+                # For general users and other user types, show dropdown for all spaces in org (optional)
+                self.fields['space'].queryset = Spaces.objects.filter(org=user.profile.org)
+                self.fields['space'].required = False
         else:
             # Anonymous users don't see space/category selection
             self.fields['space'].widget = forms.HiddenInput()
