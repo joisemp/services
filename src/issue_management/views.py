@@ -174,34 +174,30 @@ def issue_list(request):
     return render(request, 'issue_management/issue_list.html', context)
 
 def report_issue(request):
-    import threading
     if request.method == 'POST':
         form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
         images = request.FILES.getlist('image')
         if len(images) > 3:
             form.add_error('image', 'You can upload a maximum of 3 images.')
         if form.is_valid():
-            def create_issue_and_images(form, images, user):
-                issue = form.save(commit=False)
-                # Assign organisation and space if user is authenticated and has a profile
-                if user.is_authenticated and hasattr(user, 'profile'):
-                    issue.org = user.profile.org
-                    issue.created_by = user
-                    # Set space based on user type and context
-                    if user.profile.user_type == 'space_admin':
-                        if user.profile.current_active_space:
-                            issue.space = user.profile.current_active_space
-                    elif user.profile.user_type == 'central_admin':
-                        if form.cleaned_data.get('space'):
-                            issue.space = form.cleaned_data['space']
-                issue.save()
-                for img in images[:3]:
-                    IssueImage.objects.create(issue=issue, image=img)
-
-            thread = threading.Thread(target=create_issue_and_images, args=(form, images, request.user))
-            thread.start()
-            messages.success(request, 'Your issue is being processed and will appear shortly.')
-            return redirect('issue_management:issue_list')
+            issue = form.save(commit=False)
+            # Assign organisation and space if user is authenticated and has a profile
+            if request.user.is_authenticated and hasattr(request.user, 'profile'):
+                issue.org = request.user.profile.org
+                issue.created_by = request.user
+                # Set space based on user type and context
+                if request.user.profile.user_type == 'space_admin':
+                    if request.user.profile.current_active_space:
+                        issue.space = request.user.profile.current_active_space
+                elif request.user.profile.user_type == 'central_admin':
+                    if form.cleaned_data.get('space'):
+                        issue.space = form.cleaned_data['space']
+            issue.save()
+            # Handle multiple images (limit to 3)
+            for img in images[:3]:
+                IssueImage.objects.create(issue=issue, image=img)
+            messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
+            return redirect('issue_management:issue_detail', slug=issue.slug)
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
     return render(request, 'issue_management/report_issue.html', {'form': form})
