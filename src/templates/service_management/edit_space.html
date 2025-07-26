@@ -2,7 +2,9 @@
 {% load static %}
 
 {% block title %}Edit Space - {{ space.name }}{% endblock title %}
-
+{% block style %}
+<link rel="stylesheet" href="{% static 'styles/service_management/style.css' %}">
+{% endblock style %}
 {% block content %}
 <div class="container-fluid">
     <div class="row justify-content-center">
