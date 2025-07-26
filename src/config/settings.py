@@ -96,12 +96,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if ENVIRONMENT == 'development':
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.postgresql',
+    #         'NAME': 'postgres',
+    #         'USER': 'postgres',
+    #         'PASSWORD': 'postgres',
+    #         'HOST': 'postgres',
+    #         'PORT': 5432,
+    #     }
+    # }
+    
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(env('DATABASE_URL', default='postgresql://'))
     }
-}
+    
+else:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(env('DATABASE_URL', default='postgresql://'))
+    }
 
 
 # Password validation
@@ -167,3 +183,6 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
+CSRF_TRUSTED_ORIGINS = [
+    url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
+]
