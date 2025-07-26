@@ -263,10 +263,22 @@ def issue_detail(request, slug):
     # Get escalation history
     escalation_history = issue.escalation_history
     
+    # Check if user can delete the issue (general users within 15 minutes)
+    can_delete = False
+    if (user_profile.user_type == 'general_user' and 
+        issue.created_by == request.user and 
+        issue.status == 'open' and 
+        not issue.maintainer):
+        from datetime import timedelta
+        time_limit = timedelta(minutes=15)
+        time_since_creation = timezone.now() - issue.created_at
+        can_delete = time_since_creation <= time_limit
+    
     context = {
         'issue': issue,
         'can_edit': can_edit,
         'can_comment': can_comment,
+        'can_delete': can_delete,
         'comment_form': comment_form,
         'comments': comments,
         'status_history': status_history,
@@ -980,3 +992,60 @@ def end_work_session(request, slug):
         'work_time': str(current_session.total_work_time),
         'break_time': str(current_session.total_break_time)
     })
+
+@login_required
+def delete_issue(request, slug):
+    """Delete an issue - only allowed for general users within 15 minutes of creation"""
+    issue = get_object_or_404(Issue, slug=slug)
+    
+    # Check permissions
+    if not hasattr(request.user, 'profile'):
+        return HttpResponseForbidden('Access denied.')
+    
+    user_profile = request.user.profile
+    
+    # Only the issue creator can delete their own issue
+    if issue.created_by != request.user:
+        return HttpResponseForbidden('You can only delete issues you created.')
+    
+    # Only general users can delete issues (other user types have different workflows)
+    if user_profile.user_type != 'general_user':
+        return HttpResponseForbidden('Only general users can delete their own issues.')
+    
+    # Check if issue was created within the last 15 minutes
+    from datetime import timedelta
+    time_limit = timedelta(minutes=15)
+    time_since_creation = timezone.now() - issue.created_at
+    
+    if time_since_creation > time_limit:
+        messages.error(request, 'You can only delete issues within 15 minutes of creation.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Check if issue has been assigned to a maintainer
+    if issue.maintainer:
+        messages.error(request, 'Cannot delete an issue that has been assigned to a maintainer.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    # Check if issue status has changed from 'open'
+    if issue.status != 'open':
+        messages.error(request, 'Cannot delete an issue that is no longer in open status.')
+        return redirect('issue_management:issue_detail', slug=slug)
+    
+    if request.method == 'POST':
+        issue_title = issue.title
+        issue.delete()
+        messages.success(request, f'Issue "{issue_title}" has been deleted successfully.')
+        return redirect('issue_management:issue_list')
+    
+    # Calculate remaining time for deletion
+    remaining_time = time_limit - time_since_creation
+    remaining_minutes = int(remaining_time.total_seconds() // 60)
+    remaining_seconds = int(remaining_time.total_seconds() % 60)
+    
+    context = {
+        'issue': issue,
+        'remaining_minutes': remaining_minutes,
+        'remaining_seconds': remaining_seconds,
+    }
+    
+    return render(request, 'issue_management/delete_issue.html', context)

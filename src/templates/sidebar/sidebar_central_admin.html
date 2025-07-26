@@ -1,6 +1,6 @@
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-        <a class="navlink active" href="{% url 'dashboard:dashboard' %}">
+        <a class="navlink" href="{% url 'dashboard:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
@@ -13,35 +13,35 @@
             <span class="menu-text">People</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'service_management:spaces_list' %}">
             <span class="material-symbols-outlined me-2">
                 workspaces
             </span>
             <span class="menu-text">Space</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'finance:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 finance_mode
             </span>
             <span class="menu-text">Finance</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
             <span class="material-symbols-outlined me-2">
                 storefront
             </span>
             <span class="menu-text">Market</span>
         </a>
 
-        <a class="navlink" href="#">
+        <a class="navlink {% if request.resolver_match.url_name == 'issue_list' %}active{% endif %}" href="{% url 'issue_management:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
         </a>
 
-        <a class="navlink" href="{% url 'service_management:people_list' %}">
+        <a class="navlink" href="{% url 'transportation:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 commute
             </span>
@@ -55,18 +55,11 @@
             <span class="menu-text">Work category</span>
         </a>
 
-        <a class="navlink" href="{% url 'service_management:work_category_list' %}">
+        <a class="navlink" href="#" title="Asset management coming soon">
             <span class="material-symbols-outlined me-2">
                 inventory_2
             </span>
             <span class="menu-text">Assets</span>
-        </a>
-
-        <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                settings
-            </span>
-            <span class="menu-text">Settings</span>
         </a>
     </div>
 </section>
