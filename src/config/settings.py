@@ -183,3 +183,6 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
+CSRF_TRUSTED_ORIGINS = [
+    url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
+]
