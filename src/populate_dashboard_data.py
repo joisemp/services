@@ -206,11 +206,11 @@ def create_sample_data():
     # Create sample transactions
     transaction_types = ['expense', 'income']
     payment_methods = ['cash', 'bank_transfer', 'credit_card']
-    
+
     for i in range(15):  # Create 15 transactions
         days_ago = i * 12  # Spread over ~180 days
         trans_date = timezone.now() - timedelta(days=days_ago)
-        
+
         transaction, created = FinancialTransaction.objects.get_or_create(
             title=f"Sample Transaction #{i+1}",
             defaults={
