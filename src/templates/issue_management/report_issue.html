@@ -102,6 +102,78 @@
             font-size: 0.9rem;
             color: #1565c0;
         }
+        
+        /* Mobile responsive improvements */
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px auto;
+                padding: 20px 15px 20px 15px;
+                max-width: 95%;
+            }
+            
+            h3 {
+                font-size: 1.5rem;
+            }
+            
+            .row .col-md-6 {
+                margin-bottom: 1rem;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .btn:last-child {
+                margin-bottom: 0;
+            }
+            
+            .d-flex.gap-2 {
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            
+            .img-thumb {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .preview {
+                text-align: center;
+                padding: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                margin: 10px auto;
+                padding: 15px 10px;
+                max-width: 98%;
+            }
+            
+            h3 {
+                font-size: 1.3rem;
+            }
+            
+            .form-control {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .btn {
+                font-size: 0.9rem;
+                padding: 0.6rem 1rem;
+            }
+            
+            .img-thumb {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .space-info {
+                font-size: 0.8rem;
+                padding: 6px 10px;
+            }
+        }
     </style>
 </head>
 <body>

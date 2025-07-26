@@ -188,7 +188,6 @@ def delete_work_category(request, category_slug):
         return redirect('service_management:work_category_list')
     return render(request, 'service_management/delete_work_category_confirm.html', {'category': category})
 
-# Spaces Management Views
 @login_required
 @user_passes_test(is_central_admin)
 def spaces_list(request):
@@ -197,6 +196,35 @@ def spaces_list(request):
     orgs = Organisation.objects.filter(central_admins=request.user)
     # Get all spaces in these organisations
     spaces = Spaces.objects.filter(org__in=orgs).select_related('org').prefetch_related('space_admins')
+    
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                selected_space = Spaces.objects.get(slug=space_filter, org__in=orgs)
+            except Spaces.DoesNotExist:
+                pass
     
     # Add search functionality
     search_query = request.GET.get('search', '')
@@ -215,6 +243,10 @@ def spaces_list(request):
         'spaces': page_obj,
         'search_query': search_query,
         'orgs': orgs,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'service_management/spaces_list.html', context)
 
@@ -231,12 +263,45 @@ def space_detail(request, slug):
     if not (user_is_central_admin or user_is_space_admin):
         return HttpResponseForbidden('You do not have permission to view this space.')
     
+    # Initialize space context variables
+    selected_space = None
+    space_settings = None
+    user_spaces = None
+    
+    # Handle space context for different user types
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+        selected_space = request.user.profile.current_active_space
+        
+        # If no active space is set or user can't access it, set to first available
+        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
+            if user_spaces.exists():
+                selected_space = user_spaces.first()
+                request.user.profile.switch_active_space(selected_space)
+        
+        if selected_space:
+            space_settings = selected_space.settings
+    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+          request.user.profile.user_type == 'central_admin'):
+        # For central admin, check if filtering by specific space
+        space_filter = request.GET.get('space_filter')
+        if space_filter and space_filter != 'no_space':
+            try:
+                selected_space = Spaces.objects.get(slug=space_filter, org=space.org)
+            except Spaces.DoesNotExist:
+                pass
+    
     context = {
         'space': space,
         'settings': space.settings,
         'admin_count': space.get_admin_count(),
         'user_is_central_admin': user_is_central_admin,
         'user_is_space_admin': user_is_space_admin,
+        # Add space context
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
     }
     return render(request, 'service_management/space_detail.html', context)
 
@@ -327,6 +392,16 @@ def space_settings(request, slug):
     
     settings = space.settings
     
+    # Initialize space context variables (for UI consistency, but no switching allowed)
+    selected_space = space  # Always the current space being configured
+    space_settings = settings  # Settings for the current space
+    user_spaces = None
+    
+    # For space admins, get their spaces for context (but don't allow switching)
+    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
+        request.user.profile.user_type == 'space_admin'):
+        user_spaces = request.user.administered_spaces.all()
+    
     if request.method == 'POST':
         # Update module access settings
         settings.enable_issue_management = request.POST.get('enable_issue_management') == 'on'
@@ -353,6 +428,11 @@ def space_settings(request, slug):
         'settings': settings,
         'user_is_central_admin': user_is_central_admin,
         'user_is_space_admin': user_is_space_admin,
+        # Add space context (but disable switching for this specific view)
+        'selected_space': selected_space,
+        'space_settings': space_settings,
+        'user_spaces': user_spaces,
+        'disable_space_switching': True,  # Flag to disable space switcher in this view
     }
     return render(request, 'service_management/space_settings.html', context)
 
