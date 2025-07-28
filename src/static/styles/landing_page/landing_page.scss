@@ -1,0 +1,18 @@
+@import '../base';
+
+.bg-light{
+    background-color: #00012F !important; 
+    color: #fff !important;
+}
+
+.main-content{
+    margin-top: 15px;
+    margin-left: -30px;
+    h3{
+        font-size: 2.75rem;
+        font-weight: 700;
+    }
+    p{
+        font-size: 1.5rem;
+    }
+}

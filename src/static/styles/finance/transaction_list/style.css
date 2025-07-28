@@ -218,7 +218,7 @@ tr {
 .space-filter .btn.btn-light:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-  color: #4f5b6d;
+  color: rgb(78.6610878661, 91.2468619247, 109.3389121339);
 }
 .space-filter .btn.btn-primary {
   background: #3b82f6;
@@ -465,7 +465,7 @@ tr {
 
 .btn-outline-primary {
   color: #3b82f6;
-  border-color: #cddffd;
+  border-color: rgb(205.2829268293, 223.2926829268, 252.7170731707);
 }
 .btn-outline-primary:hover {
   background-color: #3b82f6;
@@ -485,7 +485,7 @@ tr {
 
 .btn-outline-danger {
   color: #ef4444;
-  border-color: #fbd1d1;
+  border-color: rgb(251.0591133005, 208.9408866995, 208.9408866995);
 }
 .btn-outline-danger:hover {
   background-color: #ef4444;
@@ -506,7 +506,7 @@ tr {
   transition: all 0.2s ease;
 }
 .pagination .page-link:hover {
-  background-color: #d8dadf;
+  background-color: rgb(216.3276595745, 218.4425531915, 222.6723404255);
   border-color: #6b7280;
   color: #374151;
 }
@@ -524,7 +524,7 @@ tr {
 .empty-state i {
   opacity: 0.4;
   margin-bottom: 1rem;
-  color: #a1a6b0;
+  color: rgb(160.770212766, 165.9234042553, 176.229787234);
 }
 .empty-state h4 {
   color: #374151;
@@ -559,7 +559,7 @@ tr {
 .btn.btn-light:hover {
   background-color: #f1f5f9;
   border-color: #cbd5e1;
-  color: #222933;
+  color: rgb(34.375, 40.625, 50.625);
 }
 .btn.btn-outline-light {
   color: rgba(255, 255, 255, 0.8);
