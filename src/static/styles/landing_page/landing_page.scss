@@ -1,0 +1,23 @@
+@import '../base';
+
+.bg-light{
+    background: linear-gradient(to bottom, #00012F, #026BA3) !important;
+    background-repeat: no-repeat !important;
+    height:100vh;
+    background-size: cover !important;
+    color: #fff !important;
+}
+
+.main-content{
+    margin-top: 15px;
+    h3{
+        font-size: 2.75rem;
+        font-weight: 700;
+    }
+    p{
+        font-size: 1.5rem;
+    }
+    .dropdown-toggle{
+        color:#fff;
+    }
+}
