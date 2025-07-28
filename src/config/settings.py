@@ -63,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -96,12 +97,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if ENVIRONMENT == 'development':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'postgres',
+            'USER': 'postgres',
+            'PASSWORD': 'postgres',
+            'HOST': 'postgres',
+            'PORT': 5432,
+        }
     }
-}
+else:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(env('DATABASE_URL', default='postgresql://'))
+    }
 
 
 # Password validation
@@ -138,12 +149,46 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+if ENVIRONMENT == 'development':
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+else:
+    # DigitalOcean Spaces Configuration
+    AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', default="aws_access_key")
+    AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', default="aws_secret_access_key")
+    AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME', default="aws_storage_bucket_name")
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL', default="aws_s3_endpoint_url")
+    AWS_S3_CUSTOM_DOMAIN = f"{env('AWS_S3_CUSTOM_DOMAIN', default="aws_s3_custom_domain")}/{AWS_STORAGE_BUCKET_NAME}"
+
+    AWS_S3_OBJECT_PARAMETERS = {
+        "CacheControl": "max-age=86400",
+    }
+
+
+    # Django 4+ STORAGES config
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "config.storages.StaticStorage",  # Update to your static storage backend
+        },
+        "default": {
+            "BACKEND": "config.storages.MediaStorage",  # Update to your media storage backend
+        },
+    }
+
+    # Static Files
+    STATIC_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/static/"
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, "static"),
+    ]
+
+    # Media Files
+    MEDIA_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/media/"
 
 
 # Default primary key field type
@@ -167,3 +212,6 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
+CSRF_TRUSTED_ORIGINS = [
+    url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
+]

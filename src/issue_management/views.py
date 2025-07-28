@@ -185,28 +185,21 @@ def report_issue(request):
             if request.user.is_authenticated and hasattr(request.user, 'profile'):
                 issue.org = request.user.profile.org
                 issue.created_by = request.user
-                
                 # Set space based on user type and context
                 if request.user.profile.user_type == 'space_admin':
-                    # For space admin, use their current active space
                     if request.user.profile.current_active_space:
                         issue.space = request.user.profile.current_active_space
                 elif request.user.profile.user_type == 'central_admin':
-                    # For central admin, use space from form if selected
                     if form.cleaned_data.get('space'):
                         issue.space = form.cleaned_data['space']
-                    # If no space selected, leave it as None (optional)
-                        
             issue.save()
             # Handle multiple images (limit to 3)
             for img in images[:3]:
                 IssueImage.objects.create(issue=issue, image=img)
-            
             messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
             return redirect('issue_management:issue_detail', slug=issue.slug)
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
-                
     return render(request, 'issue_management/report_issue.html', {'form': form})
 
 def issue_detail(request, slug):

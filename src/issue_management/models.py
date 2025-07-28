@@ -320,6 +320,25 @@ class IssueImage(models.Model):
     slug = models.SlugField(unique=True, db_index=True, blank=True)
 
     def save(self, *args, **kwargs):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.base import ContentFile
+
+        # Compress image if it's newly uploaded
+        if self.image and not self.image.closed:
+            try:
+                img = Image.open(self.image)
+                img_format = img.format if img.format else 'JPEG'
+                # Convert to RGB if not already (for JPEG)
+                if img_format == 'JPEG' and img.mode != 'RGB':
+                    img = img.convert('RGB')
+                buffer = BytesIO()
+                img.save(buffer, format=img_format, quality=70, optimize=True)
+                buffer.seek(0)
+                self.image = ContentFile(buffer.read(), name=self.image.name)
+            except Exception as e:
+                pass  # If compression fails, save original
+
         if not self.slug:
             base_slug = slugify(f"{self.issue.title}-image")
             self.slug = generate_unique_slug(self, base_slug)
