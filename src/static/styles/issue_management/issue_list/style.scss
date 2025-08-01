@@ -1,1 +1,36 @@
 @import '../../sidebar_base';
+
+#issue-list {
+    .header-issue {
+        display:flex;
+        flex-wrap: wrap;
+        .title {
+            .heading-issue {
+                display: flex !important;
+                align-items: center !important;
+                span{
+                    color:#0078B7;
+                }
+            }
+        }
+        .side-button{
+            .btn-outline-primary {
+                color:#0078B7 !important;
+                border:1px solid #0078B7 !important;
+                &:hover {
+                    background-color: #0078B7 !important;
+                    color: white !important;
+                }
+            }
+            .btn-primary{
+                background-color: #0078B7 !important;
+                border: 1px solid #0078B7 !important;
+                color:aliceblue;
+                &:hover {
+                    background-color: #00476e !important;
+                    border: 1px solid #005A8C !important;
+                }
+            }
+        }
+    }
+}

@@ -88,8 +88,8 @@
   width: 100%;
 }
 .initial-wrap .sidebar .nav .navlink:hover {
-  color: #050404;
-  background-color: #fafafa;
+  color: #ffffff;
+  background-color: #050505;
 }
 .initial-wrap .sidebar .nav .active {
   color: #050505;
@@ -146,4 +146,33 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+#issue-list .header-issue {
+  display: flex;
+  flex-wrap: wrap;
+}
+#issue-list .header-issue .title .heading-issue {
+  display: flex !important;
+  align-items: center !important;
+}
+#issue-list .header-issue .title .heading-issue span {
+  color: #0078B7;
+}
+#issue-list .header-issue .side-button .btn-outline-primary {
+  color: #0078B7 !important;
+  border: 1px solid #0078B7 !important;
+}
+#issue-list .header-issue .side-button .btn-outline-primary:hover {
+  background-color: #0078B7 !important;
+  color: white !important;
+}
+#issue-list .header-issue .side-button .btn-primary {
+  background-color: #0078B7 !important;
+  border: 1px solid #0078B7 !important;
+  color: aliceblue;
+}
+#issue-list .header-issue .side-button .btn-primary:hover {
+  background-color: #00476e !important;
+  border: 1px solid #005A8C !important;
 }/*# sourceMappingURL=style.css.map */

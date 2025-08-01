@@ -88,8 +88,8 @@
   width: 100%;
 }
 .initial-wrap .sidebar .nav .navlink:hover {
-  color: #050404;
-  background-color: #fafafa;
+  color: #ffffff;
+  background-color: #050505;
 }
 .initial-wrap .sidebar .nav .active {
   color: #050505;
