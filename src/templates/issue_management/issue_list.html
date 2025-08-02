@@ -11,6 +11,7 @@
 {% block content %}
 
 <section id="issue-list">
+    <!-- header part -->
     <div class="header-issue d-flex justify-content-between">
         <div class="title">
             <div class="heading-issue">
@@ -23,10 +24,155 @@
             </div>
         </div>
         <div class="side-button">
-            <div class="btn btn-sm btn-outline-primary">Manage Category</div>
-            <div class="btn btn-sm btn-primary">Report Issue</div>
+            <div class="btn btn-sm btn-outline-primary"><span
+                    class="material-symbols-outlined me-1">style</span><span>Manage Category</span></div>
+            <div class="btn btn-sm btn-primary"><span class="material-symbols-outlined me-1">add</span><span>Report
+                    Issue</span></div>
         </div>
     </div>
+    <!-- cards -->
+    <div class="table-responsive">
+        <div class="d-flex  mt-2">
+            <div class="card issue">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>Total Issues</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+            <div class="card open-issue">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>Open Issue</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+            <div class="card progress-issue">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>In Progress</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+            <div class="card escalate">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>In Progress</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- filters -->
+    <div class="card filters-card flex-wrap">
+        <p class="d-inline-flex gap-1">
+            <a class="filters ms-2 mt-2" data-bs-toggle="collapse" href="#multiCollapseExample1" aria-expanded="false"
+                aria-controls="multiCollapseExample1">Filters<span
+                    class="material-symbols-outlined">keyboard_arrow_down</span></a>
+        </p>
+        <div class="row mb-2">
+            <div class="col">
+                <div class="d-flex flex-wrap">
+                    <div class="collapse multi-collapse" id="multiCollapseExample1">
+                        <div class="d-flex flex-wrap align-items-center ms-2 gap-2 flex-md-nowrap flex-wrap">
+                            <input class="form-control me-2 mb-2 mb-md-0" type="search" placeholder="Search"
+                                aria-label="Search" style="min-width: 180px; max-width: 220px;" />
+                            <!-- dropdowns -->
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Status
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Priority
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Space
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Category
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-dark d-flex mb-2 mb-md-0" type="submit"><span
+                                    class="material-symbols-outlined me-1">filter_alt</span>Filter</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        <!-- button active -->
+    <div class="d-flex">
+            <button type="button" class="btn btn-primary me-2">Activate issues</button>
+            <button type="button" class="btn btn-outline-success ms-2">Resolved issues</button>
+    </div>   
+    <!-- table -->
+     <table class="table table-hover table-responsive">
+        <thead>
+            <tr>
+                <th scope="col">Issue ID</th>
+                <th scope="col">Title</th>
+                <th scope="col">Status</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Space</th>
+                <th scope="col">Category</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Example row -->
+            <tr>
+                <td>1</td>
+                <td>Issue Title Example</td>
+                <td>Open</td>
+                <td>High</td>
+                <td>Space Name</td>
+                <td>Category Name</td>
+                <td>2023-10-01</td>
+                <td><button class="btn btn-sm btn-outline-primary">View</button></td>
+            </tr>
+            <!-- More rows can be added here -->
+        </tbody>
+     </table> 
 </section>
 
 
