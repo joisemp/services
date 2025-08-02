@@ -1,1 +1,106 @@
 @import '../../sidebar_base';
+
+#issue-list {
+
+    // header part
+    .header-issue {
+        display: flex;
+        flex-wrap: wrap;
+
+        .title {
+            .heading-issue {
+                display: flex !important;
+                align-items: center !important;
+
+                span {
+                    color: #0078B7;
+                }
+            }
+        }
+
+        .side-button {
+            display: flex;
+            align-items: center;
+
+            .btn-outline-primary {
+                display: flex;
+                align-items: center;
+                margin-right: 3px;
+                color: #0078B7 !important;
+                border: 1px solid #0078B7 !important;
+
+                &:hover {
+                    background-color: #0078B7 !important;
+                    color: white !important;
+                }
+            }
+
+            .btn-primary {
+                display: flex;
+                align-items: center;
+                background-color: #0078B7 !important;
+                border: 1px solid #0078B7 !important;
+                color: aliceblue;
+
+                &:hover {
+                    background-color: #00476e !important;
+                    border: 1px solid #005A8C !important;
+                }
+            }
+        }
+    }
+
+    // cards
+    .card {
+        margin: 2px;
+        width: 100%;
+        min-width: 15rem;
+        .card-body {
+            color: aliceblue;
+            text-align: center;
+
+            span {
+                font-size: 1.5rem;
+                font-weight: 300;
+            }
+
+            h5 {
+                font-size: 2.5rem;
+                font-weight: 700;
+            }
+        }
+
+    }
+
+    .issue {
+        background: linear-gradient(to bottom, #DD7D28, #774316);
+    }
+
+    .open-issue {
+        background: linear-gradient(to bottom, #2A9D90, #0F3732);
+    }
+
+    .progress-issue {
+        background: linear-gradient(to bottom, #0078B7, #06334A);
+    }
+
+    .escalate {
+        background: linear-gradient(to bottom, #DD2828, #771616);
+    }
+
+    // filters
+    .filters-card {
+        width: 100%;
+        margin-top: 12px;
+        margin-bottom: 12px;
+        .filters {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: black;
+            font-weight: 400;
+            font-size: 17px;
+        }
+    }
+    
+}
