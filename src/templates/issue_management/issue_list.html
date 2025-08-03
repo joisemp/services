@@ -5,604 +5,181 @@
 
 {% block style %}
 <link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
-<style>
-    .issue-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 18px 16px 12px 16px;
-        margin-bottom: 22px;
-        background: #f9fafb;
-        transition: box-shadow 0.2s ease;
-    }
-    .issue-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .issue-card h5 {
-        color: #1e293b;
-        margin-bottom: 12px;
-        font-weight: 600;
-    }
-    .issue-card p {
-        color: #334155;
-        margin-bottom: 12px;
-        line-height: 1.5;
-    }
-    .issue-card img {
-        border-radius: 8px;
-        margin-bottom: 8px;
-        transition: transform 0.2s ease;
-    }
-    .issue-card audio {
-        width: 100%;
-        margin-bottom: 12px;
-    }
-    .issue-card small {
-        color: #64748b;
-    }
-    .img-thumb {
-        cursor: pointer;
-        transition: transform 0.2s;
-    }
-    .img-thumb:hover {
-        transform: scale(1.05);
-    }
-    #imagePreviewOverlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-    }
-    #imagePreviewFull {
-        max-width: 96vw;
-        max-height: 96vh;
-        border-radius: 12px;
-        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
-    }
-    .badge-status {
-        font-size: 0.75rem;
-        padding: 0.4em 0.8em;
-    }
-    .filters-card {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-    .overdue-indicator {
-        color: #dc3545;
-        font-weight: bold;
-    }
-    
-    /* Mobile responsive improvements */
-    @media (max-width: 768px) {
-        .container-fluid {
-            padding: 0.5rem;
-        }
-        
-        .issue-card {
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .issue-card h5 {
-            font-size: 1.1rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .d-flex.justify-content-between {
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-        
-        .text-end {
-            width: 100%;
-            text-align: left !important;
-            margin-top: 1rem;
-        }
-        
-        .btn {
-            margin-bottom: 0.5rem;
-            width: 100%;
-        }
-        
-        .row .col-md-6, .row .col-md-4, .row .col-md-3 {
-            margin-bottom: 1rem;
-        }
-        
-        .filters-card {
-            margin-bottom: 1rem;
-        }
-        
-        .d-flex.gap-2 {
-            flex-wrap: wrap;
-            gap: 0.25rem !important;
-        }
-        
-        .badge {
-            margin-bottom: 0.25rem;
-        }
-        
-        .statistics-cards .card {
-            margin-bottom: 0.75rem;
-        }
-        
-        .btn-group-vertical .btn {
-            width: 100%;
-        }
-        
-        /* Stack filter controls */
-        .filters-card .row {
-            flex-direction: column;
-        }
-        
-        .filters-card .col-md-2,
-        .filters-card .col-md-3 {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .issue-card {
-            padding: 0.75rem;
-        }
-        
-        .issue-card h5 {
-            font-size: 1rem;
-        }
-        
-        .issue-card p {
-            font-size: 0.9rem;
-        }
-        
-        .issue-card small {
-            font-size: 0.8rem;
-        }
-        
-        .badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.4rem;
-        }
-        
-        .btn {
-            font-size: 0.875rem;
-            padding: 0.5rem 0.75rem;
-        }
-        
-        h2 {
-            font-size: 1.5rem;
-        }
-        
-        .card-body {
-            padding: 0.75rem;
-        }
-    }
-</style>
+
 {% endblock style %}
 
 {% block content %}
-{% csrf_token %}
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-1">
-                        <i class="fas fa-bug me-2 text-primary"></i>
-                        Issue Reports
-                    </h2>
-                    {% if selected_space %}
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-building me-1"></i>
-                        {{ selected_space.name }} - {{ selected_space.org.name }}
-                    </p>
-                    {% elif user.profile.user_type == 'central_admin' %}
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-building me-1"></i>
-                        {% if request.GET.space_filter == 'no_space' %}
-                            Organization-wide Issues - {{ user.profile.org.name }}
-                        {% elif request.GET.space_filter %}
-                            {{ selected_space.name }} - {{ user.profile.org.name }}
-                        {% else %}
-                            All Issues in {{ user.profile.org.name }}
-                        {% endif %}
-                    </p>
-                    {% endif %}
-                </div>
-                <div class="d-flex gap-2">
-                    {% if user.profile.user_type == 'central_admin' %}
-                        <a href="{% url 'issue_management:category_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-tags me-2"></i>
-                            Manage Categories
-                        </a>
-                    {% endif %}
-                    <a href="{% url 'issue_management:report_issue' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>
-                        Report Issue
-                    </a>
-                </div>
+
+<section id="issue-list">
+    <!-- header part -->
+    <div class="header-issue d-flex justify-content-between">
+        <div class="title">
+            <div class="heading-issue">
+                <span class="material-symbols-outlined me-2">crisis_alert</span>
+                <h3>Issue Report</h3>
+            </div>
+            <div class="d-flex">
+                <span class="material-symbols-outlined me-2">domain</span>
+                <p>All issue in SFS Academy</p>
             </div>
         </div>
+        <div class="side-button">
+            <div class="btn btn-sm btn-outline-primary"><span
+                    class="material-symbols-outlined me-1">style</span><span>Manage Category</span></div>
+            <div class="btn btn-sm btn-primary"><span class="material-symbols-outlined me-1">add</span><span>Report
+                    Issue</span></div>
+        </div>
     </div>
-
-    <!-- View Toggle Section -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body py-2">
+    <!-- cards -->
+    <div class="table-responsive">
+        <div class="d-flex  mt-2">
+            <div class="card issue">
+                <div class="card-body">
                     <div class="d-flex align-items-center">
-                        <span class="me-3 fw-bold text-muted">View:</span>
-                        <div class="btn-group" role="group" aria-label="Issue view toggle">
-                            <a href="?view=active{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if request.GET.space_filter %}&space_filter={{ request.GET.space_filter }}{% endif %}" 
-                               class="btn btn-sm {% if view_type == 'active' or not view_type %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                                <i class="fas fa-tasks me-1"></i>
-                                Active Issues
-                            </a>
-                            <a href="?view=resolved{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if request.GET.space_filter %}&space_filter={{ request.GET.space_filter }}{% endif %}" 
-                               class="btn btn-sm {% if view_type == 'resolved' %}btn-success{% else %}btn-outline-success{% endif %}">
-                                <i class="fas fa-check-circle me-1"></i>
-                                Resolved Issues
-                            </a>
-                        </div>
-                        <span class="ms-auto text-muted small">
-                            {% if view_type == 'resolved' %}
-                                Showing {{ issues|length }} resolved issues
-                            {% else %}
-                                Showing {{ issues|length }} active issues
-                            {% endif %}
-                        </span>
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>Total Issues</span>
                     </div>
+                    <h5>10</h5>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card filters-card">
+            <div class="card open-issue">
                 <div class="card-body">
-                    <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
-                        <!-- Preserve space filter and view type -->
-                        {% if request.GET.space_filter %}
-                            <input type="hidden" name="space_filter" value="{{ request.GET.space_filter }}">
-                        {% endif %}
-                        <input type="hidden" name="view" value="{{ view_type|default:'active' }}">
-                        
-                        <div class="flex-fill" style="min-width: 200px;">
-                            <label class="form-label small">Search</label>
-                            <input type="text" name="search" class="form-control form-control-sm" 
-                                   placeholder="Search issues..." value="{{ current_filters.search }}">
-                        </div>
-                        
-                        {% if view_type != 'resolved' %}
-                        <div style="min-width: 120px;">
-                            <label class="form-label small">Status</label>
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="">All Status</option>
-                                <option value="open" {% if current_filters.status == 'open' %}selected{% endif %}>Open</option>
-                                <option value="in_progress" {% if current_filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                                <option value="escalated" {% if current_filters.status == 'escalated' %}selected{% endif %}>Escalated</option>
-                                <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
-                                <option value="closed" {% if current_filters.status == 'closed' %}selected{% endif %}>Closed</option>
-                                <option value="cancelled" {% if current_filters.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                            </select>
-                        </div>
-                        {% endif %}
-                        
-                        <div style="min-width: 120px;">
-                            <label class="form-label small">Priority</label>
-                            <select name="priority" class="form-select form-select-sm">
-                                <option value="">All Priority</option>
-                                <option value="low" {% if current_filters.priority == 'low' %}selected{% endif %}>Low</option>
-                                <option value="medium" {% if current_filters.priority == 'medium' %}selected{% endif %}>Medium</option>
-                                <option value="high" {% if current_filters.priority == 'high' %}selected{% endif %}>High</option>
-                                <option value="critical" {% if current_filters.priority == 'critical' %}selected{% endif %}>Critical</option>
-                            </select>
-                        </div>
-                        
-                        <div style="min-width: 150px;">
-                            <label class="form-label small">Category</label>
-                            <select name="category" class="form-select form-select-sm">
-                                <option value="">All Categories</option>
-                                {% for category in categories %}
-                                    <option value="{{ category.slug }}" 
-                                            {% if current_filters.category == category.slug %}selected{% endif %}>
-                                        {{ category.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-search"></i> Filter
-                            </button>
-                            <a href="{% url 'issue_management:issue_list' %}{% if request.GET.space_filter %}?space_filter={{ request.GET.space_filter }}{% endif %}" 
-                               class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-times"></i> Clear
-                            </a>
-                        </div>
-                    </form>
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>Open Issue</span>
+                    </div>
+                    <h5>10</h5>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Space Filter for Central Admin -->
-    {% if user.profile.user_type == 'central_admin' %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 bg-light">
+            <div class="card progress-issue">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">
-                            <i class="fas fa-filter me-2"></i>
-                            Filter by Space
-                        </h6>
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'issue_management:issue_list' %}" 
-                               class="btn btn-sm btn-outline-primary {% if not request.GET.space_filter %}active{% endif %}">
-                                All Issues
-                            </a>
-                            <a href="?space_filter=no_space" 
-                               class="btn btn-sm btn-outline-secondary {% if request.GET.space_filter == 'no_space' %}active{% endif %}">
-                                Organization-wide
-                            </a>
-                            {% for space in user.profile.org.spaces.all %}
-                            <a href="?space_filter={{ space.slug }}" 
-                               class="btn btn-sm btn-outline-primary {% if request.GET.space_filter == space.slug %}active{% endif %}">
-                                {{ space.name }}
-                            </a>
-                            {% endfor %}
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>In Progress</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+            <div class="card escalate">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">emergency_home</span>
+                        <span>In Progress</span>
+                    </div>
+                    <h5>10</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- filters -->
+    <div class="card filters-card flex-wrap">
+        <p class="d-inline-flex gap-1">
+            <a class="filters ms-2 mt-2" data-bs-toggle="collapse" href="#multiCollapseExample1" aria-expanded="false"
+                aria-controls="multiCollapseExample1">Filters<span
+                    class="material-symbols-outlined">keyboard_arrow_down</span></a>
+        </p>
+        <div class="row mb-2">
+            <div class="col">
+                <div class="d-flex flex-wrap">
+                    <div class="collapse multi-collapse" id="multiCollapseExample1">
+                        <div class="d-flex flex-wrap align-items-center ms-2 gap-2 flex-md-nowrap flex-wrap">
+                            <input class="form-control me-2 mb-2 mb-md-0" type="search" placeholder="Search"
+                                aria-label="Search" style="min-width: 180px; max-width: 220px;" />
+                            <!-- dropdowns -->
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Status
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Priority
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Space
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <div class="dropdown mb-2 mb-md-0 me-2">
+                                <a class="btn btn-outline dropdown-toggle" href="#" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    Category
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-dark d-flex mb-2 mb-md-0" type="submit"><span
+                                    class="material-symbols-outlined me-1">filter_alt</span>Filter</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
-                    <h6 class="card-title">Total Issues</h6>
-                    <h4 class="text-primary">{{ issues.count }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-clock fa-2x text-danger mb-2"></i>
-                    <h6 class="card-title">Open</h6>
-                    <h4 class="text-danger">{{ pending_count|default:0 }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-spinner fa-2x text-warning mb-2"></i>
-                    <h6 class="card-title">In Progress</h6>
-                    <h4 class="text-warning">{{ in_progress_count|default:0 }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-arrow-up fa-2x text-danger mb-2"></i>
-                    <h6 class="card-title">Escalated</h6>
-                    <h4 class="text-danger">{{ escalated_count|default:0 }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                    <h6 class="card-title">Resolved</h6>
-                    <h4 class="text-success">{{ resolved_count|default:0 }}</h4>
-                </div>
-            </div>
-        </div>
+    <!-- button active -->
+    <div class="d-flex">
+        <button type="button" class="btn btn-primary me-2">Activate issues</button>
+        <button type="button" class="btn btn-outline-success ms-2">Resolved issues</button>
     </div>
-
-    <!-- Issues List -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>
-                All Issues
-            </h5>
-        </div>
-        <div class="card-body">
-            {% if issues %}
-                <div class="row">
-                    {% for issue in issues %}
-                    <div class="col-12 col-lg-6 mb-3">
-                        <div class="issue-card h-100">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="flex-grow-1">
-                                    <h5>
-                                        <a href="{% url 'issue_management:issue_detail' issue.slug %}" 
-                                           class="text-decoration-none text-dark">
-                                            {{ issue.title }}
-                                        </a>
-                                    </h5>
-                                    <div class="d-flex gap-1 mb-2">
-                                        <span class="badge bg-{{ issue.status_color }} badge-status">
-                                            {{ issue.get_status_display }}
-                                        </span>
-                                        <span class="badge bg-{{ issue.priority_color }} badge-status">
-                                            {{ issue.get_priority_display }}
-                                        </span>
-                                        {% if issue.category %}
-                                            <span class="badge badge-status" style="background-color: {{ issue.category.color }}; color: white;">
-                                                {{ issue.category.name }}
-                                            </span>
-                                        {% endif %}
-                                        {% if issue.is_overdue %}
-                                            <span class="badge bg-danger badge-status">
-                                                <i class="fas fa-clock"></i> Overdue
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <p>{{ issue.description|truncatewords:30 }}</p>
-                            
-                            <!-- Images -->
-                            {% if issue.images.all %}
-                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                {% for img in issue.images.all %}
-                                    <img src="{{ img.image.url }}" 
-                                         alt="Issue Image" 
-                                         class="img-thumb" 
-                                         style="width:60px;height:60px;object-fit:cover;cursor:pointer;" 
-                                         onclick="showImagePreview('{{ img.image.url }}')" />
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-
-                            <!-- Voice Recording -->
-                            {% if issue.voice %}
-                            <div class="mb-3">
-                                <audio controls class="w-100">
-                                    <source src="{{ issue.voice.url }}">
-                                    Your browser does not support the audio element.
-                                </audio>
-                            </div>
-                            {% endif %}
-                            
-                            <!-- Issue Info footer -->
-                            <div class="border-top pt-3">
-                                <div class="row text-center">
-                                    <div class="col-3">
-                                        <small class="text-muted d-block">Reported by</small>
-                                        <strong class="small">
-                                            {% if issue.created_by %}
-                                                {{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}
-                                            {% else %}
-                                                Unknown
-                                            {% endif %}
-                                        </strong>
-                                    </div>
-                                    <div class="col-3">
-                                        <small class="text-muted d-block">Date</small>
-                                        <strong class="small">{{ issue.created_at|date:'M d, Y' }}</strong>
-                                    </div>
-                                    <div class="col-3">
-                                        <small class="text-muted d-block">Space</small>
-                                        <strong class="small">
-                                            {% if issue.space %}
-                                                {{ issue.space.name }}
-                                            {% else %}
-                                                <em class="text-muted">Organization</em>
-                                            {% endif %}
-                                        </strong>
-                                    </div>
-                                    <div class="col-3">
-                                        <small class="text-muted d-block">Maintainer</small>
-                                        <strong class="small">
-                                            {% if issue.maintainer %}
-                                                {{ issue.maintainer.profile.first_name }} {{ issue.maintainer.profile.last_name }}
-                                            {% else %}
-                                                <em class="text-muted">Unassigned</em>
-                                            {% endif %}
-                                        </strong>
-                                    </div>
-                                </div>
-                                
-                                <!-- Action Buttons -->
-                                <div class="mt-3 text-center">
-                                    <a href="{% url 'issue_management:issue_detail' issue.slug %}" 
-                                       class="btn btn-sm btn-outline-primary me-2">
-                                        <i class="fas fa-eye me-1"></i> View Details
-                                    </a>
-                                    {% if user.is_authenticated and user.profile.user_type == 'central_admin' %}
-                                        {% if issue.is_escalated %}
-                                            <a href="{% url 'issue_management:reassign_escalated_issue' issue.slug %}" 
-                                               class="btn btn-sm btn-danger">
-                                                <i class="fas fa-user-cog me-1"></i> Reassign
-                                            </a>
-                                        {% else %}
-                                            <a href="{% url 'issue_management:assign_issue' issue.slug %}" 
-                                               class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-user-plus me-1"></i>
-                                                {% if issue.maintainer %}Change{% else %}Assign{% endif %} Maintainer
-                                            </a>
-                                        {% endif %}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No Issues Found</h5>
-                    {% if user.profile.user_type == 'space_admin' and selected_space %}
-                        <p class="text-muted">No issues have been reported in {{ selected_space.name }} yet.</p>
-                    {% elif user.profile.user_type == 'central_admin' %}
-                        <p class="text-muted">No issues have been reported in your organization yet.</p>
-                    {% elif user.profile.user_type == 'maintainer' %}
-                        <p class="text-muted">No issues have been assigned to you yet.</p>
-                    {% else %}
-                        <p class="text-muted">No issues have been reported yet. Create your first issue report.</p>
-                    {% endif %}
-                    
-                    {% if user.profile.user_type != 'maintainer' %}
-                    <a href="{% url 'issue_management:report_issue' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>
-                        Report First Issue
-                    </a>
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
+    <!-- table -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Issue ID</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Space</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Created At</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Example row -->
+                <tr>
+                    <td>1</td>
+                    <td>Issue Title Example</td>
+                    <td>Open</td>
+                    <td>High</td>
+                    <td>Space Name</td>
+                    <td>Category Name</td>
+                    <td>2023-10-01</td>
+                    <td><button class="btn btn-sm btn-outline-primary">View</button></td>
+                </tr>
+                <!-- More rows can be added here -->
+            </tbody>
+        </table>
     </div>
-</div>
+</section>
 
-<!-- Image Preview Modal -->
-<div id="imagePreviewOverlay" onclick="hideImagePreview()">
-    <img id="imagePreviewFull" src="" alt="Full Preview" />
-    <button onclick="hideImagePreview()" 
-            class="btn btn-light position-absolute top-0 end-0 m-3" 
-            style="font-size:1.5rem;">&times;</button>
-</div>
+
 {% endblock content %}
 
 {% block scripts %}
-<script>
-function showImagePreview(url) {
-    const overlay = document.getElementById('imagePreviewOverlay');
-    const img = document.getElementById('imagePreviewFull');
-    img.src = url;
-    overlay.style.display = 'flex';
-}
 
-function hideImagePreview() {
-    document.getElementById('imagePreviewOverlay').style.display = 'none';
-}
-
-// Close preview with Escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        hideImagePreview();
-    }
-});
-</script>
 {% endblock scripts %}
