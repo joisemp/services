@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseForbidden, JsonResponse
-from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
+from django.contrib import messages
 from datetime import timedelta
 from core.models import UserProfile, User, Organisation
 from service_management.models import Spaces
@@ -180,23 +180,8 @@ def dashboard_view(request):
     user = request.user
     user_type = getattr(user.profile, 'user_type', None)
     
-    # Space context handling for space admins and maintainers
-    selected_space = None
-    if user_type == 'space_admin':
-        user_spaces = user.administered_spaces.all()
-        
-        # Use the current active space from profile, or set to first available space
-        selected_space = user.profile.current_active_space
-        
-        # If no active space is set or user can't access it, set to first available
-        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
-            if user_spaces.exists():
-                selected_space = user_spaces.first()
-                # Update profile with the new active space
-                user.profile.switch_active_space(selected_space)
-    elif user_type == 'maintainer':
-        # Maintainers can also have an active space context
-        selected_space = user.profile.current_active_space
+    # Space context is now handled by middleware, so we can access it directly
+    selected_space = getattr(request, 'selected_space', None)
     
     # Get dashboard statistics
     dashboard_stats = get_dashboard_stats(user, selected_space)
@@ -211,7 +196,7 @@ def dashboard_view(request):
         'general_user': 'dashboard/dashboard_general_user.html',
     }
     
-    # Base context with real data
+    # Base context with real data - space context will be added by context processor
     base_context = {
         'user': user, 
         'user_type': user_type,
@@ -238,14 +223,11 @@ def dashboard_view(request):
         'space_admin': {
             **base_context,
             'space_admin_message': 'Space admin context.',
-            'selected_space': selected_space,
-            'user_spaces': user.administered_spaces.all() if user_type == 'space_admin' else None,
-            'space_settings': selected_space.settings if selected_space else None
+            # Space context will be automatically added by middleware and context processor
         },
         'maintainer': {
             **base_context,
             'maintainer_message': 'Maintainer context.',
-            'selected_space': selected_space,
         },
         'general_user': {
             **base_context,
@@ -258,15 +240,27 @@ def dashboard_view(request):
 
 
 @login_required
-@require_POST
 def switch_space(request):
     """Handle space switching for space admins"""
+    if request.method != 'POST':
+        # If not POST, redirect to dashboard
+        return redirect('dashboard:dashboard')
+        
     if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'space_admin':
-        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        # Return JSON for AJAX requests, redirect for form submissions
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        else:
+            messages.error(request, 'Unauthorized to switch spaces')
+            return redirect('dashboard:dashboard')
     
     space_slug = request.POST.get('space_slug')
     if not space_slug:
-        return JsonResponse({'success': False, 'error': 'Space slug required'}, status=400)
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Space slug required'}, status=400)
+        else:
+            messages.error(request, 'Please select a space to switch to')
+            return redirect('dashboard:dashboard')
     
     try:
         # Get the space and verify the user can administer it
@@ -276,20 +270,41 @@ def switch_space(request):
             # Switch the active space in the user's profile
             success = request.user.profile.switch_active_space(space)
             if success:
-                return JsonResponse({
-                    'success': True, 
-                    'space_name': space.name,
-                    'space_slug': space.slug
-                })
+                # Return JSON for AJAX requests, redirect for form submissions
+                if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True, 
+                        'space_name': space.name,
+                        'space_slug': space.slug
+                    })
+                else:
+                    messages.success(request, f'Switched to {space.name} space')
+                    return redirect('dashboard:dashboard')
             else:
-                return JsonResponse({'success': False, 'error': 'Failed to switch space'}, status=400)
+                if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Failed to switch space'}, status=400)
+                else:
+                    messages.error(request, 'Failed to switch space')
+                    return redirect('dashboard:dashboard')
         else:
-            return JsonResponse({'success': False, 'error': 'Cannot access this space'}, status=403)
+            if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Cannot access this space'}, status=403)
+            else:
+                messages.error(request, 'You do not have access to this space')
+                return redirect('dashboard:dashboard')
             
     except Spaces.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Space not found'}, status=404)
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Space not found'}, status=404)
+        else:
+            messages.error(request, 'Space not found')
+            return redirect('dashboard:dashboard')
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        if request.headers.get('Content-Type') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        else:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('dashboard:dashboard')
 
 
 @login_required
@@ -298,10 +313,8 @@ def dashboard_api_stats(request):
     if not hasattr(request.user, 'profile'):
         return JsonResponse({'error': 'Access denied - no profile found.'}, status=403)
     
-    # Handle space context for space admins
-    selected_space = None
-    if request.user.profile.user_type == 'space_admin':
-        selected_space = request.user.profile.current_active_space
+    # Space context is now handled by middleware
+    selected_space = getattr(request, 'selected_space', None)
     
     stats = get_dashboard_stats(request.user, selected_space)
     return JsonResponse(stats)

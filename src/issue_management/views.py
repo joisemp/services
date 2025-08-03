@@ -15,9 +15,6 @@ def issue_list(request):
     issues = Issue.objects.none()
     assigned_count = 0
     my_issues_count = 0
-    selected_space = None
-    space_settings = None
-    user_spaces = None
     
     # Filter parameters
     status_filter = request.GET.get('status')
@@ -25,6 +22,9 @@ def issue_list(request):
     category_filter = request.GET.get('category')
     search = request.GET.get('search')
     view_type = request.GET.get('view', 'active')  # 'active' or 'resolved'
+    
+    # Space context is now handled by middleware, so we can access it directly
+    selected_space = getattr(request, 'selected_space', None)
     
     if not request.user.is_authenticated or not hasattr(request.user, 'profile'):
         # Anonymous users see no issues
@@ -36,33 +36,16 @@ def issue_list(request):
         else:
             issues = Issue.objects.filter(org=request.user.profile.org).exclude(status='resolved').order_by('-created_at')
         
-        # Handle space filter for central admin
-        space_filter = request.GET.get('space_filter')
-        if space_filter:
-            try:
-                from service_management.models import Spaces
-                filtered_space = Spaces.objects.get(slug=space_filter, org=request.user.profile.org)
-                issues = issues.filter(space=filtered_space)
-                selected_space = filtered_space  # Show which space is being filtered
-            except Spaces.DoesNotExist:
-                pass  # Invalid filter, show all issues
-        elif space_filter == 'no_space':
+        # Handle space filter for central admin (selected_space is set by middleware based on space_filter parameter)
+        if selected_space:
+            issues = issues.filter(space=selected_space)
+        elif request.GET.get('space_filter') == 'no_space':
             # Filter for issues without space assignment
             issues = issues.filter(space__isnull=True)
         
     elif request.user.profile.user_type == 'space_admin':
-        # Space admin sees issues from their managed spaces
-        user_spaces = request.user.administered_spaces.all()
-        selected_space = request.user.profile.current_active_space
-        
-        # If no active space is set or user can't access it, set to first available
-        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
-            if user_spaces.exists():
-                selected_space = user_spaces.first()
-                request.user.profile.switch_active_space(selected_space)
-        
+        # Space admin sees issues from their current active space (set by middleware)
         if selected_space:
-            space_settings = selected_space.settings
             # Filter issues by the selected space
             if view_type == 'resolved':
                 issues = Issue.objects.filter(space=selected_space, status='resolved').order_by('-updated_at')
@@ -157,9 +140,6 @@ def issue_list(request):
         'resolved_count': resolved_count,
         'escalated_count': escalated_count,
         'my_issues_count': my_issues_count,
-        'selected_space': selected_space,
-        'space_settings': space_settings,
-        'user_spaces': user_spaces,
         'categories': categories,
         'view_type': view_type,  # Add view type to context
         'current_filters': {
@@ -169,6 +149,7 @@ def issue_list(request):
             'search': search,
             'view': view_type,
         }
+        # Space context will be automatically added by middleware and context processor
     }
     
     return render(request, 'issue_management/issue_list.html', context)

@@ -12,51 +12,6 @@
         </div>
         
         <div class="d-flex align-items-center">
-            <!-- Space Switcher - Responsive -->
-            {% if user_spaces.exists and not disable_space_switching %}
-            <div class="me-2 me-md-3">
-                <!-- Mobile: Icon button with dropdown -->
-                <div class="d-block d-lg-none">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-exchange-alt"></i>
-                            <span class="d-none d-sm-inline ms-1">Switch</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="min-width: 250px;">
-                            <li><h6 class="dropdown-header">Switch Space</h6></li>
-                            <li><hr class="dropdown-divider"></li>
-                            {% for space in user_spaces %}
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="switchSpace('{{ space.slug }}')">
-                                    <div class="d-flex flex-column">
-                                        <strong>{{ space.name }}</strong>
-                                        <small class="text-muted">{{ space.org.name }}</small>
-                                    </div>
-                                    {% if selected_space and space.slug == selected_space.slug %}
-                                    <i class="fas fa-check text-success ms-2"></i>
-                                    {% endif %}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- Desktop: Select dropdown -->
-                <div class="d-none d-lg-block">
-                    <select class="form-select form-select-sm" id="headerSpaceSelector" onchange="switchSpace(this.value)" style="min-width: 200px; max-width: 250px;">
-                        <option value="">Switch space...</option>
-                        {% for space in user_spaces %}
-                            <option value="{{ space.slug }}" 
-                                    {% if selected_space and space.slug == selected_space.slug %}selected{% endif %}>
-                                {{ space.name }}{% if space.name|length > 20 %}...{% else %} - {{ space.org.name }}{% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            {% endif %}
-            
             <!-- Profile Dropdown -->
             <div class="profile">
                 <div class="dropdown">
@@ -80,42 +35,3 @@
         </div>
     </div>
 </header>
-
-<script>
-function switchSpace(spaceSlug) {
-    if (spaceSlug) {
-        // Get CSRF token from meta tag or form
-        let csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            csrfToken = csrfToken.getAttribute('content');
-        } else {
-            // Fallback to form field
-            const csrfField = document.querySelector('[name=csrfmiddlewaretoken]');
-            csrfToken = csrfField ? csrfField.value : '';
-        }
-        
-        fetch('{% url "dashboard:switch_space" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken,
-            },
-            body: `space_slug=${encodeURIComponent(spaceSlug)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Reload the page to reflect the new space context
-                window.location.reload();
-            } else {
-                console.error('Failed to switch space:', data.error);
-                alert('Failed to switch space: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while switching spaces');
-        });
-    }
-}
-</script>
