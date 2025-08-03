@@ -32,7 +32,7 @@
 }
 .initial-wrap .sidebar {
   width: 220px;
-  background-color: white;
+  background-color: #00012F;
   height: calc(100vh - 60px);
   position: fixed;
   top: 60px;
@@ -80,7 +80,7 @@
 }
 .initial-wrap .sidebar .nav .navlink {
   text-decoration: none;
-  color: #334155;
+  color: #f9f9f9;
   padding: 2rem;
   display: flex;
   align-items: center;
@@ -89,12 +89,12 @@
   width: 100%;
 }
 .initial-wrap .sidebar .nav .navlink:hover {
-  color: white;
-  background-color: #000000;
+  color: #ffffff;
+  background-color: #050505;
 }
 .initial-wrap .sidebar .nav .active {
-  color: white;
-  background-color: #000000;
+  color: #050505;
+  background-color: #fdfdfd;
 }
 @media screen and (min-width: 431px) and (max-width: 1024px) {
   .initial-wrap .sidebar {

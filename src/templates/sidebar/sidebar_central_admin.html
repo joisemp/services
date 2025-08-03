@@ -20,19 +20,19 @@
             <span class="menu-text">Space</span>
         </a>
 
-        <a class="navlink" href="{% url 'finance:dashboard' %}">
+        <!-- <a class="navlink" href="{% url 'finance:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 finance_mode
             </span>
             <span class="menu-text">Finance</span>
-        </a>
+        </a> -->
 
-        <a class="navlink" href="{% url 'marketplace:marketplace' %}">
+        <!-- <a class="navlink" href="{% url 'marketplace:marketplace' %}">
             <span class="material-symbols-outlined me-2">
                 storefront
             </span>
             <span class="menu-text">Market</span>
-        </a>
+        </a> -->
 
         <a class="navlink {% if request.resolver_match.url_name == 'issue_list' %}active{% endif %}" href="{% url 'issue_management:issue_list' %}">
             <span class="material-symbols-outlined me-2">
@@ -41,12 +41,12 @@
             <span class="menu-text">Issues</span>
         </a>
 
-        <a class="navlink" href="{% url 'transportation:dashboard' %}">
+        <!-- <a class="navlink" href="{% url 'transportation:dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 commute
             </span>
             <span class="menu-text">Vehicles</span>
-        </a>
+        </a> -->
 
         <a class="navlink" href="{% url 'service_management:work_category_list' %}">
             <span class="material-symbols-outlined me-2">
@@ -55,11 +55,11 @@
             <span class="menu-text">Work category</span>
         </a>
 
-        <a class="navlink" href="#" title="Asset management coming soon">
+        <!-- <a class="navlink" href="#" title="Asset management coming soon">
             <span class="material-symbols-outlined me-2">
                 inventory_2
             </span>
             <span class="menu-text">Assets</span>
-        </a>
+        </a> -->
     </div>
 </section>

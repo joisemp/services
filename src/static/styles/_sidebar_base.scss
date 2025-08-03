@@ -54,7 +54,7 @@ $secondary-color: #f0f0f0;
   // Sidebar
   .sidebar {
     width: 220px;
-    background-color: #ffff;
+    background-color: #00012F;
     height: calc(100vh - 60px);
     position: fixed;
     top: 60px;
@@ -105,7 +105,7 @@ $secondary-color: #f0f0f0;
 
       .navlink {
         text-decoration: none;
-        color: #334155;
+        color: #f9f9f9;
         padding: 2rem;
         display: flex;
         align-items: center;
@@ -114,14 +114,14 @@ $secondary-color: #f0f0f0;
         width: 100%;
 
         &:hover {
-          color: #ffff;
-          background-color: #000000;
+          color: #ffffff;
+          background-color: #050505;
         }
       }
 
       .active {
-        color: #ffff;
-        background-color: #000000;
+        color: #050505;
+        background-color: #fdfdfd;
       }
     }
 
