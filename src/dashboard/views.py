@@ -15,12 +15,13 @@ def get_dashboard_stats(user, selected_space=None):
     """Get dashboard statistics based on user type and context"""
     stats = {}
     thirty_days_ago = timezone.now() - timedelta(days=30)
+    user_type = user.profile.user_type
     
     # Initialize default queries
     resolved_issues_base = Issue.objects.none()
     
     # Base queries depending on user type and context
-    if user.profile.user_type == 'central_admin':
+    if user_type == 'central_admin':
         # Central admin sees org-wide stats
         org = user.profile.org
         issues_base = Issue.objects.filter(org=org).exclude(status='resolved')  # Exclude resolved issues from main stats
@@ -30,7 +31,7 @@ def get_dashboard_stats(user, selected_space=None):
         categories_base = IssueCategory.objects.filter(org=org)
         spaces_base = Spaces.objects.filter(org=org)
         
-    elif user.profile.user_type == 'space_admin' and selected_space:
+    elif user_type == 'space_admin' and selected_space:
         # Space admin sees space-specific stats with same privileges as central admin within their space
         issues_base = Issue.objects.filter(space=selected_space).exclude(status='resolved')  # Exclude resolved issues from main stats
         resolved_issues_base = Issue.objects.filter(space=selected_space, status='resolved')  # Separate resolved issues
@@ -39,7 +40,7 @@ def get_dashboard_stats(user, selected_space=None):
         categories_base = IssueCategory.objects.filter(org=selected_space.org)
         spaces_base = Spaces.objects.filter(id=selected_space.id)
         
-    elif user.profile.user_type == 'general_user':
+    elif user_type == 'general_user':
         # General users only see their own issues
         issues_base = Issue.objects.filter(created_by=user).exclude(status='resolved')  # Exclude resolved issues from main stats
         resolved_issues_base = Issue.objects.filter(created_by=user, status='resolved')  # Separate resolved issues
@@ -48,7 +49,7 @@ def get_dashboard_stats(user, selected_space=None):
         categories_base = IssueCategory.objects.filter(org=user.profile.org) if user.profile.org else IssueCategory.objects.none()
         spaces_base = Spaces.objects.none()  # General users don't see space stats
         
-    elif user.profile.user_type == 'maintainer':
+    elif user_type == 'maintainer' and selected_space:
         # Maintainers see issues assigned to them and org-wide context
         if user.profile.org:
             issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org)).exclude(status__in=['resolved', 'escalated'])  # Exclude resolved and escalated issues from main stats
@@ -136,10 +137,17 @@ def get_dashboard_stats(user, selected_space=None):
         total=Sum('amount'))['total'] or 0
     
     # Recent issues for table (active issues only)
-    stats['recent_issues'] = issues_base.select_related('category', 'created_by', 'space').order_by('-created_at')[:10]
+    stats['recent_issues'] = issues_base.select_related('category', 'created_by__profile', 'space').order_by('-created_at')[:10]
     
     # Recent resolved issues for separate display
-    stats['recent_resolved_issues'] = resolved_issues_base.select_related('category', 'created_by', 'space').order_by('-updated_at')[:10]
+    stats['recent_resolved_issues'] = resolved_issues_base.select_related('category', 'created_by__profile', 'space').order_by('-updated_at')[:10]
+    
+    # User role statistics (for central admin)
+    if user_type == 'central_admin':
+        stats['space_admins'] = users_base.filter(profile__user_type='space_admin').count()
+        stats['maintainers'] = users_base.filter(profile__user_type='maintainer').count()
+        stats['general_users'] = users_base.filter(profile__user_type='general_user').count()
+        stats['active_spaces'] = spaces_base.filter(is_active=True).count() if hasattr(spaces_base.model, 'is_active') else spaces_base.count()
     
     # Issue status data for charts
     stats['issue_status_data'] = [
