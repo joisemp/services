@@ -160,10 +160,21 @@ class EscalatedIssueReassignmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if org:
-            self.fields['maintainer'].queryset = User.objects.filter(
-                profile__user_type='maintainer', 
-                profile__org=org
-            )
+            # Check if the issue has a space
+            issue_space = None
+            if 'instance' in kwargs and kwargs['instance']:
+                issue_space = kwargs['instance'].space
+            
+            if issue_space:
+                # Get maintainers available for this specific space
+                self.fields['maintainer'].queryset = issue_space.get_available_maintainers()
+            else:
+                # Get organization-wide maintainers only (for issues without space)
+                self.fields['maintainer'].queryset = User.objects.filter(
+                    profile__user_type='maintainer', 
+                    profile__org=org,
+                    profile__assigned_spaces__isnull=True  # Only org-wide maintainers
+                )
             self.fields['maintainer'].empty_label = "Select a maintainer..."
         else:
             self.fields['maintainer'].queryset = User.objects.none()
@@ -215,14 +226,23 @@ class IssueAssignmentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         org = None
+        space = None
         if 'instance' in kwargs and kwargs['instance']:
             org = kwargs['instance'].org
+            space = kwargs['instance'].space
         super().__init__(*args, **kwargs)
+        
         if org:
-            self.fields['maintainer'].queryset = User.objects.filter(
-                profile__user_type='maintainer', 
-                profile__org=org
-            )
+            if space:
+                # Get maintainers available for this specific space
+                self.fields['maintainer'].queryset = space.get_available_maintainers()
+            else:
+                # Get organization-wide maintainers only (for issues without space)
+                self.fields['maintainer'].queryset = User.objects.filter(
+                    profile__user_type='maintainer', 
+                    profile__org=org,
+                    profile__assigned_spaces__isnull=True  # Only org-wide maintainers
+                )
             self.fields['maintainer'].empty_label = "Select a maintainer..."
         else:
             self.fields['maintainer'].queryset = User.objects.none()

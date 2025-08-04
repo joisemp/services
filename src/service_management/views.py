@@ -435,6 +435,80 @@ def manage_space_admins(request, slug):
 
 
 @login_required
+@user_passes_test(is_central_admin)
+def manage_space_maintainers(request, slug):
+    """Manage space maintainer assignments"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    
+    # Note: potential_maintainers represents org-wide maintainers who could be assigned to this space
+    # They are the same as org_wide_maintainers in this context
+    potential_maintainers = User.objects.filter(
+        profile__user_type='maintainer',
+        profile__org=space.org,
+        profile__assigned_spaces__isnull=True
+    )
+    
+    # Get current space-specific maintainers
+    current_maintainers = User.objects.filter(
+        profile__assigned_spaces=space,
+        profile__user_type='maintainer'
+    )
+    
+    # Get organization-wide maintainers (those with no space assignments)
+    org_wide_maintainers = User.objects.filter(
+        profile__user_type='maintainer',
+        profile__org=space.org,
+        profile__assigned_spaces__isnull=True
+    )
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        
+        # Validate user_id
+        if not user_id or user_id.strip() == '':
+            messages.error(request, 'Invalid user selection. Please try again.')
+            return redirect('service_management:manage_space_maintainers', slug=space.slug)
+        
+        try:
+            # Convert to int to catch invalid IDs early
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid user ID format.')
+            return redirect('service_management:manage_space_maintainers', slug=space.slug)
+        
+        try:
+            user = User.objects.get(id=user_id, profile__org=space.org, profile__user_type='maintainer')
+            
+            if action == 'add':
+                user.profile.assigned_spaces.add(space)
+                messages.success(request, f'Assigned {user.profile.first_name} {user.profile.last_name} to this space.')
+            elif action == 'remove':
+                user.profile.assigned_spaces.remove(space)
+                messages.success(request, f'Removed {user.profile.first_name} {user.profile.last_name} from this space.')
+            elif action == 'make_org_wide':
+                # Remove all space assignments to make org-wide
+                user.profile.assigned_spaces.clear()
+                messages.success(request, f'Made {user.profile.first_name} {user.profile.last_name} organization-wide.')
+                
+        except User.DoesNotExist:
+            messages.error(request, 'Maintainer not found.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('service_management:manage_space_maintainers', slug=space.slug)
+    
+    context = {
+        'space': space,
+        'current_maintainers': current_maintainers,
+        'potential_maintainers': potential_maintainers,
+        'org_wide_maintainers': org_wide_maintainers,
+        'maintainer_stats': space.get_maintainer_breakdown(),
+    }
+    return render(request, 'service_management/manage_space_maintainers.html', context)
+
+@login_required
 def no_spaces_assigned(request):
     """View for space admins who have no assigned spaces"""
     # Only space admins should see this page

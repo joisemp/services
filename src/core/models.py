@@ -63,6 +63,14 @@ class UserProfile(models.Model):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='general_user')
     skills = models.ManyToManyField('service_management.WorkCategory', related_name='skilled_users', blank=True)
     current_active_space = models.ForeignKey('service_management.Spaces', null=True, blank=True, on_delete=models.SET_NULL, related_name='current_active_users')
+    
+    # Maintainer space assignments - for space-specific or organization-wide availability
+    assigned_spaces = models.ManyToManyField(
+        'service_management.Spaces', 
+        related_name='assigned_maintainers', 
+        blank=True,
+        help_text="Spaces this maintainer is assigned to. Leave empty for organization-wide availability."
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -126,6 +134,53 @@ class UserProfile(models.Model):
                 accessible_modules.append(module)
                 
         return accessible_modules
+    
+    def is_organization_wide_maintainer(self):
+        """Check if this maintainer is available organization-wide (no specific space assignments)"""
+        return self.user_type == 'maintainer' and not self.assigned_spaces.exists()
+    
+    def get_maintainer_available_spaces(self):
+        """Get spaces where this maintainer can work on issues"""
+        if self.user_type != 'maintainer':
+            return []
+        
+        if self.is_organization_wide_maintainer():
+            # Organization-wide maintainer can work in all spaces in their org
+            if self.org:
+                return self.org.spaces.all()
+            return []
+        else:
+            # Space-specific maintainer can only work in assigned spaces
+            return self.assigned_spaces.all()
+    
+    def can_maintain_in_space(self, space):
+        """Check if this maintainer can work on issues in the given space"""
+        if self.user_type != 'maintainer':
+            return False
+        
+        if not space or space.org != self.org:
+            return False
+        
+        if self.is_organization_wide_maintainer():
+            return True  # Can work anywhere in the organization
+        else:
+            return self.assigned_spaces.filter(id=space.id).exists()
+    
+    def can_be_assigned_to_issue(self, issue):
+        """Check if this maintainer can be assigned to a specific issue"""
+        if self.user_type != 'maintainer':
+            return False
+        
+        # Check organization match
+        if issue.org != self.org:
+            return False
+        
+        # If issue has no space, only organization-wide maintainers can handle it
+        if not issue.space:
+            return self.is_organization_wide_maintainer()
+        
+        # Check space assignment
+        return self.can_maintain_in_space(issue.space)
     
 
 class Organisation(models.Model):
