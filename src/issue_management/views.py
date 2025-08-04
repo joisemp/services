@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
@@ -132,8 +133,14 @@ def issue_list(request):
         is_active=True
     ).order_by('name') if request.user.is_authenticated and hasattr(request.user, 'profile') else []
     
+    # Pagination
+    paginator = Paginator(issues, 10)  # Show 10 issues per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'issues': issues,
+        'issues': page_obj,
+        'page_obj': page_obj,
         'assigned_count': assigned_count,
         'pending_count': pending_count,
         'in_progress_count': in_progress_count,
