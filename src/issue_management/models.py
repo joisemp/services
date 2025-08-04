@@ -316,7 +316,7 @@ class IssueStatusHistory(models.Model):
 
 class IssueImage(models.Model):
     issue = models.ForeignKey(Issue, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='issue_images/')
+    image = models.ImageField(upload_to='public/issue_images/')
     slug = models.SlugField(unique=True, db_index=True, blank=True)
 
     def save(self, *args, **kwargs):

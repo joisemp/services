@@ -70,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'config.middleware.SpaceAdminAccessMiddleware',  # Custom middleware for space admin access control
+    'config.space_context_middleware.SpaceContextMiddleware',  # Custom middleware for space context
     # 'config.focus_middleware.FocusModeMiddleware',  # Temporarily disabled for testing
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -86,6 +87,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'config.context_processors.space_context',  # Custom context processor for space context
             ],
         },
     },

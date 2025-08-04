@@ -115,6 +115,45 @@ class Spaces(models.Model):
         if hasattr(self, 'settings'):
             return self.settings.can_user_access_module(user, module_name)
         return False
+    
+    def get_available_maintainers(self):
+        """Get all maintainers who can work on issues in this space"""
+        from core.models import User
+        from django.db.models import Q
+        
+        # Get maintainers who can work in this space:
+        # 1. Organization-wide maintainers (no space assignments)
+        # 2. Space-specific maintainers assigned to this space
+        return User.objects.filter(
+            Q(profile__user_type='maintainer') &
+            Q(profile__org=self.org) &
+            (Q(profile__assigned_spaces__isnull=True) | Q(profile__assigned_spaces=self))
+        ).distinct()
+    
+    def get_assigned_maintainers_count(self):
+        """Get count of maintainers specifically assigned to this space"""
+        return self.assigned_maintainers.count()
+    
+    def get_organization_wide_maintainers_count(self):
+        """Get count of organization-wide maintainers available to this space"""
+        from core.models import User
+        return User.objects.filter(
+            profile__user_type='maintainer',
+            profile__org=self.org,
+            profile__assigned_spaces__isnull=True
+        ).count()
+    
+    def get_maintainer_breakdown(self):
+        """Get a breakdown of maintainer availability for this space"""
+        total_available = self.get_available_maintainers().count()
+        space_specific = self.get_assigned_maintainers_count()
+        organization_wide = self.get_organization_wide_maintainers_count()
+        
+        return {
+            'total_available': total_available,
+            'space_specific': space_specific,
+            'organization_wide': organization_wide
+        }
 
 
 class SpaceSettings(models.Model):

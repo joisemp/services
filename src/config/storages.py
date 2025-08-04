@@ -14,16 +14,17 @@ class StaticStorage(S3Boto3Storage):
     default_acl = "public-read"
 
 class MediaStorage(S3Boto3Storage):
-    """
-    MediaStorage is a custom storage class that extends S3Boto3Storage to handle
-    media file storage in an S3 bucket.
-
-    Attributes:
-        location (str): The directory within the S3 bucket where media files will
-            be stored. Defaults to "media".
-        default_acl (str): The default access control list for stored files.
-            Defaults to "private", ensuring that files are not publicly accessible
-            by default.
-    """
     location = "media"
     default_acl = "private"
+
+    def get_object_parameters(self, name):
+        """
+        Set public-read ACL for specific file paths or types.
+        """
+        params = super().get_object_parameters(name)
+
+        # Make specific files public (e.g., images in `public/` folder)
+        if name.startswith("media/public/"):
+            params["ACL"] = "public-read"
+
+        return params

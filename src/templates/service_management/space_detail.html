@@ -112,6 +112,58 @@
                     </div>
                 </div>
 
+                <!-- Maintainers -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Maintainers</h5>
+                        {% if user_is_central_admin %}
+                        <a href="{% url 'service_management:manage_space_maintainers' slug=space.slug %}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-tools"></i> Manage Maintainers
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% with maintainer_stats=space.get_maintainer_breakdown %}
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-center">
+                                <h6 class="text-primary">{{ maintainer_stats.total_available }}</h6>
+                                <small class="text-muted">Total Available</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h6 class="text-info">{{ maintainer_stats.space_specific }}</h6>
+                                <small class="text-muted">Space-Specific</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h6 class="text-success">{{ maintainer_stats.organization_wide }}</h6>
+                                <small class="text-muted">Organization-Wide</small>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        
+                        {% if space.assigned_maintainers.all %}
+                            <h6>Space-Specific Maintainers:</h6>
+                            <div class="row">
+                                {% for maintainer in space.assigned_maintainers.all %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-tools text-warning me-2"></i>
+                                        <div>
+                                            <small class="fw-bold">{{ maintainer.profile.first_name }} {{ maintainer.profile.last_name }}</small>
+                                            <br><small class="text-muted">{{ maintainer.email }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                This space uses organization-wide maintainers. Any maintainer in the organization can handle issues from this space.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Module Settings -->
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -169,6 +221,11 @@
                             <div class="col-md-3">
                                 <a href="{% url 'service_management:manage_space_admins' slug=space.slug %}" class="btn btn-primary w-100">
                                     <i class="fas fa-users"></i> Manage Admins
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'service_management:manage_space_maintainers' slug=space.slug %}" class="btn btn-warning w-100">
+                                    <i class="fas fa-tools"></i> Manage Maintainers
                                 </a>
                             </div>
                             <div class="col-md-3">

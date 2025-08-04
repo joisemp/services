@@ -197,35 +197,6 @@ def spaces_list(request):
     # Get all spaces in these organisations
     spaces = Spaces.objects.filter(org__in=orgs).select_related('org').prefetch_related('space_admins')
     
-    # Initialize space context variables
-    selected_space = None
-    space_settings = None
-    user_spaces = None
-    
-    # Handle space context for different user types
-    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'space_admin'):
-        user_spaces = request.user.administered_spaces.all()
-        selected_space = request.user.profile.current_active_space
-        
-        # If no active space is set or user can't access it, set to first available
-        if not selected_space or not user_spaces.filter(id=selected_space.id).exists():
-            if user_spaces.exists():
-                selected_space = user_spaces.first()
-                request.user.profile.switch_active_space(selected_space)
-        
-        if selected_space:
-            space_settings = selected_space.settings
-    elif (request.user.is_authenticated and hasattr(request.user, 'profile') and 
-          request.user.profile.user_type == 'central_admin'):
-        # For central admin, check if filtering by specific space
-        space_filter = request.GET.get('space_filter')
-        if space_filter and space_filter != 'no_space':
-            try:
-                selected_space = Spaces.objects.get(slug=space_filter, org__in=orgs)
-            except Spaces.DoesNotExist:
-                pass
-    
     # Add search functionality
     search_query = request.GET.get('search', '')
     if search_query:
@@ -243,10 +214,7 @@ def spaces_list(request):
         'spaces': page_obj,
         'search_query': search_query,
         'orgs': orgs,
-        # Add space context
-        'selected_space': selected_space,
-        'space_settings': space_settings,
-        'user_spaces': user_spaces,
+        # Space context will be automatically added by middleware and context processor
     }
     return render(request, 'service_management/spaces_list.html', context)
 
@@ -392,16 +360,6 @@ def space_settings(request, slug):
     
     settings = space.settings
     
-    # Initialize space context variables (for UI consistency, but no switching allowed)
-    selected_space = space  # Always the current space being configured
-    space_settings = settings  # Settings for the current space
-    user_spaces = None
-    
-    # For space admins, get their spaces for context (but don't allow switching)
-    if (request.user.is_authenticated and hasattr(request.user, 'profile') and 
-        request.user.profile.user_type == 'space_admin'):
-        user_spaces = request.user.administered_spaces.all()
-    
     if request.method == 'POST':
         # Update module access settings
         settings.enable_issue_management = request.POST.get('enable_issue_management') == 'on'
@@ -428,11 +386,8 @@ def space_settings(request, slug):
         'settings': settings,
         'user_is_central_admin': user_is_central_admin,
         'user_is_space_admin': user_is_space_admin,
-        # Add space context (but disable switching for this specific view)
-        'selected_space': selected_space,
-        'space_settings': space_settings,
-        'user_spaces': user_spaces,
         'disable_space_switching': True,  # Flag to disable space switcher in this view
+        # Space context will be automatically added by middleware and context processor
     }
     return render(request, 'service_management/space_settings.html', context)
 
@@ -478,6 +433,80 @@ def manage_space_admins(request, slug):
     }
     return render(request, 'service_management/manage_space_admins.html', context)
 
+
+@login_required
+@user_passes_test(is_central_admin)
+def manage_space_maintainers(request, slug):
+    """Manage space maintainer assignments"""
+    orgs = Organisation.objects.filter(central_admins=request.user)
+    space = get_object_or_404(Spaces, slug=slug, org__in=orgs)
+    
+    # Note: potential_maintainers represents org-wide maintainers who could be assigned to this space
+    # They are the same as org_wide_maintainers in this context
+    potential_maintainers = User.objects.filter(
+        profile__user_type='maintainer',
+        profile__org=space.org,
+        profile__assigned_spaces__isnull=True
+    )
+    
+    # Get current space-specific maintainers
+    current_maintainers = User.objects.filter(
+        profile__assigned_spaces=space,
+        profile__user_type='maintainer'
+    )
+    
+    # Get organization-wide maintainers (those with no space assignments)
+    org_wide_maintainers = User.objects.filter(
+        profile__user_type='maintainer',
+        profile__org=space.org,
+        profile__assigned_spaces__isnull=True
+    )
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        
+        # Validate user_id
+        if not user_id or user_id.strip() == '':
+            messages.error(request, 'Invalid user selection. Please try again.')
+            return redirect('service_management:manage_space_maintainers', slug=space.slug)
+        
+        try:
+            # Convert to int to catch invalid IDs early
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid user ID format.')
+            return redirect('service_management:manage_space_maintainers', slug=space.slug)
+        
+        try:
+            user = User.objects.get(id=user_id, profile__org=space.org, profile__user_type='maintainer')
+            
+            if action == 'add':
+                user.profile.assigned_spaces.add(space)
+                messages.success(request, f'Assigned {user.profile.first_name} {user.profile.last_name} to this space.')
+            elif action == 'remove':
+                user.profile.assigned_spaces.remove(space)
+                messages.success(request, f'Removed {user.profile.first_name} {user.profile.last_name} from this space.')
+            elif action == 'make_org_wide':
+                # Remove all space assignments to make org-wide
+                user.profile.assigned_spaces.clear()
+                messages.success(request, f'Made {user.profile.first_name} {user.profile.last_name} organization-wide.')
+                
+        except User.DoesNotExist:
+            messages.error(request, 'Maintainer not found.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('service_management:manage_space_maintainers', slug=space.slug)
+    
+    context = {
+        'space': space,
+        'current_maintainers': current_maintainers,
+        'potential_maintainers': potential_maintainers,
+        'org_wide_maintainers': org_wide_maintainers,
+        'maintainer_stats': space.get_maintainer_breakdown(),
+    }
+    return render(request, 'service_management/manage_space_maintainers.html', context)
 
 @login_required
 def no_spaces_assigned(request):

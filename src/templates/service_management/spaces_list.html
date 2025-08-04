@@ -67,6 +67,12 @@
                                             </td>
                                             <td>
                                                 <span class="badge bg-info">{{ space.get_admin_count }} admin{{ space.get_admin_count|pluralize }}</span>
+                                                <br><small class="text-muted mt-1">
+                                                    {% with maintainer_stats=space.get_maintainer_breakdown %}
+                                                        {{ maintainer_stats.total_available }} maintainer{{ maintainer_stats.total_available|pluralize }}
+                                                        ({{ maintainer_stats.space_specific }} space + {{ maintainer_stats.organization_wide }} org)
+                                                    {% endwith %}
+                                                </small>
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
