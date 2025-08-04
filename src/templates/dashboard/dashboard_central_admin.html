@@ -21,7 +21,16 @@ Central Admin Dashboard
 {% block content %}
 <section id="dashboard-admin">
     <div class="">
-        <h2 class="mb-4">Central Admin Dashboard</h2>
+        <!-- Welcome Message -->
+        <div class="mb-4 mt-3">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                <div>
+                    <h2 class="mb-1 fw-bold">Welcome back, {{ user.profile.first_name|default:user.username }}!</h2>
+                    <p class="text-muted mb-0">Here's what's happening in your organization today.</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- Statistics Cards - Responsive Grid -->
         <div class="row g-3 mb-4">
             <div class="col-12 col-sm-6 col-lg-4">
