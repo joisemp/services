@@ -6,6 +6,7 @@ from .forms import AccountCreationForm, OrganisationCreationForm, UserLoginForm,
 from django.contrib.auth import authenticate, login
 from django.urls import reverse
 from django.contrib.auth import views as auth_views
+from django.views.decorators.cache import never_cache
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -107,3 +108,23 @@ def general_user_login_view(request):
         except User.DoesNotExist:
             error = 'No general user found with this phone number.'
     return render(request, 'core/general_user_login.html', {'form': form, 'error': error})
+
+
+@never_cache
+def landing_view(request):
+    """
+    Landing page view that redirects authenticated users to their dashboard
+    and shows the landing page for anonymous users.
+    """
+    # If user is authenticated, redirect to dashboard
+    if request.user.is_authenticated:
+        # Check if user has a profile
+        if hasattr(request.user, 'profile'):
+            return redirect('dashboard:dashboard')
+        else:
+            # If user doesn't have a profile, they might need to complete setup
+            # For now, redirect to dashboard which will handle the error appropriately
+            return redirect('dashboard:dashboard')
+    
+    # If user is not authenticated, show the landing page
+    return render(request, 'landing.html')

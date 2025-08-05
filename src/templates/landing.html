@@ -10,20 +10,6 @@
 <body>
     <img src="{% static 'images/logo.png' %}" alt="IssueHub Logo" class="img-fluid mb-4">
     <div class="container mt-5 text-center">
-        {% if user.is_authenticated %}
-        <div class="alert alert-dark mb-4">
-            Logged in as <strong>
-                {% if user.profile.first_name or user.profile.last_name %}
-                {{ user.profile.first_name }} {{ user.profile.last_name }}
-                {% elif user.email %}
-                {{ user.email }}
-                {% else %}
-                {{ user.phone }}
-                {% endif %}
-            </strong>
-            <a href="{% url 'dashboard:dashboard' %}" class="btn btn-info ms-3">Go to Dashboard</a>
-        </div>
-        {% endif %}
         <div class="row">
             <div class="col">
                 <h3>Simplifying Life with Seamless Service</h3>
