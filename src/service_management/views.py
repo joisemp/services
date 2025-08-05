@@ -17,6 +17,7 @@ from core.forms import AccountCreationForm
 from core.models import Organisation, UserProfile, User
 from .models import WorkCategory, Spaces, SpaceSettings
 from config.helpers import is_central_admin, is_space_admin
+from django.conf import settings
 
 @login_required
 @user_passes_test(is_central_admin)
@@ -83,7 +84,7 @@ def add_person(request):
                     send_mail(
                         'Your Account Created',
                         f'Your password is: {password}',
-                        'noreply@example.com',
+                        getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
                         [form.cleaned_data['email']],
                         fail_silently=True,
                     )
