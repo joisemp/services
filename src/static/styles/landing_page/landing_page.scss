@@ -1,4 +1,8 @@
-@import '../base';
+@use '../base';
+
+.main-content {
+    margin-top: 0;
+}
 
 .bg-light{
     background: linear-gradient(135deg, #00012F 0%, #026BA3 100%) !important;
