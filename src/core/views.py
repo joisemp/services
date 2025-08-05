@@ -3,10 +3,13 @@ from django.db import transaction
 from django.contrib import messages
 from .models import User, UserProfile, Organisation
 from .forms import AccountCreationForm, OrganisationCreationForm, UserLoginForm, GeneralUserLoginForm
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse
 from django.contrib.auth import views as auth_views
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
+from django.http import HttpResponseRedirect
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -128,3 +131,27 @@ def landing_view(request):
     
     # If user is not authenticated, show the landing page
     return render(request, 'landing.html')
+
+
+@never_cache
+@csrf_protect
+def custom_logout_view(request):
+    """
+    Custom logout view that handles both GET and POST requests.
+    More secure than the default GET-only logout and provides better user experience.
+    """
+    if request.method == 'POST':
+        # Handle POST logout (more secure)
+        logout(request)
+        messages.success(request, 'You have been successfully logged out.')
+        return redirect('landing')
+    
+    elif request.method == 'GET':
+        # Handle GET logout (for compatibility with simple links)
+        if request.user.is_authenticated:
+            logout(request)
+            messages.success(request, 'You have been successfully logged out.')
+        return redirect('landing')
+    
+    # For any other method, just redirect to landing
+    return redirect('landing')

@@ -19,12 +19,15 @@
                 </div>
                 <ul class="dropdown-menu">
                     <li>
-                        <a class="dropdown-item text-danger d-flex align-items-center" href="#">
-                            <span class="material-symbols-outlined me-2">
-                                chip_extraction
-                            </span>
-                            Logout
-                        </a>
+                        <form method="post" action="{% url 'core:logout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger d-flex align-items-center border-0 bg-transparent w-100" style="text-align: left;">
+                                <span class="material-symbols-outlined me-2">
+                                    chip_extraction
+                                </span>
+                                Logout
+                            </button>
+                        </form>
                     </li>
                 </ul>
             </div>
