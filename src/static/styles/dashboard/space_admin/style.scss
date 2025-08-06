@@ -1,4 +1,889 @@
 // Space Admin Dashboard Styles
-@import '../../sidebar_base';
+@use '../../sidebar_base';
 
-// Keep the default sidebar styles without modifications
+#space-admin-dashboard {
+    // Welcome section responsive
+    .welcome-section {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .alert {
+            padding: 1.5rem;
+            
+            @media (max-width: 767.98px) {
+                padding: 1rem;
+                
+                .d-flex {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 1rem;
+                }
+                
+                .fa-user-shield {
+                    margin-bottom: 0.5rem !important;
+                    margin-right: 0 !important;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                padding: 0.8rem;
+                
+                h5 {
+                    margin-bottom: 0.5rem;
+                }
+                
+                p {
+                    margin-bottom: 0;
+                }
+            }
+        }
+    }
+    
+    // Space switcher responsive
+    .space-switcher {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            padding: 1rem 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 0.75rem 1rem;
+            }
+            
+            h6 {
+                margin-bottom: 0;
+                
+                .fas {
+                    margin-right: 0.5rem;
+                }
+            }
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+            
+            @media (max-width: 767.98px) {
+                padding: 1rem;
+                
+                .d-flex {
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+                
+                .current-space-info {
+                    margin-right: 0 !important;
+                    text-align: center;
+                    padding: 0.75rem;
+                    background: #f8f9fa;
+                    border-radius: 0.375rem;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .input-group {
+                    .btn {
+                        min-width: 80px;
+                        padding: 0.5rem 1rem;
+                    }
+                }
+                
+                .text-end {
+                    text-align: center !important;
+                    margin-top: 0.5rem;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                padding: 0.75rem;
+                
+                .current-space-info {
+                    padding: 0.5rem;
+                    margin-bottom: 1rem;
+                }
+                
+                .input-group {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                    
+                    .form-select, .btn {
+                        border-radius: 0.375rem !important;
+                        width: 100%;
+                    }
+                    
+                    .btn {
+                        margin-top: 0.5rem;
+                    }
+                }
+                
+                label {
+                    margin-bottom: 0.5rem;
+                }
+            }
+        }
+    }
+    
+    // Space overview responsive
+    .space-overview {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            
+            @media (max-width: 767.98px) {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        .card-header {
+            padding: 1rem 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 0.75rem 1rem;
+            }
+            
+            h5 {
+                margin-bottom: 0;
+                
+                .fas {
+                    margin-right: 0.5rem;
+                }
+            }
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 1rem;
+            }
+        }
+        
+        .row.text-center {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            
+            @media (max-width: 991.98px) {
+                .col-3 {
+                    flex: 0 0 50%;
+                    max-width: 50%;
+                    margin-bottom: 1rem;
+                    padding: 0.5rem;
+                    display: flex;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                .col-3 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    margin-bottom: 0.75rem;
+                    padding: 0.25rem;
+                    display: flex;
+                }
+            }
+            
+            // Ensure all columns have equal height on desktop
+            @media (min-width: 992px) {
+                .col-3 {
+                    display: flex;
+                }
+            }
+            
+            .card {
+                height: 100%;
+                margin-bottom: 0;
+                display: flex;
+                flex-direction: column;
+                min-height: 120px; // Set minimum height for consistency
+                
+                @media (max-width: 575.98px) {
+                    min-height: 100px;
+                }
+                
+                .card-body {
+                    padding: 0.75rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    flex-grow: 1;
+                    
+                    @media (max-width: 575.98px) {
+                        padding: 0.5rem;
+                    }
+                }
+            }
+        }
+        
+        .card-title {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            
+            @media (max-width: 575.98px) {
+                font-size: 0.8rem;
+                margin-bottom: 0.25rem;
+            }
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            
+            @media (max-width: 575.98px) {
+                font-size: 0.7rem;
+            }
+        }
+    }
+    
+    // Statistics cards responsive
+    .stats-cards {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .row {
+            margin: -0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            
+            @media (max-width: 767.98px) {
+                margin: -0.25rem;
+                
+                .col-md-3 {
+                    flex: 0 0 50%;
+                    max-width: 50%;
+                    margin-bottom: 0.5rem;
+                    padding: 0.25rem;
+                    display: flex;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                margin: -0.125rem;
+                
+                .col-md-3 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    margin-bottom: 0.75rem;
+                    padding: 0.125rem;
+                    display: flex;
+                }
+            }
+            
+            // Ensure all columns have equal height on desktop
+            @media (min-width: 768px) {
+                .col-md-3 {
+                    display: flex;
+                }
+            }
+        }
+        
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 140px; // Set minimum height for consistency
+            
+            @media (max-width: 767.98px) {
+                min-height: 120px;
+            }
+            
+            @media (max-width: 575.98px) {
+                min-height: 110px;
+            }
+            
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .card-body {
+                padding: 1.25rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                flex-grow: 1;
+                
+                @media (max-width: 767.98px) {
+                    padding: 1rem;
+                }
+                
+                @media (max-width: 575.98px) {
+                    padding: 0.75rem;
+                    text-align: center;
+                    justify-content: center;
+                    
+                    .d-flex {
+                        flex-direction: column;
+                        text-align: center;
+                        gap: 0.5rem;
+                        
+                        .fas {
+                            margin-right: 0 !important;
+                            margin-bottom: 0.25rem;
+                            align-self: center;
+                        }
+                    }
+                }
+                
+                // Content wrapper to handle spacing
+                .content-wrapper {
+                    display: flex;
+                    flex-direction: column;
+                    flex-grow: 1;
+                    justify-content: center;
+                }
+            }
+            
+            h5 {
+                margin-bottom: 0.25rem;
+                
+                @media (max-width: 575.98px) {
+                    font-size: 1rem;
+                    margin-bottom: 0.125rem;
+                }
+            }
+            
+            small {
+                font-size: 0.875rem;
+                
+                @media (max-width: 575.98px) {
+                    font-size: 0.75rem;
+                }
+                
+                &.d-block {
+                    margin-top: 0.5rem;
+                    
+                    @media (max-width: 575.98px) {
+                        margin-top: 0.25rem;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Issues table responsive
+    .issues-section {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            padding: 1rem 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 0.75rem 1rem;
+            }
+            
+            h5 {
+                margin-bottom: 0;
+                
+                .fas {
+                    margin-right: 0.5rem;
+                }
+            }
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 1rem;
+            }
+        }
+        
+        .table-responsive {
+            margin-bottom: 1rem;
+            
+            @media (max-width: 767.98px) {
+                display: none;
+            }
+            
+            .table {
+                margin-bottom: 0;
+                
+                th {
+                    border-top: none;
+                    font-weight: 600;
+                    padding: 0.75rem;
+                }
+                
+                td {
+                    padding: 0.75rem;
+                    vertical-align: middle;
+                }
+                
+                .badge {
+                    font-size: 0.75rem;
+                }
+            }
+        }
+        
+        // Mobile card view for issues
+        .mobile-issues {
+            display: none;
+            
+            @media (max-width: 767.98px) {
+                display: block;
+            }
+            
+            .issue-card {
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                transition: box-shadow 0.2s ease;
+                
+                &:hover {
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                
+                &:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .card-body {
+                    padding: 1rem;
+                    
+                    @media (max-width: 575.98px) {
+                        padding: 0.75rem;
+                    }
+                }
+                
+                .issue-title {
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    line-height: 1.3;
+                    margin-bottom: 0.5rem;
+                    color: #333;
+                    
+                    @media (max-width: 575.98px) {
+                        font-size: 0.9rem;
+                        margin-bottom: 0.375rem;
+                    }
+                }
+                
+                .issue-meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                    margin-bottom: 0.75rem;
+                    
+                    @media (max-width: 575.98px) {
+                        gap: 0.25rem;
+                        margin-bottom: 0.5rem;
+                    }
+                    
+                    .badge {
+                        font-size: 0.75rem;
+                        
+                        @media (max-width: 575.98px) {
+                            font-size: 0.7rem;
+                        }
+                    }
+                }
+                
+                .issue-details {
+                    font-size: 0.85rem;
+                    color: #6c757d;
+                    
+                    @media (max-width: 575.98px) {
+                        font-size: 0.8rem;
+                    }
+                    
+                    .d-flex {
+                        justify-content: space-between;
+                        margin-bottom: 0.25rem;
+                        
+                        &:last-child {
+                            margin-bottom: 0;
+                        }
+                        
+                        span:first-child {
+                            font-weight: 500;
+                        }
+                        
+                        span:last-child {
+                            text-align: right;
+                        }
+                    }
+                }
+            }
+        }
+        
+        .action-buttons {
+            margin-top: 1rem;
+            
+            @media (max-width: 575.98px) {
+                margin-top: 0.75rem;
+                
+                .btn {
+                    display: block;
+                    width: 100%;
+                    margin-bottom: 0.5rem;
+                    
+                    &:last-child {
+                        margin-bottom: 0;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Empty states
+    .empty-state {
+        padding: 2rem 1rem;
+        
+        @media (max-width: 575.98px) {
+            padding: 1.5rem 0.5rem;
+        }
+        
+        .fas {
+            margin-bottom: 1rem;
+            
+            @media (max-width: 575.98px) {
+                font-size: 2rem !important;
+                margin-bottom: 0.75rem;
+            }
+        }
+        
+        h6, h4 {
+            margin-bottom: 0.5rem;
+            
+            @media (max-width: 575.98px) {
+                font-size: 1rem;
+                margin-bottom: 0.375rem;
+            }
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            
+            @media (max-width: 575.98px) {
+                font-size: 0.9rem;
+                margin-bottom: 0.75rem;
+            }
+        }
+        
+        .btn {
+            margin-top: 0.5rem;
+            
+            @media (max-width: 575.98px) {
+                margin-top: 0.25rem;
+                width: 100%;
+            }
+        }
+    }
+    
+    // No space selected state
+    .no-space-selected {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-body {
+            padding: 3rem 2rem;
+            
+            @media (max-width: 767.98px) {
+                padding: 2.5rem 1.5rem;
+            }
+            
+            @media (max-width: 575.98px) {
+                padding: 2rem 1rem;
+            }
+            
+            .fas {
+                margin-bottom: 1.5rem;
+                
+                @media (max-width: 575.98px) {
+                    font-size: 2.5rem !important;
+                    margin-bottom: 1rem;
+                }
+            }
+            
+            h4 {
+                margin-bottom: 1rem;
+                
+                @media (max-width: 575.98px) {
+                    font-size: 1.1rem;
+                    margin-bottom: 0.75rem;
+                }
+            }
+            
+            p {
+                margin-bottom: 0;
+                
+                @media (max-width: 575.98px) {
+                    font-size: 0.9rem;
+                }
+            }
+        }
+    }
+    
+    // No spaces assigned state
+    .no-spaces-assigned {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 1rem;
+            
+            .alert {
+                text-align: center;
+                padding: 1.5rem 1rem;
+                margin-bottom: 0;
+                
+                .fas {
+                    font-size: 2rem !important;
+                    margin-bottom: 0.75rem;
+                }
+                
+                h5 {
+                    font-size: 1.1rem;
+                    margin-bottom: 0.5rem;
+                }
+                
+                p {
+                    font-size: 0.9rem;
+                    margin-bottom: 0;
+                }
+            }
+        }
+    }
+    
+    // General responsive typography
+    h1 {
+        margin-bottom: 1rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+    }
+    
+    h2 {
+        margin-bottom: 0.75rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+    }
+    
+    h3 {
+        margin-bottom: 0.75rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+    }
+    
+    h5 {
+        margin-bottom: 0.5rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 1rem;
+            margin-bottom: 0.375rem;
+        }
+    }
+    
+    h6 {
+        margin-bottom: 0.5rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 0.9rem;
+            margin-bottom: 0.375rem;
+        }
+    }
+    
+    // Container adjustments
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        
+        @media (max-width: 575.98px) {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+    }
+    
+    // Card spacing adjustments
+    .card {
+        margin-bottom: 1.5rem;
+        
+        @media (max-width: 767.98px) {
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 0.75rem;
+        }
+        
+        // Card header spacing
+        .card-header {
+            padding: 1rem 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 0.75rem 1rem;
+            }
+        }
+        
+        // Card body spacing
+        .card-body {
+            padding: 1.25rem;
+            
+            @media (max-width: 575.98px) {
+                padding: 1rem;
+            }
+        }
+    }
+    
+    // Row and column spacing
+    .row {
+        &.mb-4 {
+            @media (max-width: 575.98px) {
+                margin-bottom: 1rem !important;
+            }
+        }
+        
+        [class*="col-"] {
+            @media (max-width: 575.98px) {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+    }
+    
+    // Button responsive
+    .btn {
+        transition: all 0.2s ease;
+        
+        @media (max-width: 575.98px) {
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+        }
+        
+        &.btn-sm {
+            @media (max-width: 575.98px) {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+        
+        // Button groups spacing
+        & + .btn {
+            @media (max-width: 575.98px) {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+        }
+    }
+    
+    // Badge responsive
+    .badge {
+        font-size: 0.75rem;
+        
+        @media (max-width: 575.98px) {
+            font-size: 0.7rem;
+            padding: 0.25em 0.5em;
+        }
+    }
+    
+    // Alert spacing
+    .alert {
+        margin-bottom: 1rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+        }
+    }
+    
+    // Table responsive adjustments
+    .table {
+        @media (max-width: 767.98px) {
+            font-size: 0.875rem;
+        }
+        
+        th, td {
+            @media (max-width: 767.98px) {
+                padding: 0.5rem;
+            }
+        }
+    }
+    
+    // Form elements spacing
+    .form-label {
+        margin-bottom: 0.5rem;
+        
+        @media (max-width: 575.98px) {
+            margin-bottom: 0.375rem;
+            font-size: 0.875rem;
+        }
+    }
+    
+    .form-select, .form-control {
+        @media (max-width: 575.98px) {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+    }
+    
+    // Icon spacing
+    .fas, .material-symbols-outlined {
+        &.me-2 {
+            @media (max-width: 575.98px) {
+                margin-right: 0.375rem !important;
+            }
+        }
+        
+        &.me-3 {
+            @media (max-width: 575.98px) {
+                margin-right: 0.5rem !important;
+            }
+        }
+        
+        &.mb-3 {
+            @media (max-width: 575.98px) {
+                margin-bottom: 0.5rem !important;
+            }
+        }
+    }
+}
+
+@media (max-width: 767px) {
+    #space-admin-dashboard .row [class*=col-] {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        padding-bottom: 1rem;
+    }
+}
