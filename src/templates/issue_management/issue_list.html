@@ -31,10 +31,12 @@
         </div>
         <div class="side-button">
             <div class="d-flex flex-wrap gap-2">
+                {% if user.profile.user_type == 'central_admin' %}
                 <a href="{% url 'issue_management:category_list' %}" class="btn btn-outline-primary">
                     <span class="material-symbols-outlined me-1">style</span>
                     <span>Manage Category</span>
                 </a>
+                {% endif %}
                 <a href="{% url 'issue_management:report_issue' %}" class="btn btn-primary">
                     <span class="material-symbols-outlined me-1">add</span>
                     <span>Report Issue</span>

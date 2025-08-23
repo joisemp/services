@@ -22,12 +22,15 @@
                     </div>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item text-danger d-flex align-items-center" href="{% url 'core:logout' %}">
-                                <span class="material-symbols-outlined me-2">
-                                    logout
-                                </span>
-                                Logout
-                            </a>
+                            <form method="post" action="{% url 'core:logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger d-flex align-items-center border-0 bg-transparent w-100" style="text-align: left;">
+                                    <span class="material-symbols-outlined me-2">
+                                        logout
+                                    </span>
+                                    Logout
+                                </button>
+                            </form>
                         </li>
                     </ul>
                 </div>

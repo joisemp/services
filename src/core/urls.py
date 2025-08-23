@@ -1,6 +1,6 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
-from .views import account_creation_view, organisation_creation_view, account_creation_success, user_login_view, general_user_login_view
+from .views import account_creation_view, organisation_creation_view, account_creation_success, user_login_view, general_user_login_view, custom_logout_view
 from . import views
 
 app_name = 'core'
@@ -10,11 +10,10 @@ urlpatterns = [
     path('organisation/create/', organisation_creation_view, name='organisation_creation'),
     path('account/success/', account_creation_success, name='account_creation_success'),
     path('login/', user_login_view, name='user_login'),
-    path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
+    path('logout/', custom_logout_view, name='logout'),
     path('general-user/login/', general_user_login_view, name='general_user_login'),
     path('password-reset/', views.CustomPasswordResetView.as_view(), name='password_reset'),
     path('password-reset/done/', views.CustomPasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', views.CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('password-reset/complete/', views.CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
 ]
-# This file is intentionally left empty for now.
