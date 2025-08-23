@@ -166,6 +166,18 @@
                         </span>
                     {% endif %}
                 </div>
+                <div class="text-muted small">
+                    <p class="d-flex align-items-center mt-2">
+                        <span class="material-symbols-outlined me-2" style="font-size: 18px;">call_log</span>Phone no: 
+                    {% if issue.created_by %}
+                        {{ issue.created_by.phone }}
+                    {% else %}
+                        Unknown
+                    {% endif %}
+                    </p>
+                       
+                    
+                </div>
             </div>
             <div class="action-buttons">
                 <!-- Delete button for general users (within 15 minutes) -->
