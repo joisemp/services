@@ -3,50 +3,59 @@
 {% block title %}IssueHub - Landing Page{% endblock %}
 {% block style %}
 <link rel="stylesheet" href="{% static 'styles/landing_page/landing_page.css' %}">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 {% endblock style %}
 
 {% block content %}
 
 <body>
-    <img src="{% static 'images/logo.png' %}" alt="IssueHub Logo" class="img-fluid mb-4">
-    <div class="container mt-5 text-center">
-        {% if user.is_authenticated %}
-        <div class="alert alert-dark mb-4">
-            Logged in as <strong>
-                {% if user.profile.first_name or user.profile.last_name %}
-                {{ user.profile.first_name }} {{ user.profile.last_name }}
-                {% elif user.email %}
-                {{ user.email }}
-                {% else %}
-                {{ user.phone }}
-                {% endif %}
-            </strong>
-            <a href="{% url 'dashboard:dashboard' %}" class="btn btn-info ms-3">Go to Dashboard</a>
-        </div>
-        {% endif %}
-        <div class="row">
-            <div class="col">
-                <h3>Simplifying Life with Seamless Service</h3>
-                <p>Report, track, and manage issues efficiently for your organisation.</p>
-                <!-- <a href="{% url 'admin:index' %}" class="btn btn-primary">Admin Login</a>
-                <a href="{% url 'issue_management:report_issue' %}" class="btn btn-primary">Report an Issue</a> -->
-                <div class="d-flex justify-content-center">
-                    <a href="{% url 'core:account_creation' %}" class="btn btn-light me-2">Register</a>
-                    <div class="dropdown">
-                        <button class="btn btn-outline dropdown-toggle ms-2" type="button" data-bs-toggle="dropdown"
-                            aria-expanded="false">
-                            Login
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item"
-                                    href="{% url 'core:general_user_login' %}">general_user_login</a></li>
-                            <li><a class="dropdown-item" href="{% url 'core:user_login' %}">User Login</a></li>
-                        </ul>
+    <!-- Single Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row justify-content-center align-items-center min-vh-100">
+                <div class="col-lg-8 text-center">
+                    <!-- Logo with Animation -->
+                    <div class="logo-container mb-5">
+                        <img src="{% static 'images/logo.png' %}" alt="IssueHub Logo" class="logo-img">
+                    </div>
+                    
+                    <!-- Main Content -->
+                    <div class="hero-content">
+                        <h1 class="hero-title mb-4">Simplifying Life with Seamless Service</h1>
+                        <p class="hero-subtitle mb-5">Report, track, and manage issues efficiently for your organisation.</p>
+                        
+                        <!-- Action Buttons -->
+                        <div class="action-buttons d-flex justify-content-center flex-wrap">
+                            <a href="{% url 'core:account_creation' %}" class="btn btn-light me-3 mb-3">
+                                Register
+                            </a>
+                            <div class="dropdown mb-3">
+                                <button class="btn btn-outline dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    Login
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'core:general_user_login' %}">
+                                            General Users
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'core:user_login' %}">
+                                            Other Users
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-    </div>
+    </section>
 </body>
+
+{% block scripts %}
+<script src="{% static 'js/landing_page.js' %}"></script>
+{% endblock scripts %}
 {% endblock content %}

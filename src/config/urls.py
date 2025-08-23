@@ -2,10 +2,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import TemplateView
+from core.views import landing_view
 
 urlpatterns = [
-    path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
+    path('', landing_view, name='landing'),
     path('admin/', admin.site.urls),
     path('issue-management/', include('issue_management.urls', namespace='issue_management')),
     path('core/', include('core.urls', namespace='core')),

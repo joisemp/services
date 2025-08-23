@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 from django.contrib import messages
 from django.db.models import Q
@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
+from config.helpers import is_central_admin
 
 def issue_list(request):
     # Initialize default values
@@ -510,20 +511,16 @@ def reassign_escalated_issue(request, slug):
 
 # Category Management Views
 @login_required
+@user_passes_test(is_central_admin)
 def category_list(request):
     """List all issue categories for the organization"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
-        return HttpResponseForbidden('You do not have permission to manage categories.')
-    
     categories = IssueCategory.objects.filter(org=request.user.profile.org).order_by('name')
     return render(request, 'issue_management/category_list.html', {'categories': categories})
 
 @login_required
+@user_passes_test(is_central_admin)
 def create_category(request):
     """Create a new issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
-        return HttpResponseForbidden('You do not have permission to create categories.')
-    
     if request.method == 'POST':
         form = IssueCategoryForm(request.POST)
         if form.is_valid():
@@ -538,11 +535,9 @@ def create_category(request):
     return render(request, 'issue_management/create_category.html', {'form': form})
 
 @login_required
+@user_passes_test(is_central_admin)
 def update_category(request, slug):
     """Update an existing issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
-        return HttpResponseForbidden('You do not have permission to edit categories.')
-    
     category = get_object_or_404(IssueCategory, slug=slug, org=request.user.profile.org)
     
     if request.method == 'POST':
@@ -560,11 +555,9 @@ def update_category(request, slug):
     })
 
 @login_required
+@user_passes_test(is_central_admin)
 def delete_category(request, slug):
     """Delete an issue category"""
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type not in ['central_admin', 'space_admin']:
-        return HttpResponseForbidden('You do not have permission to delete categories.')
-    
     category = get_object_or_404(IssueCategory, slug=slug, org=request.user.profile.org)
     
     if request.method == 'POST':

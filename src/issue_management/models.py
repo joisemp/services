@@ -87,7 +87,7 @@ class Issue(models.Model):
     
     title = models.CharField(max_length=255)
     description = models.TextField()
-    voice = models.FileField(upload_to='issue_voices/', blank=True, null=True)
+    voice = models.FileField(upload_to='public/issue_voices/', blank=True, null=True)
     
     # New fields
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')

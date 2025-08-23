@@ -198,7 +198,18 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# email settings
+if ENVIRONMENT == 'development':
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = env('EMAIL_HOST', default='in-v3.mailjet.com')
+    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+    EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+    DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+
 
 # Finance Module Settings
 DEFAULT_CURRENCY = 'INR'  # Default currency for the application
@@ -217,3 +228,115 @@ MESSAGE_TAGS = {
 CSRF_TRUSTED_ORIGINS = [
     url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
 ]
+
+# Logging Configuration
+if not DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+                'style': '{',
+            },
+            'simple': {
+                'format': '{levelname} {message}',
+                'style': '{',
+            },
+        },
+        'filters': {
+            'require_debug_false': {
+                '()': 'django.utils.log.RequireDebugFalse',
+            },
+        },
+        'handlers': {
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+                'maxBytes': 1024*1024*10,  # 10 MB
+                'backupCount': 5,
+                'formatter': 'verbose',
+                'filters': ['require_debug_false'],
+            },
+            'error_file': {
+                'level': 'ERROR',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': os.path.join(BASE_DIR, 'logs', 'django_errors.log'),
+                'maxBytes': 1024*1024*10,  # 10 MB
+                'backupCount': 5,
+                'formatter': 'verbose',
+                'filters': ['require_debug_false'],
+            },
+            'mail_admins': {
+                'level': 'ERROR',
+                'class': 'django.utils.log.AdminEmailHandler',
+                'filters': ['require_debug_false'],
+                'formatter': 'verbose',
+            },
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple',
+            },
+        },
+        'root': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['console', 'file', 'mail_admins'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'django.request': {
+                'handlers': ['error_file', 'mail_admins'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+            'django.security': {
+                'handlers': ['error_file', 'mail_admins'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+            'django.db.backends': {
+                'handlers': ['file'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+            # Your app loggers
+            'core': {
+                'handlers': ['file', 'error_file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'issue_management': {
+                'handlers': ['file', 'error_file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'finance': {
+                'handlers': ['file', 'error_file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'service_management': {
+                'handlers': ['file', 'error_file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
+    
+    # Ensure logs directory exists
+    LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+    if not os.path.exists(LOGS_DIR):
+        os.makedirs(LOGS_DIR)
+
+# Admin emails for error notifications (only used when DEBUG=False)
+if not DEBUG:
+    ADMINS = [
+        ('Admin', env('ADMIN_EMAIL', default='admin@example.com')),
+    ]
+    MANAGERS = ADMINS

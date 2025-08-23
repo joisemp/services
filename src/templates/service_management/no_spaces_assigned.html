@@ -160,9 +160,12 @@
         {% endif %}
         
         <div class="d-flex flex-column align-items-center">
-            <a href="{% url 'core:logout' %}" class="btn logout-btn">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout
-            </a>
+            <form method="post" action="{% url 'core:logout' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn logout-btn">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </form>
             
             <div class="help-text">
                 Contact your organization's central administrator for space assignment.

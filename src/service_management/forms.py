@@ -13,6 +13,12 @@ class AddGeneralUserForm(forms.Form):
     phone = forms.CharField(max_length=20, label='Phone Number')
     first_name = forms.CharField(max_length=255, required=False)
     last_name = forms.CharField(max_length=255, required=False)
+    
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone and User.objects.filter(phone=phone).exists():
+            raise forms.ValidationError('A user with this phone number already exists.')
+        return phone
 
 class AddOtherUserForm(forms.Form):
     email = forms.EmailField()
@@ -34,6 +40,18 @@ class AddOtherUserForm(forms.Form):
             self.fields['skills'].queryset = WorkCategory.objects.filter(org=org)
         else:
             self.fields['skills'].queryset = WorkCategory.objects.all()
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exists():
+            raise forms.ValidationError('A user with this email address already exists.')
+        return email
+    
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone and User.objects.filter(phone=phone).exists():
+            raise forms.ValidationError('A user with this phone number already exists.')
+        return phone
 
 class WorkCategoryForm(forms.ModelForm):
     class Meta:

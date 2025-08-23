@@ -9,9 +9,9 @@
 
 {% block content %}
 {% csrf_token %}
-<div class="container-fluid">
+<div class="container-fluid" id="space-admin-dashboard">
     <!-- Welcome Section -->
-    <div class="row mb-4">
+    <div class="row mb-4 welcome-section">
         <div class="col-12">
             <div class="alert alert-info border-0 shadow-sm">
                 <div class="d-flex align-items-center">
@@ -27,7 +27,7 @@
 
     <!-- Space Switcher Section -->
     {% if user_spaces.exists and user_spaces.count > 1 %}
-    <div class="row mb-4">
+    <div class="row mb-4 space-switcher">
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -64,7 +64,7 @@
                                 </select>
                                 <button class="btn btn-primary" type="submit" title="Switch to Selected Space">
                                     <i class="fas fa-arrow-right"></i>
-                                    Switch
+                                    <span class="d-none d-sm-inline">Switch</span>
                                 </button>
                             </div>
                         </div>
@@ -85,7 +85,7 @@
     {% if user_spaces.exists %}
     {% if selected_space %}
     <!-- Selected Space Details -->
-    <div class="row mb-4">
+    <div class="row mb-4 space-overview">
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
@@ -100,7 +100,7 @@
                     {% endif %}
                     
                     <div class="row text-center">
-                        <div class="col-3">
+                        <div class="col-6 col-md-3">
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title">Access Status</h6>
@@ -112,7 +112,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3">
+                        <div class="col-6 col-md-3">
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title">Approval</h6>
@@ -124,7 +124,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3">
+                        <div class="col-6 col-md-3">
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title">Space Admins</h6>
@@ -132,7 +132,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3">
+                        <div class="col-6 col-md-3">
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title">Organization</h6>
@@ -157,206 +157,75 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
+    <div class="row mb-4 stats-cards">
+        <div class="col-6 col-md-3">
             <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-bug fa-2x me-3"></i>
-                        <div>
-                            <h5 class="mb-0">{{ stats.total_issues }}</h5>
-                            <small>Total Issues</small>
+                    <div class="content-wrapper">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-bug fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0">{{ stats.total_issues }}</h5>
+                                <small>Total Issues</small>
+                            </div>
                         </div>
+                        <small class="d-block mt-2">{{ stats.issues_last_30_days }} this month</small>
                     </div>
-                    <small class="d-block mt-2">{{ stats.issues_last_30_days }} this month</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card bg-success text-white">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-check-circle fa-2x me-3"></i>
-                        <div>
-                            <h5 class="mb-0">{{ stats.resolved_issues }}</h5>
-                            <small>Resolved</small>
+                    <div class="content-wrapper">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0">{{ stats.resolved_issues }}</h5>
+                                <small>Resolved</small>
+                            </div>
                         </div>
+                        <small class="d-block mt-2">{{ stats.resolved_issues_last_30_days }} this month</small>
                     </div>
-                    <small class="d-block mt-2">{{ stats.resolved_issues_last_30_days }} this month</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-clock fa-2x me-3"></i>
-                        <div>
-                            <h5 class="mb-0">{{ stats.in_progress_issues }}</h5>
-                            <small>In Progress</small>
+                    <div class="content-wrapper">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0">{{ stats.in_progress_issues }}</h5>
+                                <small>In Progress</small>
+                            </div>
                         </div>
+                        <small class="d-block mt-2">{{ stats.open_issues }} open</small>
                     </div>
-                    <small class="d-block mt-2">{{ stats.open_issues }} open</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="card bg-danger text-white">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                        <div>
-                            <h5 class="mb-0">{{ stats.escalated_issues }}</h5>
-                            <small>Escalated</small>
-                        </div>
-                    </div>
-                    <small class="d-block mt-2">Need attention</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions for Selected Space -->
-    <div class="card">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-rocket me-2"></i>
-                Quick Actions for {{ selected_space.name }}
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% if space_settings %}
-                <!-- Issues (only if enabled) -->
-                {% if space_settings.enable_issue_management %}
-                <div class="col-md-3 mb-3">
-                    <div class="card border-primary">
-                        <div class="card-body text-center">
-                            <i class="fas fa-bug fa-2x text-primary mb-3"></i>
-                            <h6>Issues</h6>
-                            <div class="d-grid gap-2">
-                                <a href="{% url 'issue_management:issue_list' %}" 
-                                   class="btn btn-outline-primary btn-sm">
-                                    View Issues
-                                </a>
-                                <a href="{% url 'issue_management:category_list' %}" 
-                                   class="btn btn-outline-secondary btn-sm">
-                                    Manage Categories
-                                </a>
+                    <div class="content-wrapper">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0">{{ stats.escalated_issues }}</h5>
+                                <small>Escalated</small>
                             </div>
                         </div>
+                        <small class="d-block mt-2">Need attention</small>
                     </div>
                 </div>
-                {% endif %}
-                
-                <!-- Transportation (only if enabled) -->
-                {% if space_settings.enable_transportation %}
-                <div class="col-md-3 mb-3">
-                    <div class="card border-info">
-                        <div class="card-body text-center">
-                            <i class="fas fa-car fa-2x text-info mb-3"></i>
-                            <h6>Vehicles</h6>
-                            <a href="{% url 'transportation:vehicle_list' %}" 
-                               class="btn btn-outline-info btn-sm">
-                                Manage Fleet
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <!-- Finance (only if enabled) -->
-                {% if space_settings.enable_finance %}
-                <div class="col-md-3 mb-3">
-                    <div class="card border-warning">
-                        <div class="card-body text-center">
-                            <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
-                            <h6>Finances</h6>
-                            <a href="{% url 'finance:transaction_list' %}" 
-                               class="btn btn-outline-warning btn-sm">
-                                View Transactions
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <!-- Settings (always show for space admin) -->
-                <div class="col-md-3 mb-3">
-                    <div class="card border-secondary">
-                        <div class="card-body text-center">
-                            <i class="fas fa-cog fa-2x text-secondary mb-3"></i>
-                            <h6>Settings</h6>
-                            <a href="{% url 'service_management:space_settings' selected_space.slug %}" 
-                               class="btn btn-outline-secondary btn-sm">
-                                Space Settings
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Show all if no settings available -->
-                <div class="col-md-3 mb-3">
-                    <div class="card border-primary">
-                        <div class="card-body text-center">
-                            <i class="fas fa-bug fa-2x text-primary mb-3"></i>
-                            <h6>Issues</h6>
-                            <div class="d-grid gap-2">
-                                <a href="{% url 'issue_management:issue_list' %}" 
-                                   class="btn btn-outline-primary btn-sm">
-                                    View Issues
-                                </a>
-                                <a href="{% url 'issue_management:category_list' %}" 
-                                   class="btn btn-outline-secondary btn-sm">
-                                    Manage Categories
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card border-info">
-                        <div class="card-body text-center">
-                            <i class="fas fa-car fa-2x text-info mb-3"></i>
-                            <h6>Vehicles</h6>
-                            <a href="{% url 'transportation:vehicle_list' %}" 
-                               class="btn btn-outline-info btn-sm">
-                                Manage Fleet
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card border-warning">
-                        <div class="card-body text-center">
-                            <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
-                            <h6>Finances</h6>
-                            <a href="{% url 'finance:transaction_list' %}" 
-                               class="btn btn-outline-warning btn-sm">
-                                View Transactions
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card border-secondary">
-                        <div class="card-body text-center">
-                            <i class="fas fa-cog fa-2x text-secondary mb-3"></i>
-                            <h6>Settings</h6>
-                            <a href="{% url 'service_management:space_settings' selected_space.slug %}" 
-                               class="btn btn-outline-secondary btn-sm">
-                                Space Settings
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Recent Issues for Selected Space -->
-    <div class="card">
+    <div class="card issues-section">
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="fas fa-list me-2"></i>
@@ -365,7 +234,8 @@
         </div>
         <div class="card-body">
             {% if stats.recent_issues %}
-            <div class="table-responsive">
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -410,7 +280,48 @@
                     </tbody>
                 </table>
             </div>
-            <div class="text-center mt-3">
+            
+            <!-- Mobile Card View -->
+            <div class="mobile-issues d-block d-md-none">
+                {% for issue in stats.recent_issues %}
+                <div class="card issue-card">
+                    <div class="card-body">
+                        <div class="issue-title">{{ issue.title|truncatechars:50 }}</div>
+                        {% if issue.category %}
+                            <small class="text-muted d-block mb-2">{{ issue.category.name }}</small>
+                        {% endif %}
+                        
+                        <div class="issue-meta">
+                            <span class="badge bg-{{ issue.status_color }}">
+                                {{ issue.get_status_display }}
+                            </span>
+                            <span class="badge bg-{{ issue.priority_color }}">
+                                {{ issue.get_priority_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="issue-details">
+                            <div class="d-flex justify-content-between">
+                                <span>Created:</span>
+                                <span>{{ issue.created_at|date:"M d, H:i" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Reporter:</span>
+                                <span>
+                                    {% if issue.created_by %}
+                                        {{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="text-center mt-3 action-buttons">
                 <a href="{% url 'issue_management:issue_list' %}" class="btn btn-outline-primary">
                     View All Active Issues
                 </a>
@@ -419,7 +330,7 @@
                 </a>
             </div>
             {% else %}
-            <div class="text-center py-4">
+            <div class="text-center py-4 empty-state">
                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                 <h6 class="text-muted">No Issues Found</h6>
                 <p class="text-muted">This space has no issues reported yet.</p>
@@ -431,78 +342,20 @@
         </div>
     </div>
     
-    <!-- Recent Resolved Issues -->
-    {% if stats.recent_resolved_issues %}
-    <div class="card">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-check-circle me-2"></i>
-                Recent Resolved Issues ({{ stats.total_resolved_issues }} total)
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Issue</th>
-                            <th>Priority</th>
-                            <th>Resolved Date</th>
-                            <th>Reporter</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for issue in stats.recent_resolved_issues %}
-                        <tr>
-                            <td>
-                                <div>
-                                    <strong>{{ issue.title|truncatechars:40 }}</strong>
-                                    {% if issue.category %}
-                                        <small class="text-muted d-block">{{ issue.category.name }}</small>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge bg-{{ issue.priority_color }}">
-                                    {{ issue.get_priority_display }}
-                                </span>
-                            </td>
-                            <td>{{ issue.updated_at|date:"M d, H:i" }}</td>
-                            <td>
-                                {% if issue.created_by %}
-                                    {{ issue.created_by.profile.first_name }} {{ issue.created_by.profile.last_name }}
-                                {% else %}
-                                    <span class="text-muted">Unknown</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="text-center mt-3">
-                <a href="{% url 'issue_management:issue_list' %}?view=resolved" class="btn btn-outline-success">
-                    View All Resolved Issues
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
     {% else %}
     <!-- No Space Selected -->
-    <div class="card">
+    <div class="card no-space-selected">
         <div class="card-body text-center py-5">
             <i class="fas fa-hand-pointer fa-3x text-muted mb-4"></i>
             <h4 class="text-muted">Select a Space to Begin</h4>
-            <p class="text-muted">Choose a space from the switcher in the navigation bar to view its details and manage activities.</p>
+            <p class="text-muted">Choose a space from the switcher above to view its details and manage activities.</p>
         </div>
     </div>
     {% endif %}
 
     {% else %}
     <!-- No Spaces Assigned -->
-    <div class="row">
+    <div class="row no-spaces-assigned">
         <div class="col-12">
             <div class="alert alert-warning text-center">
                 <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
