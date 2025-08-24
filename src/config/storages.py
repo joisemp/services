@@ -1,5 +1,8 @@
 from storages.backends.s3boto3 import S3Boto3Storage
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class StaticStorage(S3Boto3Storage):
     """
@@ -28,3 +31,28 @@ class MediaStorage(S3Boto3Storage):
             params["ACL"] = "public-read"
 
         return params
+    
+    def _save(self, name, content):
+        """
+        Override the _save method to add logging and error handling
+        """
+        try:
+            logger.info(f"Attempting to save file: {name}")
+            saved_name = super()._save(name, content)
+            logger.info(f"Successfully saved file: {saved_name}")
+            return saved_name
+        except Exception as e:
+            logger.error(f"Failed to save file {name}: {str(e)}")
+            raise e
+    
+    def exists(self, name):
+        """
+        Override exists method with logging
+        """
+        try:
+            exists = super().exists(name)
+            logger.debug(f"File exists check for {name}: {exists}")
+            return exists
+        except Exception as e:
+            logger.error(f"Error checking if file exists {name}: {str(e)}")
+            return False

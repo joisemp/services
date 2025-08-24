@@ -7,6 +7,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
+from django.db import transaction
+import signal
+import logging
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
@@ -231,12 +234,51 @@ def issue_list(request):
     return render(request, 'issue_management/issue_list.html', context)
 
 def report_issue(request):
+    logger = logging.getLogger(__name__)
+    
+    # Timeout handler to prevent worker timeout
+    def timeout_handler(signum, frame):
+        logger.error("File upload timeout detected")
+        raise TimeoutError("File upload operation timed out")
+    
     if request.method == 'POST':
-        form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
-        images = request.FILES.getlist('image')
-        if len(images) > 3:
-            form.add_error('image', 'You can upload a maximum of 3 images.')
-        if form.is_valid():
+        # Set up timeout protection (90 seconds) - only on Unix systems
+        timeout_set = False
+        if hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(90)
+                timeout_set = True
+                logger.info("Timeout protection enabled for file upload")
+            except (OSError, AttributeError):
+                logger.warning("Could not set timeout protection - continuing without it")
+        
+        try:
+            form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
+            images = request.FILES.getlist('image')
+            
+            # Validate images separately since they're not part of the form model
+            image_errors = []
+            if len(images) > 3:
+                image_errors.append('You can upload a maximum of 3 images.')
+            
+            # Validate image file types and sizes
+            allowed_image_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+            max_image_size = 3 * 1024 * 1024  # Reduced to 3MB to prevent timeouts
+            
+            for img in images:
+                if img.content_type not in allowed_image_types:
+                    image_errors.append(f'Invalid image type: {img.name}. Allowed types: JPEG, PNG, GIF, WebP.')
+                if img.size > max_image_size:
+                    image_errors.append(f'Image {img.name} is too large. Maximum size is 3MB.')
+            
+            if image_errors:
+                for error in image_errors:
+                    form.add_error(None, error)
+            
+            if form.is_valid() and not image_errors:
+                logger.info(f"Starting issue creation process for user: {request.user.id if request.user.is_authenticated else 'anonymous'}")
+            
             # Check for potential duplicate submissions using multiple methods
             
             # Method 1: Session-based duplicate prevention
@@ -256,12 +298,14 @@ def report_issue(request):
                     # Prevent duplicate submission within 30 seconds with same title
                     if (timezone.now() - last_time < timedelta(seconds=30) and 
                         last_title == form.cleaned_data['title']):
+                        logger.warning(f"Duplicate submission prevented for user {request.user.id}: {last_title}")
                         messages.warning(request, 
                             'You recently submitted an issue with the same title. '
                             'Please wait a moment before submitting again or use a different title.'
                         )
                         return render(request, 'issue_management/report_issue.html', {'form': form})
                 except (json.JSONDecodeError, KeyError, ValueError):
+                    logger.warning("Invalid session data found, continuing with submission")
                     pass  # Invalid session data, continue with submission
             
             # Method 2: Database duplicate check for authenticated users
@@ -277,6 +321,7 @@ def report_issue(request):
                 ).first()
                 
                 if existing_issue:
+                    logger.warning(f"Duplicate issue found, redirecting to existing issue: {existing_issue.id}")
                     messages.warning(request, 
                         f'An issue with the same title was recently created. '
                         f'<a href="/issues/{existing_issue.slug}/" class="alert-link">View the existing issue</a>.'
@@ -284,7 +329,15 @@ def report_issue(request):
                     return redirect('issue_management:issue_detail', slug=existing_issue.slug)
             
             try:
+                logger.info("Starting issue creation with optimized file handling")
+                
+                # Create the issue object first without files to avoid timeout
                 issue = form.save(commit=False)
+                
+                # Clear the voice file temporarily to save the issue first
+                voice_file = issue.voice
+                issue.voice = None
+                
                 # Assign organisation and space if user is authenticated and has a profile
                 if request.user.is_authenticated and hasattr(request.user, 'profile'):
                     issue.org = request.user.profile.org
@@ -296,11 +349,47 @@ def report_issue(request):
                     elif request.user.profile.user_type == 'central_admin':
                         if form.cleaned_data.get('space'):
                             issue.space = form.cleaned_data['space']
-                issue.save()
                 
-                # Handle multiple images (limit to 3)
-                for img in images[:3]:
-                    IssueImage.objects.create(issue=issue, image=img)
+                logger.info(f"Issue prepared for saving: {issue.title}")
+                
+                # Save the issue first without files to get an ID quickly
+                issue.save()
+                logger.info(f"Issue saved successfully: {issue.id}")
+                
+                # Now handle file uploads with timeout protection
+                uploaded_images = 0
+                image_upload_errors = []
+                voice_uploaded = False
+                
+                # Handle voice file upload if present
+                if voice_file:
+                    try:
+                        logger.info(f"Uploading voice file for issue {issue.id}")
+                        issue.voice = voice_file
+                        issue.save(update_fields=['voice'])
+                        voice_uploaded = True
+                        logger.info(f"Voice file uploaded successfully for issue {issue.id}")
+                    except Exception as voice_error:
+                        logger.error(f"Voice upload failed for issue {issue.id}: {str(voice_error)}")
+                        # Don't fail the entire process for voice upload failure
+                
+                # Handle image uploads with individual error handling
+                for i, img in enumerate(images[:3]):
+                    try:
+                        logger.info(f"Processing image {i+1}/{len(images[:3])}: {img.name}")
+                        
+                        # Validate image size before upload
+                        if img.size > 5 * 1024 * 1024:  # 5MB limit
+                            raise ValueError(f"Image too large: {img.size} bytes")
+                        
+                        issue_image = IssueImage.objects.create(issue=issue, image=img)
+                        uploaded_images += 1
+                        logger.info(f"Image {i+1} uploaded successfully for issue {issue.id}")
+                        
+                    except Exception as img_error:
+                        logger.error(f"Failed to upload image {img.name} for issue {issue.id}: {str(img_error)}")
+                        image_upload_errors.append(f"Failed to upload {img.name}: {str(img_error)}")
+                        # Continue with other images even if one fails
                 
                 # Store submission info in session for duplicate prevention
                 import json
@@ -311,18 +400,71 @@ def report_issue(request):
                     'issue_id': issue.id
                 }
                 request.session[session_key] = json.dumps(submission_data)
+                
+                # Create success message
+                success_msg = f'Issue "{issue.title}" has been reported successfully.'
+                if uploaded_images > 0:
+                    success_msg += f' {uploaded_images} of {len(images)} image(s) uploaded.'
+                if voice_uploaded:
+                    success_msg += ' Voice note uploaded.'
+                if image_upload_errors:
+                    success_msg += f' Note: {len(image_upload_errors)} file(s) failed to upload.'
+                
+                logger.info(f"Issue creation completed: {issue.id}, images: {uploaded_images}, voice: {voice_uploaded}")
+                messages.success(request, success_msg)
+                
+                # Add warnings for any upload failures
+                for error in image_upload_errors:
+                    messages.warning(request, error)
                     
-                messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
                 return redirect('issue_management:issue_detail', slug=issue.slug)
                 
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Error creating issue: {str(e)}")
-                messages.error(request, 'An error occurred while creating the issue. Please try again.')
+                logger.error(f"Critical error creating issue: {str(e)}", exc_info=True)
+                
+                # Add more specific error details for debugging
+                error_details = {
+                    'error_type': type(e).__name__,
+                    'error_message': str(e),
+                    'user_id': request.user.id if request.user.is_authenticated else None,
+                    'form_data': {
+                        'title': form.cleaned_data.get('title', '') if form.cleaned_data else '',
+                        'has_voice': bool(request.FILES.get('voice')),
+                        'image_count': len(images)
+                    }
+                }
+                logger.error(f"Issue creation error details: {error_details}")
+                
+                messages.error(request, 
+                    'An error occurred while creating the issue. Please try again. '
+                    'If the problem persists, please contact support.'
+                )
+            else:
+                # Log form validation errors
+                logger.warning(f"Form validation failed: {form.errors}, Image errors: {image_errors}")
+        
+        except TimeoutError:
+            logger.error("File upload timed out")
+            messages.error(request, 
+                'File upload is taking too long. Please try uploading smaller files or fewer images.'
+            )
+        except Exception as general_error:
+            logger.error(f"Unexpected error in issue creation: {str(general_error)}", exc_info=True)
+            messages.error(request, 
+                'An unexpected error occurred. Please try again.'
+            )
+        finally:
+            # Clear the timeout alarm if it was set
+            if timeout_set and hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
+                try:
+                    signal.alarm(0)
+                    logger.debug("Timeout alarm cleared")
+                except (OSError, AttributeError):
+                    pass
                 
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
+    
     return render(request, 'issue_management/report_issue.html', {'form': form})
 
 def issue_detail(request, slug):

@@ -243,6 +243,9 @@ class Issue(models.Model):
         return timedelta()
 
     def save(self, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # Set resolved_at when status changes to resolved
         if self.status == 'resolved' and not self.resolved_at:
             from django.utils import timezone
@@ -257,10 +260,27 @@ class Issue(models.Model):
         elif self.status != 'escalated':
             self.escalated_at = None
             
+        # Generate slug if not exists
         if not self.slug:
             base_slug = slugify(self.title)
             self.slug = generate_unique_slug(self, base_slug)
-        super().save(*args, **kwargs)
+        
+        # Handle voice file validation before saving
+        if self.voice:
+            try:
+                # Ensure voice file is accessible
+                voice_size = self.voice.size
+                logger.info(f"Voice file validated for issue: {self.title}, size: {voice_size}")
+            except Exception as e:
+                logger.error(f"Voice file validation failed for issue {self.title}: {str(e)}")
+                # Don't raise error, just log it to avoid breaking the save
+        
+        try:
+            super().save(*args, **kwargs)
+            logger.info(f"Issue saved successfully: {self.title} (ID: {self.id})")
+        except Exception as e:
+            logger.error(f"Failed to save issue {self.title}: {str(e)}")
+            raise e
 
     def __str__(self):
         return self.title
@@ -339,26 +359,46 @@ class IssueImage(models.Model):
         from io import BytesIO
         from PIL import Image
         from django.core.files.base import ContentFile
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         # Compress image if it's newly uploaded
         if self.image and not self.image.closed:
             try:
+                logger.info(f"Processing image: {self.image.name}")
                 img = Image.open(self.image)
                 img_format = img.format if img.format else 'JPEG'
+                
                 # Convert to RGB if not already (for JPEG)
                 if img_format == 'JPEG' and img.mode != 'RGB':
                     img = img.convert('RGB')
+                
                 buffer = BytesIO()
                 img.save(buffer, format=img_format, quality=70, optimize=True)
                 buffer.seek(0)
-                self.image = ContentFile(buffer.read(), name=self.image.name)
+                
+                # Replace the image with compressed version
+                compressed_content = ContentFile(buffer.read(), name=self.image.name)
+                self.image = compressed_content
+                
+                logger.info(f"Image compressed successfully: {self.image.name}")
+                
             except Exception as e:
-                pass  # If compression fails, save original
+                logger.warning(f"Image compression failed for {self.image.name}: {str(e)}")
+                # If compression fails, save original
 
         if not self.slug:
             base_slug = slugify(f"{self.issue.title}-image")
             self.slug = generate_unique_slug(self, base_slug)
-        super().save(*args, **kwargs)
+        
+        # Call the parent save method and ensure it completes
+        try:
+            super().save(*args, **kwargs)
+            logger.info(f"IssueImage saved successfully: {self.slug}")
+        except Exception as e:
+            logger.error(f"Failed to save IssueImage {self.slug}: {str(e)}")
+            raise e
 
     def __str__(self):
         return f"Image for {self.issue.title}"
