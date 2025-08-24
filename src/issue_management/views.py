@@ -313,12 +313,17 @@ def issue_detail(request, slug):
     # Get escalation history
     escalation_history = issue.escalation_history
     
-    # Check if user can delete the issue (general users within 15 minutes)
+    # Check if user can delete the issue
     can_delete = False
-    if (user_profile.user_type == 'general_user' and 
-        issue.created_by == request.user and 
-        issue.status == 'open' and 
-        not issue.maintainer):
+    
+    # Central admins can delete any issue in their organization
+    if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
+        can_delete = True
+    # General users can delete their own issues within 15 minutes if certain conditions are met
+    elif (user_profile.user_type == 'general_user' and 
+          issue.created_by == request.user and 
+          issue.status == 'open' and 
+          not issue.maintainer):
         from datetime import timedelta
         time_limit = timedelta(minutes=15)
         time_since_creation = timezone.now() - issue.created_at
@@ -1037,7 +1042,7 @@ def end_work_session(request, slug):
 
 @login_required
 def delete_issue(request, slug):
-    """Delete an issue - only allowed for general users within 15 minutes of creation"""
+    """Delete an issue - allowed for general users within 15 minutes of creation or central admins at any time"""
     issue = get_object_or_404(Issue, slug=slug)
     
     # Check permissions
@@ -1045,47 +1050,85 @@ def delete_issue(request, slug):
         return HttpResponseForbidden('Access denied.')
     
     user_profile = request.user.profile
+    can_delete = False
+    is_central_admin = False
     
-    # Only the issue creator can delete their own issue
-    if issue.created_by != request.user:
-        return HttpResponseForbidden('You can only delete issues you created.')
+    # Central admins can delete any issue in their organization
+    if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
+        can_delete = True
+        is_central_admin = True
+    # General users can delete their own issues within 15 minutes
+    elif (user_profile.user_type == 'general_user' and 
+          issue.created_by == request.user):
+        
+        # Check if issue was created within the last 15 minutes
+        from datetime import timedelta
+        time_limit = timedelta(minutes=15)
+        time_since_creation = timezone.now() - issue.created_at
+        
+        if time_since_creation <= time_limit:
+            # Additional checks for general users
+            if issue.maintainer:
+                messages.error(request, 'Cannot delete an issue that has been assigned to a maintainer.')
+                return redirect('issue_management:issue_detail', slug=slug)
+            
+            if issue.status != 'open':
+                messages.error(request, 'Cannot delete an issue that is no longer in open status.')
+                return redirect('issue_management:issue_detail', slug=slug)
+            
+            can_delete = True
+        else:
+            messages.error(request, 'You can only delete issues within 15 minutes of creation.')
+            return redirect('issue_management:issue_detail', slug=slug)
+    else:
+        return HttpResponseForbidden('You do not have permission to delete this issue.')
     
-    # Only general users can delete issues (other user types have different workflows)
-    if user_profile.user_type != 'general_user':
-        return HttpResponseForbidden('Only general users can delete their own issues.')
-    
-    # Check if issue was created within the last 15 minutes
-    from datetime import timedelta
-    time_limit = timedelta(minutes=15)
-    time_since_creation = timezone.now() - issue.created_at
-    
-    if time_since_creation > time_limit:
-        messages.error(request, 'You can only delete issues within 15 minutes of creation.')
-        return redirect('issue_management:issue_detail', slug=slug)
-    
-    # Check if issue has been assigned to a maintainer
-    if issue.maintainer:
-        messages.error(request, 'Cannot delete an issue that has been assigned to a maintainer.')
-        return redirect('issue_management:issue_detail', slug=slug)
-    
-    # Check if issue status has changed from 'open'
-    if issue.status != 'open':
-        messages.error(request, 'Cannot delete an issue that is no longer in open status.')
-        return redirect('issue_management:issue_detail', slug=slug)
+    if not can_delete:
+        return HttpResponseForbidden('You do not have permission to delete this issue.')
     
     if request.method == 'POST':
         issue_title = issue.title
+        
+        # Create a status history record for deletion (for audit purposes)
+        if not is_central_admin:
+            # For general users, create history as usual
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status=issue.status,
+                new_status='deleted',
+                comment=f"Issue deleted by {request.user.profile.first_name} {request.user.profile.last_name} (general user within time limit)"
+            )
+        else:
+            # For central admins, create history record noting admin deletion
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status=issue.status,
+                new_status='deleted',
+                comment=f"Issue deleted by central admin {request.user.profile.first_name} {request.user.profile.last_name}"
+            )
+        
         issue.delete()
         messages.success(request, f'Issue "{issue_title}" has been deleted successfully.')
         return redirect('issue_management:issue_list')
     
-    # Calculate remaining time for deletion
-    remaining_time = time_limit - time_since_creation
-    remaining_minutes = int(remaining_time.total_seconds() // 60)
-    remaining_seconds = int(remaining_time.total_seconds() % 60)
+    # Calculate remaining time for deletion (only for general users)
+    remaining_time = None
+    remaining_minutes = None
+    remaining_seconds = None
+    
+    if not is_central_admin:
+        from datetime import timedelta
+        time_limit = timedelta(minutes=15)
+        time_since_creation = timezone.now() - issue.created_at
+        remaining_time = time_limit - time_since_creation
+        remaining_minutes = int(remaining_time.total_seconds() // 60)
+        remaining_seconds = int(remaining_time.total_seconds() % 60)
     
     context = {
         'issue': issue,
+        'is_central_admin': is_central_admin,
         'remaining_minutes': remaining_minutes,
         'remaining_seconds': remaining_seconds,
     }
