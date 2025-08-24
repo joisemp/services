@@ -49,19 +49,50 @@ def get_dashboard_stats(user, selected_space=None):
         categories_base = IssueCategory.objects.filter(org=user.profile.org) if user.profile.org else IssueCategory.objects.none()
         spaces_base = Spaces.objects.none()  # General users don't see space stats
         
-    elif user_type == 'maintainer' and selected_space:
-        # Maintainers see issues assigned to them and org-wide context
+    elif user_type == 'maintainer':
+        # Maintainers see issues assigned to them or that they have worked on before
+        from django.db.models import Q
+        
+        # Get issues where the maintainer:
+        # 1. Is currently assigned (maintainer=user)
+        # 2. Has work sessions (worked on it before)
+        # 3. Has status history (was assigned before) 
+        # 4. Has commented on the issue (was involved)
+        
+        # Import work session model
+        from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
+        
+        # Get issue IDs where maintainer has worked or been involved
+        worked_issue_ids = IssueWorkSession.objects.filter(maintainer=user).values_list('issue_id', flat=True)
+        status_history_issue_ids = IssueStatusHistory.objects.filter(
+            Q(old_maintainer=user) | Q(new_maintainer=user)
+        ).values_list('issue_id', flat=True)
+        commented_issue_ids = IssueComment.objects.filter(author=user).values_list('issue_id', flat=True)
+        
+        # Combine all relevant issue IDs
+        relevant_issue_ids = set(worked_issue_ids) | set(status_history_issue_ids) | set(commented_issue_ids)
+        
+        # Filter issues: currently assigned OR has worked on before
+        maintainer_issues_query = Q(maintainer=user) | Q(id__in=relevant_issue_ids)
+        
         if user.profile.org:
-            issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org)).exclude(status__in=['resolved', 'escalated'])  # Exclude resolved and escalated issues from main stats
-            resolved_issues_base = Issue.objects.filter(Q(maintainer=user) | Q(org=user.profile.org), status='resolved')  # Separate resolved issues
+            # Filter by org as well for security
+            issues_base = Issue.objects.filter(
+                maintainer_issues_query & Q(org=user.profile.org)
+            ).exclude(status__in=['resolved', 'escalated'])
+            
+            resolved_issues_base = Issue.objects.filter(
+                maintainer_issues_query & Q(org=user.profile.org, status='resolved')
+            )
+            
             users_base = User.objects.filter(profile__org=user.profile.org)
             transactions_base = FinancialTransaction.objects.filter(org=user.profile.org)
             categories_base = IssueCategory.objects.filter(org=user.profile.org)
             spaces_base = Spaces.objects.filter(org=user.profile.org)
         else:
-            # No org context, only see assigned issues
-            issues_base = Issue.objects.filter(maintainer=user).exclude(status__in=['resolved', 'escalated'])  # Exclude resolved and escalated issues from main stats
-            resolved_issues_base = Issue.objects.filter(maintainer=user, status='resolved')  # Separate resolved issues
+            # No org context, only see assigned issues or ones worked on
+            issues_base = Issue.objects.filter(maintainer_issues_query).exclude(status__in=['resolved', 'escalated'])
+            resolved_issues_base = Issue.objects.filter(maintainer_issues_query & Q(status='resolved'))
             users_base = User.objects.filter(id=user.id)
             transactions_base = FinancialTransaction.objects.none()
             categories_base = IssueCategory.objects.none()

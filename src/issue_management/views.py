@@ -58,16 +58,34 @@ def issue_list(request):
             issues = Issue.objects.none()
             
     elif request.user.profile.user_type == 'maintainer':
-        # Maintainer sees assigned issues - can view resolved ones separately
+        # Maintainer sees issues assigned to them or that they have worked on before
+        from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
+        
+        # Get issue IDs where maintainer has worked or been involved
+        worked_issue_ids = IssueWorkSession.objects.filter(maintainer=request.user).values_list('issue_id', flat=True)
+        status_history_issue_ids = IssueStatusHistory.objects.filter(
+            Q(old_maintainer=request.user) | Q(new_maintainer=request.user)
+        ).values_list('issue_id', flat=True)
+        commented_issue_ids = IssueComment.objects.filter(author=request.user).values_list('issue_id', flat=True)
+        
+        # Combine all relevant issue IDs
+        relevant_issue_ids = set(worked_issue_ids) | set(status_history_issue_ids) | set(commented_issue_ids)
+        
+        # Filter issues: currently assigned OR has worked on before
+        maintainer_issues_query = Q(maintainer=request.user) | Q(id__in=relevant_issue_ids)
+        
+        # Apply org filter for security if user has org
+        if request.user.profile.org:
+            maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
+        
         if view_type == 'resolved':
             issues = Issue.objects.filter(
-                maintainer=request.user,
-                status='resolved'
+                maintainer_issues_query & Q(status='resolved')
             ).order_by('-updated_at')
         else:
             # Active issues only (excluding escalated and resolved for normal view)
             issues = Issue.objects.filter(
-                maintainer=request.user
+                maintainer_issues_query
             ).exclude(status__in=['escalated', 'resolved']).order_by('-created_at')
         
     else:
@@ -107,8 +125,27 @@ def issue_list(request):
         if request.user.profile.user_type == 'space_admin' and selected_space:
             base_issues = Issue.objects.filter(space=selected_space)
         elif request.user.profile.user_type == 'maintainer':
-            # For maintainers, count all their assigned issues for stats
-            base_issues = Issue.objects.filter(maintainer=request.user)
+            # For maintainers, count issues they are assigned to or have worked on
+            from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
+            
+            # Get issue IDs where maintainer has worked or been involved
+            worked_issue_ids = IssueWorkSession.objects.filter(maintainer=request.user).values_list('issue_id', flat=True)
+            status_history_issue_ids = IssueStatusHistory.objects.filter(
+                Q(old_maintainer=request.user) | Q(new_maintainer=request.user)
+            ).values_list('issue_id', flat=True)
+            commented_issue_ids = IssueComment.objects.filter(author=request.user).values_list('issue_id', flat=True)
+            
+            # Combine all relevant issue IDs
+            relevant_issue_ids = set(worked_issue_ids) | set(status_history_issue_ids) | set(commented_issue_ids)
+            
+            # Filter issues: currently assigned OR has worked on before
+            maintainer_issues_query = Q(maintainer=request.user) | Q(id__in=relevant_issue_ids)
+            
+            # Apply org filter for security if user has org
+            if request.user.profile.org:
+                maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
+            
+            base_issues = Issue.objects.filter(maintainer_issues_query)
         elif request.user.profile.user_type not in ['central_admin']:
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
     
