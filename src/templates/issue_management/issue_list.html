@@ -51,9 +51,9 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <span class="material-symbols-outlined me-2">list_alt</span>
-                        <span>Total Issues</span>
+                        <span>Total Active</span>
                     </div>
-                    <h5>{{ assigned_count|add:pending_count|add:in_progress_count|add:escalated_count }}</h5>
+                    <h5>{{ total_active_count }}</h5>
                 </div>
             </div>
             <div class="card open-issue" style="flex: 1;">

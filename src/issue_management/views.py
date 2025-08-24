@@ -119,11 +119,27 @@ def issue_list(request):
             Q(description__icontains=search)
         )
     
-    # Calculate statistics based on filtered issues (before additional filters)
-    base_issues = Issue.objects.filter(org=request.user.profile.org) if request.user.is_authenticated and hasattr(request.user, 'profile') else Issue.objects.none()
+    # Calculate statistics based on user type and permissions (should match the same filtering logic as issues)
+    base_issues = Issue.objects.none()
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        if request.user.profile.user_type == 'space_admin' and selected_space:
-            base_issues = Issue.objects.filter(space=selected_space)
+        if request.user.profile.user_type == 'central_admin':
+            # Central admin sees org-wide statistics
+            base_issues = Issue.objects.filter(org=request.user.profile.org)
+            
+            # Apply space filter if selected
+            if selected_space:
+                base_issues = base_issues.filter(space=selected_space)
+            elif request.GET.get('space_filter') == 'no_space':
+                base_issues = base_issues.filter(space__isnull=True)
+                
+        elif request.user.profile.user_type == 'space_admin':
+            # Space admin sees statistics from their current active space
+            if selected_space:
+                base_issues = Issue.objects.filter(space=selected_space)
+            else:
+                # No spaces available - show empty stats
+                base_issues = Issue.objects.none()
+                
         elif request.user.profile.user_type == 'maintainer':
             # For maintainers, count issues they are assigned to or have worked on
             from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
@@ -146,23 +162,37 @@ def issue_list(request):
                 maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
             
             base_issues = Issue.objects.filter(maintainer_issues_query)
-        elif request.user.profile.user_type not in ['central_admin']:
+        else:
+            # Regular users see statistics for issues they created
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
     
     # Separate counts for active and resolved issues
     active_issues = base_issues.exclude(status='resolved')
     resolved_issues = base_issues.filter(status='resolved')
     
-    assigned_count = active_issues.filter(maintainer__isnull=False).count()
+    # Calculate specific status counts
     pending_count = active_issues.filter(status='open').count()
     in_progress_count = active_issues.filter(status='in_progress').count()
-    resolved_count = resolved_issues.count()
     escalated_count = active_issues.filter(status='escalated').count()
+    resolved_count = resolved_issues.count()
     
+    # Assigned count should reflect issues that have a maintainer assigned (excluding resolved)
+    assigned_count = active_issues.filter(maintainer__isnull=False).count()
+    
+    # Total active issues count
+    total_active_count = pending_count + in_progress_count + escalated_count
+    
+    # Initialize my_issues_count
+    my_issues_count = 0
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
         if request.user.profile.user_type == 'maintainer':
+            # For maintainers, count only currently assigned issues
             my_issues_count = base_issues.filter(maintainer=request.user).count()
+        elif request.user.profile.user_type in ['central_admin', 'space_admin']:
+            # For admins, show total active issues in their scope (not personally created)
+            my_issues_count = active_issues.count()
         else:
+            # For regular users, show issues they created
             my_issues_count = base_issues.filter(created_by=request.user).count()
     
     # Get categories for filter dropdown
@@ -179,6 +209,7 @@ def issue_list(request):
     context = {
         'issues': page_obj,
         'page_obj': page_obj,
+        'total_active_count': total_active_count,
         'assigned_count': assigned_count,
         'pending_count': pending_count,
         'in_progress_count': in_progress_count,
