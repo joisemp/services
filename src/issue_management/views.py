@@ -237,24 +237,90 @@ def report_issue(request):
         if len(images) > 3:
             form.add_error('image', 'You can upload a maximum of 3 images.')
         if form.is_valid():
-            issue = form.save(commit=False)
-            # Assign organisation and space if user is authenticated and has a profile
-            if request.user.is_authenticated and hasattr(request.user, 'profile'):
-                issue.org = request.user.profile.org
-                issue.created_by = request.user
-                # Set space based on user type and context
-                if request.user.profile.user_type == 'space_admin':
-                    if request.user.profile.current_active_space:
-                        issue.space = request.user.profile.current_active_space
-                elif request.user.profile.user_type == 'central_admin':
-                    if form.cleaned_data.get('space'):
-                        issue.space = form.cleaned_data['space']
-            issue.save()
-            # Handle multiple images (limit to 3)
-            for img in images[:3]:
-                IssueImage.objects.create(issue=issue, image=img)
-            messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
-            return redirect('issue_management:issue_detail', slug=issue.slug)
+            # Check for potential duplicate submissions using multiple methods
+            
+            # Method 1: Session-based duplicate prevention
+            session_key = f"last_issue_submission_{request.user.id if request.user.is_authenticated else request.session.session_key}"
+            last_submission = request.session.get(session_key)
+            
+            if last_submission:
+                from django.utils import timezone
+                import json
+                from datetime import timedelta
+                
+                try:
+                    last_data = json.loads(last_submission)
+                    last_time = timezone.datetime.fromisoformat(last_data['timestamp'])
+                    last_title = last_data['title']
+                    
+                    # Prevent duplicate submission within 30 seconds with same title
+                    if (timezone.now() - last_time < timedelta(seconds=30) and 
+                        last_title == form.cleaned_data['title']):
+                        messages.warning(request, 
+                            'You recently submitted an issue with the same title. '
+                            'Please wait a moment before submitting again or use a different title.'
+                        )
+                        return render(request, 'issue_management/report_issue.html', {'form': form})
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    pass  # Invalid session data, continue with submission
+            
+            # Method 2: Database duplicate check for authenticated users
+            if request.user.is_authenticated:
+                from django.utils import timezone
+                from datetime import timedelta
+                
+                recent_cutoff = timezone.now() - timedelta(minutes=2)  # 2 minute window
+                existing_issue = Issue.objects.filter(
+                    created_by=request.user,
+                    title=form.cleaned_data['title'],
+                    created_at__gte=recent_cutoff
+                ).first()
+                
+                if existing_issue:
+                    messages.warning(request, 
+                        f'An issue with the same title was recently created. '
+                        f'<a href="/issues/{existing_issue.slug}/" class="alert-link">View the existing issue</a>.'
+                    )
+                    return redirect('issue_management:issue_detail', slug=existing_issue.slug)
+            
+            try:
+                issue = form.save(commit=False)
+                # Assign organisation and space if user is authenticated and has a profile
+                if request.user.is_authenticated and hasattr(request.user, 'profile'):
+                    issue.org = request.user.profile.org
+                    issue.created_by = request.user
+                    # Set space based on user type and context
+                    if request.user.profile.user_type == 'space_admin':
+                        if request.user.profile.current_active_space:
+                            issue.space = request.user.profile.current_active_space
+                    elif request.user.profile.user_type == 'central_admin':
+                        if form.cleaned_data.get('space'):
+                            issue.space = form.cleaned_data['space']
+                issue.save()
+                
+                # Handle multiple images (limit to 3)
+                for img in images[:3]:
+                    IssueImage.objects.create(issue=issue, image=img)
+                
+                # Store submission info in session for duplicate prevention
+                import json
+                from django.utils import timezone
+                submission_data = {
+                    'timestamp': timezone.now().isoformat(),
+                    'title': issue.title,
+                    'issue_id': issue.id
+                }
+                request.session[session_key] = json.dumps(submission_data)
+                    
+                messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
+                return redirect('issue_management:issue_detail', slug=issue.slug)
+                
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error creating issue: {str(e)}")
+                messages.error(request, 'An error occurred while creating the issue. Please try again.')
+                
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
     return render(request, 'issue_management/report_issue.html', {'form': form})
