@@ -32,4 +32,7 @@ urlpatterns += [
     path('people/delete/<slug:profile_id>/',
          views.delete_person,
          name='delete_person'),
+    path('people/generate-password/<slug:profile_id>/',
+         views.generate_user_password,
+         name='generate_user_password'),
 ]

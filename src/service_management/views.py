@@ -539,3 +539,44 @@ def no_spaces_assigned(request):
     }
     return render(request, 'service_management/no_spaces_assigned.html', context)
 
+
+@login_required
+@user_passes_test(is_central_admin)
+def generate_user_password(request, profile_id):
+    """Generate a new password for a user"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    try:
+        # Get the user profile
+        profile = get_object_or_404(UserProfile, pk=profile_id)
+        
+        # Ensure the profile belongs to the central admin's organization
+        orgs = Organisation.objects.filter(central_admins=request.user)
+        if profile.org not in orgs:
+            return JsonResponse({'success': False, 'error': 'User not in your organization'})
+        
+        # Prevent admin from changing their own password this way
+        if profile.user == request.user:
+            return JsonResponse({'success': False, 'error': 'Cannot generate password for yourself'})
+        
+        # Generate a new secure password
+        new_password = secrets.token_urlsafe(12)  # Generates a 12-character URL-safe password
+        
+        # Set the new password
+        profile.user.set_password(new_password)
+        profile.user.save()
+        
+        # Return the new password
+        return JsonResponse({
+            'success': True, 
+            'password': new_password,
+            'user_name': f"{profile.first_name} {profile.last_name}",
+            'message': f'New password generated for {profile.first_name} {profile.last_name}'
+        })
+        
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'User not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'An error occurred: {str(e)}'})
+
