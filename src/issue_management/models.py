@@ -313,6 +313,22 @@ class IssueStatusHistory(models.Model):
     
     def __str__(self):
         return f"{self.issue.title} - {self.old_status} to {self.new_status}"
+    
+    def get_resolution_images(self):
+        """Get resolution images associated with this status change"""
+        if self.new_status == 'resolved':
+            # Get images created around the same time as this status change (within 1 minute)
+            from django.utils import timezone
+            time_window = timezone.timedelta(minutes=1)
+            start_time = self.created_at - time_window
+            end_time = self.created_at + time_window
+            
+            return IssueResolutionImage.objects.filter(
+                issue=self.issue,
+                uploaded_at__gte=start_time,
+                uploaded_at__lte=end_time
+            )
+        return IssueResolutionImage.objects.none()
 
 class IssueImage(models.Model):
     issue = models.ForeignKey(Issue, related_name='images', on_delete=models.CASCADE)
@@ -346,6 +362,49 @@ class IssueImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.issue.title}"
+
+
+class IssueResolutionImage(models.Model):
+    """Images attached by maintainers when resolving issues"""
+    issue = models.ForeignKey(Issue, related_name='resolution_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/issue_resolution_images/')
+    uploaded_by = models.ForeignKey('core.User', on_delete=models.CASCADE, limit_choices_to={'profile__user_type': 'maintainer'})
+    description = models.CharField(max_length=255, blank=True, help_text="Optional description of the resolution image")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True, db_index=True, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = "Issue Resolution Image"
+        verbose_name_plural = "Issue Resolution Images"
+
+    def save(self, *args, **kwargs):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.base import ContentFile
+
+        # Compress image if it's newly uploaded
+        if self.image and not self.image.closed:
+            try:
+                img = Image.open(self.image)
+                img_format = img.format if img.format else 'JPEG'
+                # Convert to RGB if not already (for JPEG)
+                if img_format == 'JPEG' and img.mode != 'RGB':
+                    img = img.convert('RGB')
+                buffer = BytesIO()
+                img.save(buffer, format=img_format, quality=70, optimize=True)
+                buffer.seek(0)
+                self.image = ContentFile(buffer.read(), name=self.image.name)
+            except Exception as e:
+                pass  # If compression fails, save original
+
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-resolution-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Resolution image for {self.issue.title} by {self.uploaded_by.profile.first_name}"
 
 
 class IssueWorkSession(models.Model):

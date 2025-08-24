@@ -277,16 +277,49 @@
             </div>
 
             <!-- Resolution Notes -->
-            {% if issue.resolution_notes %}
+            {% if issue.resolution_notes or resolution_images %}
                 <div class="card mb-4">
                     <div class="card-body">
                         <h5 class="card-title text-success">
                             <i class="fas fa-check-circle"></i> Resolution
                         </h5>
-                        <p>{{ issue.resolution_notes|linebreaks }}</p>
+                        
+                        {% if issue.resolution_notes %}
+                            <p>{{ issue.resolution_notes|linebreaks }}</p>
+                        {% endif %}
+                        
+                        <!-- Display resolution images -->
+                        {% if resolution_images %}
+                            <div class="mt-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-images"></i> Resolution Images:
+                                </h6>
+                                <div class="row g-2">
+                                    {% for image in resolution_images %}
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="position-relative">
+                                                <img src="{{ image.image.url }}" 
+                                                     class="img-fluid rounded shadow-sm" 
+                                                     style="width: 100%; height: 150px; object-fit: cover; cursor: pointer;"
+                                                     onclick="showImagePreview('{{ image.image.url }}')"
+                                                     title="Resolution image uploaded on {{ image.uploaded_at|date:'M d, Y \a\\t g:i A' }}">
+                                                <div class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center py-1"
+                                                     style="font-size: 0.75rem;">
+                                                    {{ forloop.counter }} of {{ resolution_images|length }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
                         {% if issue.resolved_at %}
-                            <small class="text-muted">
+                            <small class="text-muted d-block mt-2">
                                 Resolved on {{ issue.resolved_at|date:"M d, Y \a\\t g:i A" }}
+                                {% if issue.maintainer %}
+                                    by {{ issue.maintainer.profile.first_name }} {{ issue.maintainer.profile.last_name }}
+                                {% endif %}
                             </small>
                         {% endif %}
                     </div>
@@ -555,6 +588,30 @@
                                     {% if history.comment %}
                                         <div class="mt-1">{{ history.comment }}</div>
                                     {% endif %}
+                                    
+                                    <!-- Display resolution images if this is a resolution status change -->
+                                    {% if history.new_status == 'resolved' %}
+                                        {% with resolution_images=history.get_resolution_images %}
+                                            {% if resolution_images %}
+                                                <div class="mt-2">
+                                                    <div class="small text-muted mb-1">
+                                                        <i class="fas fa-images"></i> Resolution Images:
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        {% for image in resolution_images %}
+                                                            <div class="position-relative">
+                                                                <img src="{{ image.image.url }}" 
+                                                                     class="img-thumbnail" 
+                                                                     style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;"
+                                                                     onclick="showImagePreview('{{ image.image.url }}')"
+                                                                     title="Resolution image {{ forloop.counter }}">
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
                                 </div>
                             </div>
                         {% endfor %}
@@ -613,7 +670,7 @@
 <div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" action="" id="statusChangeForm">
+            <form method="post" action="" id="statusChangeForm" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusChangeModalLabel">Change Status</h5>
@@ -624,6 +681,18 @@
                         <label for="statusComment" class="form-label">Add a comment (optional)</label>
                         <textarea class="form-control" id="statusComment" name="comment" rows="3" placeholder="Describe what you did or any notes about this status change..."></textarea>
                     </div>
+                    
+                    <!-- Image upload section for resolution -->
+                    <div class="mb-3" id="resolutionImagesSection" style="display: none;">
+                        <label for="resolutionImages" class="form-label">
+                            <i class="fas fa-images"></i> Attach images (optional) - Max 3 images
+                        </label>
+                        <input type="file" class="form-control" id="resolutionImages" name="resolution_images" 
+                               multiple accept="image/*" onchange="previewResolutionImages(this)">
+                        <div class="form-text">Upload images to document your resolution (JPG, PNG, GIF)</div>
+                        <div id="imagePreviewContainer" class="mt-2"></div>
+                    </div>
+                    
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
                         <strong>Action:</strong> <span id="actionDescription"></span>
@@ -674,19 +743,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const commentTextarea = document.getElementById('statusComment');
             const commentLabel = document.querySelector('label[for="statusComment"]');
             const singleIssueAlert = document.getElementById('singleIssueAlert');
+            const resolutionImagesSection = document.getElementById('resolutionImagesSection');
             
             if (status === 'resolved') {
                 commentLabel.textContent = 'Resolution notes (optional)';
                 commentTextarea.placeholder = 'Describe how you resolved this issue, what you did, or any important notes...';
                 singleIssueAlert.style.display = 'none';
+                resolutionImagesSection.style.display = 'block';
             } else if (status === 'in_progress') {
                 commentLabel.textContent = 'Work notes (optional)';
                 commentTextarea.placeholder = 'Describe what you plan to do or any notes about starting work...';
                 singleIssueAlert.style.display = 'block';
+                resolutionImagesSection.style.display = 'none';
             } else {
                 commentLabel.textContent = 'Add a comment (optional)';
                 commentTextarea.placeholder = 'Describe what you did or any notes about this status change...';
                 singleIssueAlert.style.display = 'none';
+                resolutionImagesSection.style.display = 'none';
             }
             
             // Update form action
@@ -695,5 +768,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Function to preview resolution images before upload
+function previewResolutionImages(input) {
+    const container = document.getElementById('imagePreviewContainer');
+    container.innerHTML = '';
+    
+    if (input.files.length > 3) {
+        alert('You can only upload a maximum of 3 images.');
+        input.value = '';
+        return;
+    }
+    
+    Array.from(input.files).forEach((file, index) => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'd-inline-block position-relative me-2 mb-2';
+                previewDiv.style.width = '100px';
+                previewDiv.style.height = '100px';
+                
+                previewDiv.innerHTML = `
+                    <img src="${e.target.result}" 
+                         class="img-thumbnail" 
+                         style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                         onclick="showImagePreview('${e.target.result}')"
+                         title="${file.name}">
+                    <button type="button" 
+                            class="btn btn-danger btn-sm position-absolute top-0 end-0"
+                            style="padding: 2px 6px; font-size: 10px;"
+                            onclick="removeImagePreview(this, ${index})"
+                            title="Remove image">×</button>
+                `;
+                
+                container.appendChild(previewDiv);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// Function to remove image preview
+function removeImagePreview(button, index) {
+    const input = document.getElementById('resolutionImages');
+    const dt = new DataTransfer();
+    
+    Array.from(input.files).forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+    
+    input.files = dt.files;
+    button.parentElement.remove();
+}
 </script>
 {% endblock scripts %}

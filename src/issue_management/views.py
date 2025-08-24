@@ -313,6 +313,11 @@ def issue_detail(request, slug):
     # Get escalation history
     escalation_history = issue.escalation_history
     
+    # Get resolution images if issue is resolved
+    resolution_images = []
+    if issue.status == 'resolved':
+        resolution_images = issue.resolution_images.all()
+    
     # Check if user can delete the issue
     can_delete = False
     
@@ -338,6 +343,7 @@ def issue_detail(request, slug):
         'comments': comments,
         'status_history': status_history,
         'escalation_history': escalation_history,
+        'resolution_images': resolution_images,
     }
     
     return render(request, 'issue_management/issue_detail.html', context)
@@ -779,6 +785,16 @@ def change_status_with_comment(request, slug, new_status):
     # Get the comment from the form
     comment = request.POST.get('comment', '').strip()
     
+    # Handle optional resolution images for resolved status
+    resolution_images = []
+    if new_status == 'resolved':
+        uploaded_files = request.FILES.getlist('resolution_images')
+        # Limit to 3 images maximum
+        if len(uploaded_files) > 3:
+            messages.error(request, 'You can upload a maximum of 3 resolution images.')
+            return redirect('issue_management:issue_detail', slug=slug)
+        resolution_images = uploaded_files[:3]
+    
     # Record the old status for history
     old_status = issue.status
     old_maintainer = issue.maintainer  # Track maintainer change
@@ -829,6 +845,17 @@ def change_status_with_comment(request, slug, new_status):
             content=comment_content,
             is_internal=False
         )
+    
+    # Handle resolution images if status is resolved
+    if new_status == 'resolved' and resolution_images:
+        from .models import IssueResolutionImage
+        for image in resolution_images:
+            IssueResolutionImage.objects.create(
+                issue=issue,
+                image=image,
+                uploaded_by=request.user,
+                description=f"Resolution image uploaded with status change"
+            )
     
     # Success message
     status_display = dict(Issue.STATUS_CHOICES)[new_status]
