@@ -87,7 +87,7 @@ class Issue(models.Model):
     
     title = models.CharField(max_length=255)
     description = models.TextField()
-    voice = models.FileField(upload_to='issue_voices/', blank=True, null=True)
+    voice = models.FileField(upload_to='public/issue_voices/', blank=True, null=True)
     
     # New fields
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
@@ -243,6 +243,9 @@ class Issue(models.Model):
         return timedelta()
 
     def save(self, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # Set resolved_at when status changes to resolved
         if self.status == 'resolved' and not self.resolved_at:
             from django.utils import timezone
@@ -257,10 +260,27 @@ class Issue(models.Model):
         elif self.status != 'escalated':
             self.escalated_at = None
             
+        # Generate slug if not exists
         if not self.slug:
             base_slug = slugify(self.title)
             self.slug = generate_unique_slug(self, base_slug)
-        super().save(*args, **kwargs)
+        
+        # Handle voice file validation before saving
+        if self.voice:
+            try:
+                # Ensure voice file is accessible
+                voice_size = self.voice.size
+                logger.info(f"Voice file validated for issue: {self.title}, size: {voice_size}")
+            except Exception as e:
+                logger.error(f"Voice file validation failed for issue {self.title}: {str(e)}")
+                # Don't raise error, just log it to avoid breaking the save
+        
+        try:
+            super().save(*args, **kwargs)
+            logger.info(f"Issue saved successfully: {self.title} (ID: {self.id})")
+        except Exception as e:
+            logger.error(f"Failed to save issue {self.title}: {str(e)}")
+            raise e
 
     def __str__(self):
         return self.title
@@ -313,11 +333,90 @@ class IssueStatusHistory(models.Model):
     
     def __str__(self):
         return f"{self.issue.title} - {self.old_status} to {self.new_status}"
+    
+    def get_resolution_images(self):
+        """Get resolution images associated with this status change"""
+        if self.new_status == 'resolved':
+            # Get images created around the same time as this status change (within 1 minute)
+            from django.utils import timezone
+            time_window = timezone.timedelta(minutes=1)
+            start_time = self.created_at - time_window
+            end_time = self.created_at + time_window
+            
+            return IssueResolutionImage.objects.filter(
+                issue=self.issue,
+                uploaded_at__gte=start_time,
+                uploaded_at__lte=end_time
+            )
+        return IssueResolutionImage.objects.none()
 
 class IssueImage(models.Model):
     issue = models.ForeignKey(Issue, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='public/issue_images/')
     slug = models.SlugField(unique=True, db_index=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.base import ContentFile
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        # Compress image if it's newly uploaded
+        if self.image and not self.image.closed:
+            try:
+                logger.info(f"Processing image: {self.image.name}")
+                img = Image.open(self.image)
+                img_format = img.format if img.format else 'JPEG'
+                
+                # Convert to RGB if not already (for JPEG)
+                if img_format == 'JPEG' and img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                buffer = BytesIO()
+                img.save(buffer, format=img_format, quality=70, optimize=True)
+                buffer.seek(0)
+                
+                # Replace the image with compressed version
+                compressed_content = ContentFile(buffer.read(), name=self.image.name)
+                self.image = compressed_content
+                
+                logger.info(f"Image compressed successfully: {self.image.name}")
+                
+            except Exception as e:
+                logger.warning(f"Image compression failed for {self.image.name}: {str(e)}")
+                # If compression fails, save original
+
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        
+        # Call the parent save method and ensure it completes
+        try:
+            super().save(*args, **kwargs)
+            logger.info(f"IssueImage saved successfully: {self.slug}")
+        except Exception as e:
+            logger.error(f"Failed to save IssueImage {self.slug}: {str(e)}")
+            raise e
+
+    def __str__(self):
+        return f"Image for {self.issue.title}"
+
+
+class IssueResolutionImage(models.Model):
+    """Images attached by maintainers when resolving issues"""
+    issue = models.ForeignKey(Issue, related_name='resolution_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/issue_resolution_images/')
+    uploaded_by = models.ForeignKey('core.User', on_delete=models.CASCADE, limit_choices_to={'profile__user_type': 'maintainer'})
+    description = models.CharField(max_length=255, blank=True, help_text="Optional description of the resolution image")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True, db_index=True, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = "Issue Resolution Image"
+        verbose_name_plural = "Issue Resolution Images"
 
     def save(self, *args, **kwargs):
         from io import BytesIO
@@ -340,12 +439,12 @@ class IssueImage(models.Model):
                 pass  # If compression fails, save original
 
         if not self.slug:
-            base_slug = slugify(f"{self.issue.title}-image")
+            base_slug = slugify(f"{self.issue.title}-resolution-image")
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Image for {self.issue.title}"
+        return f"Resolution image for {self.issue.title} by {self.uploaded_by.profile.first_name}"
 
 
 class IssueWorkSession(models.Model):

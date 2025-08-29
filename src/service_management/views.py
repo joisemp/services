@@ -6,9 +6,10 @@ from .forms import (AddGeneralUserForm, AddOtherUserForm, WorkCategoryForm, Spac
 from .edit_forms import EditUserForm
 import secrets
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.contrib import messages
 from django.urls import reverse
+from django.conf import settings
 from django.http import HttpResponseForbidden, JsonResponse
 from django.utils import timezone
 from decimal import Decimal
@@ -42,53 +43,66 @@ def add_person(request):
         if request.POST.get('mode') == 'general':
             form = AddGeneralUserForm(request.POST)
             if form.is_valid():
-                with transaction.atomic():
-                    password = secrets.token_urlsafe(8)
-                    user = User.objects.create_user(
-                        phone=form.cleaned_data['phone'],
-                        password=password
-                    )
-                    UserProfile.objects.create(
-                        user=user,
-                        org=org,
-                        first_name=form.cleaned_data.get('first_name', ''),
-                        last_name=form.cleaned_data.get('last_name', ''),
-                        user_type='general_user'
-                    )
-                # Optionally notify user by SMS here
-                return redirect('service_management:people_list')
+                try:
+                    with transaction.atomic():
+                        password = secrets.token_urlsafe(8)
+                        user = User.objects.create_user(
+                            phone=form.cleaned_data['phone'],
+                            password=password
+                        )
+                        UserProfile.objects.create(
+                            user=user,
+                            org=org,
+                            first_name=form.cleaned_data.get('first_name', ''),
+                            last_name=form.cleaned_data.get('last_name', ''),
+                            user_type='general_user'
+                        )
+                    # Optionally notify user by SMS here
+                    messages.success(request, 'User created successfully!')
+                    return redirect('service_management:people_list')
+                except IntegrityError as e:
+                    messages.error(request, 'A user with this phone number already exists.')
         else:
             form = AddOtherUserForm(request.POST, org=org)
             if form.is_valid():
-                with transaction.atomic():
-                    password = secrets.token_urlsafe(8)
-                    user = User.objects.create_user(
-                        email=form.cleaned_data['email'],
-                        phone=form.cleaned_data['phone'],
-                        password=password
-                    )
-                    profile = UserProfile.objects.create(
-                        user=user,
-                        org=org,
-                        first_name=form.cleaned_data['first_name'],
-                        last_name=form.cleaned_data['last_name'],
-                        user_type=form.cleaned_data['user_type']
-                    )
-                    # Assign skills if maintainer
-                    if form.cleaned_data['user_type'] == 'maintainer':
-                        selected_skills = list(form.cleaned_data['skills'])
-                        general_skill = WorkCategory.objects.filter(org=org, name__iexact='general').first()
-                        if general_skill and general_skill not in selected_skills:
-                            selected_skills.append(general_skill)
-                        profile.skills.set(selected_skills)
-                    send_mail(
-                        'Your Account Created',
-                        f'Your password is: {password}',
-                        getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
-                        [form.cleaned_data['email']],
-                        fail_silently=True,
-                    )
-                return redirect('service_management:people_list')
+                try:
+                    with transaction.atomic():
+                        password = secrets.token_urlsafe(8)
+                        user = User.objects.create_user(
+                            email=form.cleaned_data['email'],
+                            phone=form.cleaned_data['phone'],
+                            password=password
+                        )
+                        profile = UserProfile.objects.create(
+                            user=user,
+                            org=org,
+                            first_name=form.cleaned_data['first_name'],
+                            last_name=form.cleaned_data['last_name'],
+                            user_type=form.cleaned_data['user_type']
+                        )
+                        # Assign skills if maintainer
+                        if form.cleaned_data['user_type'] == 'maintainer':
+                            selected_skills = list(form.cleaned_data['skills'])
+                            general_skill = WorkCategory.objects.filter(org=org, name__iexact='general').first()
+                            if general_skill and general_skill not in selected_skills:
+                                selected_skills.append(general_skill)
+                            profile.skills.set(selected_skills)
+                        send_mail(
+                            'Your Account Created',
+                            f'Your password is: {password}',
+                            getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                            [form.cleaned_data['email']],
+                            fail_silently=True,
+                        )
+                    messages.success(request, 'User created successfully!')
+                    return redirect('service_management:people_list')
+                except IntegrityError as e:
+                    if 'email' in str(e):
+                        messages.error(request, 'A user with this email address already exists.')
+                    elif 'phone' in str(e):
+                        messages.error(request, 'A user with this phone number already exists.')
+                    else:
+                        messages.error(request, 'This user already exists in the system.')
     else:
         if mode == 'general':
             form = AddGeneralUserForm()
@@ -524,4 +538,45 @@ def no_spaces_assigned(request):
         'user_org': user_org,
     }
     return render(request, 'service_management/no_spaces_assigned.html', context)
+
+
+@login_required
+@user_passes_test(is_central_admin)
+def generate_user_password(request, profile_id):
+    """Generate a new password for a user"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    try:
+        # Get the user profile
+        profile = get_object_or_404(UserProfile, pk=profile_id)
+        
+        # Ensure the profile belongs to the central admin's organization
+        orgs = Organisation.objects.filter(central_admins=request.user)
+        if profile.org not in orgs:
+            return JsonResponse({'success': False, 'error': 'User not in your organization'})
+        
+        # Prevent admin from changing their own password this way
+        if profile.user == request.user:
+            return JsonResponse({'success': False, 'error': 'Cannot generate password for yourself'})
+        
+        # Generate a new secure password
+        new_password = secrets.token_urlsafe(12)  # Generates a 12-character URL-safe password
+        
+        # Set the new password
+        profile.user.set_password(new_password)
+        profile.user.save()
+        
+        # Return the new password
+        return JsonResponse({
+            'success': True, 
+            'password': new_password,
+            'user_name': f"{profile.first_name} {profile.last_name}",
+            'message': f'New password generated for {profile.first_name} {profile.last_name}'
+        })
+        
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'User not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'An error occurred: {str(e)}'})
 

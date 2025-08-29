@@ -198,6 +198,35 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+FILE_UPLOAD_PERMISSIONS = 0o644
+
+# Ensure file uploads are handled synchronously but efficiently
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
+# Request timeout settings
+if ENVIRONMENT != 'development':
+    # Production timeout settings
+    import os
+    os.environ.setdefault('GUNICORN_TIMEOUT', '120')
+    os.environ.setdefault('GUNICORN_KEEPALIVE', '5')
+
+# Additional S3 settings for production
+if ENVIRONMENT != 'development':
+    # Ensure S3 uploads are synchronous
+    AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='blr1')
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_S3_USE_SSL = True
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 3600  # 1 hour
+
 # email settings
 if ENVIRONMENT == 'development':
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

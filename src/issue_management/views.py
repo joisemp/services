@@ -7,6 +7,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
+from django.db import transaction
+import signal
+import logging
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
 from .forms import IssueForm, IssueAssignmentForm, IssueUpdateForm, IssueCommentForm, IssueCategoryForm, IssueEscalationForm, EscalatedIssueReassignmentForm
@@ -58,16 +61,34 @@ def issue_list(request):
             issues = Issue.objects.none()
             
     elif request.user.profile.user_type == 'maintainer':
-        # Maintainer sees assigned issues - can view resolved ones separately
+        # Maintainer sees issues assigned to them or that they have worked on before
+        from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
+        
+        # Get issue IDs where maintainer has worked or been involved
+        worked_issue_ids = IssueWorkSession.objects.filter(maintainer=request.user).values_list('issue_id', flat=True)
+        status_history_issue_ids = IssueStatusHistory.objects.filter(
+            Q(old_maintainer=request.user) | Q(new_maintainer=request.user)
+        ).values_list('issue_id', flat=True)
+        commented_issue_ids = IssueComment.objects.filter(author=request.user).values_list('issue_id', flat=True)
+        
+        # Combine all relevant issue IDs
+        relevant_issue_ids = set(worked_issue_ids) | set(status_history_issue_ids) | set(commented_issue_ids)
+        
+        # Filter issues: currently assigned OR has worked on before
+        maintainer_issues_query = Q(maintainer=request.user) | Q(id__in=relevant_issue_ids)
+        
+        # Apply org filter for security if user has org
+        if request.user.profile.org:
+            maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
+        
         if view_type == 'resolved':
             issues = Issue.objects.filter(
-                maintainer=request.user,
-                status='resolved'
+                maintainer_issues_query & Q(status='resolved')
             ).order_by('-updated_at')
         else:
             # Active issues only (excluding escalated and resolved for normal view)
             issues = Issue.objects.filter(
-                maintainer=request.user
+                maintainer_issues_query
             ).exclude(status__in=['escalated', 'resolved']).order_by('-created_at')
         
     else:
@@ -101,31 +122,80 @@ def issue_list(request):
             Q(description__icontains=search)
         )
     
-    # Calculate statistics based on filtered issues (before additional filters)
-    base_issues = Issue.objects.filter(org=request.user.profile.org) if request.user.is_authenticated and hasattr(request.user, 'profile') else Issue.objects.none()
+    # Calculate statistics based on user type and permissions (should match the same filtering logic as issues)
+    base_issues = Issue.objects.none()
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        if request.user.profile.user_type == 'space_admin' and selected_space:
-            base_issues = Issue.objects.filter(space=selected_space)
+        if request.user.profile.user_type == 'central_admin':
+            # Central admin sees org-wide statistics
+            base_issues = Issue.objects.filter(org=request.user.profile.org)
+            
+            # Apply space filter if selected
+            if selected_space:
+                base_issues = base_issues.filter(space=selected_space)
+            elif request.GET.get('space_filter') == 'no_space':
+                base_issues = base_issues.filter(space__isnull=True)
+                
+        elif request.user.profile.user_type == 'space_admin':
+            # Space admin sees statistics from their current active space
+            if selected_space:
+                base_issues = Issue.objects.filter(space=selected_space)
+            else:
+                # No spaces available - show empty stats
+                base_issues = Issue.objects.none()
+                
         elif request.user.profile.user_type == 'maintainer':
-            # For maintainers, count all their assigned issues for stats
-            base_issues = Issue.objects.filter(maintainer=request.user)
-        elif request.user.profile.user_type not in ['central_admin']:
+            # For maintainers, count issues they are assigned to or have worked on
+            from issue_management.models import IssueWorkSession, IssueStatusHistory, IssueComment
+            
+            # Get issue IDs where maintainer has worked or been involved
+            worked_issue_ids = IssueWorkSession.objects.filter(maintainer=request.user).values_list('issue_id', flat=True)
+            status_history_issue_ids = IssueStatusHistory.objects.filter(
+                Q(old_maintainer=request.user) | Q(new_maintainer=request.user)
+            ).values_list('issue_id', flat=True)
+            commented_issue_ids = IssueComment.objects.filter(author=request.user).values_list('issue_id', flat=True)
+            
+            # Combine all relevant issue IDs
+            relevant_issue_ids = set(worked_issue_ids) | set(status_history_issue_ids) | set(commented_issue_ids)
+            
+            # Filter issues: currently assigned OR has worked on before
+            maintainer_issues_query = Q(maintainer=request.user) | Q(id__in=relevant_issue_ids)
+            
+            # Apply org filter for security if user has org
+            if request.user.profile.org:
+                maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
+            
+            base_issues = Issue.objects.filter(maintainer_issues_query)
+        else:
+            # Regular users see statistics for issues they created
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
     
     # Separate counts for active and resolved issues
     active_issues = base_issues.exclude(status='resolved')
     resolved_issues = base_issues.filter(status='resolved')
     
-    assigned_count = active_issues.filter(maintainer__isnull=False).count()
+    # Calculate specific status counts
     pending_count = active_issues.filter(status='open').count()
     in_progress_count = active_issues.filter(status='in_progress').count()
-    resolved_count = resolved_issues.count()
     escalated_count = active_issues.filter(status='escalated').count()
+    resolved_count = resolved_issues.count()
     
+    # Assigned count should reflect issues that have a maintainer assigned (excluding resolved)
+    assigned_count = active_issues.filter(maintainer__isnull=False).count()
+    
+    # Total active issues count
+    total_active_count = pending_count + in_progress_count + escalated_count
+    
+    # Initialize my_issues_count
+    my_issues_count = 0
     if request.user.is_authenticated and hasattr(request.user, 'profile'):
         if request.user.profile.user_type == 'maintainer':
+            # For maintainers, count only currently assigned issues
             my_issues_count = base_issues.filter(maintainer=request.user).count()
+        elif request.user.profile.user_type in ['central_admin', 'space_admin']:
+            # For admins, show total active issues in their scope (not personally created)
+            my_issues_count = active_issues.count()
         else:
+            # For regular users, show issues they created
             my_issues_count = base_issues.filter(created_by=request.user).count()
     
     # Get categories for filter dropdown
@@ -142,6 +212,7 @@ def issue_list(request):
     context = {
         'issues': page_obj,
         'page_obj': page_obj,
+        'total_active_count': total_active_count,
         'assigned_count': assigned_count,
         'pending_count': pending_count,
         'in_progress_count': in_progress_count,
@@ -163,32 +234,237 @@ def issue_list(request):
     return render(request, 'issue_management/issue_list.html', context)
 
 def report_issue(request):
+    logger = logging.getLogger(__name__)
+    
+    # Timeout handler to prevent worker timeout
+    def timeout_handler(signum, frame):
+        logger.error("File upload timeout detected")
+        raise TimeoutError("File upload operation timed out")
+    
     if request.method == 'POST':
-        form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
-        images = request.FILES.getlist('image')
-        if len(images) > 3:
-            form.add_error('image', 'You can upload a maximum of 3 images.')
-        if form.is_valid():
-            issue = form.save(commit=False)
-            # Assign organisation and space if user is authenticated and has a profile
-            if request.user.is_authenticated and hasattr(request.user, 'profile'):
-                issue.org = request.user.profile.org
-                issue.created_by = request.user
-                # Set space based on user type and context
-                if request.user.profile.user_type == 'space_admin':
-                    if request.user.profile.current_active_space:
-                        issue.space = request.user.profile.current_active_space
-                elif request.user.profile.user_type == 'central_admin':
-                    if form.cleaned_data.get('space'):
-                        issue.space = form.cleaned_data['space']
-            issue.save()
-            # Handle multiple images (limit to 3)
-            for img in images[:3]:
-                IssueImage.objects.create(issue=issue, image=img)
-            messages.success(request, f'Issue "{issue.title}" has been reported successfully.')
-            return redirect('issue_management:issue_detail', slug=issue.slug)
+        # Set up timeout protection (90 seconds) - only on Unix systems
+        timeout_set = False
+        if hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(90)
+                timeout_set = True
+                logger.info("Timeout protection enabled for file upload")
+            except (OSError, AttributeError):
+                logger.warning("Could not set timeout protection - continuing without it")
+        
+        try:
+            form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
+            images = request.FILES.getlist('image')
+            
+            # Validate images separately since they're not part of the form model
+            image_errors = []
+            if len(images) > 3:
+                image_errors.append('You can upload a maximum of 3 images.')
+            
+            # Validate image file types and sizes
+            allowed_image_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+            max_image_size = 3 * 1024 * 1024  # Reduced to 3MB to prevent timeouts
+            
+            for img in images:
+                if img.content_type not in allowed_image_types:
+                    image_errors.append(f'Invalid image type: {img.name}. Allowed types: JPEG, PNG, GIF, WebP.')
+                if img.size > max_image_size:
+                    image_errors.append(f'Image {img.name} is too large. Maximum size is 3MB.')
+            
+            if image_errors:
+                for error in image_errors:
+                    form.add_error(None, error)
+            
+            if form.is_valid() and not image_errors:
+                logger.info(f"Starting issue creation process for user: {request.user.id if request.user.is_authenticated else 'anonymous'}")
+            
+            # Check for potential duplicate submissions using multiple methods
+            
+            # Method 1: Session-based duplicate prevention
+            session_key = f"last_issue_submission_{request.user.id if request.user.is_authenticated else request.session.session_key}"
+            last_submission = request.session.get(session_key)
+            
+            if last_submission:
+                from django.utils import timezone
+                import json
+                from datetime import timedelta
+                
+                try:
+                    last_data = json.loads(last_submission)
+                    last_time = timezone.datetime.fromisoformat(last_data['timestamp'])
+                    last_title = last_data['title']
+                    
+                    # Prevent duplicate submission within 30 seconds with same title
+                    if (timezone.now() - last_time < timedelta(seconds=30) and 
+                        last_title == form.cleaned_data['title']):
+                        logger.warning(f"Duplicate submission prevented for user {request.user.id}: {last_title}")
+                        messages.warning(request, 
+                            'You recently submitted an issue with the same title. '
+                            'Please wait a moment before submitting again or use a different title.'
+                        )
+                        return render(request, 'issue_management/report_issue.html', {'form': form})
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    logger.warning("Invalid session data found, continuing with submission")
+                    pass  # Invalid session data, continue with submission
+            
+            # Method 2: Database duplicate check for authenticated users
+            if request.user.is_authenticated:
+                from django.utils import timezone
+                from datetime import timedelta
+                
+                recent_cutoff = timezone.now() - timedelta(minutes=2)  # 2 minute window
+                existing_issue = Issue.objects.filter(
+                    created_by=request.user,
+                    title=form.cleaned_data['title'],
+                    created_at__gte=recent_cutoff
+                ).first()
+                
+                if existing_issue:
+                    logger.warning(f"Duplicate issue found, redirecting to existing issue: {existing_issue.id}")
+                    messages.warning(request, 
+                        f'An issue with the same title was recently created. '
+                        f'<a href="/issues/{existing_issue.slug}/" class="alert-link">View the existing issue</a>.'
+                    )
+                    return redirect('issue_management:issue_detail', slug=existing_issue.slug)
+            
+            try:
+                logger.info("Starting issue creation with optimized file handling")
+                
+                # Create the issue object first without files to avoid timeout
+                issue = form.save(commit=False)
+                
+                # Clear the voice file temporarily to save the issue first
+                voice_file = issue.voice
+                issue.voice = None
+                
+                # Assign organisation and space if user is authenticated and has a profile
+                if request.user.is_authenticated and hasattr(request.user, 'profile'):
+                    issue.org = request.user.profile.org
+                    issue.created_by = request.user
+                    # Set space based on user type and context
+                    if request.user.profile.user_type == 'space_admin':
+                        if request.user.profile.current_active_space:
+                            issue.space = request.user.profile.current_active_space
+                    elif request.user.profile.user_type == 'central_admin':
+                        if form.cleaned_data.get('space'):
+                            issue.space = form.cleaned_data['space']
+                
+                logger.info(f"Issue prepared for saving: {issue.title}")
+                
+                # Save the issue first without files to get an ID quickly
+                issue.save()
+                logger.info(f"Issue saved successfully: {issue.id}")
+                
+                # Now handle file uploads with timeout protection
+                uploaded_images = 0
+                image_upload_errors = []
+                voice_uploaded = False
+                
+                # Handle voice file upload if present
+                if voice_file:
+                    try:
+                        logger.info(f"Uploading voice file for issue {issue.id}")
+                        issue.voice = voice_file
+                        issue.save(update_fields=['voice'])
+                        voice_uploaded = True
+                        logger.info(f"Voice file uploaded successfully for issue {issue.id}")
+                    except Exception as voice_error:
+                        logger.error(f"Voice upload failed for issue {issue.id}: {str(voice_error)}")
+                        # Don't fail the entire process for voice upload failure
+                
+                # Handle image uploads with individual error handling
+                for i, img in enumerate(images[:3]):
+                    try:
+                        logger.info(f"Processing image {i+1}/{len(images[:3])}: {img.name}")
+                        
+                        # Validate image size before upload
+                        if img.size > 5 * 1024 * 1024:  # 5MB limit
+                            raise ValueError(f"Image too large: {img.size} bytes")
+                        
+                        issue_image = IssueImage.objects.create(issue=issue, image=img)
+                        uploaded_images += 1
+                        logger.info(f"Image {i+1} uploaded successfully for issue {issue.id}")
+                        
+                    except Exception as img_error:
+                        logger.error(f"Failed to upload image {img.name} for issue {issue.id}: {str(img_error)}")
+                        image_upload_errors.append(f"Failed to upload {img.name}: {str(img_error)}")
+                        # Continue with other images even if one fails
+                
+                # Store submission info in session for duplicate prevention
+                import json
+                from django.utils import timezone
+                submission_data = {
+                    'timestamp': timezone.now().isoformat(),
+                    'title': issue.title,
+                    'issue_id': issue.id
+                }
+                request.session[session_key] = json.dumps(submission_data)
+                
+                # Create success message
+                success_msg = f'Issue "{issue.title}" has been reported successfully.'
+                if uploaded_images > 0:
+                    success_msg += f' {uploaded_images} of {len(images)} image(s) uploaded.'
+                if voice_uploaded:
+                    success_msg += ' Voice note uploaded.'
+                if image_upload_errors:
+                    success_msg += f' Note: {len(image_upload_errors)} file(s) failed to upload.'
+                
+                logger.info(f"Issue creation completed: {issue.id}, images: {uploaded_images}, voice: {voice_uploaded}")
+                messages.success(request, success_msg)
+                
+                # Add warnings for any upload failures
+                for error in image_upload_errors:
+                    messages.warning(request, error)
+                    
+                return redirect('issue_management:issue_detail', slug=issue.slug)
+                
+            except Exception as e:
+                logger.error(f"Critical error creating issue: {str(e)}", exc_info=True)
+                
+                # Add more specific error details for debugging
+                error_details = {
+                    'error_type': type(e).__name__,
+                    'error_message': str(e),
+                    'user_id': request.user.id if request.user.is_authenticated else None,
+                    'form_data': {
+                        'title': form.cleaned_data.get('title', '') if form.cleaned_data else '',
+                        'has_voice': bool(request.FILES.get('voice')),
+                        'image_count': len(images)
+                    }
+                }
+                logger.error(f"Issue creation error details: {error_details}")
+                
+                messages.error(request, 
+                    'An error occurred while creating the issue. Please try again. '
+                    'If the problem persists, please contact support.'
+                )
+            else:
+                # Log form validation errors
+                logger.warning(f"Form validation failed: {form.errors}, Image errors: {image_errors}")
+        
+        except TimeoutError:
+            logger.error("File upload timed out")
+            messages.error(request, 
+                'File upload is taking too long. Please try uploading smaller files or fewer images.'
+            )
+        except Exception as general_error:
+            logger.error(f"Unexpected error in issue creation: {str(general_error)}", exc_info=True)
+            messages.error(request, 
+                'An unexpected error occurred. Please try again.'
+            )
+        finally:
+            # Clear the timeout alarm if it was set
+            if timeout_set and hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
+                try:
+                    signal.alarm(0)
+                    logger.debug("Timeout alarm cleared")
+                except (OSError, AttributeError):
+                    pass
+                
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
+    
     return render(request, 'issue_management/report_issue.html', {'form': form})
 
 def issue_detail(request, slug):
@@ -245,12 +521,22 @@ def issue_detail(request, slug):
     # Get escalation history
     escalation_history = issue.escalation_history
     
-    # Check if user can delete the issue (general users within 15 minutes)
+    # Get resolution images if issue is resolved
+    resolution_images = []
+    if issue.status == 'resolved':
+        resolution_images = issue.resolution_images.all()
+    
+    # Check if user can delete the issue
     can_delete = False
-    if (user_profile.user_type == 'general_user' and 
-        issue.created_by == request.user and 
-        issue.status == 'open' and 
-        not issue.maintainer):
+    
+    # Central admins can delete any issue in their organization
+    if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
+        can_delete = True
+    # General users can delete their own issues within 15 minutes if certain conditions are met
+    elif (user_profile.user_type == 'general_user' and 
+          issue.created_by == request.user and 
+          issue.status == 'open' and 
+          not issue.maintainer):
         from datetime import timedelta
         time_limit = timedelta(minutes=15)
         time_since_creation = timezone.now() - issue.created_at
@@ -265,6 +551,7 @@ def issue_detail(request, slug):
         'comments': comments,
         'status_history': status_history,
         'escalation_history': escalation_history,
+        'resolution_images': resolution_images,
     }
     
     return render(request, 'issue_management/issue_detail.html', context)
@@ -706,6 +993,16 @@ def change_status_with_comment(request, slug, new_status):
     # Get the comment from the form
     comment = request.POST.get('comment', '').strip()
     
+    # Handle optional resolution images for resolved status
+    resolution_images = []
+    if new_status == 'resolved':
+        uploaded_files = request.FILES.getlist('resolution_images')
+        # Limit to 3 images maximum
+        if len(uploaded_files) > 3:
+            messages.error(request, 'You can upload a maximum of 3 resolution images.')
+            return redirect('issue_management:issue_detail', slug=slug)
+        resolution_images = uploaded_files[:3]
+    
     # Record the old status for history
     old_status = issue.status
     old_maintainer = issue.maintainer  # Track maintainer change
@@ -756,6 +1053,17 @@ def change_status_with_comment(request, slug, new_status):
             content=comment_content,
             is_internal=False
         )
+    
+    # Handle resolution images if status is resolved
+    if new_status == 'resolved' and resolution_images:
+        from .models import IssueResolutionImage
+        for image in resolution_images:
+            IssueResolutionImage.objects.create(
+                issue=issue,
+                image=image,
+                uploaded_by=request.user,
+                description=f"Resolution image uploaded with status change"
+            )
     
     # Success message
     status_display = dict(Issue.STATUS_CHOICES)[new_status]
@@ -969,7 +1277,7 @@ def end_work_session(request, slug):
 
 @login_required
 def delete_issue(request, slug):
-    """Delete an issue - only allowed for general users within 15 minutes of creation"""
+    """Delete an issue - allowed for general users within 15 minutes of creation or central admins at any time"""
     issue = get_object_or_404(Issue, slug=slug)
     
     # Check permissions
@@ -977,47 +1285,85 @@ def delete_issue(request, slug):
         return HttpResponseForbidden('Access denied.')
     
     user_profile = request.user.profile
+    can_delete = False
+    is_central_admin = False
     
-    # Only the issue creator can delete their own issue
-    if issue.created_by != request.user:
-        return HttpResponseForbidden('You can only delete issues you created.')
+    # Central admins can delete any issue in their organization
+    if user_profile.user_type == 'central_admin' and issue.org == user_profile.org:
+        can_delete = True
+        is_central_admin = True
+    # General users can delete their own issues within 15 minutes
+    elif (user_profile.user_type == 'general_user' and 
+          issue.created_by == request.user):
+        
+        # Check if issue was created within the last 15 minutes
+        from datetime import timedelta
+        time_limit = timedelta(minutes=15)
+        time_since_creation = timezone.now() - issue.created_at
+        
+        if time_since_creation <= time_limit:
+            # Additional checks for general users
+            if issue.maintainer:
+                messages.error(request, 'Cannot delete an issue that has been assigned to a maintainer.')
+                return redirect('issue_management:issue_detail', slug=slug)
+            
+            if issue.status != 'open':
+                messages.error(request, 'Cannot delete an issue that is no longer in open status.')
+                return redirect('issue_management:issue_detail', slug=slug)
+            
+            can_delete = True
+        else:
+            messages.error(request, 'You can only delete issues within 15 minutes of creation.')
+            return redirect('issue_management:issue_detail', slug=slug)
+    else:
+        return HttpResponseForbidden('You do not have permission to delete this issue.')
     
-    # Only general users can delete issues (other user types have different workflows)
-    if user_profile.user_type != 'general_user':
-        return HttpResponseForbidden('Only general users can delete their own issues.')
-    
-    # Check if issue was created within the last 15 minutes
-    from datetime import timedelta
-    time_limit = timedelta(minutes=15)
-    time_since_creation = timezone.now() - issue.created_at
-    
-    if time_since_creation > time_limit:
-        messages.error(request, 'You can only delete issues within 15 minutes of creation.')
-        return redirect('issue_management:issue_detail', slug=slug)
-    
-    # Check if issue has been assigned to a maintainer
-    if issue.maintainer:
-        messages.error(request, 'Cannot delete an issue that has been assigned to a maintainer.')
-        return redirect('issue_management:issue_detail', slug=slug)
-    
-    # Check if issue status has changed from 'open'
-    if issue.status != 'open':
-        messages.error(request, 'Cannot delete an issue that is no longer in open status.')
-        return redirect('issue_management:issue_detail', slug=slug)
+    if not can_delete:
+        return HttpResponseForbidden('You do not have permission to delete this issue.')
     
     if request.method == 'POST':
         issue_title = issue.title
+        
+        # Create a status history record for deletion (for audit purposes)
+        if not is_central_admin:
+            # For general users, create history as usual
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status=issue.status,
+                new_status='deleted',
+                comment=f"Issue deleted by {request.user.profile.first_name} {request.user.profile.last_name} (general user within time limit)"
+            )
+        else:
+            # For central admins, create history record noting admin deletion
+            IssueStatusHistory.objects.create(
+                issue=issue,
+                changed_by=request.user,
+                old_status=issue.status,
+                new_status='deleted',
+                comment=f"Issue deleted by central admin {request.user.profile.first_name} {request.user.profile.last_name}"
+            )
+        
         issue.delete()
         messages.success(request, f'Issue "{issue_title}" has been deleted successfully.')
         return redirect('issue_management:issue_list')
     
-    # Calculate remaining time for deletion
-    remaining_time = time_limit - time_since_creation
-    remaining_minutes = int(remaining_time.total_seconds() // 60)
-    remaining_seconds = int(remaining_time.total_seconds() % 60)
+    # Calculate remaining time for deletion (only for general users)
+    remaining_time = None
+    remaining_minutes = None
+    remaining_seconds = None
+    
+    if not is_central_admin:
+        from datetime import timedelta
+        time_limit = timedelta(minutes=15)
+        time_since_creation = timezone.now() - issue.created_at
+        remaining_time = time_limit - time_since_creation
+        remaining_minutes = int(remaining_time.total_seconds() // 60)
+        remaining_seconds = int(remaining_time.total_seconds() % 60)
     
     context = {
         'issue': issue,
+        'is_central_admin': is_central_admin,
         'remaining_minutes': remaining_minutes,
         'remaining_seconds': remaining_seconds,
     }
