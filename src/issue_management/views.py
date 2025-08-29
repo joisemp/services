@@ -8,7 +8,6 @@ from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from django.db import transaction
-import signal
 import logging
 
 from .models import Issue, IssueImage, IssueCategory, IssueComment, IssueStatusHistory, IssueWorkSession, IssueBreakSession
@@ -236,23 +235,7 @@ def issue_list(request):
 def report_issue(request):
     logger = logging.getLogger(__name__)
     
-    # Timeout handler to prevent worker timeout
-    def timeout_handler(signum, frame):
-        logger.error("File upload timeout detected")
-        raise TimeoutError("File upload operation timed out")
-    
     if request.method == 'POST':
-        # Set up timeout protection (90 seconds) - only on Unix systems
-        timeout_set = False
-        if hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
-            try:
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(90)
-                timeout_set = True
-                logger.info("Timeout protection enabled for file upload")
-            except (OSError, AttributeError):
-                logger.warning("Could not set timeout protection - continuing without it")
-        
         try:
             form = IssueForm(request.POST, request.FILES, user=request.user if request.user.is_authenticated else None)
             images = request.FILES.getlist('image')
@@ -443,24 +426,11 @@ def report_issue(request):
                 # Log form validation errors
                 logger.warning(f"Form validation failed: {form.errors}, Image errors: {image_errors}")
         
-        except TimeoutError:
-            logger.error("File upload timed out")
-            messages.error(request, 
-                'File upload is taking too long. Please try uploading smaller files or fewer images.'
-            )
         except Exception as general_error:
             logger.error(f"Unexpected error in issue creation: {str(general_error)}", exc_info=True)
             messages.error(request, 
                 'An unexpected error occurred. Please try again.'
             )
-        finally:
-            # Clear the timeout alarm if it was set
-            if timeout_set and hasattr(signal, 'SIGALRM') and hasattr(signal, 'alarm'):
-                try:
-                    signal.alarm(0)
-                    logger.debug("Timeout alarm cleared")
-                except (OSError, AttributeError):
-                    pass
                 
     else:
         form = IssueForm(user=request.user if request.user.is_authenticated else None)
@@ -647,20 +617,27 @@ def assign_issue(request, issue_slug):
         if form.is_valid():
             # Track assignment change
             old_maintainer = issue.maintainer
+            old_status = issue.status
             new_maintainer = form.cleaned_data['maintainer']
             
-            form.save()
+            # Save the form, which will trigger the model's save method
+            updated_issue = form.save()
             
             # Create status history for assignment change
             if old_maintainer != new_maintainer:
+                # Check if status changed due to assignment
+                status_change_comment = ""
+                if old_status != updated_issue.status:
+                    status_change_comment = f" (Status changed from {old_status} to {updated_issue.status})"
+                
                 IssueStatusHistory.objects.create(
-                    issue=issue,
+                    issue=updated_issue,
                     changed_by=request.user,
-                    old_status=issue.status,
-                    new_status=issue.status,
+                    old_status=old_status,
+                    new_status=updated_issue.status,
                     old_maintainer=old_maintainer,
                     new_maintainer=new_maintainer,
-                    comment=f"Assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}" if new_maintainer else "Unassigned"
+                    comment=f"Assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}{status_change_comment}" if new_maintainer else f"Unassigned{status_change_comment}"
                 )
             
             messages.success(request, f'Issue assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}' if new_maintainer else 'Issue unassigned')
@@ -684,9 +661,9 @@ def escalate_issue(request, slug):
     if user_profile.user_type != 'maintainer' or issue.maintainer != request.user:
         return HttpResponseForbidden('You do not have permission to escalate this issue.')
     
-    # Can only escalate issues that are in progress
+    # Can only escalate issues that are assigned or in progress
     if not issue.can_be_escalated:
-        messages.error(request, 'This issue cannot be escalated. It must be in progress.')
+        messages.error(request, 'This issue cannot be escalated. It must be assigned or in progress.')
         return redirect('issue_management:issue_detail', slug=slug)
     
     if request.method == 'POST':

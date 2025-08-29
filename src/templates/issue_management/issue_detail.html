@@ -194,26 +194,7 @@
                     </a>
                 {% endif %}
                 
-                <!-- Status Change Buttons for Maintainers -->
-                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
-                    {% if issue.status == 'open' %}
-                        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
-                            <i class="fas fa-play"></i> Start Working
-                        </button>
-                    {% elif issue.status == 'in_progress' %}
-                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-bullseye"></i> Focus Mode
-                        </a>
-                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
-                            <i class="fas fa-check"></i> Mark Resolved
-                        </button>
-                        <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
-                            <i class="fas fa-pause"></i> Set Open
-                        </button>
-                    {% endif %}
-                    <!-- No reopen option for resolved issues - maintainers cannot reopen resolved issues -->
-                {% endif %}
-                
+               
                 {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and issue.can_be_escalated %}
                     <a href="{% url 'issue_management:escalate_issue' issue.slug %}" class="btn btn-warning btn-sm">
                         <i class="fas fa-arrow-up"></i> Escalate Issue
@@ -325,7 +306,30 @@
                     </div>
                 </div>
             {% endif %}
-
+             <!-- Status Change Buttons for Maintainers -->
+                {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
+                    {% if issue.status == 'assigned' %}
+                        <button class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                            <i class="fas fa-play"></i> Start Work
+                        </button>
+                    {% elif issue.status == 'open' %}
+                        <button class="btn btn-info btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                            <i class="fas fa-play"></i> Start Working
+                        </button>
+                    {% elif issue.status == 'in_progress' %}
+                        <a href="{% url 'issue_management:focus_mode' issue.slug %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-bullseye"></i> Focus Mode
+                        </a>
+                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="resolved" data-action="Mark Resolved">
+                            <i class="fas fa-check"></i> Mark Resolved
+                        </button>
+                        <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="open" data-action="Set Open">
+                            <i class="fas fa-pause"></i> Set Open
+                        </button>
+                    {% endif %}
+                    <!-- No reopen option for resolved issues - maintainers cannot reopen resolved issues -->
+            {% endif %}
+                
             <!-- Comments Section -->
             <div class="card">
                 <div class="card-header">
