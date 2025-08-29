@@ -70,6 +70,7 @@ class Issue(models.Model):
     # Status choices
     STATUS_CHOICES = [
         ('open', 'Open'),
+        ('assigned', 'Assigned'),
         ('in_progress', 'In Progress'),
         ('resolved', 'Resolved'),
         ('escalated', 'Escalated'),
@@ -123,12 +124,12 @@ class Issue(models.Model):
     def is_overdue(self):
         """Check if issue is overdue"""
         from django.utils import timezone
-        return self.due_date and self.due_date < timezone.now() and self.status in ['open', 'in_progress']
+        return self.due_date and self.due_date < timezone.now() and self.status in ['open', 'assigned', 'in_progress']
     
     @property
     def can_be_escalated(self):
         """Check if issue can be escalated by maintainer"""
-        return self.status == 'in_progress' and self.maintainer is not None
+        return self.status in ['assigned', 'in_progress'] and self.maintainer is not None
     
     @property
     def is_escalated(self):
@@ -150,6 +151,7 @@ class Issue(models.Model):
         """Get color for status badge"""
         colors = {
             'open': 'danger',
+            'assigned': 'info',
             'in_progress': 'warning', 
             'resolved': 'success',
             'escalated': 'danger',
@@ -245,6 +247,27 @@ class Issue(models.Model):
     def save(self, *args, **kwargs):
         import logging
         logger = logging.getLogger(__name__)
+        
+        # Track if this is a new instance or if maintainer changed
+        is_new = self.pk is None
+        old_maintainer = None
+        
+        if not is_new:
+            # Get the current state from database
+            try:
+                old_instance = Issue.objects.get(pk=self.pk)
+                old_maintainer = old_instance.maintainer
+            except Issue.DoesNotExist:
+                old_instance = None
+                
+        # Auto-assign status when maintainer is assigned
+        if self.maintainer and (is_new or old_maintainer != self.maintainer):
+            # Only auto-change status if it's currently 'open' or if being reassigned
+            if self.status == 'open' or (old_maintainer != self.maintainer and self.status in ['open', 'assigned']):
+                self.status = 'assigned'
+        elif not self.maintainer and old_maintainer and self.status == 'assigned':
+            # If maintainer is removed and status is 'assigned', revert to 'open'
+            self.status = 'open'
         
         # Set resolved_at when status changes to resolved
         if self.status == 'resolved' and not self.resolved_at:

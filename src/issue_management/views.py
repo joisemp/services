@@ -617,20 +617,27 @@ def assign_issue(request, issue_slug):
         if form.is_valid():
             # Track assignment change
             old_maintainer = issue.maintainer
+            old_status = issue.status
             new_maintainer = form.cleaned_data['maintainer']
             
-            form.save()
+            # Save the form, which will trigger the model's save method
+            updated_issue = form.save()
             
             # Create status history for assignment change
             if old_maintainer != new_maintainer:
+                # Check if status changed due to assignment
+                status_change_comment = ""
+                if old_status != updated_issue.status:
+                    status_change_comment = f" (Status changed from {old_status} to {updated_issue.status})"
+                
                 IssueStatusHistory.objects.create(
-                    issue=issue,
+                    issue=updated_issue,
                     changed_by=request.user,
-                    old_status=issue.status,
-                    new_status=issue.status,
+                    old_status=old_status,
+                    new_status=updated_issue.status,
                     old_maintainer=old_maintainer,
                     new_maintainer=new_maintainer,
-                    comment=f"Assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}" if new_maintainer else "Unassigned"
+                    comment=f"Assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}{status_change_comment}" if new_maintainer else f"Unassigned{status_change_comment}"
                 )
             
             messages.success(request, f'Issue assigned to {new_maintainer.profile.first_name} {new_maintainer.profile.last_name}' if new_maintainer else 'Issue unassigned')
@@ -654,9 +661,9 @@ def escalate_issue(request, slug):
     if user_profile.user_type != 'maintainer' or issue.maintainer != request.user:
         return HttpResponseForbidden('You do not have permission to escalate this issue.')
     
-    # Can only escalate issues that are in progress
+    # Can only escalate issues that are assigned or in progress
     if not issue.can_be_escalated:
-        messages.error(request, 'This issue cannot be escalated. It must be in progress.')
+        messages.error(request, 'This issue cannot be escalated. It must be assigned or in progress.')
         return redirect('issue_management:issue_detail', slug=slug)
     
     if request.method == 'POST':

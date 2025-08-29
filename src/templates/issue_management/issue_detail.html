@@ -308,7 +308,11 @@
             {% endif %}
              <!-- Status Change Buttons for Maintainers -->
                 {% if user.profile.user_type == 'maintainer' and issue.maintainer == user and not issue.is_escalated %}
-                    {% if issue.status == 'open' %}
+                    {% if issue.status == 'assigned' %}
+                        <button class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
+                            <i class="fas fa-play"></i> Start Work
+                        </button>
+                    {% elif issue.status == 'open' %}
                         <button class="btn btn-info btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#statusChangeModal" data-status="in_progress" data-action="Start Working">
                             <i class="fas fa-play"></i> Start Working
                         </button>
