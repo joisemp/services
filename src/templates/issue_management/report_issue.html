@@ -430,26 +430,43 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ongoingSubmission = localStorage.getItem('issueSubmissionInProgress');
         if (ongoingSubmission) {
-            const submissionData = JSON.parse(ongoingSubmission);
-            const submissionTime = new Date(submissionData.timestamp);
-            const now = new Date();
-            
-            // If submission is older than 2 minutes, clear it
-            if (now - submissionTime > 120000) {
+            try {
+                const submissionData = JSON.parse(ongoingSubmission);
+                const submissionTime = new Date(submissionData.timestamp);
+                const now = new Date();
+                
+                // If submission is older than 2 minutes, clear it
+                if (now - submissionTime > 120000) {
+                    localStorage.removeItem('issueSubmissionInProgress');
+                } else {
+                    // Show warning about ongoing submission with option to clear
+                    const warningAlert = document.createElement('div');
+                    warningAlert.className = 'alert alert-warning mt-3 d-flex justify-content-between align-items-center';
+                    warningAlert.innerHTML = `
+                        <div>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Note:</strong> You have a recent submission in progress. 
+                            Please wait a moment before creating another issue.
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="clearSubmissionProgress()">
+                            Clear & Continue
+                        </button>
+                    `;
+                    document.querySelector('.container').insertBefore(warningAlert, document.getElementById('issueForm'));
+                }
+            } catch (e) {
+                // If there's any error parsing the submission data, clear it
                 localStorage.removeItem('issueSubmissionInProgress');
-            } else {
-                // Show warning about ongoing submission
-                const warningAlert = document.createElement('div');
-                warningAlert.className = 'alert alert-warning mt-3';
-                warningAlert.innerHTML = `
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>Note:</strong> You have a recent submission in progress. 
-                    Please wait a moment before creating another issue.
-                `;
-                document.querySelector('.container').insertBefore(warningAlert, document.getElementById('issueForm'));
             }
         }
     });
+
+    // Function to clear submission progress
+    function clearSubmissionProgress() {
+        localStorage.removeItem('issueSubmissionInProgress');
+        localStorage.removeItem('recentIssueSubmissions');
+        location.reload();
+    }
     
     document.getElementById('issueForm').addEventListener('submit', function(e) {
         // Prevent multiple submissions
@@ -466,7 +483,8 @@
         // Filter out submissions older than 1 minute
         const recentValidSubmissions = recentSubmissions.filter(sub => new Date(sub) > oneMinuteAgo);
         
-        if (recentValidSubmissions.length >= 2) {
+        // Allow more reasonable submission rate - max 3 submissions per minute instead of 2
+        if (recentValidSubmissions.length >= 3) {
             alert('You have submitted multiple issues recently. Please wait a moment before creating another issue.');
             e.preventDefault();
             return false;
@@ -592,9 +610,35 @@
         }
     });
     
-    // Clear localStorage when successfully navigating away (issue created)
+    // Clear localStorage when navigating away from the page
     window.addEventListener('beforeunload', function() {
+        // If not currently submitting, clear the progress
         if (!isSubmitting) {
+            localStorage.removeItem('issueSubmissionInProgress');
+        }
+    });
+
+    // Clear localStorage when the page loads (in case of redirect after successful submission)
+    window.addEventListener('load', function() {
+        // Check if we're on the same form page and not a success page
+        if (window.location.pathname.includes('/report-issue/')) {
+            // Only clear if the timestamp is older than 30 seconds (indicating page refresh after success)
+            const ongoingSubmission = localStorage.getItem('issueSubmissionInProgress');
+            if (ongoingSubmission) {
+                try {
+                    const submissionData = JSON.parse(ongoingSubmission);
+                    const submissionTime = new Date(submissionData.timestamp);
+                    const now = new Date();
+                    
+                    if (now - submissionTime > 30000) { // 30 seconds
+                        localStorage.removeItem('issueSubmissionInProgress');
+                    }
+                } catch (e) {
+                    localStorage.removeItem('issueSubmissionInProgress');
+                }
+            }
+        } else {
+            // If we're on a different page, clear the submission progress
             localStorage.removeItem('issueSubmissionInProgress');
         }
     });
