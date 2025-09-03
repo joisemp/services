@@ -2,29 +2,50 @@ import random
 import string
 
 
-def generate_unique_slug(instance, base_slug):
+def generate_unique_slug(instance, base_slug, max_length=100):
     """
     Generates a unique slug for a given model instance by appending a 4-character
     alphanumeric code to a base slug. Ensures the generated slug is unique within
-    the model's database table.
+    the model's database table and fits within the specified max_length.
+    
     Args:
         instance: The model instance for which the slug is being generated. The
             instance's class is used to query the database for existing slugs.
         base_slug (str): The base string to which the unique code will be appended.
+        max_length (int): Maximum length of the final slug. Defaults to 100.
+    
     Returns:
-        str: A unique slug in the format "{base_slug}-{unique_code}".
+        str: A unique slug in the format "{truncated_base_slug}-{unique_code}".
+    
     Raises:
         AttributeError: If the model class does not have a `objects.filter` method
             to query the database.
     """
-    """Generates a unique slug with a 4-character alphanumeric code."""
     def generate_code():
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     
+    # Reserve 5 characters for the separator and 4-character code ("-xxxx")
+    max_base_length = max_length - 5
+    
+    # Truncate base_slug if it's too long
+    if len(base_slug) > max_base_length:
+        base_slug = base_slug[:max_base_length]
+    
     slug = f"{base_slug}-{generate_code()}"
     model_class = instance.__class__
-    while model_class.objects.filter(slug=slug).exists():
-        slug = f"{base_slug}-{generate_code()}"
+    
+    # Ensure the generated slug doesn't exceed max_length
+    while len(slug) > max_length or model_class.objects.filter(slug=slug).exists():
+        code = generate_code()
+        slug = f"{base_slug}-{code}"
+        
+        # Double-check length constraint
+        if len(slug) > max_length:
+            # Further truncate base if needed
+            max_base_length = max_length - 5
+            base_slug = base_slug[:max_base_length]
+            slug = f"{base_slug}-{code}"
+    
     return slug
 
 
