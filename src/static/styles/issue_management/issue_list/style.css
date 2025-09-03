@@ -214,6 +214,9 @@ tr {
 #issue-list .escalate {
   background: linear-gradient(to bottom, #DD2828, #771616);
 }
+#issue-list .resolved {
+  background: linear-gradient(to bottom, #28A745, #155724);
+}
 #issue-list .filters-card {
   width: 100%;
   margin-top: 12px;
