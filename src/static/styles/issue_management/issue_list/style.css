@@ -226,4 +226,27 @@ tr {
   color: black;
   font-weight: 400;
   font-size: 17px;
-}/*# sourceMappingURL=style.css.map */
+}
+
+/* Hover effects for clickable stat cards */
+#issue-list .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+#issue-list .card.text-decoration-none {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+#issue-list .card.text-decoration-none:hover {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+#issue-list .card .card-body:hover {
+  color: aliceblue;
+}
+
+/*# sourceMappingURL=style.css.map */
