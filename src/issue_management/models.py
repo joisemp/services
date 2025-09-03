@@ -51,7 +51,7 @@ class IssueCategory(models.Model):
     org = models.ForeignKey(Organisation, related_name='issue_categories', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         verbose_name_plural = "Issue Categories"
@@ -60,7 +60,7 @@ class IssueCategory(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(f"{self.org}-{self.name}")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -115,7 +115,7 @@ class Issue(models.Model):
     escalated_by = models.ForeignKey('core.User', related_name='escalated_issues', on_delete=models.SET_NULL, null=True, blank=True, help_text="Maintainer who escalated the issue")
     
     # Slug for URLs
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -286,7 +286,7 @@ class Issue(models.Model):
         # Generate slug if not exists
         if not self.slug:
             base_slug = slugify(self.title)
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         
         # Handle voice file validation before saving
         if self.voice:
@@ -316,7 +316,7 @@ class IssueComment(models.Model):
     is_internal = models.BooleanField(default=False, help_text="Internal comments only visible to maintainers and admins")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         ordering = ['created_at']
@@ -324,7 +324,7 @@ class IssueComment(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(f"{self.issue.slug}-comment-{self.created_at}")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -342,7 +342,7 @@ class IssueStatusHistory(models.Model):
     new_maintainer = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='new_maintainer_history')
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -351,7 +351,7 @@ class IssueStatusHistory(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(f"{self.issue.slug}-{self.old_status}-{self.new_status}")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -376,7 +376,7 @@ class IssueStatusHistory(models.Model):
 class IssueImage(models.Model):
     issue = models.ForeignKey(Issue, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='public/issue_images/')
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
 
     def save(self, *args, **kwargs):
         from io import BytesIO
@@ -413,7 +413,7 @@ class IssueImage(models.Model):
 
         if not self.slug:
             base_slug = slugify(f"{self.issue.title}-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         
         # Call the parent save method and ensure it completes
         try:
@@ -434,7 +434,7 @@ class IssueResolutionImage(models.Model):
     uploaded_by = models.ForeignKey('core.User', on_delete=models.CASCADE, limit_choices_to={'profile__user_type': 'maintainer'})
     description = models.CharField(max_length=255, blank=True, help_text="Optional description of the resolution image")
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
 
     class Meta:
         ordering = ['-uploaded_at']
@@ -463,7 +463,7 @@ class IssueResolutionImage(models.Model):
 
         if not self.slug:
             base_slug = slugify(f"{self.issue.title}-resolution-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -480,7 +480,7 @@ class IssueWorkSession(models.Model):
     total_break_time = models.DurationField(default=timedelta, help_text="Total time spent on breaks")
     session_notes = models.TextField(blank=True, help_text="Notes about work done in this session")
     is_focus_mode = models.BooleanField(default=False, help_text="Whether this session was in focus mode")
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         ordering = ['-started_at']
@@ -533,7 +533,7 @@ class IssueWorkSession(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(f"{self.issue.slug}-session-{self.started_at}")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -552,7 +552,7 @@ class IssueBreakSession(models.Model):
         ('long', 'Long Break (30+ min)'),
         ('manual', 'Manual Break'),
     ], default='manual')
-    slug = models.SlugField(unique=True, db_index=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     
     class Meta:
         ordering = ['-started_at']
@@ -582,7 +582,7 @@ class IssueBreakSession(models.Model):
         
         if not self.slug:
             base_slug = slugify(f"{self.work_session.issue.slug}-break-{self.started_at}")
-            self.slug = generate_unique_slug(self, base_slug)
+            self.slug = generate_unique_slug(self, base_slug, max_length=100)
         super().save(*args, **kwargs)
     
     def __str__(self):
