@@ -163,7 +163,8 @@ def issue_list(request):
             if request.user.profile.org:
                 maintainer_issues_query = maintainer_issues_query & Q(org=request.user.profile.org)
             
-            base_issues = Issue.objects.filter(maintainer_issues_query)
+            # For maintainers, exclude escalated issues from statistics as well since they can no longer work on them
+            base_issues = Issue.objects.filter(maintainer_issues_query).exclude(status='escalated')
         else:
             # Regular users see statistics for issues they created
             base_issues = Issue.objects.filter(created_by=request.user, org=request.user.profile.org)
