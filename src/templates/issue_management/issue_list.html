@@ -47,7 +47,8 @@
     <!-- cards -->
     <div class="table-responsive">
         <div class="d-flex mt-2" style="gap: 0.5rem;">
-            <div class="card issue" style="flex: 1;">
+            <a href="?view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card issue text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <span class="material-symbols-outlined me-2">list_alt</span>
@@ -55,8 +56,9 @@
                     </div>
                     <h5>{{ total_active_count }}</h5>
                 </div>
-            </div>
-            <div class="card open-issue" style="flex: 1;">
+            </a>
+            <a href="?status=open&view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card open-issue text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <span class="material-symbols-outlined me-2">error</span>
@@ -64,8 +66,9 @@
                     </div>
                     <h5>{{ pending_count }}</h5>
                 </div>
-            </div>
-            <div class="card progress-issue" style="flex: 1;">
+            </a>
+            <a href="?status=in_progress&view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card progress-issue text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <span class="material-symbols-outlined me-2">hourglass_empty</span>
@@ -73,8 +76,9 @@
                     </div>
                     <h5>{{ in_progress_count }}</h5>
                 </div>
-            </div>
-            <div class="card escalate" style="flex: 1;">
+            </a>
+            <a href="?status=escalated&view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card escalate text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <span class="material-symbols-outlined me-2">priority_high</span>
@@ -82,7 +86,17 @@
                     </div>
                     <h5>{{ escalated_count }}</h5>
                 </div>
-            </div>
+            </a>
+            <a href="?view=resolved{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card resolved text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="material-symbols-outlined me-2">check_circle</span>
+                        <span>Resolved</span>
+                    </div>
+                    <h5>{{ resolved_count }}</h5>
+                </div>
+            </a>
         </div>
     </div>
 
