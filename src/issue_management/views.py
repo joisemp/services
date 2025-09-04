@@ -25,6 +25,7 @@ def issue_list(request):
     priority_filter = request.GET.get('priority')
     category_filter = request.GET.get('category')
     search = request.GET.get('search')
+    assigned_filter = request.GET.get('assigned')  # New assigned filter
     view_type = request.GET.get('view', 'active')  # 'active' or 'resolved'
     
     # Space context is now handled by middleware, so we can access it directly
@@ -120,6 +121,8 @@ def issue_list(request):
             Q(title__icontains=search) | 
             Q(description__icontains=search)
         )
+    if assigned_filter and view_type != 'resolved':  # Filter for assigned issues
+        issues = issues.filter(maintainer__isnull=False)
     
     # Calculate statistics based on user type and permissions (should match the same filtering logic as issues)
     base_issues = Issue.objects.none()
@@ -226,6 +229,7 @@ def issue_list(request):
             'priority': priority_filter,
             'category': category_filter,
             'search': search,
+            'assigned': assigned_filter,
             'view': view_type,
         }
         # Space context will be automatically added by middleware and context processor

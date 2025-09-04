@@ -189,33 +189,166 @@ tr {
   margin: 2px;
   width: 100%;
   min-width: 15rem;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#issue-list .card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+#issue-list .card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+#issue-list .card:hover .material-symbols-outlined {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+#issue-list .card:hover h5 {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+#issue-list .card:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }
 #issue-list .card .card-body {
-  color: aliceblue;
+  color: white;
   text-align: center;
+  padding: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+#issue-list .card .card-body .d-flex {
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 #issue-list .card .card-body span {
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+#issue-list .card .card-body .material-symbols-outlined {
   font-size: 1.5rem;
-  font-weight: 300;
+  opacity: 0.9;
 }
 #issue-list .card .card-body h5 {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+#issue-list .card .card-body:hover {
+  color: white;
+}
+#issue-list .card.text-decoration-none {
+  color: inherit;
+  text-decoration: none !important;
+}
+#issue-list .card.text-decoration-none:hover {
+  color: inherit;
+  text-decoration: none !important;
 }
 #issue-list .issue {
-  background: linear-gradient(to bottom, #DD7D28, #774316);
+  background: linear-gradient(135deg, #FF8A00 0%, #DA1B60 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
 }
-#issue-list .open-issue {
-  background: linear-gradient(to bottom, #2A9D90, #0F3732);
+#issue-list .assigned-issue {
+  background: linear-gradient(135deg, #2ED8B6 0%, #59C173 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
 }
 #issue-list .progress-issue {
-  background: linear-gradient(to bottom, #0078B7, #06334A);
+  background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
 }
 #issue-list .escalate {
-  background: linear-gradient(to bottom, #DD2828, #771616);
+  background: linear-gradient(135deg, #FA709A 0%, #FEE140 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
 }
 #issue-list .resolved {
-  background: linear-gradient(to bottom, #28A745, #155724);
+  background: linear-gradient(135deg, #A8ED5F 0%, #28A745 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+}
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+#issue-list .table-responsive {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+#issue-list .d-flex.mt-2 {
+  gap: 0.75rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1.5rem;
+}
+@keyframes cardPulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+#issue-list .card.loading {
+  animation: cardPulse 1.5s ease-in-out infinite;
+}
+@media (max-width: 768px) {
+  #issue-list .card {
+    min-width: 12rem;
+    margin: 1px;
+  }
+  #issue-list .card .card-body {
+    padding: 1rem;
+  }
+  #issue-list .card .card-body h5 {
+    font-size: 2.2rem;
+  }
+  #issue-list .card .card-body span {
+    font-size: 1rem;
+  }
+}
+@media (max-width: 576px) {
+  #issue-list .d-flex {
+    flex-wrap: wrap;
+  }
+  #issue-list .card {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 8rem;
+  }
+  #issue-list .card .card-body h5 {
+    font-size: 1.8rem;
+  }
+  #issue-list .card .card-body span {
+    font-size: 0.9rem;
+  }
 }
 #issue-list .filters-card {
   width: 100%;
@@ -229,27 +362,4 @@ tr {
   color: black;
   font-weight: 400;
   font-size: 17px;
-}
-
-/* Hover effects for clickable stat cards */
-#issue-list .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-}
-
-#issue-list .card.text-decoration-none {
-  color: inherit;
-  text-decoration: none !important;
-}
-
-#issue-list .card.text-decoration-none:hover {
-  color: inherit;
-  text-decoration: none !important;
-}
-
-#issue-list .card .card-body:hover {
-  color: aliceblue;
-}
-
-/*# sourceMappingURL=style.css.map */
+}/*# sourceMappingURL=style.css.map */
