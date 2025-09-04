@@ -182,6 +182,13 @@ def issue_list(request):
     escalated_count = active_issues.filter(status='escalated').count()
     resolved_count = resolved_issues.count()
     
+    # Calculate priority counts (combining active and resolved issues for total priority counts)
+    all_issues = base_issues  # This includes both active and resolved issues
+    low_priority_count = all_issues.filter(priority='low').count()
+    medium_priority_count = all_issues.filter(priority='medium').count()
+    high_priority_count = all_issues.filter(priority='high').count()
+    critical_priority_count = all_issues.filter(priority='critical').count()
+    
     # Assigned count should reflect issues that have a maintainer assigned (excluding resolved)
     assigned_count = active_issues.filter(maintainer__isnull=False).count()
     
@@ -222,6 +229,10 @@ def issue_list(request):
         'resolved_count': resolved_count,
         'escalated_count': escalated_count,
         'my_issues_count': my_issues_count,
+        'low_priority_count': low_priority_count,
+        'medium_priority_count': medium_priority_count,
+        'high_priority_count': high_priority_count,
+        'critical_priority_count': critical_priority_count,
         'categories': categories,
         'view_type': view_type,  # Add view type to context
         'current_filters': {

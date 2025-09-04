@@ -109,24 +109,6 @@
                    value="{{ current_filters.search|default:'' }}"
                    style="min-width: 180px; max-width: 220px;" />
             
-            <!-- Status dropdown -->
-            <select name="status" class="form-select" style="min-width: 120px; max-width: 150px;">
-                <option value="">All Status</option>
-                <option value="open" {% if current_filters.status == 'open' %}selected{% endif %}>Open</option>
-                <option value="in_progress" {% if current_filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                <option value="escalated" {% if current_filters.status == 'escalated' %}selected{% endif %}>Escalated</option>
-                <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
-            </select>
-            
-            <!-- Priority dropdown -->
-            <select name="priority" class="form-select" style="min-width: 120px; max-width: 150px;">
-                <option value="">All Priority</option>
-                <option value="low" {% if current_filters.priority == 'low' %}selected{% endif %}>Low</option>
-                <option value="medium" {% if current_filters.priority == 'medium' %}selected{% endif %}>Medium</option>
-                <option value="high" {% if current_filters.priority == 'high' %}selected{% endif %}>High</option>
-                <option value="critical" {% if current_filters.priority == 'critical' %}selected{% endif %}>Critical</option>
-            </select>
-            
             <!-- Category dropdown -->
             <select name="category" class="form-select" style="min-width: 140px; max-width: 180px;">
                 <option value="">All Categories</option>
@@ -231,15 +213,27 @@
             </div>
         </div>
     </div>
-    <!-- View toggle buttons -->
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        <a href="?view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
-           class="btn btn-sm {% if view_type == 'active' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-            Active Issues
+    <!-- Priority Filter Buttons -->
+    <div class="d-flex flex-wrap gap-2 mb-3 justify-content-start">
+        <a href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.category %}category={{ current_filters.category }}&{% endif %}view={{ view_type }}" 
+           class="btn btn-sm {% if not current_filters.priority %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            All Priority
         </a>
-        <a href="?view=resolved{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
-           class="btn btn-sm {% if view_type == 'resolved' %}btn-success{% else %}btn-outline-success{% endif %}">
-            Resolved Issues ({{ resolved_count }})
+        <a href="?priority=low{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}&view={{ view_type }}" 
+           class="btn btn-sm {% if current_filters.priority == 'low' %}btn-info{% else %}btn-outline-info{% endif %}">
+            Low ({{ low_priority_count }})
+        </a>
+        <a href="?priority=medium{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}&view={{ view_type }}" 
+           class="btn btn-sm {% if current_filters.priority == 'medium' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+            Medium ({{ medium_priority_count }})
+        </a>
+        <a href="?priority=high{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}&view={{ view_type }}" 
+           class="btn btn-sm {% if current_filters.priority == 'high' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+            High ({{ high_priority_count }})
+        </a>
+        <a href="?priority=critical{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}&view={{ view_type }}" 
+           class="btn btn-sm {% if current_filters.priority == 'critical' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+            Critical ({{ critical_priority_count }})
         </a>
     </div>
     <!-- table -->
