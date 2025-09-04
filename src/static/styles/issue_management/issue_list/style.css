@@ -185,15 +185,7 @@ tr {
   background-color: #00476e !important;
   border: 1px solid #005A8C !important;
 }
-#issue-list .card {
-  margin: 2px;
-  width: 100%;
-  min-width: 15rem;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  position: relative;
+#issue-
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 #issue-list .card::before {
@@ -363,3 +355,27 @@ tr {
   font-weight: 400;
   font-size: 17px;
 }/*# sourceMappingURL=style.css.map */
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  #issue-list .d-flex {
+    flex-wrap: wrap;
+  }
+  
+  #issue-list .card {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 8rem;
+  }
+  
+  #issue-list .card .card-body h5 {
+    font-size: 1.8rem;
+  }
+  
+  #issue-list .card .card-body span {
+    font-size: 0.9rem;
+  }
+}
+
+/*# sourceMappingURL=style.css.map */
