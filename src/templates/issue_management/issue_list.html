@@ -57,14 +57,14 @@
                     <h5>{{ total_active_count }}</h5>
                 </div>
             </a>
-            <a href="?status=open&view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
-               class="card open-issue text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
+            <a href="?view=active&assigned=true{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
+               class="card assigned-issue text-decoration-none" style="flex: 1; cursor: pointer; transition: transform 0.2s;">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
-                        <span class="material-symbols-outlined me-2">error</span>
-                        <span>Open Issues</span>
+                        <span class="material-symbols-outlined me-2">assignment_ind</span>
+                        <span>Assigned Issues</span>
                     </div>
-                    <h5>{{ pending_count }}</h5>
+                    <h5>{{ assigned_count }}</h5>
                 </div>
             </a>
             <a href="?status=in_progress&view=active{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.priority %}&priority={{ current_filters.priority }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}" 
