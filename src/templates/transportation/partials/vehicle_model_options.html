@@ -1,8 +1,0 @@
-<!-- Vehicle Model Options -->
-<option value="">Select a vehicle model</option>
-{% for vehicle_model in vehicle_models %}
-    <option value="{{ vehicle_model.id }}" {% if vehicle_model.id == selected_model_id %}selected{% endif %}>
-        {{ vehicle_model.make.name }} {{ vehicle_model.name }}
-        {% if vehicle_model.year_introduced %}({{ vehicle_model.year_introduced }}){% endif %}
-    </option>
-{% endfor %}

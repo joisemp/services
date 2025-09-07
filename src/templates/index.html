@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/home/style.css' %}">
+{% endblock styles %}
+
+{% block navbar %}
+    {% include 'navbar.html' %}
+{% endblock navbar %}
+
+{% block content %}
+<h1>Hello world</h1>
+{% endblock content %}

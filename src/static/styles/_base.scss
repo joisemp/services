@@ -1,13 +1,15 @@
+@use 'colors' as colors;
+
 // Navbar
 .header {
-    background-color: #ffffff;
+    background-color: colors.$nav-bg;
     width: 100%;
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
     height: 60px;
-    border-bottom: 1px solid #000000;
+    border-bottom: 1px solid colors.$base-border;
     display: flex;
     align-items: center !important;
 

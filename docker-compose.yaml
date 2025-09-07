@@ -3,8 +3,8 @@ name: sfs-services-project
 services:
   app:
     build: ./src
-    image: sfs-services
-    container_name: sfs-services-container
+    image: sfs-services-dev
+    container_name: sfs-services-dev-container
     command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     ports:
       - "7000:8000"
@@ -18,7 +18,7 @@ services:
 
   postgres:
     image: postgres
-    container_name: services-postgres-container
+    container_name: sfs-services-dev-postgres-container
     ports:
       - "5432:5432"
     environment:
@@ -32,3 +32,5 @@ services:
 
 volumes:
   postgres_data:
+  project_data:
+    name: sfs_services_data

@@ -7,11 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Services {% block title %}{% endblock title %}</title>
     <link rel="icon" type="image/x-icon" href="{% static 'images/logo-icon.svg' %}">
-    <script src="{% static 'utils/htmx/htmx.min.js' %}"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
     <link href="{% static 'utils/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    {% block style %}{% endblock style %}
+    {% block styles %}{% endblock styles %}
 </head>
 
 <body class="bg-light">
@@ -23,7 +22,7 @@
         <!-- Main Content -->
         <section class="main-content">
             <div class="container">
-                {% block content %}{% endblock %}
+                {% block content %}{% endblock content %}
             </div>
         </section>
 
