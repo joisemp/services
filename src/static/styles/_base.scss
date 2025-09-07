@@ -1,0 +1,31 @@
+@use 'colors' as colors;
+
+// Navbar
+.header {
+    background-color: colors.$nav-bg;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    height: 60px;
+    border-bottom: 1px solid colors.$base-border;
+    display: flex;
+    align-items: center !important;
+
+    .logo {
+        img {
+            width: 115px;
+        }
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem;
+    }
+}
+
+.main-content {
+    margin-top: 70px;
+}

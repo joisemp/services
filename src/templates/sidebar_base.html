@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Services | {% block title %}{% endblock title %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-icon.svg' %}">
+    <script src="{% static 'utils/htmx/htmx.min.js' %}"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+    <link href="{% static 'utils/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    {% block styles %}{% endblock styles %}
+</head>
+
+<body class="bg-light">
+    <div class="initial-wrap">
+
+        <!-- Navbar -->
+        {% block navbar %}
+        {% endblock navbar %}
+
+        <!-- Sidebar -->
+        {% block sidebar %}
+        {% endblock sidebar %}
+
+        <!-- Main Content -->
+        <section class="main-content">
+            <!-- Django Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </section>
+
+    </div>
+    {% block scripts %}{% endblock scripts %}
+    <script src="{% static 'utils/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/sidebar/collaps.js' %}"></script>
+</body>
+
+</html>
