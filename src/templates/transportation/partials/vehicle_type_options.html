@@ -1,7 +1,0 @@
-<!-- Vehicle Type Options -->
-<option value="">Select a vehicle type</option>
-{% for vehicle_type in vehicle_types %}
-    <option value="{{ vehicle_type.id }}" {% if vehicle_type.id == selected_type_id %}selected{% endif %}>
-        {{ vehicle_type.get_name_display }}
-    </option>
-{% endfor %}
