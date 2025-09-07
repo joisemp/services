@@ -1,15 +1,4 @@
-// Don't even dare to touch or make changes to this file.. please 🙏
-$primary-color: #000000;
-$dark-color: #333333;
-$text-muted: #666666;
-$success-color: #28a745;
-$warning-color: #ffc107;
-$danger-color: #dc3545;
-$light-color: #f8f9fa;
-$border-color: #e1e5e9;
-$header-height: 60px;
-$sidebar-width: 220px;
-$secondary-color: #f0f0f0;
+@use "./colors" as colors;
 
 // Overall wrap
 .initial-wrap {
@@ -19,14 +8,14 @@ $secondary-color: #f0f0f0;
 
   // Navbar
   .header {
-    background-color: #ffffff;
+    background-color: colors.$nav-bg;
     width: 100%;
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
     height: 60px;
-    border-bottom: 2px solid #000000;
+    border-bottom: 1px solid colors.$base-border;
     display: flex;
     align-items: center !important;
 
@@ -43,7 +32,6 @@ $secondary-color: #f0f0f0;
     }
   }
 
-
   @media screen and (max-width: 430px) {
     .sidebar-collapsed {
       margin-left: -100%;
@@ -54,34 +42,27 @@ $secondary-color: #f0f0f0;
   // Sidebar
   .sidebar {
     width: 220px;
-    background-color: #00012F;
+    background-color: colors.$base-white;
     height: calc(100vh - 60px);
     position: fixed;
     top: 60px;
     left: 0;
     z-index: 999;
-    border-right: 1px solid #e5e5e5;
+    border-right: 1px solid colors.$base-border;
     overflow-y: auto;
-    scrollbar-width: none;
-    transition: margin-left 0.3s;
-    /* Firefox */
-    -ms-overflow-style: none;
-    /* Internet Explorer 10+ */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
 
     &::-webkit-scrollbar {
-      display: none;
-      /* Safari and Chrome */
+      display: none; /* Safari and Chrome */
     }
 
     &:hover {
-      scrollbar-width: thin;
-      /* Firefox */
-      -ms-overflow-style: auto;
-      /* Internet Explorer 10+ */
+      scrollbar-width: thin; /* Firefox */
+      -ms-overflow-style: auto; /* Internet Explorer 10+ */
 
       &::-webkit-scrollbar {
-        display: block;
-        /* Safari and Chrome */
+        display: block; /* Safari and Chrome */
         width: 8px;
       }
 
@@ -105,7 +86,7 @@ $secondary-color: #f0f0f0;
 
       .navlink {
         text-decoration: none;
-        color: #f9f9f9;
+        color: #334155;
         padding: 2rem;
         display: flex;
         align-items: center;
@@ -114,14 +95,14 @@ $secondary-color: #f0f0f0;
         width: 100%;
 
         &:hover {
-          color: #ffffff;
-          background-color: #050505;
+          color: colors.$base-white;
+          background-color: colors.$primary;
         }
       }
 
       .active {
-        color: #050505;
-        background-color: #fdfdfd;
+        color: colors.$base-white;
+        background-color: colors.$primary;
       }
     }
 

@@ -14,8 +14,6 @@ import os
 from pathlib import Path
 from environ import Env
 
-AUTH_USER_MODEL = 'core.User'
-
 env = Env()
 Env.read_env()
 
@@ -27,7 +25,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
@@ -50,15 +47,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'widget_tweaks',
-    'issue_management.apps.IssueManagementConfig',
-    'core.apps.CoreConfig',
-    'dashboard.apps.DashboardConfig',
-    'service_management.apps.ServiceManagementConfig',
-    'transportation.apps.TransportationConfig',
-    'marketplace.apps.MarketplaceConfig',
-    'finance.apps.FinanceConfig',
-    'asset_management.apps.AssetManagementConfig',
 ]
 
 MIDDLEWARE = [
@@ -69,9 +57,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'config.middleware.SpaceAdminAccessMiddleware',  # Custom middleware for space admin access control
-    'config.space_context_middleware.SpaceContextMiddleware',  # Custom middleware for space context
-    # 'config.focus_middleware.FocusModeMiddleware',  # Temporarily disabled for testing
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -80,14 +65,13 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['templates'], 
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'config.context_processors.space_context',  # Custom context processor for space context
             ],
         },
     },
@@ -115,7 +99,6 @@ else:
     DATABASES = {
         'default': dj_database_url.parse(env('DATABASE_URL', default='postgresql://'))
     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -160,6 +143,7 @@ if ENVIRONMENT == 'development':
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 else:
     # DigitalOcean Spaces Configuration
     AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', default="aws_access_key")
@@ -183,6 +167,7 @@ else:
         },
     }
 
+
     # Static Files
     STATIC_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/static/"
     STATICFILES_DIRS = [
@@ -192,180 +177,7 @@ else:
     # Media Files
     MEDIA_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/media/"
 
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
-FILE_UPLOAD_PERMISSIONS = 0o644
-
-# Ensure file uploads are handled synchronously but efficiently
-FILE_UPLOAD_HANDLERS = [
-    'django.core.files.uploadhandler.MemoryFileUploadHandler',
-    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
-]
-
-# Request timeout settings
-if ENVIRONMENT != 'development':
-    # Production timeout settings
-    import os
-    os.environ.setdefault('GUNICORN_TIMEOUT', '120')
-    os.environ.setdefault('GUNICORN_KEEPALIVE', '5')
-
-# Additional S3 settings for production
-if ENVIRONMENT != 'development':
-    # Ensure S3 uploads are synchronous
-    AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='blr1')
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_S3_USE_SSL = True
-    AWS_QUERYSTRING_AUTH = True
-    AWS_QUERYSTRING_EXPIRE = 3600  # 1 hour
-
-# email settings
-if ENVIRONMENT == 'development':
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = env('EMAIL_HOST', default='in-v3.mailjet.com')
-    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-    EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-    DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
-
-
-# Finance Module Settings
-DEFAULT_CURRENCY = 'INR'  # Default currency for the application
-
-# Django Messages Framework Configuration
-# Map Django message levels to Bootstrap CSS classes
-from django.contrib.messages import constants as messages
-MESSAGE_TAGS = {
-    messages.DEBUG: 'debug',
-    messages.INFO: 'info',
-    messages.SUCCESS: 'success',
-    messages.WARNING: 'warning',
-    messages.ERROR: 'danger',
-}
-
-CSRF_TRUSTED_ORIGINS = [
-    url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
-]
-
-# Logging Configuration
-if not DEBUG:
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'verbose': {
-                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-                'style': '{',
-            },
-            'simple': {
-                'format': '{levelname} {message}',
-                'style': '{',
-            },
-        },
-        'filters': {
-            'require_debug_false': {
-                '()': 'django.utils.log.RequireDebugFalse',
-            },
-        },
-        'handlers': {
-            'file': {
-                'level': 'INFO',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-                'maxBytes': 1024*1024*10,  # 10 MB
-                'backupCount': 5,
-                'formatter': 'verbose',
-                'filters': ['require_debug_false'],
-            },
-            'error_file': {
-                'level': 'ERROR',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': os.path.join(BASE_DIR, 'logs', 'django_errors.log'),
-                'maxBytes': 1024*1024*10,  # 10 MB
-                'backupCount': 5,
-                'formatter': 'verbose',
-                'filters': ['require_debug_false'],
-            },
-            'mail_admins': {
-                'level': 'ERROR',
-                'class': 'django.utils.log.AdminEmailHandler',
-                'filters': ['require_debug_false'],
-                'formatter': 'verbose',
-            },
-            'console': {
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                'formatter': 'simple',
-            },
-        },
-        'root': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['console', 'file', 'mail_admins'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'django.request': {
-                'handlers': ['error_file', 'mail_admins'],
-                'level': 'ERROR',
-                'propagate': False,
-            },
-            'django.security': {
-                'handlers': ['error_file', 'mail_admins'],
-                'level': 'ERROR',
-                'propagate': False,
-            },
-            'django.db.backends': {
-                'handlers': ['file'],
-                'level': 'ERROR',
-                'propagate': False,
-            },
-            # Your app loggers
-            'core': {
-                'handlers': ['file', 'error_file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'issue_management': {
-                'handlers': ['file', 'error_file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'finance': {
-                'handlers': ['file', 'error_file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'service_management': {
-                'handlers': ['file', 'error_file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-        },
-    }
-    
-    # Ensure logs directory exists
-    LOGS_DIR = os.path.join(BASE_DIR, 'logs')
-    if not os.path.exists(LOGS_DIR):
-        os.makedirs(LOGS_DIR)
-
-# Admin emails for error notifications (only used when DEBUG=False)
-if not DEBUG:
-    ADMINS = [
-        ('Admin', env('ADMIN_EMAIL', default='admin@example.com')),
-    ]
-    MANAGERS = ADMINS
