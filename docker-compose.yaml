@@ -1,0 +1,36 @@
+name: sfs-services-project
+
+services:
+  app:
+    build: ./src
+    image: sfs-services-dev
+    container_name: sfs-services-dev-container
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "7000:8000"
+    volumes:
+      - ./src:/app
+    env_file:
+      - ./src/config/.env
+    depends_on:
+      - postgres
+
+
+  postgres:
+    image: postgres
+    container_name: sfs-services-dev-postgres-container
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
+  project_data:
+    name: sfs_services_data
