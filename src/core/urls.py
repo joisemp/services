@@ -1,8 +1,11 @@
 from django.urls import path
-
+from . import views
 
 app_name = "core"
 
 urlpatterns = [
-    # Add central admin-specific URL patterns here
+    # Core application URL patterns
+    # path('', views.core_home, name='home'),
+    # path('about/', views.about, name='about'),
+    # Add core app URLs here
 ]
