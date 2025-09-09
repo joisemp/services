@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomePageView.as_view(), name='home'),
     path('core/', include('core.urls', namespace='core')),
+    path('issue_management/', include('issue_management.urls', namespace='issue_management')),
 ]
