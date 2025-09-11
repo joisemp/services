@@ -13,7 +13,7 @@ class Organization(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.name)
-            self.slug = generate_unique_slug(base_slug)
+            self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -29,7 +29,7 @@ class Space(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.name)
-            self.slug = generate_unique_slug(base_slug)
+            self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -20,7 +20,7 @@
 <div class="container-fluid">
   <div class="d-flex">
     <h3>Issue List</h3>
-    <a href="#" class="btn btn-primary ms-auto fw-semibold">Create New Issue</a>
+    <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary ms-auto">Create New Issue</a>
   </div>
   <ul>
     {% for issue in issues %}
