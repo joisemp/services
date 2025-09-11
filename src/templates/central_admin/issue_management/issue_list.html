@@ -1,0 +1,33 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Issue Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex">
+    <h3>Issue List</h3>
+    <a href="#" class="btn btn-primary ms-auto fw-semibold">Create New Issue</a>
+  </div>
+  <ul>
+    {% for issue in issues %}
+    <li>{{ issue.title }} - {{ issue.status }}</li>
+    {% empty %}
+    <li>No issues found.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
