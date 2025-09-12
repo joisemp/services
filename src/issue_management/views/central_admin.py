@@ -34,3 +34,14 @@ class IssueCreateView(CreateView):
         
         return response
     
+
+class IssueDetailView(DetailView):
+    template_name = "central_admin/issue_management/issue_detail.html"
+    context_object_name = "issue"
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def get_queryset(self):
+        return Issue.objects.prefetch_related('images', 'comments').select_related('org', 'space')
+    

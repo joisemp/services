@@ -25,5 +25,14 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
                 'class': 'voice-file-input',
                 'accept': 'audio/*',
                 'style': 'display: none;'
+            }),
+            'space': forms.Select(attrs={
+                'class': 'form-control'
             })
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make space field optional
+        self.fields['space'].required = False
+        self.fields['space'].empty_label = "Select a space (optional)"

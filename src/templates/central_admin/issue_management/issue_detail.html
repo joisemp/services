@@ -1,0 +1,47 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Issue Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_detail/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% if issue %}
+  <h2>{{ issue.title }}</h2>
+  <p>{{ issue.description }}</p>
+  <p>Status: {{ issue.get_status_display }}</p>
+  <p>Priority: {{ issue.get_priority_display }}</p>
+  <p>Created at: {{ issue.created_at|date:"M d, Y" }}</p>
+
+  {% if issue.images.exists %}
+    <h3>Images</h3>
+    <div class="d-flex flex-wrap">
+      {% for image in issue.images.all %}
+        <img src="{{ image.image.url }}" alt="Issue image" class="img-thumbnail me-1 mb-1"
+          style="width: 100px; height: 100px; object-fit: cover;">
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if issue.voice %}
+    <h3>Voice Recording</h3>
+    <audio controls>
+      <source src="{{ issue.voice.url }}" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+  {% endif %}
+{% else %}
+  <p>Issue not found.</p>
+{% endif %}
+{% endblock content %}

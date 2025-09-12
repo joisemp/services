@@ -27,7 +27,7 @@ class Issue(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
-    space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE)
+    space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
     slug = models.SlugField(unique=True)
      
     def save(self, *args, **kwargs):
