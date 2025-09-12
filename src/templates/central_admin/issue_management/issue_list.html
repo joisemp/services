@@ -6,6 +6,8 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 {% endblock %}
 
 {% block navbar %}
@@ -20,14 +22,87 @@
 <div class="container-fluid">
   <div class="d-flex">
     <h3>Issue List</h3>
-    <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary ms-auto">Create New Issue</a>
+    <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary ms-auto">
+      <span class="material-symbols-outlined me-1" style="vertical-align: middle;">add</span>
+      Create New Issue
+    </a>
   </div>
-  <ul>
+
+  {% if issues %}
+  <div class="row">
     {% for issue in issues %}
-    <li>{{ issue.title }} - {{ issue.status }}</li>
-    {% empty %}
-    <li>No issues found.</li>
+    <div class="col-lg-6 col-xl-4 mb-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title">{{ issue.title }}</h5>
+            <span
+              class="badge bg-{% if issue.status == 'open' %}primary{% elif issue.status == 'in_progress' %}warning{% elif issue.status == 'resolved' %}success{% else %}secondary{% endif %}">
+              {{ issue.get_status_display }}
+            </span>
+          </div>
+
+          <p class="card-text">{{ issue.description|truncatewords:20 }}</p>
+
+          <div class="mb-2">
+            <small class="text-muted">
+              <span class="material-symbols-outlined me-1"
+                style="font-size: 16px; vertical-align: middle;">business</span>
+              {{ issue.org.name }}
+            </small>
+            <br>
+            <small class="text-muted">
+              <span class="material-symbols-outlined me-1"
+                style="font-size: 16px; vertical-align: middle;">space_dashboard</span>
+              {{ issue.space.name }}
+            </small>
+          </div>
+
+          {% if issue.images.exists %}
+          <div class="mb-2">
+            <small class="text-muted d-block mb-1">
+              <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">image</span>
+              {{ issue.images.count }} image{{ issue.images.count|pluralize }}
+            </small>
+            <div class="d-flex flex-wrap">
+              {% for image in issue.images.all|slice:":3" %}
+              <img src="{{ image.image.url }}" alt="Issue image" class="img-thumbnail me-1 mb-1"
+                style="width: 40px; height: 40px; object-fit: cover;">
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if issue.voice %}
+          <div class="mb-2">
+            <small class="text-muted">
+              <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">mic</span>
+              Voice recording attached
+            </small>
+          </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+              Priority:
+              <span
+                class="badge bg-{% if issue.priority == 'critical' %}danger{% elif issue.priority == 'high' %}warning{% elif issue.priority == 'medium' %}info{% else %}secondary{% endif %}">
+                {{ issue.get_priority_display }}
+              </span>
+            </small>
+            <small class="text-muted">{{ issue.created_at|date:"M d, Y" }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
     {% endfor %}
-  </ul>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <span class="material-symbols-outlined text-muted" style="font-size: 64px;">inbox</span>
+    <h4 class="text-muted mt-2">No issues found</h4>
+    <p class="text-muted">Get started by creating your first issue.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
