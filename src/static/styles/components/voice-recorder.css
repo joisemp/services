@@ -1,0 +1,381 @@
+/* Voice Recorder Component - WhatsApp Style with Material Icons - Mobile Friendly */
+.voice-recorder {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 60px;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.voice-recorder.recording {
+  background: #fef7f0;
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}
+@media (max-width: 768px) {
+  .voice-recorder {
+    padding: 10px 12px;
+    border-radius: 16px;
+    gap: 10px;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 480px) {
+  .voice-recorder {
+    padding: 8px 10px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+}
+
+.voice-recorder-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .voice-recorder-controls {
+    gap: 10px;
+  }
+}
+@media (max-width: 480px) {
+  .voice-recorder-controls {
+    gap: 8px;
+  }
+}
+
+.record-button, .action-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #007bff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+.record-button .material-symbols-outlined, .action-button .material-symbols-outlined {
+  font-size: 20px;
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+@media (max-width: 768px) {
+  .record-button, .action-button {
+    width: 44px;
+    height: 44px;
+  }
+  .record-button .material-symbols-outlined, .action-button .material-symbols-outlined {
+    font-size: 22px;
+  }
+}
+@media (max-width: 480px) {
+  .record-button, .action-button {
+    width: 42px;
+    height: 42px;
+  }
+  .record-button .material-symbols-outlined, .action-button .material-symbols-outlined {
+    font-size: 20px;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .record-button:active, .action-button:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}
+
+.record-button:hover {
+  background: #0056b3;
+  transform: scale(1.05);
+}
+@media (hover: none) {
+  .record-button:hover {
+    transform: none;
+    background: #007bff;
+  }
+}
+.record-button.recording {
+  background: #dc3545;
+  animation: pulse 2s infinite;
+}
+
+.action-button.delete-button {
+  background: #dc3545;
+  width: 32px;
+  height: 32px;
+}
+.action-button.delete-button .material-symbols-outlined {
+  font-size: 18px;
+}
+@media (max-width: 768px) {
+  .action-button.delete-button {
+    width: 36px;
+    height: 36px;
+  }
+  .action-button.delete-button .material-symbols-outlined {
+    font-size: 20px;
+  }
+}
+
+.recording-timer {
+  font-size: 14px;
+  font-weight: 500;
+  color: #dc3545;
+  min-width: 60px;
+  text-align: center;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .recording-timer {
+    font-size: 13px;
+    min-width: 50px;
+  }
+}
+
+.waveform-container {
+  flex: 1;
+  height: 40px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .waveform-container {
+    height: 36px;
+    border-radius: 18px;
+    padding: 3px 6px;
+  }
+}
+@media (max-width: 480px) {
+  .waveform-container {
+    height: 32px;
+    border-radius: 16px;
+    padding: 2px 4px;
+  }
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  overflow: hidden;
+}
+@media (max-width: 480px) {
+  .waveform {
+    gap: 1px;
+  }
+}
+
+.waveform-bar {
+  width: 3px;
+  background: #007bff;
+  border-radius: 2px;
+  min-height: 4px;
+  transition: height 0.1s ease;
+}
+.waveform-bar.active {
+  background: #28a745;
+}
+@media (max-width: 480px) {
+  .waveform-bar {
+    width: 2px;
+    border-radius: 1px;
+    min-height: 3px;
+  }
+}
+
+.recording-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+@media (max-width: 480px) {
+  .recording-actions {
+    gap: 6px;
+  }
+}
+
+.voice-preview {
+  display: none;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.voice-preview.show {
+  display: block;
+}
+@media (max-width: 768px) {
+  .voice-preview {
+    padding: 6px 10px;
+    border-radius: 10px;
+    margin-top: 6px;
+  }
+}
+@media (max-width: 480px) {
+  .voice-preview {
+    padding: 4px 8px;
+    border-radius: 8px;
+    margin-top: 4px;
+  }
+}
+
+.voice-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.voice-preview-controls .action-button.play-button {
+  background: #28a745;
+}
+.voice-preview-controls .action-button.play-button.playing {
+  background: #ffc107;
+}
+@media (max-width: 768px) {
+  .voice-preview-controls {
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+}
+@media (max-width: 480px) {
+  .voice-preview-controls {
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+}
+
+.playback-waveform {
+  flex: 1;
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .playback-waveform {
+    height: 24px;
+    border-radius: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .playback-waveform {
+    height: 22px;
+    border-radius: 11px;
+  }
+}
+
+.playback-progress {
+  height: 100%;
+  background: #007bff;
+  border-radius: inherit;
+  width: 0%;
+  transition: width 0.1s ease;
+}
+
+.recording-info {
+  font-size: 12px;
+  color: #6c757d;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .recording-info {
+    font-size: 11px;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+/* Hidden file input */
+.voice-recorder + input[type=file] {
+  display: none;
+}
+
+/* Text utilities */
+.text-muted {
+  color: #6c757d;
+  font-size: 14px;
+}
+@media (max-width: 480px) {
+  .text-muted {
+    font-size: 13px;
+  }
+}
+
+.text-danger {
+  color: #dc3545;
+  font-size: 14px;
+}
+@media (max-width: 480px) {
+  .text-danger {
+    font-size: 13px;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  .voice-recorder input {
+    font-size: 16px;
+  }
+  .mb-3 .voice-recorder {
+    margin-bottom: 0.5rem !important;
+  }
+}
+/* Accessibility improvements for mobile */
+@media (prefers-reduced-motion: reduce) {
+  .voice-recorder,
+  .record-button,
+  .action-button,
+  .waveform-bar,
+  .playback-progress {
+    transition: none;
+    animation: none;
+  }
+  .record-button.recording {
+    animation: none;
+    background: #dc3545;
+  }
+}
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .voice-recorder {
+    border-width: 2px;
+  }
+  .record-button,
+  .action-button {
+    border: 2px solid currentColor;
+  }
+}/*# sourceMappingURL=voice-recorder.css.map */
