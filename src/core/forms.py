@@ -6,8 +6,47 @@ from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.urls import reverse
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from config.mixins.form_mixin import BootstrapFormMixin
 from .models import Organization, User
+
+
+class CustomPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
+    """
+    Custom password reset form with Bootstrap styling
+    """
+    email = forms.EmailField(
+        max_length=254,
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'Enter your email address',
+            'autocomplete': 'email'
+        }),
+        label="Email Address",
+        help_text="Enter the email address associated with your account."
+    )
+
+
+class CustomSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
+    """
+    Custom set password form with Bootstrap styling
+    """
+    new_password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Enter your new password',
+            'autocomplete': 'new-password'
+        }),
+        label="New Password",
+        help_text="Your password must contain at least 8 characters and cannot be entirely numeric."
+    )
+    
+    new_password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Confirm your new password',
+            'autocomplete': 'new-password'
+        }),
+        label="Confirm New Password",
+        help_text="Enter the same password as before, for verification."
+    )
 
 
 class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
@@ -114,7 +153,7 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
         
         # Create password reset URL
         password_reset_url = request.build_absolute_uri(
-            reverse('password_reset_confirm', kwargs={
+            reverse('core:password_reset_confirm', kwargs={
                 'uidb64': uid,
                 'token': token,
             })
