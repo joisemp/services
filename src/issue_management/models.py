@@ -21,6 +21,7 @@ class Issue(models.Model):
     ]
     title = models.CharField(max_length=200)
     description = models.TextField()
+    reporter = models.ForeignKey('core.User', related_name='reported_issues', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     voice = models.FileField(upload_to='public/issue_voices/', blank=True, null=True)

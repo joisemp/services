@@ -10,7 +10,7 @@ class IssueListView(ListView):
     model = Issue
     
     def get_queryset(self):
-        return Issue.objects.prefetch_related('images').select_related('org', 'space').all()
+        return Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
 
     
 class IssueCreateView(CreateView):
