@@ -34,19 +34,19 @@
   <div class="container-nav">
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a class="nav-link nav-active" href="#">All</a>
+        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}">All</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link " href="#">Open</a>
+        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=open">Open</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">Assigned</a>
+        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=assigned">Assigned</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">In progress</a>
+        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=in_progress">In progress</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">Critical</a>
+        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=critical">Critical</a>
       </li>
     </ul>
   </div>

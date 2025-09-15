@@ -10,7 +10,22 @@ class IssueListView(ListView):
     model = Issue
     
     def get_queryset(self):
-        return Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
+        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status')
+        if status_filter and status_filter in ['open', 'assigned', 'in_progress', 'critical']:
+            if status_filter == 'critical':
+                queryset = queryset.filter(priority='critical')
+            else:
+                queryset = queryset.filter(status=status_filter)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_filter'] = self.request.GET.get('status', 'all')
+        return context
 
     
 class IssueCreateView(CreateView):
