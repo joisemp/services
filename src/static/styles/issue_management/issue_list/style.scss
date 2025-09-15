@@ -1,13 +1,42 @@
 @use '../../sidebar_base';
 
+#options-bar {
+  .container-nav {
+    background-color: #f1f7ff;
+    padding: 5px;
+    border-radius: 5px;
+    width: fit-content;
+
+    .nav {
+      .nav-item {
+        .nav-active {
+            background-color: #f9f9ff;
+            color: #060606 !important;
+          }
+        a {
+          text-decoration: none;
+          font-weight: 500;
+          color: #4e4e4e !important;
+          border-radius: 0px !important;
+
+          &:hover {
+            background-color: #f9f9ff;
+            color: #060606 !important;
+          }
+        }
+      }
+    }
+  }
+}
 
 #issue-list {
-    @media (max-width: 575.98px) {
-        .card {
-            width: 100% !important;
-        }
+  @media (max-width: 575.98px) {
+    .card {
+      width: 100% !important;
     }
-    .card-link-wrapper {
+  }
+
+  .card-link-wrapper {
     display: block;
     color: inherit;
   }

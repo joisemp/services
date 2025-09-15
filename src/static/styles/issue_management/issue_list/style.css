@@ -141,6 +141,28 @@ tr {
   word-wrap: break-word;
 }
 
+#options-bar .container-nav {
+  background-color: #f1f7ff;
+  padding: 5px;
+  border-radius: 5px;
+  width: -moz-fit-content;
+  width: fit-content;
+}
+#options-bar .container-nav .nav .nav-item .nav-active {
+  background-color: #f9f9ff;
+  color: #060606 !important;
+}
+#options-bar .container-nav .nav .nav-item a {
+  text-decoration: none;
+  font-weight: 500;
+  color: #4e4e4e !important;
+  border-radius: 0px !important;
+}
+#options-bar .container-nav .nav .nav-item a:hover {
+  background-color: #f9f9ff;
+  color: #060606 !important;
+}
+
 @media (max-width: 575.98px) {
   #issue-list .card {
     width: 100% !important;
