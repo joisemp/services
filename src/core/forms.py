@@ -114,7 +114,7 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
         
         # Create password reset URL
         password_reset_url = request.build_absolute_uri(
-            reverse('admin:password_reset_confirm', kwargs={
+            reverse('password_reset_confirm', kwargs={
                 'uidb64': uid,
                 'token': token,
             })
