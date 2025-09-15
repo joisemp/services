@@ -139,4 +139,10 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+@media (max-width: 575.98px) {
+  #issue-list .card {
+    width: 100% !important;
+  }
 }/*# sourceMappingURL=style.css.map */

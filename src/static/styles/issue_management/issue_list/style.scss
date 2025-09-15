@@ -1,1 +1,10 @@
 @use '../../sidebar_base';
+
+
+#issue-list {
+    @media (max-width: 575.98px) {
+        .card {
+            width: 100% !important;
+        }
+    }
+}
