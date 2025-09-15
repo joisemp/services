@@ -2,7 +2,12 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django import forms
+from django.urls import path, reverse
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.http import HttpResponseRedirect
 from .models import Organization, Space, User
+from .forms import OrganizationWithAdminForm
 
 
 @admin.register(Organization)
@@ -24,6 +29,56 @@ class OrganizationAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('spaces')
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'register-with-admin/',
+                self.admin_site.admin_view(self.register_organization_with_admin),
+                name='core_organization_register_with_admin',
+            ),
+        ]
+        return custom_urls + urls
+    
+    def register_organization_with_admin(self, request):
+        """
+        Custom admin view for registering organization with central admin
+        """
+        if not request.user.is_superuser:
+            messages.error(request, "Only superusers can register organizations with central admins.")
+            return HttpResponseRedirect(reverse('admin:core_organization_changelist'))
+        
+        if request.method == 'POST':
+            form = OrganizationWithAdminForm(request.POST)
+            if form.is_valid():
+                try:
+                    organization, central_admin = form.save(request)
+                    messages.success(
+                        request, 
+                        f'Successfully created organization "{organization.name}" with central admin "{central_admin.email}". '
+                        f'{"Welcome email sent!" if form.cleaned_data["send_welcome_email"] else "No welcome email sent."}'
+                    )
+                    return HttpResponseRedirect(reverse('admin:core_organization_changelist'))
+                except Exception as e:
+                    messages.error(request, f'Error creating organization: {str(e)}')
+        else:
+            form = OrganizationWithAdminForm()
+        
+        context = {
+            'title': 'Register Organization with Central Admin',
+            'form': form,
+            'opts': self.model._meta,
+            'has_view_permission': True,
+            'original': None,
+        }
+        
+        return render(request, 'admin/core/organization/register_with_admin.html', context)
+    
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['register_with_admin_url'] = reverse('admin:core_organization_register_with_admin')
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(Space)

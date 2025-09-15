@@ -186,3 +186,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'core.User'
+
+# Email Configuration
+if ENVIRONMENT == 'development':
+    # For development - use console backend or configure SMTP
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@services.local'
+    SERVER_EMAIL = 'server@services.local'
+else:
+    # For production - configure your email backend
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = env('EMAIL_PORT', default=587)
+    EMAIL_USE_TLS = env('EMAIL_USE_TLS', default=True)
+    EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+    DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@services.com')
+    SERVER_EMAIL = env('SERVER_EMAIL', default='server@services.com')
+
+# Password reset token validity (24 hours)
+PASSWORD_RESET_TIMEOUT = 86400

@@ -1,0 +1,23 @@
+Hello {{ user.first_name }} {{ user.last_name }},
+
+Welcome to {{ site_name }}!
+
+You have been registered as the Central Administrator for {{ organization.name }}.
+
+To complete your account setup, please click the link below to set your password:
+
+{{ password_reset_url }}
+
+This link will expire in 24 hours for security reasons.
+
+Once you've set your password, you can log in to the admin panel at:
+{{ protocol }}://{{ domain }}/admin/
+
+Your login credentials:
+Email: {{ user.email }}
+Password: [Set using the link above]
+
+If you have any questions, please contact your system administrator.
+
+Best regards,
+{{ site_name }} Team

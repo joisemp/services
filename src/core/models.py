@@ -17,8 +17,9 @@ class UserManager(BaseUserManager):
         """
         Create and return a regular user with proper role-based authentication
         """
-        if not organization:
-            raise ValueError('All users must be associated with an organization')
+        # Only require organization for non-superusers
+        if not organization and not extra_fields.get('is_superuser', False):
+            raise ValueError('All users (except superusers) must be associated with an organization')
         
         # Determine authentication method based on user type
         if user_type == 'general_user':
@@ -76,6 +77,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, organization=None, **extra_fields):
         """
         Create and return a superuser with email and password
+        Superusers must use email authentication and don't require an organization
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -86,13 +88,18 @@ class UserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
         
-        # For superuser, organization can be optional initially
-        if not organization:
-            # You might want to create a default organization for superusers
-            # or handle this differently based on your requirements
-            pass
+        if not email:
+            raise ValueError('Superuser must have an email address.')
+        if not password:
+            raise ValueError('Superuser must have a password.')
         
-        return self.create_user(email=email, password=password, organization=organization, **extra_fields)
+        # Superusers don't need an organization - pass None or provided organization
+        return self.create_user(
+            email=email, 
+            password=password, 
+            organization=organization,  # Can be None for superusers
+            **extra_fields
+        )
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -165,10 +172,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     organization = models.ForeignKey(
         'Organization', 
         on_delete=models.CASCADE, 
-        null=False, 
-        blank=False,
+        null=True, 
+        blank=True,
         related_name='users',
-        help_text="Every user must be associated with an organization"
+        help_text="Organization association (optional for superusers, required for all other users)"
     )
     spaces = models.ManyToManyField(
         'Space', 
@@ -179,9 +186,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     objects = UserManager()
     
-    # Set the field used for authentication - this will be dynamic
-    USERNAME_FIELD = 'phone_number'  # Default, but will be dynamic based on auth_method
-    REQUIRED_FIELDS = []  # Fields required when creating superuser (email will be required)
+    # Set the field used for authentication - email for superusers and non-general users
+    USERNAME_FIELD = 'email'  # Default to email for authentication
+    REQUIRED_FIELDS = ['first_name', 'last_name']  # Fields required when creating superuser
     
     class Meta:
         verbose_name = 'User'
@@ -219,9 +226,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         from django.core.exceptions import ValidationError
         
-        # Ensure every user has an organization (except during creation)
+        # Ensure every non-superuser has an organization
         if not self.organization and not self.is_superuser:
-            raise ValidationError('Every user must be associated with an organization')
+            raise ValidationError('Every user (except superusers) must be associated with an organization')
         
         # Only general users can use phone authentication
         if self.auth_method == 'phone' and self.user_type != 'general_user':
