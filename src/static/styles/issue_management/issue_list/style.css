@@ -145,4 +145,16 @@ tr {
   #issue-list .card {
     width: 100% !important;
   }
+}
+#issue-list .card-link-wrapper {
+  display: block;
+  color: inherit;
+}
+#issue-list .card-link-wrapper:hover .card {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2509803922);
+  border-color: #0d6efd;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+#issue-list .card-link-wrapper:focus {
+  outline: none;
 }/*# sourceMappingURL=style.css.map */
