@@ -141,6 +141,16 @@ tr {
   word-wrap: break-word;
 }
 
+#alert .alert {
+  margin-bottom: 15px;
+  border: 1px solid #0d6efd !important;
+  background-color: #e2eefd !important;
+}
+#alert .alert .alert-buttons {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
 #options-bar .container-nav {
   background-color: #f1f7ff;
   padding: 5px;
@@ -179,4 +189,21 @@ tr {
 }
 #issue-list .card-link-wrapper:focus {
   outline: none;
+}
+
+@media (max-width: 767.98px) {
+  #alert .custom-alert {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left;
+  }
+  #alert .custom-alert .alert-buttons {
+    margin-left: 0 !important;
+    margin-top: 0.75rem;
+    width: 100% !important;
+  }
+  #alert .custom-alert .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }/*# sourceMappingURL=style.css.map */
