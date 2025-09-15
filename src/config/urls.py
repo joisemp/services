@@ -24,6 +24,9 @@ urlpatterns = [
     # Admin interface
     path('admin/', admin.site.urls),
     
+    # Authentication URLs (includes password reset)
+    path('auth/', include('django.contrib.auth.urls')),
+    
     # Home page
     path('', HomePageView.as_view(), name='home'),
     
