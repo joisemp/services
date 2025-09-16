@@ -210,6 +210,7 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('phone_number', 'email', 'first_name', 'last_name', 'organization__name')
     ordering = ('-date_joined',)
     filter_horizontal = ('spaces', 'groups', 'user_permissions')
+    readonly_fields = ('date_joined', 'last_login')
 
     fieldsets = (
         ('Authentication', {
