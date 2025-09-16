@@ -1,0 +1,176 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:core_organization_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module aligned">
+        
+        <div class="description">
+            <p>Use this form to register a new organization along with its central administrator. 
+            The central admin will receive a welcome email with a password reset link to set up their account.</p>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            <fieldset class="module aligned">
+                <h2>Organization Details</h2>
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.org_name.id_for_label }}" class="required">{{ form.org_name.label }}:</label>
+                        {{ form.org_name }}
+                        {% if form.org_name.help_text %}
+                            <div class="help">{{ form.org_name.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.org_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.org_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.org_description.id_for_label }}">{{ form.org_description.label }}:</label>
+                        {{ form.org_description }}
+                        {% if form.org_description.help_text %}
+                            <div class="help">{{ form.org_description.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.org_description.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.org_description.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.org_address_line_one.id_for_label }}">{{ form.org_address_line_one.label }}:</label>
+                        {{ form.org_address_line_one }}
+                        {% if form.org_address_line_one.help_text %}
+                            <div class="help">{{ form.org_address_line_one.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.org_address_line_one.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.org_address_line_one.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.org_address_line_two.id_for_label }}">{{ form.org_address_line_two.label }}:</label>
+                        {{ form.org_address_line_two }}
+                        {% if form.org_address_line_two.help_text %}
+                            <div class="help">{{ form.org_address_line_two.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.org_address_line_two.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.org_address_line_two.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="module aligned">
+                <h2>Central Administrator Details</h2>
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.admin_first_name.id_for_label }}" class="required">{{ form.admin_first_name.label }}:</label>
+                        {{ form.admin_first_name }}
+                        {% if form.admin_first_name.help_text %}
+                            <div class="help">{{ form.admin_first_name.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.admin_first_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.admin_first_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.admin_last_name.id_for_label }}" class="required">{{ form.admin_last_name.label }}:</label>
+                        {{ form.admin_last_name }}
+                        {% if form.admin_last_name.help_text %}
+                            <div class="help">{{ form.admin_last_name.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.admin_last_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.admin_last_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.admin_email.id_for_label }}" class="required">{{ form.admin_email.label }}:</label>
+                        {{ form.admin_email }}
+                        {% if form.admin_email.help_text %}
+                            <div class="help">{{ form.admin_email.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.admin_email.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.admin_email.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.send_welcome_email.id_for_label }}">{{ form.send_welcome_email.label }}:</label>
+                        {{ form.send_welcome_email }}
+                        {% if form.send_welcome_email.help_text %}
+                            <div class="help">{{ form.send_welcome_email.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.send_welcome_email.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.send_welcome_email.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="submit-row">
+                <input type="submit" value="Register Organization & Central Admin" class="default" />
+                <a href="{% url 'admin:core_organization_changelist' %}" class="button cancel-link">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

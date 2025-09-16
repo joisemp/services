@@ -4,8 +4,20 @@ from . import views
 app_name = "core"
 
 urlpatterns = [
-    # Core application URL patterns
-    # path('', views.core_home, name='home'),
-    # path('about/', views.about, name='about'),
-    # Add core app URLs here
+    # Password Reset URLs with custom views
+    path('password-reset/', 
+         views.CustomPasswordResetView.as_view(), 
+         name='password_reset'),
+    
+    path('password-reset/done/', 
+         views.CustomPasswordResetDoneView.as_view(), 
+         name='password_reset_done'),
+    
+    path('password-reset-confirm/<uidb64>/<token>/', 
+         views.CustomPasswordResetConfirmView.as_view(), 
+         name='password_reset_confirm'),
+    
+    path('password-reset-complete/', 
+         views.CustomPasswordResetCompleteView.as_view(), 
+         name='password_reset_complete'),
 ]

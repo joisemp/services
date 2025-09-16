@@ -26,7 +26,7 @@
       <span class="alert-text text-body-secondary">View and manage all reported issues across the platform.</span>
     </div>
     <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
-      <button type="button" class="btn btn-primary d-flex w-100 w-md-auto"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Issue</span></button>
+      <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary d-flex w-100 w-md-auto"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Issue</span></a>
     </div>
   </div>
 </section>
@@ -34,114 +34,52 @@
   <div class="container-nav">
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a class="nav-link nav-active" href="#">All</a>
+        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}">All</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link " href="#">Open</a>
+        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=open">Open</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">Assigned</a>
+        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=assigned">Assigned</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">In progress</a>
+        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=in_progress">In progress</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">Critical</a>
+        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=critical">Critical</a>
       </li>
     </ul>
   </div>
 </section>
 <section id="issue-list">
-  <div class="container mt-3">
+  <div class="container-fluid mt-3">
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
+      {% for issue in issues %}
       <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
+        <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
           <div class="card h-100">
             <div class="card-body">
-              <h5 class="card-title">Tonner refill required for HP printer 1020</h5>
+              <h5 class="card-title">{{ issue.title }}</h5>
               <hr>
               <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Sep 04, 2025</h6>
-                <span class="badge rounded-pill text-bg-primary">Primary</span>
+                <h6 class="card-subtitle mb-2 text-body-secondary">{{ issue.created_at|date:"M d, Y" }}</h6>
+                <span class="badge rounded-pill text-bg-primary">{{ issue.get_priority_display }}</span>
               </div>
               <div class="d-flex justify-content-between mt-4">
                 <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Category</h6>
+                <h6 class="card-text ms-2">Status</h6>
               </div>
               <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">PV Charley</h6>
-                <h6 class="card-text text-body-secondary ms-2">General</h6>
+                <h6 class="card-text text-body-secondary me-2">
+                  {{ issue.reporter.get_full_name|default:issue.reporter.phone_number|default:issue.reporter.email|default:"Mello Hello" }}
+                </h6>
+                <h6 class="card-text text-body-secondary ms-2">{{ issue.get_status_display }}</h6>
               </div>
             </div>
           </div>
         </a>
       </div>
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Tonner refill required for HP printer 1020</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Sep 04, 2025</h6>
-                <span class="badge rounded-pill text-bg-primary">Primary</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Category</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">PV Charley</h6>
-                <h6 class="card-text text-body-secondary ms-2">General</h6>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Tonner refill required for HP printer 1020</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Sep 04, 2025</h6>
-                <span class="badge rounded-pill text-bg-primary">Primary</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Category</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">PV Charley</h6>
-                <h6 class="card-text text-body-secondary ms-2">General</h6>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Tonner refill required for HP printer 1020</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Sep 04, 2025</h6>
-                <span class="badge rounded-pill text-bg-primary">Primary</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Category</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">PV Charley</h6>
-                <h6 class="card-text text-body-secondary ms-2">General</h6>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+      {% endfor %}
     </div>
   </div>
 </section>
