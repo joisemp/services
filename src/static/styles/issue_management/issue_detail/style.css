@@ -139,4 +139,20 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+#alert-details .alert {
+  margin-bottom: 15px;
+  border: 1px solid #2563EB !important;
+  background-color: #e2eefd !important;
+}
+#alert-details .alert .alert-buttons {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+#alert-details .resolved-alert {
+  padding: 12px;
+  border-radius: 5px;
+  border: 1px solid #104920 !important;
+  background-color: #edffec !important;
 }/*# sourceMappingURL=style.css.map */
