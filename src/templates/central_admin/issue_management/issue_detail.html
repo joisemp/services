@@ -16,7 +16,13 @@
 {% include 'central_admin/sidebar.html' %}
 {% endblock %}
 
-{% block content %}
+{% block content %} 
+<section id="breadcrumb" class="mb-3">
+  <span class="badge rounded-pill text-bg-primary ms-2">Open</span>
+  <span class="badge rounded-pill text-bg-warning ms-2">Medium priority</span>
+  <span class="badge rounded-pill text-bg-dark ms-2">Due on 23-03-2023</span>
+</section>
+
 <section id="alert-details">
   <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center"
     role="alert">
@@ -60,11 +66,62 @@
 </div>
 </section>
 
-<section id="issue-work" class="mt-4 d-flex">
-  <div class="card" style="width: 100%; margin:5px;">
-    <div class="card-body">
-      <h6 class="card-subtitle mb-2 text-body-secondary">Start working</h6>
+<section id="issue-work" class="mt-4">
+  <div class="row g-3">
+    <!-- Start working card -->
+    <div class="col-lg-6">
+      <div class="card h-100 border-dark background-secondary">
+        <div class="card-body">
+          <h5 class="card-title text-muted mb-3">Start working</h5>
+          <p class="card-text text-muted mb-3">Lets start the work.</p>
+          <button class="btn btn-sm btn-outline-secondary d-flex align-items-center">
+            <span class="material-symbols-outlined me-2">play_arrow</span>
+            Start work
+          </button>
+        </div>
+      </div>
+    </div>
 
+    <!-- Delete Issue card -->
+    <div class="col-lg-6">
+      <div class="card h-100 border-danger background-danger">
+        <div class="card-body">
+          <h5 class="card-title mb-3 t-danger" style="color:rgb(130, 18, 18);">Delete Issue</h5>
+          <p class="card-text text-danger mb-3">Deleting issue is a permanent action. Once done can't be undone.</p>
+          <button class="btn btn-danger d-flex align-items-center">
+            <span class="material-symbols-outlined me-2">delete</span>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments card -->
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Comments</h5>
+          <div class="comments-section" style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px;">
+            <p class="text-muted text-center">No comments yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work tasks card -->
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Work tasks</h5>
+          <div class="tasks-section" style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px; position: relative;">
+            <p class="text-muted text-center mb-3">No tasks yet</p>
+            <button class="btn btn-primary btn-sm position-absolute bottom-0 end-0 m-3">
+              <span class="material-symbols-outlined">add</span>
+              Add task
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
