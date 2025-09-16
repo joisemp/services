@@ -34,6 +34,9 @@ class IssueCreateView(CreateView):
     success_url = reverse_lazy('issue_management:central_admin:issue_list')
     
     def form_valid(self, form):
+        # Set the reporter to the current user before saving
+        form.instance.reporter = self.request.user
+        
         # Save the issue first
         response = super().form_valid(form)
         
