@@ -20,4 +20,8 @@ urlpatterns = [
     path('password-reset-complete/', 
          views.CustomPasswordResetCompleteView.as_view(), 
          name='password_reset_complete'),
+    
+    path('people/', 
+         views.PeopleListView.as_view(), 
+         name='people_list'),
 ]
