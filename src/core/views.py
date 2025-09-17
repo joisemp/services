@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from .forms import CustomPasswordResetForm, CustomSetPasswordForm
+from .models import User
+from django.views.generic import ListView
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -37,3 +39,15 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     Custom password reset complete view
     """
     template_name = 'registration/password_reset_complete.html'
+    
+
+class PeopleListView(ListView):
+    """
+    View to list all users in the system
+    """
+    model = User
+    template_name = 'core/people_list.html'
+    context_object_name = 'users'
+
+    def get_queryset(self):
+        return User.objects.all().order_by('first_name', 'last_name')
