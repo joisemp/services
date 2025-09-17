@@ -1,1 +1,61 @@
 @use '../../sidebar_base';
+@use '../../colors' as colors;
+
+#breadcrumb{
+  display: flex;
+  justify-content: right;
+  margin:5px;
+}
+
+#alert-details {
+  .alert {
+    margin-bottom: 15px;
+    border: 1px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+  .resolved-alert{
+    padding: 12px;
+    border-radius: 5px;
+    border: 1px solid #104920 !important;
+    background-color: #edffec !important;
+  }
+}
+  #issue-work .card {
+    border: 1px solid #e3e6f0;
+    border-radius: 12px;
+  }
+  
+  #issue-work .card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  
+  #issue-work .btn {
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  
+  #issue-work .comments-section,
+  #issue-work .tasks-section {
+    border: 1px dashed #dee2e6;
+  }
+  
+  #issue-work
+  .background-danger {
+    background-color: #fdd9dd;
+  }
+
+   .border-danger {
+    border-color: #dc3545 !important;
+  }
+  .background-secondary{
+    background-color: #f5f5f5;
+  }
+  
+  #issue-work .material-symbols-outlined {
+    font-size: 20px;
+  }
+  
