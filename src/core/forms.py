@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.urls import reverse
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm, UserCreationForm
 from config.mixins.form_mixin import BootstrapFormMixin
 from .models import Organization, User
 
@@ -181,6 +181,189 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
             subject=subject,
             message=text_message,
             html_message=html_message,
+            from_email=None,  # Uses DEFAULT_FROM_EMAIL
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+
+class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Form for creating general users with phone-only authentication (passwordless)
+    """
+    class Meta:
+        model = User
+        fields = ['phone_number', 'first_name', 'last_name', 'organization']
+        widgets = {
+            'phone_number': forms.TextInput(attrs={
+                'placeholder': '+1234567890',
+            }),
+            'first_name': forms.TextInput(attrs={'placeholder': 'First Name'}),
+            'last_name': forms.TextInput(attrs={'placeholder': 'Last Name'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['phone_number'].help_text = 'Enter phone number with country code (e.g., +1234567890)'
+        self.fields['organization'].queryset = Organization.objects.all()
+        self.fields['organization'].empty_label = "Select an organization"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Pre-set the auth_method and user_type for validation
+        if hasattr(self, 'instance'):
+            self.instance.user_type = 'general_user'
+            self.instance.auth_method = 'phone'
+            self.instance.email = None  # Clear email for phone users
+            # Set a dummy password to pass Django's built-in validation
+            self.instance.set_password('dummy_password_for_validation')
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # Set these fields before any validation
+        user.user_type = 'general_user'
+        user.auth_method = 'phone'
+        
+        # Clear email field for phone users to avoid validation conflicts
+        user.email = None
+        
+        # Set a dummy password first to pass validation, then make it unusable
+        user.set_password('dummy_password_for_validation')
+        
+        if commit:
+            user.save()
+            # Now make the password unusable after saving
+            user.set_unusable_password()
+            user.save(skip_validation=True)
+        return user
+
+
+class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Form for creating users with email + auto-generated password authentication
+    (central_admin, space_admin, maintainer, supervisor, reviewer)
+    """
+    USER_TYPE_CHOICES = [
+        ('central_admin', 'Central Admin'),
+        ('space_admin', 'Space Admin'),
+        ('maintainer', 'Maintainer'),
+        ('supervisor', 'Supervisor'),
+        ('reviewer', 'Reviewer'),
+    ]
+
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'placeholder': 'user@example.com'})
+    )
+    first_name = forms.CharField(
+        max_length=30, 
+        required=True,
+        widget=forms.TextInput(attrs={'placeholder': 'First Name'})
+    )
+    last_name = forms.CharField(
+        max_length=30, 
+        required=True,
+        widget=forms.TextInput(attrs={'placeholder': 'Last Name'})
+    )
+    user_type = forms.ChoiceField(
+        choices=USER_TYPE_CHOICES, 
+        required=True,
+        label="User Role"
+    )
+    organization = forms.ModelChoiceField(
+        queryset=Organization.objects.all(),
+        required=True,
+        empty_label="Select an organization"
+    )
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'user_type', 'organization']
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("A user with this email already exists.")
+        return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.user_type = self.cleaned_data['user_type']
+        user.organization = self.cleaned_data['organization']
+        user.auth_method = 'email'
+        
+        # Set a dummy password first to pass validation
+        user.set_password('dummy_password_for_validation')
+        
+        if commit:
+            user.save()
+            # Now set unusable password - user will set it via password reset link
+            user.set_unusable_password()
+            user.save(skip_validation=True)
+        return user
+
+    def send_password_reset_email(self, user, request):
+        """
+        Send password reset email to the newly created user
+        """
+        current_site = get_current_site(request)
+        site_name = current_site.name
+        domain = current_site.domain
+        
+        # Generate password reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Create password reset URL
+        password_reset_url = request.build_absolute_uri(
+            reverse('core:password_reset_confirm', kwargs={
+                'uidb64': uid,
+                'token': token,
+            })
+        )
+        
+        # Email context
+        context = {
+            'user': user,
+            'organization': user.organization,
+            'site_name': site_name,
+            'domain': domain,
+            'password_reset_url': password_reset_url,
+            'protocol': 'https' if request.is_secure() else 'http',
+        }
+        
+        # Render email templates
+        subject = f'Welcome to {site_name} - Set Your Password'
+        
+        # Simple text email for now
+        message = f"""
+Welcome to {site_name}!
+
+Your account has been created with the following details:
+- Name: {user.get_full_name()}
+- Email: {user.email}
+- Role: {user.get_user_type_display()}
+- Organization: {user.organization.name}
+
+Please click the link below to set your password and activate your account:
+{password_reset_url}
+
+This link will expire in 24 hours for security reasons.
+
+If you have any questions, please contact your administrator.
+
+Best regards,
+{site_name} Team
+        """
+        
+        # Send email
+        send_mail(
+            subject=subject,
+            message=message,
             from_email=None,  # Uses DEFAULT_FROM_EMAIL
             recipient_list=[user.email],
             fail_silently=False,
