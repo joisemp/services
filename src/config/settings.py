@@ -187,6 +187,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom User Model
 AUTH_USER_MODEL = 'core.User'
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'core.backends.DualAuthBackend',  # Our custom backend for both phone and email auth
+    'django.contrib.auth.backends.ModelBackend',  # Default backend as fallback
+]
+
+# Login/Logout URLs
+LOGIN_URL = '/core/login/'
+LOGIN_REDIRECT_URL = '/core/people/'
+LOGOUT_REDIRECT_URL = '/core/login/'
+
 # Email Configuration
 if ENVIRONMENT == 'development':
     # For development - use console backend or configure SMTP

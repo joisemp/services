@@ -1,5 +1,12 @@
 <h1>People List</h1>
 
+{% if user.is_authenticated %}
+    <p>
+        Welcome, {{ user.get_full_name|default:user.get_short_name }}! | 
+        <a href="{% url 'core:logout' %}" onclick="return confirm('Are you sure you want to logout?')">Logout</a>
+    </p>
+{% endif %}
+
 <p>
     <a href="{% url 'core:people_create' %}">Add New Person</a>
 </p>

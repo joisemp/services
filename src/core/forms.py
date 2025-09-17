@@ -187,6 +187,86 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
         )
 
 
+class PhoneLoginForm(BootstrapFormMixin, forms.Form):
+    """
+    Login form for general users using phone number only (passwordless)
+    """
+    phone_number = forms.CharField(
+        max_length=17,
+        widget=forms.TextInput(attrs={
+            'placeholder': '+1234567890',
+            'autocomplete': 'tel'
+        }),
+        label="Phone Number",
+        help_text="Enter your phone number with country code"
+    )
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data['phone_number']
+        
+        # Check if user exists with this phone number
+        try:
+            user = User.objects.get(
+                phone_number=phone_number,
+                auth_method='phone',
+                user_type='general_user',
+                is_active=True
+            )
+        except User.DoesNotExist:
+            raise forms.ValidationError("No active general user found with this phone number.")
+        
+        return phone_number
+
+
+class EmailLoginForm(BootstrapFormMixin, forms.Form):
+    """
+    Login form for non-general users using email + password
+    """
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'user@example.com',
+            'autocomplete': 'email'
+        }),
+        label="Email Address"
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Password',
+            'autocomplete': 'current-password'
+        }),
+        label="Password"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        password = cleaned_data.get('password')
+        
+        if email and password:
+            # Check if user exists and password is correct
+            try:
+                user = User.objects.get(
+                    email=email,
+                    auth_method='email',
+                    is_active=True
+                )
+                # Exclude general users
+                if user.user_type == 'general_user':
+                    raise forms.ValidationError("General users should use phone number login.")
+                
+                # Check password
+                if not user.has_usable_password():
+                    raise forms.ValidationError("Please use the password reset link sent to your email to set your password.")
+                
+                if not user.check_password(password):
+                    raise forms.ValidationError("Invalid email or password.")
+                    
+            except User.DoesNotExist:
+                raise forms.ValidationError("Invalid email or password.")
+        
+        return cleaned_data
+
+
 class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     """
     Form for creating general users with phone-only authentication (passwordless)

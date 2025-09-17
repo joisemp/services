@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from . import views
 
 app_name = "core"
@@ -28,4 +29,12 @@ urlpatterns = [
     path('people/create/', 
          views.PeopleCreateView.as_view(), 
          name='people_create'),
+    
+    path('login/', 
+         views.CustomLoginView.as_view(), 
+         name='login'),
+    
+    path('logout/', 
+         views.custom_logout_view, 
+         name='logout'),
 ]

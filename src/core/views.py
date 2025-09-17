@@ -1,11 +1,14 @@
-from django.shortcuts import render
-from django.contrib.auth import views as auth_views
+from django.shortcuts import render, redirect
+from django.contrib.auth import views as auth_views, authenticate, login, logout
 from django.urls import reverse_lazy
+from django.views.generic import FormView
 from .forms import (
     CustomPasswordResetForm, 
     CustomSetPasswordForm, 
     GeneralUserCreateForm, 
-    OtherRoleUserCreateForm
+    OtherRoleUserCreateForm,
+    PhoneLoginForm,
+    EmailLoginForm
 )
 from .models import User
 from django.views.generic import ListView, CreateView
@@ -112,4 +115,89 @@ class PeopleCreateView(CreateView):
                     f'User {self.object.get_full_name()} created successfully, but there was an error sending the password reset email. '
                     f'Please manually send them a password reset link.'
                 )
-        return response  
+        return response
+
+
+class CustomLoginView(FormView):
+    """
+    Custom login view that handles both phone and email authentication
+    """
+    template_name = 'core/login.html'
+    success_url = reverse_lazy('core:people_list')  # Redirect after successful login
+
+    def get_form_class(self):
+        """
+        Return the appropriate form class based on user_type parameter
+        """
+        user_type = self.request.GET.get('type', 'email')
+        if user_type == 'phone':
+            return PhoneLoginForm
+        return EmailLoginForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_type = self.request.GET.get('type', 'email')
+        context['user_type'] = user_type
+        context['form_title'] = 'Phone Login' if user_type == 'phone' else 'Email Login'
+        return context
+
+    def form_valid(self, form):
+        """
+        Handle successful form submission and authenticate user
+        """
+        user_type = self.request.GET.get('type', 'email')
+        
+        if user_type == 'phone':
+            # Phone authentication
+            phone_number = form.cleaned_data['phone_number']
+            user = authenticate(
+                self.request,
+                phone_number=phone_number
+            )
+        else:
+            # Email authentication
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            user = authenticate(
+                self.request,
+                username=email,
+                password=password
+            )
+
+        if user is not None:
+            login(self.request, user)
+            from django.contrib import messages
+            messages.success(
+                self.request,
+                f'Welcome back, {user.get_full_name() or user.get_short_name()}!'
+            )
+            return super().form_valid(form)
+        else:
+            # Authentication failed
+            from django.contrib import messages
+            messages.error(
+                self.request,
+                'Authentication failed. Please check your credentials and try again.'
+            )
+            return self.form_invalid(form)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Redirect already authenticated users
+        """
+        if request.user.is_authenticated:
+            return redirect(self.success_url)
+        return super().dispatch(request, *args, **kwargs)
+
+
+def custom_logout_view(request):
+    """
+    Custom logout view that handles logout and redirects to login page
+    """
+    if request.user.is_authenticated:
+        user_name = request.user.get_full_name() or request.user.get_short_name()
+        logout(request)
+        from django.contrib import messages
+        messages.success(request, f'You have been successfully logged out. Goodbye, {user_name}!')
+    
+    return redirect('core:login')  
