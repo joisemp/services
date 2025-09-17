@@ -255,7 +255,9 @@ class User(AbstractBaseUser, PermissionsMixin):
                 self.phone_number = None
     
     def save(self, *args, **kwargs):
-        self.full_clean()
+        # Only run full_clean if not explicitly skipped
+        if not kwargs.pop('skip_validation', False):
+            self.full_clean()
         super().save(*args, **kwargs)
     
     def __str__(self):

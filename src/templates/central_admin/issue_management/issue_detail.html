@@ -16,92 +16,122 @@
 {% include 'central_admin/sidebar.html' %}
 {% endblock %}
 
-{% block content %} 
+{% block content %}
 <section id="breadcrumb" class="mb-3">
-  <span class="badge rounded-pill text-bg-primary ms-2">Open</span>
-  <span class="badge rounded-pill text-bg-warning ms-2">Medium priority</span>
-  <span class="badge rounded-pill text-bg-dark ms-2">Due on 23-03-2023</span>
+  <span class="badge rounded-pill text-bg-primary ms-2">{{ issue.get_status_display }}</span>
+  <span class="badge rounded-pill text-bg-warning ms-2">{{ issue.get_priority_display }}</span>
+  <span class="badge rounded-pill text-bg-dark ms-2">{{ issue.created_at|date:"M d, Y" }}</span>
 </section>
 
 <section id="alert-details">
-  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center"
+  <!--Headline-->
+  <div
+    class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-md-3 py-4"
     role="alert">
     <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h4 class="mb-1">Senese board error</h4>
-      <p class="alert-text text-body-secondary mb-md-0">Reported by Ashish Jacob on Sep 04, 2025 at 6:18 AM</p>
-      <p class="alert-text text-body-secondary mb-md-0">SFS High School</p>
+      <h4 class="mb-2">{{ issue.title }}</h4>
+      <p class="alert-text text-body-secondary mb-0">Reported by {{ issue.reporter.get_full_name }} ({{
+        issue.reporter.space_name | default:"Organization wide" }})</p>
+      <p class="alert-text text-body-secondary mb-0 fw-semibold">{{ issue.reporter.phone_number | default:"N/A" }}</p>
     </div>
-    <div class="alert-buttons ms-md-3 d-flex flex-column flex-sm-row gap-2">
-      <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn d-flex align-items-center justify-content-center">
-        <span class="material-symbols-outlined text-primary">edit</span>
-        <span class="ms-2 text-primary d-none d-sm-inline">Update Issue</span>
-      </a>
+    <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">
       <a href="{% url 'issue_management:central_admin:issue_create' %}"
         class="btn btn-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">call</span>
         <span class="ms-2">Call</span>
       </a>
+      <a href="{% url 'issue_management:central_admin:issue_create' %}"
+        class="btn btn-outline-primary d-flex align-items-center justify-content-center">
+        <span class="material-symbols-outlined">edit</span>
+        <span class="ms-2 d-inline">Edit</span>
+      </a>
     </div>
   </div>
-  <div class="resolved-alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center"
+
+  <!--Resolution-->
+  <div
+    class="resolved-alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-3 py-4"
     role="alert">
     <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h4 class="mb-1" style="color:darkgreen">Resolution notes</h4>
+      <h5 class="mb-1" style="color:darkgreen">Resolution notes</h5>
       <p class="alert-text text-success mb-md-0">It was the issue with sensors</p>
     </div>
   </div>
 </section>
 
 <section id="issue-content" class="mt-4">
-  <div class="card" style="width: 100%;">
-  <div class="card-body">
-    <h6 class="card-subtitle mb-2 text-body-secondary">Description</h6>
-    <p class="card-text mt-0">Window does not lock</p>
-    <h6 class="card-subtitle mt-2 text-body-secondary">Attached Images</h6>
-    <div class="images-log">
-       <img src="#" alt="Issue image" class="img-thumbnail me-1 mb-1"
-      style="width: 100px; height: 100px; object-fit: cover;">
+  <div class="row g-3">
+    <!-- Issue details card -->
+    <div class="col-12 col-lg-6">
+      <div class="card" style="width: 100%; height: 100%;">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-body-secondary">Description</h6>
+          <p class="card-text mt-0">{{ issue.description }}</p>
+          <h6 class="card-subtitle mt-2 text-body-secondary mb-2">Attached Images</h6>
+          <div class="images-log">
+            {% if issue.images.exists %}
+            <div class="d-flex flex-wrap">
+              {% for image in issue.images.all %}
+              <a href="{{ image.image.url }}" target="_blank">
+                <img src="{{ image.image.url }}" alt="Issue image" class="img-thumbnail me-1 mb-1"
+                  style="width: 100px; height: 100px; object-fit: cover;">
+              </a>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% if issue.voice %}
+            <audio controls class="mt-3">
+              <source src="{{ issue.voice.url }}" type="audio/mpeg">
+              Your browser does not support the audio element.
+            </audio>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <!-- Start working card -->
+      <div class="col-12 mb-3">
+        <div class="card h-100 background-light">
+          <div class="card-body">
+            <h5 class="card-title text-muted mb-3">Start working</h5>
+            <p class="card-text text-muted mb-3">Lets start the work.</p>
+            <button class="btn btn-dark d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">play_arrow</span>
+              Start work
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Issue card -->
+      <div class="col-12">
+        <div class="card h-100 border-danger background-danger">
+          <div class="card-body">
+            <h5 class="card-title mb-3 t-danger" style="color:rgb(130, 18, 18);">Delete Issue</h5>
+            <p class="card-text text-danger mb-3">Deleting issue is a permanent action. Once done can't be undone.</p>
+            <button class="btn btn-danger d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">delete</span>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 </section>
 
 <section id="issue-work" class="mt-4">
   <div class="row g-3">
-    <!-- Start working card -->
-    <div class="col-lg-6">
-      <div class="card h-100 border-dark background-secondary">
-        <div class="card-body">
-          <h5 class="card-title text-muted mb-3">Start working</h5>
-          <p class="card-text text-muted mb-3">Lets start the work.</p>
-          <button class="btn btn-sm btn-outline-secondary d-flex align-items-center">
-            <span class="material-symbols-outlined me-2">play_arrow</span>
-            Start work
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Issue card -->
-    <div class="col-lg-6">
-      <div class="card h-100 border-danger background-danger">
-        <div class="card-body">
-          <h5 class="card-title mb-3 t-danger" style="color:rgb(130, 18, 18);">Delete Issue</h5>
-          <p class="card-text text-danger mb-3">Deleting issue is a permanent action. Once done can't be undone.</p>
-          <button class="btn btn-danger d-flex align-items-center">
-            <span class="material-symbols-outlined me-2">delete</span>
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Comments card -->
     <div class="col-lg-6">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">Comments</h5>
-          <div class="comments-section" style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px;">
+          <div class="comments-section"
+            style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px;">
             <p class="text-muted text-center">No comments yet</p>
           </div>
         </div>
@@ -113,7 +143,8 @@
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">Work tasks</h5>
-          <div class="tasks-section" style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px; position: relative;">
+          <div class="tasks-section"
+            style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px; position: relative;">
             <p class="text-muted text-center mb-3">No tasks yet</p>
             <button class="btn btn-primary btn-sm position-absolute bottom-0 end-0 m-3">
               <span class="material-symbols-outlined">add</span>
@@ -125,31 +156,4 @@
     </div>
   </div>
 </section>
-{% if issue %}
-<h2>{{ issue.title }}</h2>
-<p>{{ issue.description }}</p>
-<p>Status: {{ issue.get_status_display }}</p>
-<p>Priority: {{ issue.get_priority_display }}</p>
-<p>Created at: {{ issue.created_at|date:"M d, Y" }}</p>
-
-{% if issue.images.exists %}
-<h3>Images</h3>
-<div class="d-flex flex-wrap">
-  {% for image in issue.images.all %}
-  <img src="{{ image.image.url }}" alt="Issue image" class="img-thumbnail me-1 mb-1"
-    style="width: 100px; height: 100px; object-fit: cover;">
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if issue.voice %}
-<h3>Voice Recording</h3>
-<audio controls>
-  <source src="{{ issue.voice.url }}" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
-{% endif %}
-{% else %}
-<p>Issue not found.</p>
-{% endif %}
 {% endblock content %}

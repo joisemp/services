@@ -1,0 +1,37 @@
+<h1>People List</h1>
+
+{% if user.is_authenticated %}
+    <p>
+        Welcome, {{ user.get_full_name|default:user.get_short_name }}! | 
+        <a href="{% url 'core:logout' %}" onclick="return confirm('Are you sure you want to logout?')">Logout</a>
+    </p>
+{% endif %}
+
+<p>
+    <a href="{% url 'core:people_create' %}">Add New Person</a>
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Phone Number</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.first_name }}</td>
+            <td>{{ user.last_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.phone_number }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No users found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

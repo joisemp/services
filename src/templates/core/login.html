@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ form_title }}</title>
+</head>
+<body>
+    <h1>{{ form_title }}</h1>
+
+    <!-- User Type Selection -->
+    <div>
+        <h3>Login Type</h3>
+        <p>
+            <a href="?type=phone" {% if user_type == 'phone' %}style="font-weight: bold;"{% endif %}>
+                Phone Login (General Users)
+            </a>
+            |
+            <a href="?type=email" {% if user_type != 'phone' %}style="font-weight: bold;"{% endif %}>
+                Email Login (Other Roles)
+            </a>
+        </p>
+        <p>
+            {% if user_type == 'phone' %}
+                General users login with phone number only (no password required).
+            {% else %}
+                Other roles login with email and password.
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; margin: 10px 0; border: 1px solid;">
+                {% if message.tags == 'error' %}
+                    <span style="color: red;">{{ message }}</span>
+                {% elif message.tags == 'success' %}
+                    <span style="color: green;">{{ message }}</span>
+                {% else %}
+                    {{ message }}
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Login Form -->
+    <form method="post">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div style="color: red;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <table>
+            {% if user_type == 'phone' %}
+                <!-- Phone Login Form -->
+                <tr>
+                    <td>
+                        <label for="{{ form.phone_number.id_for_label }}">
+                            Phone Number <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.help_text %}
+                            <br><small>{{ form.phone_number.help_text }}</small>
+                        {% endif %}
+                        {% if form.phone_number.errors %}
+                            <br><span style="color: red;">{{ form.phone_number.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <!-- Email Login Form -->
+                <tr>
+                    <td>
+                        <label for="{{ form.email.id_for_label }}">
+                            Email Address <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <br><span style="color: red;">{{ form.email.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="{{ form.password.id_for_label }}">
+                            Password <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <br><span style="color: red;">{{ form.password.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endif %}
+        </table>
+
+        <p>
+            <button type="submit">Login</button>
+        </p>
+
+        {% if user_type == 'email' %}
+            <p>
+                <a href="{% url 'core:password_reset' %}">Forgot your password?</a>
+            </p>
+        {% endif %}
+    </form>
+
+    <hr>
+    <p>
+        Don't have an account? Contact your administrator to create one.
+    </p>
+</body>
+</html>

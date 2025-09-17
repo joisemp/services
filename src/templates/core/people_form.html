@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ form_title }}</title>
+</head>
+<body>
+    <h1>{{ form_title }}</h1>
+    <a href="{% url 'core:people_list' %}">← Back to People</a>
+
+    <!-- User Type Selection -->
+    <div>
+        <h3>User Type</h3>
+        <p>
+            <a href="?type=general" {% if user_type == 'general' %}style="font-weight: bold;"{% endif %}>
+                General User (Phone Only)
+            </a>
+            |
+            <a href="?type=other" {% if user_type != 'general' %}style="font-weight: bold;"{% endif %}>
+                Other Roles (Email + Password)
+            </a>
+        </p>
+        <p>
+            {% if user_type == 'general' %}
+                General users authenticate with phone number only (passwordless login).
+            {% else %}
+                All other roles require email and password authentication.
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Form -->
+    <form method="post">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div style="color: red;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <table>
+            {% if user_type == 'general' %}
+                <!-- General User Form Fields -->
+                <tr>
+                    <td>
+                        <label for="{{ form.phone_number.id_for_label }}">
+                            Phone Number <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.help_text %}
+                            <br><small>{{ form.phone_number.help_text }}</small>
+                        {% endif %}
+                        {% if form.phone_number.errors %}
+                            <br><span style="color: red;">{{ form.phone_number.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <!-- Other Roles Form Fields -->
+                <tr>
+                    <td>
+                        <label for="{{ form.email.id_for_label }}">
+                            Email Address <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <br><span style="color: red;">{{ form.email.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="{{ form.user_type.id_for_label }}">
+                            User Role <span style="color: red;">*</span>
+                        </label>
+                    </td>
+                    <td>
+                        {{ form.user_type }}
+                        {% if form.user_type.errors %}
+                            <br><span style="color: red;">{{ form.user_type.errors }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endif %}
+
+            <!-- Common Fields -->
+            <tr>
+                <td>
+                    <label for="{{ form.first_name.id_for_label }}">
+                        First Name <span style="color: red;">*</span>
+                    </label>
+                </td>
+                <td>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <br><span style="color: red;">{{ form.first_name.errors }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="{{ form.last_name.id_for_label }}">
+                        Last Name <span style="color: red;">*</span>
+                    </label>
+                </td>
+                <td>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <br><span style="color: red;">{{ form.last_name.errors }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="{{ form.organization.id_for_label }}">
+                        Organization <span style="color: red;">*</span>
+                    </label>
+                </td>
+                <td>
+                    {{ form.organization }}
+                    {% if form.organization.errors %}
+                        <br><span style="color: red;">{{ form.organization.errors }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            {% if user_type != 'general' %}
+                <em>Note: A password reset link will be sent to the user's email address.</em><br>
+            {% endif %}
+            <a href="{% url 'core:people_list' %}">Cancel</a>
+            <button type="submit">Create User</button>
+        </p>
+    </form>
+</body>
+</html>
