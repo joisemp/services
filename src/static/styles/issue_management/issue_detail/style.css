@@ -149,7 +149,7 @@ tr {
 
 #alert-details .alert {
   margin-bottom: 15px;
-  border: 1px solid #2563EB !important;
+  border: 0.5px solid #2563EB !important;
   background-color: #e2eefd !important;
 }
 #alert-details .alert .alert-buttons {
@@ -159,12 +159,12 @@ tr {
 #alert-details .resolved-alert {
   padding: 12px;
   border-radius: 5px;
-  border: 1px solid #104920 !important;
+  border: 0.5px solid #104920 !important;
   background-color: #edffec !important;
 }
 
 #issue-work .card {
-  border: 1px solid #e3e6f0;
+  border: 0.5px solid #e3e6f0;
   border-radius: 12px;
 }
 
@@ -183,12 +183,12 @@ tr {
   border: 1px dashed #dee2e6;
 }
 
-#issue-work .background-danger {
+.background-danger {
   background-color: #fdd9dd;
 }
 
 .border-danger {
-  border-color: #dc3545 !important;
+  border-color: #ffb1b1 !important;
 }
 
 .background-secondary {
