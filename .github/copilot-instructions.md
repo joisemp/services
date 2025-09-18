@@ -5,13 +5,18 @@ This is a Django-based issue management system with role-based access control. T
 
 ## Architecture & Key Components
 
-### Custom User Authentication (`core/models.py`)
+### Custom User Authentication (`core/models.py`, `core/backends.py`)
 - **Two-Tier Authentication System**:
   - **General Users**: Phone-only authentication (passwordless) - just enter phone number to login
   - **All Other Roles**: Email + password authentication required (`central_admin`, `space_admin`, `maintainer`, `supervisor`, `reviewer`)
 - **Role-based User Types**: `central_admin`, `space_admin`, `maintainer`, `supervisor`, `reviewer`, `general_user`
 - **Organization Hierarchy**: Every non-superuser must belong to an `Organization`; users can be associated with multiple `Space`s
 - **Custom UserManager**: Handles role-specific user creation with `auth_method` field determining passwordless vs password authentication
+- **DualAuthBackend**: Custom authentication backend supporting both phone (passwordless) and email+password authentication in single system
+  ```python
+  # Phone auth: authenticate(phone_number="+1234567890") 
+  # Email auth: authenticate(username="user@email.com", password="pass")
+  ```
 
 ### Role-Based URL Structure (`issue_management/`)
 URLs are organized by user role with parallel structures:
@@ -42,6 +47,7 @@ Each role has its own URL namespace and corresponding view modules in `views/`.
 - **CBVs with Prefetch**: Use `select_related()`/`prefetch_related()` in `get_queryset()` for performance optimization
 - **Role-Based Templates**: Template paths follow pattern `{role}/issue_management/{action}.html`
 - **Image Handling**: Forms include separate `image1`, `image2`, `image3` fields; views handle IssueImage creation in `form_valid()`
+- **Slug-based URLs**: DetailViews use `slug_field = 'slug'` and `slug_url_kwarg = '{model}_slug'` pattern
 
 ### Configuration & Environment
 - **Environment-based Settings**: Uses `django-environ` with `ENVIRONMENT` variable (`development`/`production`)
@@ -75,7 +81,7 @@ Each role has its own URL namespace and corresponding view modules in `views/`.
 ```bash
 docker-compose up  # Runs Django on localhost:7000, Postgres on 5432
 ```
-The container automatically runs migrations and starts dev server via command in `docker-compose.yaml`.
+The container automatically runs migrations and starts dev server via command in `docker-compose.yaml`. Container names: `sfs-services-dev-container` (app), `sfs-services-dev-postgres-container` (database).
 
 ### Database Migrations
 - Always run migrations inside container: `python manage.py makemigrations && python manage.py migrate`

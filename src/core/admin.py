@@ -6,7 +6,7 @@ from django.urls import path, reverse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import HttpResponseRedirect
-from .models import Organization, Space, User
+from .models import Organization, Space, User, Update
 from .forms import OrganizationWithAdminForm
 
 
@@ -259,3 +259,21 @@ class UserAdmin(BaseUserAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('organization').prefetch_related('spaces')
+    
+
+@admin.register(Update)
+class UpdateAdmin(admin.ModelAdmin):
+    list_display = ['title', 'created_at']
+    search_fields = ['title', 'content']
+    list_filter = ['created_at']
+    ordering = ['-created_at']
+    fieldsets = (
+        ('Update Information', {
+            'fields': ('title', 'content', 'related_issue', 'space', 'org')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
