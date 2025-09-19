@@ -1,7 +1,9 @@
 # Copilot Instructions for Services Project
 
 ## Project Overview
-This is a Django-based issue management system with role-based access control. The project features a custom user authentication system supporting both phone (passwordless) and email authentication, and is designed around organizations and spaces for multi-tenant issue tracking.
+This is a Django 5.2-based issue management system with role-based access control. The project features a custom user authentication system supporting both phone (passwordless) and email authentication, and is designed around organizations and spaces for multi-tenant issue tracking.
+
+**Tech Stack**: Django 5.2, PostgreSQL, Docker, Bootstrap 5, HTMX, DigitalOcean Spaces (S3-compatible), WhiteNoise
 
 ## Architecture & Key Components
 
@@ -86,8 +88,19 @@ docker-compose up  # Runs Django on localhost:7000, Postgres on 5432
 ```
 The container automatically runs migrations and starts dev server via command in `docker-compose.yaml`. Container names: `sfs-services-dev-container` (app), `sfs-services-dev-postgres-container` (database).
 
+### Running Commands in Container
+```bash
+# Enter the container for Django commands
+docker exec -it sfs-services-dev-container bash
+
+# Or run commands directly
+docker exec -it sfs-services-dev-container python manage.py makemigrations
+docker exec -it sfs-services-dev-container python manage.py migrate
+docker exec -it sfs-services-dev-container python manage.py createsuperuser
+```
+
 ### Database Migrations
-- Always run migrations inside container: `python manage.py makemigrations && python manage.py migrate`
+- Always run migrations inside container: `docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate`
 - Custom User model requires careful migration handling - organization is optional for superusers only
 
 ### Environment Configuration
@@ -97,6 +110,14 @@ The container automatically runs migrations and starts dev server via command in
   ENVIRONMENT=development
   ALLOWED_HOSTS=localhost,127.0.0.1
   ```
+
+### Working with CSS/SCSS
+- SCSS files are NOT automatically compiled - you need to compile them manually or use a build tool
+- Each page/feature has its own SCSS/CSS pair: `style.scss` and `style.css` in same directory
+- Always import base styles in SCSS files:
+  - `@use '../_base'` for basic navbar/header styles only
+  - `@use '../../_sidebar_base'` for full sidebar layout with responsive design
+- Color variables are in `static/styles/_colors.scss` - use these instead of hardcoded colors
 
 ### Key Files to Know
 - `config/settings.py`: Environment-based configuration with django-environ
@@ -133,6 +154,38 @@ user = User.objects.create_user(
     user_type='central_admin',
     organization=org
 )  # auth_method='email'
+```
+
+### Working with Forms and Views
+```python
+# Form inheriting Bootstrap styling
+class MyForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = MyModel
+        fields = '__all__'
+
+# View with slug handling and optimization
+class MyDetailView(DetailView):
+    model = MyModel
+    slug_field = 'slug'
+    slug_url_kwarg = 'my_model_slug'
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('org', 'space').prefetch_related('images')
+```
+
+### Model Creation Pattern
+```python
+class MyModel(models.Model):
+    title = models.CharField(max_length=200)
+    org = models.ForeignKey('core.Organization', related_name='my_models', on_delete=models.CASCADE)
+    slug = models.SlugField(unique=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title)
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
 ```
 
 ### Model Relationships & Validation
