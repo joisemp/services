@@ -30,8 +30,10 @@ URLs are organized by user role with parallel structures:
 Each role has its own URL namespace and corresponding view modules in `views/`.
 
 ### Issue Management System
-- **Models**: `Issue`, `IssueImage`, `IssueComment` with automatic slug generation using `config.utils.generate_unique_slug()`
+- **Models**: `Issue`, `IssueImage`, `IssueComment`, `WorkTask`, `WorkTaskShare` with automatic slug generation using `config.utils.generate_unique_slug()`
 - **Status Flow**: `open` → `assigned` → `in_progress` → `resolved`/`escalated` → `closed`/`cancelled`
+- **Work Tasks**: Each issue can have multiple `WorkTask`s with assignees, due dates, completion status, and resolution notes
+- **External Task Sharing**: `WorkTaskShare` model enables sharing work tasks via secure tokens with external users (view-only, comment, or collaborate permissions)
 - **Media Handling**: Voice recordings and multiple image uploads per issue (up to 3 via form fields `image1`, `image2`, `image3`)
 - **Relationships**: Issues belong to Organizations, optionally to Spaces; reporter is required ForeignKey to User
 
@@ -54,6 +56,7 @@ Each role has its own URL namespace and corresponding view modules in `views/`.
 - **Development**: Docker Postgres, local media storage, console email backend
 - **Production**: DigitalOcean Spaces (S3-compatible), SMTP email, custom `StorageClasses`
 - **Static Files**: WhiteNoise for static file serving in all environments
+- **Custom Utilities**: `config.utils.py` provides `generate_unique_slug()` and `generate_unique_code()` for 4-char suffixes and longer tokens
 
 ### SCSS/CSS File Organization
 - **Page-Specific Structure**: SCSS and generated CSS files stored together by page/feature name
@@ -135,8 +138,14 @@ user = User.objects.create_user(
 ### Model Relationships & Validation
 - Organization → Users, Spaces, Issues (one-to-many)
 - Space → Users (many-to-many), Issues (one-to-many) 
-- Issue → IssueImage, IssueComment (one-to-many)
+- Issue → IssueImage, IssueComment, WorkTask (one-to-many)
+- WorkTask → WorkTaskShare (one-to-many) for external sharing
 - User model enforces auth_method constraints in `clean()` method
+
+### Work Task Management
+- **Task Lifecycle**: Create → Assign → Update → Complete (with resolution notes) → Optional sharing
+- **External Sharing**: Generate secure tokens via `WorkTaskShare` with expiration, permission levels, and access tracking
+- **Completion Flow**: Use `WorkTaskCompleteView` requiring resolution notes; `WorkTaskToggleCompleteView` for reopening
 
 ### Media File Handling
 - **Development**: Files stored in `src/media/public/` locally
