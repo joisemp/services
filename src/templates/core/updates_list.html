@@ -1,0 +1,42 @@
+{% extends "sidebar_base.html" %}
+
+{% load static %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'styles/core/updates/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+    {% include "navbar.html" %}
+{% endblock %}
+
+{% block sidebar %}
+    {% include "central_admin/sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<h3>Updates</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for update in updates %}
+        <tr>
+            <td>{{ update.title }}</td>
+            <td>{{ update.description }}</td>
+            <td>{{ update.created_at }}</td>
+            <td>{{ update.updated_at }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No updates found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+{% endblock %}

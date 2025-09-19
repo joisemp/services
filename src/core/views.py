@@ -10,8 +10,8 @@ from .forms import (
     PhoneLoginForm,
     EmailLoginForm
 )
-from .models import User
-from django.views.generic import ListView, CreateView
+from .models import Update, User
+from django.views.generic import ListView, CreateView, TemplateView
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -201,3 +201,17 @@ def custom_logout_view(request):
         messages.success(request, f'You have been successfully logged out. Goodbye, {user_name}!')
     
     return redirect('core:login')  
+
+
+class UpdateListView(ListView):
+    """
+    View to list all updates in the system
+    """
+    model = Update
+    template_name = 'core/updates_list.html'
+    context_object_name = 'updates'
+
+    def get_queryset(self):
+        return Update.objects.all().order_by('-created_at')
+    
+    
