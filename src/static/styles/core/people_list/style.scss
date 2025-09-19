@@ -1,0 +1,333 @@
+@use '../../sidebar_base';
+@use '../../colors' as colors;
+
+#go-back {
+  width: fit-content;
+  margin-bottom: 2rem !important;
+}
+
+#alert-details {
+  .alert {
+    margin-bottom: 15px;
+    margin-top: 3rem !important;
+    border: 0.5px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+}
+
+#filter-bar {
+  #search-bar {
+    input {
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 10px 15px;
+
+      &:focus {
+        border-color: colors.$primary;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+      }
+    }
+  }
+
+  #options-bar {
+    .container-nav {
+      background-color: #f1f7ff;
+      padding: 5px;
+      border-radius: 5px;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+
+      .nav {
+        display: flex;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        gap: 4px;
+
+        .nav-item {
+          .nav-active {
+            background-color: #f9f9ff;
+            color: #060606 !important;
+          }
+
+          a {
+            text-decoration: none;
+            font-weight: 500;
+            color: #878787 !important;
+            border-radius: 0px !important;
+
+            &:hover {
+              background-color: #f5f5ff;
+              color: #060606 !important;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Mobile responsive styles */
+@media (max-width: 767.98px) {
+  #filter-bar {
+    flex-direction: column;
+    gap: 1rem;
+    
+    #search-bar {
+      width: 100%;
+    }
+    
+    #options-bar {
+      width: 100%;
+      
+      .container-nav {
+        width: 100%;
+      }
+    }
+  }
+}
+
+/* Profile card responsive styles */
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+    
+    .profile-content {
+      .profile-pic {
+        .pic {
+          width: 60px;
+          height: 60px;
+          background-color: #6b7280;
+          border-radius: 50%;
+          
+          h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+          }
+        }
+      }
+      
+      .text-content {
+        .card-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #111827;
+        }
+        
+        .card-text {
+          font-size: 0.9rem;
+          color: #6b7280;
+        }
+      }
+      
+      .label {
+        .badge {
+          font-size: 0.75rem;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}
+
+/* Mobile adjustments for cards */
+@media (max-width: 575.98px) {
+  .card {
+    .card-body {
+      padding: 1rem;
+      
+      .profile-content {
+        gap: 1rem !important;
+        
+        .profile-pic .pic {
+          width: 50px;
+          height: 50px;
+          
+          h3 {
+            font-size: 1rem;
+          }
+        }
+        
+        .text-content {
+          .card-title {
+            font-size: 1rem;
+          }
+          
+          .card-text {
+            font-size: 0.85rem;
+          }
+        }
+        
+        .label {
+          margin-top: 0.5rem;
+          
+          .badge {
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Medium screen adjustments */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .card .card-body .profile-content {
+    .label {
+      align-self: flex-start !important;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+    #search-bar {
+      width: 100%;
+    }
+
+    #options-bar {
+      width: 100%;
+
+      .container-nav {
+        width: 100%;
+      }
+    }
+
+
+// card styles
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+    
+    .profile-content {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      
+      .profile-pic {
+        .pic {
+          width: 60px;
+          height: 60px;
+          background-color: #6b7280;
+          border-radius: 50%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          
+          h3 {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+          }
+        }
+      }
+      
+      .text-content {
+        flex-grow: 1;
+        
+        .card-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #111827;
+        }
+        
+        .card-text {
+          font-size: 0.9rem;
+          color: #6b7280;
+        }
+      }
+      
+      .label {
+        display: flex;
+        justify-content: flex-end;
+        
+        span {
+          font-size: 0.75rem !important;
+          padding: 0.5rem 1rem !important;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}
+
+/* Mobile adjustments for cards */
+@media (max-width: 575.98px) {
+  .card {
+    .card-body {
+      padding: 1rem;
+      
+      .profile-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem !important;
+        
+        .profile-pic .pic {
+          width: 50px;
+          height: 50px;
+          
+          h3 {
+            font-size: 1rem;
+          }
+        }
+        
+        .text-content {
+          text-align: center;
+          
+          .card-title {
+            font-size: 1rem;
+          }
+          
+          .card-text {
+            font-size: 0.85rem;
+          }
+        }
+        
+        .label {
+          justify-content: center;
+          
+          span {
+            font-size: 0.7rem !important;
+            padding: 0.4rem 0.8rem !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Medium screen adjustments */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .card .card-body .profile-content {
+    .label {
+      align-self: flex-start;
+      margin-top: 0.25rem;
+    }
+  }
+}
