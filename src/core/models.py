@@ -316,3 +316,23 @@ class Space(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.org.name})"
+
+
+class Update(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    related_issue = models.ForeignKey('issue_management.Issue', related_name='updates', on_delete=models.CASCADE, null=True, blank=True)
+    org = models.ForeignKey(Organization, related_name='updates', on_delete=models.CASCADE)
+    space = models.ForeignKey(Space, related_name='updates', on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    slug = models.SlugField(unique=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title)
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.title

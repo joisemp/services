@@ -1,12 +1,9 @@
 from django.urls import path
-# from ...views import space_admin  # Uncomment when views are created
+from .. views.space_admin import IssueListView, IssueCreateView
 
 app_name = "space_admin"
 
 urlpatterns = [
-    # Space admin URLs for managing specific spaces/areas
-    # path('', space_admin.dashboard, name='dashboard'),
-    # path('spaces/', space_admin.space_list, name='space_list'),
-    # path('spaces/<int:space_id>/', space_admin.space_detail, name='space_detail'),
-    # Add space admin URLs here
+    path('', IssueListView.as_view(), name='issue_list'),
+    path('create/', IssueCreateView.as_view(), name='issue_create'),
 ]

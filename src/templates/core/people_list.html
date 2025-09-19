@@ -33,10 +33,10 @@
             <span class="alert-text text-body-secondary">Manage all the people in your organisation</span>
         </div>
         <div class="alert-buttons">
-            <a href="{% url 'issue_management:central_admin:issue_create' %}"
+            <a href="{% url 'core:people_create' %}"
                 class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto">
                 <span class="material-symbols-outlined">add</span>
-                <span class="ms-2">Create Issue</span>
+                <span class="ms-2">Add Person</span>
             </a>
         </div>
     </div>
@@ -76,116 +76,69 @@
 <section id="people-list">
     <div class="container-fluid">
         <div class="row g-3">
-            <!-- Profile Card 1 -->
+            {% for user in users %}
+            <!-- Profile Card for {{ user.get_full_name|default:user.get_short_name }} -->
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
                             <div class="profile-pic flex-shrink-0">
                                 <div class="pic d-flex align-items-center justify-content-center">
-                                   <h3 class="m-0 text-white">AT</h3>
+                                   <h3 class="m-0 text-white">
+                                       {% if user.first_name and user.last_name %}
+                                           {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                                       {% elif user.first_name %}
+                                           {{ user.first_name|slice:":2"|upper }}
+                                       {% elif user.email %}
+                                           {{ user.email|slice:":2"|upper }}
+                                       {% elif user.phone_number %}
+                                           {{ user.phone_number|slice:"-2:"|upper }}
+                                       {% else %}
+                                           U
+                                       {% endif %}
+                                   </h3>
                                 </div>
                             </div>
                             <div class="text-content flex-grow-1 text-center text-sm-start">
-                               <h5 class="card-title mb-1">Asha Thomas</h5>
-                               <p class="card-text mb-1 text-muted">sfsgrpi@gmail.com</p>
-                               <p class="card-text mb-0 text-muted">3557923207</p>
+                               <h5 class="card-title mb-1">
+                                   {{ user.get_full_name|default:user.get_short_name|default:"No Name" }}
+                               </h5>
+                               {% if user.email %}
+                                   <p class="card-text mb-1 text-muted">{{ user.email }}</p>
+                               {% endif %}
+                               {% if user.phone_number %}
+                                   <p class="card-text mb-0 text-muted">{{ user.phone_number }}</p>
+                               {% endif %}
+                               {% if user.organization %}
+                                   <p class="card-text mb-0 text-muted small"><i class="fas fa-building"></i> {{ user.organization.name }}</p>
+                               {% endif %}
                             </div>
                             <div class="label d-flex align-self-center align-self-sm-start">
-                                <span class="badge rounded-pill text-bg-primary px-3 py-2">Central Admin</span>
+                                <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ user.get_user_type_display }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Profile Card 2 -->
-           <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
-                            <div class="profile-pic flex-shrink-0">
-                                <div class="pic d-flex align-items-center justify-content-center">
-                                   <h3 class="m-0 text-white">AT</h3>
-                                </div>
-                            </div>
-                            <div class="text-content flex-grow-1 text-center text-sm-start">
-                               <h5 class="card-title mb-1">Asha Thomas</h5>
-                               <p class="card-text mb-1 text-muted">sfsgrpi@gmail.com</p>
-                               <p class="card-text mb-0 text-muted">3557923207</p>
-                            </div>
-                            <div class="label d-flex align-self-center align-self-sm-start">
-                                <span class="badge rounded-pill text-bg-primary px-3 py-2">Central Admin</span>
-                            </div>
-                        </div>
+            {% empty %}
+            <!-- Empty state when no users found -->
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <div class="text-muted">
+                        <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
+                        <h4>No People Found</h4>
+                        <p class="mb-3">There are no users in the system yet.</p>
+                        <a href="{% url 'core:people_create' %}" class="btn btn-primary">
+                            <span class="material-symbols-outlined me-2">add</span>
+                            Add First Person
+                        </a>
                     </div>
                 </div>
             </div>
-            
-            <!-- Profile Card 3 -->
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
-                            <div class="profile-pic flex-shrink-0">
-                                <div class="pic d-flex align-items-center justify-content-center">
-                                   <h3 class="m-0 text-white">AT</h3>
-                                </div>
-                            </div>
-                            <div class="text-content flex-grow-1 text-center text-sm-start">
-                               <h5 class="card-title mb-1">Asha Thomas</h5>
-                               <p class="card-text mb-1 text-muted">sfsgrpi@gmail.com</p>
-                               <p class="card-text mb-0 text-muted">3557923207</p>
-                            </div>
-                            <div class="label d-flex align-self-center align-self-sm-start">
-                                <span class="badge rounded-pill text-bg-primary px-3 py-2">Central Admin</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
 
 
 {% endblock %}
-
-
-<h1>People List</h1>
-
-{% if user.is_authenticated %}
-<p>
-    Welcome, {{ user.get_full_name|default:user.get_short_name }}! |
-    <a href="{% url 'core:logout' %}" onclick="return confirm('Are you sure you want to logout?')">Logout</a>
-</p>
-{% endif %}
-
-<p>
-    <a href="{% url 'core:people_create' %}">Add New Person</a>
-</p>
-
-<table>
-    <thead>
-        <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Email</th>
-            <th>Phone Number</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.first_name }}</td>
-            <td>{{ user.last_name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.phone_number }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4">No users found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
