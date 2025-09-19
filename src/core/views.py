@@ -58,7 +58,7 @@ class PeopleListView(ListView):
     context_object_name = 'users'
 
     def get_queryset(self):
-        return User.objects.all().order_by('first_name', 'last_name')
+        return User.objects.select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
 class PeopleCreateView(CreateView):
