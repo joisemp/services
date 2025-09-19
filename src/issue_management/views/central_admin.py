@@ -1,9 +1,10 @@
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
-from ..models import Issue, IssueImage, WorkTask
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm
+from django.http import JsonResponse, HttpResponse
+from ..models import Issue, IssueImage, WorkTask, IssueComment
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm
 
 
 class IssueListView(ListView):
@@ -69,6 +70,8 @@ class IssueDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         # Add work tasks to context
         context['work_tasks'] = self.object.work_tasks.all().order_by('-created_at')
+        # Add comment form to context
+        context['comment_form'] = IssueCommentForm()
         return context
 
 
@@ -198,5 +201,53 @@ class WorkTaskDeleteView(View):
         messages.success(request, f'Work task "{task_title}" has been deleted.')
         
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue_slug)
+
+
+class IssueCommentListView(View):
+    """HTMX endpoint to return the list of comments for an issue"""
     
+    def get(self, request, issue_slug):
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        comments = issue.comments.select_related('user').all()
+        
+        return render(request, 'central_admin/issue_management/partials/comment_list.html', {
+            'comments': comments,
+            'issue': issue
+        })
+
+
+class IssueCommentCreateView(View):
+    """HTMX endpoint to create a new comment"""
     
+    def post(self, request, issue_slug):
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = IssueCommentForm(request.POST)
+        
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.issue = issue
+            comment.user = request.user
+            comment.save()
+            
+            # Return the updated comment list
+            comments = issue.comments.select_related('user').all()
+            return render(request, 'central_admin/issue_management/partials/comment_list.html', {
+                'comments': comments,
+                'issue': issue
+            })
+        else:
+            # Return form errors
+            return render(request, 'central_admin/issue_management/partials/comment_form.html', {
+                'form': form,
+                'issue': issue
+            }, status=400)
+    
+    def get(self, request, issue_slug):
+        """Return empty form for HTMX to display"""
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = IssueCommentForm()
+        
+        return render(request, 'central_admin/issue_management/partials/comment_form.html', {
+            'form': form,
+            'issue': issue
+        })

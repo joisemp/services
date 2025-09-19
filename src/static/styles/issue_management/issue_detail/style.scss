@@ -1,5 +1,6 @@
 @use '../../sidebar_base';
 @use '../../colors' as colors;
+@use '../../components/comments';
 
 #breadcrumb{
   display: flex;

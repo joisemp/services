@@ -1,6 +1,6 @@
 from config.mixins.form_mixin import BootstrapFormMixin
 from django import forms
-from .models import Issue, WorkTask
+from .models import Issue, WorkTask, IssueComment
 
 class IssueForm(BootstrapFormMixin, forms.ModelForm):
     # Add image fields for up to 3 images
@@ -127,3 +127,24 @@ class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
         # Make resolution_notes required for completion
         self.fields['resolution_notes'].required = True
         self.fields['resolution_notes'].help_text = "Please provide details about how the task was completed"
+
+
+class IssueCommentForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for adding comments to issues"""
+    class Meta:
+        model = IssueComment
+        fields = ['comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Add your comment...',
+                'class': 'form-control'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Make comment required
+        self.fields['comment'].required = True
+        self.fields['comment'].label = ""  # Remove label for cleaner UI

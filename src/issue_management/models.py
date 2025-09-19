@@ -60,9 +60,13 @@ class IssueImage(models.Model):
     
 class IssueComment(models.Model):
     issue = models.ForeignKey(Issue, related_name='comments', on_delete=models.CASCADE)
+    user = models.ForeignKey('core.User', related_name='issue_comments', on_delete=models.CASCADE)
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['created_at']
     
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -71,7 +75,7 @@ class IssueComment(models.Model):
         super().save(*args, **kwargs)
         
     def __str__(self):
-        return f"Comment on Issue: {self.issue.title}"
+        return f"Comment by {self.user.get_full_name() or self.user} on Issue: {self.issue.title}"
     
 
 class WorkTask(models.Model):
