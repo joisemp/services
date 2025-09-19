@@ -141,19 +141,152 @@
     <!-- Work tasks card -->
     <div class="col-lg-6">
       <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Work Tasks</h5>
+          <a href="{% url 'issue_management:central_admin:work_task_create' issue_slug=issue.slug %}" class="btn btn-primary btn-sm">
+            <span class="material-symbols-outlined">add</span>
+            Add Task
+          </a>
+        </div>
         <div class="card-body">
-          <h5 class="card-title mb-3">Work tasks</h5>
-          <div class="tasks-section"
-            style="min-height: 150px; background-color: #f8f9fa; border-radius: 8px; padding: 15px; position: relative;">
-            <p class="text-muted text-center mb-3">No tasks yet</p>
-            <button class="btn btn-primary btn-sm position-absolute bottom-0 end-0 m-3">
-              <span class="material-symbols-outlined">add</span>
-              Add task
-            </button>
-          </div>
+          {% if work_tasks %}
+            <div class="work-tasks-list">
+              {% for task in work_tasks %}
+              <div class="task-item border rounded p-3 mb-3 {% if task.completed %}bg-light{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="task-content flex-grow-1">
+                    <h6 class="task-title mb-1 {% if task.completed %}text-decoration-line-through text-muted{% endif %}">
+                      {{ task.title }}
+                    </h6>
+                    <p class="task-description text-muted small mb-2">{{ task.description|truncatewords:15 }}</p>
+                    
+                    <div class="task-meta small text-muted">
+                      <div class="row">
+                        <div class="col-12 col-sm-6">
+                          <i class="fas fa-user"></i> {{ task.assigned_to.get_full_name|default:task.assigned_to }}
+                        </div>
+                        {% if task.due_date %}
+                        <div class="col-12 col-sm-6">
+                          <i class="fas fa-calendar"></i> Due: {{ task.due_date|date:"M d, Y" }}
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="task-actions ms-2">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-h"></i>
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li>
+                          <a class="dropdown-item" href="{% url 'issue_management:central_admin:work_task_update' work_task_slug=task.slug %}">
+                            <i class="fas fa-edit"></i> Edit
+                          </a>
+                        </li>
+                        <li>
+                          {% if not task.completed %}
+                            <a class="dropdown-item" href="{% url 'issue_management:central_admin:work_task_complete' work_task_slug=task.slug %}">
+                              <i class="fas fa-check"></i> Mark Complete
+                            </a>
+                          {% else %}
+                            <form method="post" action="{% url 'issue_management:central_admin:work_task_toggle_complete' work_task_slug=task.slug %}" class="d-inline">
+                              {% csrf_token %}
+                              <button type="submit" class="dropdown-item">
+                                <i class="fas fa-undo"></i> Mark Pending
+                              </button>
+                            </form>
+                          {% endif %}
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <button class="dropdown-item text-danger" type="button" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#deleteWorkTaskModal{{ task.id }}">
+                            <i class="fas fa-trash"></i> Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="task-status mt-2">
+                  {% if task.completed %}
+                    <span class="badge bg-success">
+                      <i class="fas fa-check"></i> Completed
+                    </span>
+                    {% if task.resolution_notes %}
+                      <div class="mt-2 p-2 bg-light rounded">
+                        <small class="text-muted">Resolution Notes:</small>
+                        <p class="small mb-0">{{ task.resolution_notes }}</p>
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-warning">
+                      <i class="fas fa-clock"></i> Pending
+                    </span>
+                  {% endif %}
+                  
+                  {% if task.due_date %}
+                    {% now "Y-m-d H:i:s" as current_time %}
+                    {% if task.due_date < current_time and not task.completed %}
+                      <span class="badge bg-danger ms-1">
+                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                      </span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+              <p class="text-muted mb-3">No work tasks yet</p>
+              <a href="{% url 'issue_management:central_admin:work_task_create' issue_slug=issue.slug %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create First Task
+              </a>
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- Delete Work Task Modals -->
+{% for task in work_tasks %}
+<div class="modal fade" id="deleteWorkTaskModal{{ task.id }}" tabindex="-1" aria-labelledby="deleteWorkTaskModalLabel{{ task.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteWorkTaskModalLabel{{ task.id }}">
+          <i class="fas fa-trash text-danger me-2"></i>Delete Work Task
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Warning!</strong> This action cannot be undone.
+        </div>
+        <p>Are you sure you want to delete the work task <strong>"{{ task.title }}"</strong>?</p>
+        <p class="text-muted mb-0">All information associated with this task will be permanently removed.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'issue_management:central_admin:work_task_delete' work_task_slug=task.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash me-2"></i>Delete Task
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
 {% endblock content %}
