@@ -1,5 +1,7 @@
 from django.views.generic import ListView, CreateView, DetailView
-from ..models import Issue
+from ..models import Issue, IssueImage
+from ..forms import IssueForm
+from django.urls import reverse_lazy
 
 class IssueListView(ListView):
     template_name = "space_admin/issue_management/issue_list.html"
@@ -18,5 +20,30 @@ class IssueListView(ListView):
                 queryset = queryset.filter(status=status_filter)
         
         return queryset.order_by('-created_at')
+    
+
+class IssueCreateView(CreateView):
+    template_name = "space_admin/issue_management/issue_create.html"
+    form_class = IssueForm
+    success_url = reverse_lazy('issue_management:space_admin:issue_list')
+    
+    def form_valid(self, form):
+        # Set the reporter to the current user before saving
+        form.instance.reporter = self.request.user
+        
+        # Save the issue first
+        response = super().form_valid(form)
+        
+        # Handle image uploads
+        image_fields = ['image1', 'image2', 'image3']
+        for field_name in image_fields:
+            image_file = form.cleaned_data.get(field_name)
+            if image_file:
+                IssueImage.objects.create(
+                    issue=self.object,
+                    image=image_file
+                )
+        
+        return response    
     
     

@@ -2,7 +2,7 @@ import random
 import string
 
 
-def generate_unique_slug(instance, base_slug, max_length=100):
+def generate_unique_slug(instance, base_slug, max_length=50):
     """
     Generates a unique slug for a given model instance by appending a 4-character
     alphanumeric code to a base slug. Ensures the generated slug is unique within
@@ -12,7 +12,7 @@ def generate_unique_slug(instance, base_slug, max_length=100):
         instance: The model instance for which the slug is being generated. The
             instance's class is used to query the database for existing slugs.
         base_slug (str): The base string to which the unique code will be appended.
-        max_length (int): Maximum length of the final slug. Defaults to 100.
+        max_length (int): Maximum length of the final slug. Defaults to 50.
     
     Returns:
         str: A unique slug in the format "{truncated_base_slug}-{unique_code}".
