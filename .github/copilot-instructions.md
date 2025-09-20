@@ -84,7 +84,7 @@ Each role has its own URL namespace and corresponding view modules in `views/`.
 
 ### Docker Setup
 ```bash
-docker-compose up  # Runs Django on localhost:7000, Postgres on 5432
+docker-compose up  # Runs Django on localhost:7000 (mapped from container port 8000), Postgres on 5432
 ```
 The container automatically runs migrations and starts dev server via command in `docker-compose.yaml`. Container names: `sfs-services-dev-container` (app), `sfs-services-dev-postgres-container` (database).
 
@@ -104,12 +104,14 @@ docker exec -it sfs-services-dev-container python manage.py createsuperuser
 - Custom User model requires careful migration handling - organization is optional for superusers only
 
 ### Environment Configuration
-- Create `src/config/.env` with required variables:
+- Create `src/config/.env` with required variables (Django looks for this path automatically):
   ```
-  SECRET_KEY=your-secret-key
+  SECRET_KEY=your-secret-key-here
   ENVIRONMENT=development
   ALLOWED_HOSTS=localhost,127.0.0.1
   ```
+- For production, add: `DATABASE_URL`, email settings (`EMAIL_HOST`, `EMAIL_HOST_USER`, etc.), and DigitalOcean Spaces config
+- Environment detection: `ENVIRONMENT=development` enables debug mode, console email, local storage; `production` enables S3 storage, SMTP email
 
 ### Working with CSS/SCSS
 - SCSS files are NOT automatically compiled - you need to compile them manually or use a build tool
@@ -129,6 +131,27 @@ docker exec -it sfs-services-dev-container python manage.py createsuperuser
 - `templates/sidebar_base.html`: Full layout template with sidebar, includes Django messages and HTMX
 - `static/styles/_colors.scss`: Global color variables and theme definitions
 - `static/styles/_sidebar_base.scss`: Complete responsive sidebar layout with navbar
+- `src/requirements.txt`: Python dependencies (Django 5.2, PostgreSQL, DigitalOcean Spaces, WhiteNoise)
+
+### Development Troubleshooting
+```bash
+# Check container status
+docker ps
+
+# View container logs
+docker logs sfs-services-dev-container
+docker logs sfs-services-dev-postgres-container
+
+# Reset database completely
+docker-compose down -v  # Removes volumes
+docker-compose up
+
+# Access Django shell
+docker exec -it sfs-services-dev-container python manage.py shell
+
+# Check Django configuration
+docker exec -it sfs-services-dev-container python manage.py check
+```
 
 ## Common Patterns
 
