@@ -111,10 +111,11 @@
           <div class="card-body">
             <h5 class="card-title mb-3 t-danger" style="color:rgb(130, 18, 18);">Delete Issue</h5>
             <p class="card-text text-danger mb-3">Deleting issue is a permanent action. Once done can't be undone.</p>
-            <button class="btn btn-danger d-flex align-items-center">
+            <a href="{% url 'issue_management:central_admin:issue_delete' issue_slug=issue.slug %}" 
+               class="btn btn-danger d-inline-flex align-items-center">
               <span class="material-symbols-outlined me-2">delete</span>
               Delete
-            </button>
+            </a>
           </div>
         </div>
       </div>

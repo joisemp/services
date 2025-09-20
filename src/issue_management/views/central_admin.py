@@ -251,3 +251,44 @@ class IssueCommentCreateView(View):
             'form': form,
             'issue': issue
         })
+
+
+class IssueDeleteView(DeleteView):
+    """Delete an issue and all its related data"""
+    template_name = "central_admin/issue_management/issue_delete.html"
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    success_url = reverse_lazy('issue_management:central_admin:issue_list')
+    
+    def get_queryset(self):
+        return Issue.objects.prefetch_related('images', 'comments', 'work_tasks__shares').select_related('org', 'space', 'reporter')
+    
+    def delete(self, request, *args, **kwargs):
+        """Override delete to add success message"""
+        self.object = self.get_object()
+        issue_title = self.object.title
+        
+        # Django's CASCADE will automatically delete:
+        # - IssueImage instances (related via images)
+        # - IssueComment instances (related via comments) 
+        # - WorkTask instances (related via work_tasks)
+        # - WorkTaskShare instances (related via work_tasks__shares)
+        
+        success_url = self.get_success_url()
+        self.object.delete()
+        
+        messages.success(request, f'Issue "{issue_title}" and all its related data have been permanently deleted.')
+        
+        return redirect(success_url)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add counts of related objects that will be deleted
+        context['related_counts'] = {
+            'images': self.object.images.count(),
+            'comments': self.object.comments.count(),
+            'work_tasks': self.object.work_tasks.count(),
+            'work_task_shares': sum(task.shares.count() for task in self.object.work_tasks.all()),
+        }
+        return context
