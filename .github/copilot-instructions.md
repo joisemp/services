@@ -97,11 +97,15 @@ docker exec -it sfs-services-dev-container bash
 docker exec -it sfs-services-dev-container python manage.py makemigrations
 docker exec -it sfs-services-dev-container python manage.py migrate
 docker exec -it sfs-services-dev-container python manage.py createsuperuser
+
+# For Windows PowerShell, use:
+docker exec -it sfs-services-dev-container python manage.py shell
 ```
 
 ### Database Migrations
 - Always run migrations inside container: `docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate`
 - Custom User model requires careful migration handling - organization is optional for superusers only
+- For Windows PowerShell, join commands with `;` instead of `&&`
 
 ### Environment Configuration
 - Create `src/config/.env` with required variables (Django looks for this path automatically):
@@ -114,8 +118,10 @@ docker exec -it sfs-services-dev-container python manage.py createsuperuser
 - Environment detection: `ENVIRONMENT=development` enables debug mode, console email, local storage; `production` enables S3 storage, SMTP email
 
 ### Working with CSS/SCSS
+- **Always create SCSS files for page-specific styles** - do NOT create raw CSS files
+- **Each page gets its own folder** within the appropriate module directory (e.g., `issue_list/`, `issue_detail/`)
+- **Inside each page folder**, create a `style.scss` file, then compile to `style.css` in the same folder
 - SCSS files are NOT automatically compiled - you need to compile them manually or use a build tool
-- Each page/feature has its own SCSS/CSS pair: `style.scss` and `style.css` in same directory
 - Always import base styles in SCSS files:
   - `@use '../_base'` for basic navbar/header styles only
   - `@use '../../_sidebar_base'` for full sidebar layout with responsive design
@@ -126,6 +132,7 @@ docker exec -it sfs-services-dev-container python manage.py createsuperuser
 - `config/utils.py`: Unique slug/code generation utilities (4-char codes)
 - `config/mixins/form_mixin.py`: Bootstrap form styling automation with error handling
 - `config/storages.py`: Custom S3 storage classes for static/media files
+- `core/backends.py`: DualAuthBackend for phone and email authentication
 - `docker-compose.yaml`: Development environment setup (container name: `sfs-services-dev-container`)
 - `templates/base.html`: Basic template with Bootstrap 5, no sidebar
 - `templates/sidebar_base.html`: Full layout template with sidebar, includes Django messages and HTMX
