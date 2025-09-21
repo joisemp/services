@@ -18,6 +18,9 @@
 {% endblock %}
 
 {% block content %}
+
+<a href="{% url 'issue_management:central_admin:issue_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Go back</a>
+
 <section id="breadcrumb" class="mb-3">
   <span class="badge rounded-pill text-bg-primary ms-2">{{ issue.get_status_display }}</span>
   <span class="badge rounded-pill text-bg-warning ms-2">{{ issue.get_priority_display }}</span>
