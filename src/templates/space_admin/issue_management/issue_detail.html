@@ -38,11 +38,21 @@
       <p class="alert-text text-body-secondary mb-0 fw-semibold">{{ issue.reporter.phone_number | default:"N/A" }}</p>
     </div>
     <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">
-      <a href="{% url 'issue_management:space_admin:issue_create' %}"
-        class="btn btn-primary d-flex align-items-center justify-content-center">
-        <span class="material-symbols-outlined">call</span>
-        <span class="ms-2">Call</span>
-      </a>
+      {% if issue.reporter.phone_number %}
+        <a href="tel:{{ issue.reporter.phone_number }}"
+          class="btn btn-primary d-flex align-items-center justify-content-center"
+          title="Call {{ issue.reporter.get_full_name|default:'Reporter' }} at {{ issue.reporter.phone_number }}">
+          <span class="material-symbols-outlined">call</span>
+          <span class="ms-2">Call</span>
+        </a>
+      {% else %}
+        <button class="btn btn-primary d-flex align-items-center justify-content-center" 
+                disabled 
+                title="No phone number available for {{ issue.reporter.get_full_name|default:'Reporter' }}">
+          <span class="material-symbols-outlined">call</span>
+          <span class="ms-2">Call</span>
+        </button>
+      {% endif %}
       <a href="{% url 'issue_management:space_admin:issue_create' %}"
         class="btn btn-outline-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">edit</span>
