@@ -34,8 +34,7 @@
     role="alert">
     <div class="message flex-grow-1 mb-2 mb-md-0">
       <h4 class="mb-2">{{ issue.title }}</h4>
-      <p class="alert-text text-body-secondary mb-0">Reported by {{ issue.reporter.get_full_name }} ({{
-        issue.reporter.space_name | default:"Organization wide" }})</p>
+      <p class="alert-text text-body-secondary mb-0">Reported by {{ issue.reporter.get_full_name }} ({{ issue.reporter.space_name | default:"Organization wide" }})</p>
       <p class="alert-text text-body-secondary mb-0 fw-semibold">{{ issue.reporter.phone_number | default:"N/A" }}</p>
     </div>
     <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">
