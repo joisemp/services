@@ -292,3 +292,27 @@ class IssueDeleteView(DeleteView):
             'work_task_shares': sum(task.shares.count() for task in self.object.work_tasks.all()),
         }
         return context
+
+
+class IssueImageDeleteView(View):
+    """Delete a specific image attached to an issue"""
+    
+    def post(self, request, issue_slug, image_slug):
+        # Get the issue and image
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        image = get_object_or_404(IssueImage, slug=image_slug, issue=issue)
+        
+        # Store the image filename for the success message
+        image_name = image.image.name
+        
+        # Delete the image file from storage
+        if image.image:
+            image.image.delete(save=False)
+        
+        # Delete the image record
+        image.delete()
+        
+        messages.success(request, f'Image successfully deleted.')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)

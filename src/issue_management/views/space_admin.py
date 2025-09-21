@@ -1,4 +1,6 @@
-from django.views.generic import ListView, CreateView, DetailView
+from django.views.generic import ListView, CreateView, DetailView, View
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
 from ..models import Issue, IssueImage
 from ..forms import IssueForm
 from django.urls import reverse_lazy
@@ -45,5 +47,29 @@ class IssueCreateView(CreateView):
                 )
         
         return response    
+
+
+class IssueImageDeleteView(View):
+    """Delete a specific image attached to an issue"""
+    
+    def post(self, request, issue_slug, image_slug):
+        # Get the issue and image
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        image = get_object_or_404(IssueImage, slug=image_slug, issue=issue)
+        
+        # Store the image filename for the success message
+        image_name = image.image.name
+        
+        # Delete the image file from storage
+        if image.image:
+            image.image.delete(save=False)
+        
+        # Delete the image record
+        image.delete()
+        
+        messages.success(request, f'Image successfully deleted.')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
     
     

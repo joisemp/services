@@ -19,4 +19,7 @@ urlpatterns = [
     # Comment URLs
     path('<slug:issue_slug>/comments/', central_admin.IssueCommentListView.as_view(), name='comment_list'),
     path('<slug:issue_slug>/comments/create/', central_admin.IssueCommentCreateView.as_view(), name='comment_create'),
+    
+    # Image URLs
+    path('<slug:issue_slug>/images/<slug:image_slug>/delete/', central_admin.IssueImageDeleteView.as_view(), name='image_delete'),
 ]
