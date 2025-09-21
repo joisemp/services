@@ -62,14 +62,20 @@
   </div>
 
   <!--Resolution-->
+  {% if issue.status == 'resolved' and issue.resolution_notes %}
   <div
     class="resolved-alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-3 py-4"
     role="alert">
     <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h5 class="mb-1" style="color:darkgreen">Resolution notes</h5>
-      <p class="alert-text text-success mb-md-0">It was the issue with sensors</p>
+      <h5 class="mb-1" style="color:darkgreen">
+        <span class="material-symbols-outlined me-2" style="color:darkgreen;">check_circle</span>
+        Resolution notes
+      </h5>
+      <p class="alert-text text-success mb-md-0">{{ issue.resolution_notes|linebreaksbr }}</p>
+      <small class="text-muted">Resolved on {{ issue.updated_at|date:"M d, Y \\a\\t H:i" }}</small>
     </div>
   </div>
+  {% endif %}
 </section>
 
 <section id="issue-content" class="mt-4">
@@ -160,10 +166,20 @@
           <div class="card-body">
             <h5 class="card-title text-muted mb-3">Start working</h5>
             <p class="card-text text-muted mb-3">Lets start the work.</p>
-            <button class="btn btn-dark d-flex align-items-center">
-              <span class="material-symbols-outlined me-2">play_arrow</span>
-              Start work
-            </button>
+            <div class="d-flex gap-2 flex-wrap">
+              <button class="btn btn-dark d-flex align-items-center">
+                <span class="material-symbols-outlined me-2">play_arrow</span>
+                Start work
+              </button>
+              {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
+                <button class="btn btn-success d-flex align-items-center" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#markResolvedModal">
+                  <span class="material-symbols-outlined me-2">check_circle</span>
+                  Mark Resolved
+                </button>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -372,6 +388,48 @@
     </div>
   </div>
 </section>
+
+<!-- Mark Resolved Modal -->
+<div class="modal fade" id="markResolvedModal" tabindex="-1" aria-labelledby="markResolvedModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="markResolvedModalLabel">
+          <span class="material-symbols-outlined text-success me-2">check_circle</span>
+          Mark Issue as Resolved
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'issue_management:space_admin:issue_resolve' issue_slug=issue.slug %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="alert alert-success">
+            <strong>Issue:</strong> {{ issue.title }}
+          </div>
+          <div class="mb-3">
+            <label for="resolution_notes" class="form-label">
+              <strong>Resolution Notes</strong> <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" 
+                      id="resolution_notes" 
+                      name="resolution_notes" 
+                      rows="4" 
+                      placeholder="Please describe how this issue was resolved..." 
+                      required></textarea>
+            <div class="form-text">Provide details about how the issue was resolved for future reference.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <span class="material-symbols-outlined me-2">check_circle</span>
+            Mark as Resolved
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- Delete Work Task Modals -->
 {% for task in work_tasks %}

@@ -4,6 +4,7 @@ from django.contrib import messages
 from ..models import Issue, IssueImage
 from ..forms import IssueForm, AdditionalImageUploadForm, VoiceUploadForm
 from django.urls import reverse_lazy
+from django.http import JsonResponse
 
 class IssueListView(ListView):
     template_name = "space_admin/issue_management/issue_list.html"
@@ -219,3 +220,37 @@ class IssueVoiceUploadView(View):
             'form': form,
         }
         return render(request, 'space_admin/issue_management/voice_upload.html', context)
+
+
+class IssueResolveView(View):
+    """Mark an issue as resolved with resolution notes"""
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue is already resolved, closed, or cancelled
+        if issue.status in ['resolved', 'closed', 'cancelled']:
+            messages.error(request, f'This issue is already {issue.get_status_display().lower()} and cannot be resolved again.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+        
+        # Get resolution notes from the form
+        resolution_notes = request.POST.get('resolution_notes', '').strip()
+        
+        if not resolution_notes:
+            messages.error(request, 'Resolution notes are required to mark an issue as resolved.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+        
+        try:
+            # Update the issue status and resolution notes
+            issue.status = 'resolved'
+            issue.resolution_notes = resolution_notes
+            issue.save()
+            
+            messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved.')
+            
+        except Exception as e:
+            messages.error(request, f'Failed to resolve issue: {str(e)}')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
