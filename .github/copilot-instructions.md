@@ -84,7 +84,7 @@ Each role has its own URL namespace and corresponding view modules in `views/`.
 
 ### Docker Setup
 ```bash
-docker-compose up  # Runs Django on localhost:7000, Postgres on 5432
+docker-compose up  # Runs Django on localhost:7000 (mapped from container port 8000), Postgres on 5432
 ```
 The container automatically runs migrations and starts dev server via command in `docker-compose.yaml`. Container names: `sfs-services-dev-container` (app), `sfs-services-dev-postgres-container` (database).
 
@@ -97,23 +97,31 @@ docker exec -it sfs-services-dev-container bash
 docker exec -it sfs-services-dev-container python manage.py makemigrations
 docker exec -it sfs-services-dev-container python manage.py migrate
 docker exec -it sfs-services-dev-container python manage.py createsuperuser
+
+# For Windows PowerShell, use:
+docker exec -it sfs-services-dev-container python manage.py shell
 ```
 
 ### Database Migrations
 - Always run migrations inside container: `docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate`
 - Custom User model requires careful migration handling - organization is optional for superusers only
+- For Windows PowerShell, join commands with `;` instead of `&&`
 
 ### Environment Configuration
-- Create `src/config/.env` with required variables:
+- Create `src/config/.env` with required variables (Django looks for this path automatically):
   ```
-  SECRET_KEY=your-secret-key
+  SECRET_KEY=your-secret-key-here
   ENVIRONMENT=development
   ALLOWED_HOSTS=localhost,127.0.0.1
   ```
+- For production, add: `DATABASE_URL`, email settings (`EMAIL_HOST`, `EMAIL_HOST_USER`, etc.), and DigitalOcean Spaces config
+- Environment detection: `ENVIRONMENT=development` enables debug mode, console email, local storage; `production` enables S3 storage, SMTP email
 
 ### Working with CSS/SCSS
+- **Always create SCSS files for page-specific styles** - do NOT create raw CSS files
+- **Each page gets its own folder** within the appropriate module directory (e.g., `issue_list/`, `issue_detail/`)
+- **Inside each page folder**, create a `style.scss` file, then compile to `style.css` in the same folder
 - SCSS files are NOT automatically compiled - you need to compile them manually or use a build tool
-- Each page/feature has its own SCSS/CSS pair: `style.scss` and `style.css` in same directory
 - Always import base styles in SCSS files:
   - `@use '../_base'` for basic navbar/header styles only
   - `@use '../../_sidebar_base'` for full sidebar layout with responsive design
@@ -124,11 +132,33 @@ docker exec -it sfs-services-dev-container python manage.py createsuperuser
 - `config/utils.py`: Unique slug/code generation utilities (4-char codes)
 - `config/mixins/form_mixin.py`: Bootstrap form styling automation with error handling
 - `config/storages.py`: Custom S3 storage classes for static/media files
+- `core/backends.py`: DualAuthBackend for phone and email authentication
 - `docker-compose.yaml`: Development environment setup (container name: `sfs-services-dev-container`)
 - `templates/base.html`: Basic template with Bootstrap 5, no sidebar
 - `templates/sidebar_base.html`: Full layout template with sidebar, includes Django messages and HTMX
 - `static/styles/_colors.scss`: Global color variables and theme definitions
 - `static/styles/_sidebar_base.scss`: Complete responsive sidebar layout with navbar
+- `src/requirements.txt`: Python dependencies (Django 5.2, PostgreSQL, DigitalOcean Spaces, WhiteNoise)
+
+### Development Troubleshooting
+```bash
+# Check container status
+docker ps
+
+# View container logs
+docker logs sfs-services-dev-container
+docker logs sfs-services-dev-postgres-container
+
+# Reset database completely
+docker-compose down -v  # Removes volumes
+docker-compose up
+
+# Access Django shell
+docker exec -it sfs-services-dev-container python manage.py shell
+
+# Check Django configuration
+docker exec -it sfs-services-dev-container python manage.py check
+```
 
 ## Common Patterns
 
