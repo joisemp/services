@@ -29,6 +29,7 @@ class Issue(models.Model):
     voice = models.FileField(upload_to='public/issue_voices/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    resolution_notes = models.TextField(blank=True, null=True, help_text="Notes describing how the issue was resolved")
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
     slug = models.SlugField(unique=True)
