@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm
 
 
 class IssueListView(ListView):
@@ -316,3 +316,59 @@ class IssueImageDeleteView(View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
+class IssueImageUploadView(View):
+    """Upload additional images to an existing issue"""
+    
+    def get(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = AdditionalImageUploadForm()
+        
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'central_admin/issue_management/image_upload.html', context)
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = AdditionalImageUploadForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Get the list of uploaded images from cleaned_data
+            images = form.cleaned_data.get('images')
+            uploaded_count = 0
+            
+            # Ensure images is a list
+            if not isinstance(images, list):
+                images = [images] if images else []
+            
+            # Create IssueImage instances for each uploaded image
+            for image_file in images:
+                try:
+                    IssueImage.objects.create(
+                        issue=issue,
+                        image=image_file
+                    )
+                    uploaded_count += 1
+                except Exception as e:
+                    messages.error(request, f'Failed to upload image "{image_file.name}": {str(e)}')
+            
+            if uploaded_count > 0:
+                if uploaded_count == 1:
+                    messages.success(request, f'Successfully uploaded {uploaded_count} image.')
+                else:
+                    messages.success(request, f'Successfully uploaded {uploaded_count} images.')
+                
+                # Redirect back to the issue detail page
+                return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        # If form is not valid, show errors
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'central_admin/issue_management/image_upload.html', context)

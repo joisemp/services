@@ -68,6 +68,13 @@
           <h6 class="card-subtitle mb-2 text-body-secondary">Description</h6>
           <p class="card-text mt-0">{{ issue.description }}</p>
           <h6 class="card-subtitle mt-2 text-body-secondary mb-2">Attached Images</h6>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-info">{{ issue.images.count }} image{{ issue.images.count|pluralize }}</span>
+            <a href="{% url 'issue_management:space_admin:image_upload' issue_slug=issue.slug %}" 
+               class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-plus me-1"></i>Add Images
+            </a>
+          </div>
           <div class="images-log">
             {% if issue.images.exists %}
             <div class="d-flex flex-wrap">
@@ -86,6 +93,11 @@
                 </button>
               </div>
               {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-3 text-muted">
+              <i class="fas fa-images fa-2x mb-2"></i>
+              <p class="mb-0 small">No images uploaded yet</p>
             </div>
             {% endif %}
             {% if issue.voice %}

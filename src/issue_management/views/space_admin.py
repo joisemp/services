@@ -1,8 +1,8 @@
 from django.views.generic import ListView, CreateView, DetailView, View
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from ..models import Issue, IssueImage
-from ..forms import IssueForm
+from ..forms import IssueForm, AdditionalImageUploadForm
 from django.urls import reverse_lazy
 
 class IssueListView(ListView):
@@ -49,6 +49,17 @@ class IssueCreateView(CreateView):
         return response    
 
 
+class IssueDetailView(DetailView):
+    template_name = "space_admin/issue_management/issue_detail.html"
+    context_object_name = "issue"
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def get_queryset(self):
+        return Issue.objects.prefetch_related('images').select_related('org', 'space')
+
+
 class IssueImageDeleteView(View):
     """Delete a specific image attached to an issue"""
     
@@ -71,5 +82,61 @@ class IssueImageDeleteView(View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+
+
+class IssueImageUploadView(View):
+    """Upload additional images to an existing issue"""
+    
+    def get(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = AdditionalImageUploadForm()
+        
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'space_admin/issue_management/image_upload.html', context)
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        form = AdditionalImageUploadForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Get the list of uploaded images from cleaned_data
+            images = form.cleaned_data.get('images')
+            uploaded_count = 0
+            
+            # Ensure images is a list
+            if not isinstance(images, list):
+                images = [images] if images else []
+            
+            # Create IssueImage instances for each uploaded image
+            for image_file in images:
+                try:
+                    IssueImage.objects.create(
+                        issue=issue,
+                        image=image_file
+                    )
+                    uploaded_count += 1
+                except Exception as e:
+                    messages.error(request, f'Failed to upload image "{image_file.name}": {str(e)}')
+            
+            if uploaded_count > 0:
+                if uploaded_count == 1:
+                    messages.success(request, f'Successfully uploaded {uploaded_count} image.')
+                else:
+                    messages.success(request, f'Successfully uploaded {uploaded_count} images.')
+                
+                # Redirect back to the issue detail page
+                return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+        
+        # If form is not valid, show errors
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'space_admin/issue_management/image_upload.html', context)
     
     

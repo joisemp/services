@@ -148,3 +148,90 @@ class IssueCommentForm(BootstrapFormMixin, forms.ModelForm):
         # Make comment required
         self.fields['comment'].required = True
         self.fields['comment'].label = ""  # Remove label for cleaner UI
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget for multiple file uploads"""
+    allow_multiple_selected = True
+
+    def value_from_datadict(self, data, files, name):
+        """Return a list of uploaded files"""
+        upload = files.getlist(name)
+        if not upload:
+            return None
+        return upload
+
+
+class MultipleFileField(forms.FileField):
+    """Custom field for handling multiple file uploads"""
+    widget = MultipleFileInput
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def to_python(self, data):
+        """Handle multiple file data"""
+        if data in self.empty_values:
+            return None
+        elif isinstance(data, list):
+            return [super(MultipleFileField, self).to_python(item) for item in data]
+        else:
+            return super().to_python(data)
+
+    def validate(self, value):
+        """Validate multiple files"""
+        if self.required and not value:
+            raise forms.ValidationError(self.error_messages['required'], code='required')
+        if isinstance(value, list):
+            for file_item in value:
+                super(MultipleFileField, self).validate(file_item)
+        else:
+            super().validate(value)
+
+
+class AdditionalImageUploadForm(BootstrapFormMixin, forms.Form):
+    """Form for uploading additional images to existing issues"""
+    images = MultipleFileField(
+        widget=MultipleFileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+            'multiple': True
+        }),
+        help_text='Select one or more images to upload (JPEG, PNG, GIF formats supported)',
+        required=True
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['images'].label = "Additional Images"
+        
+    def clean_images(self):
+        """Validate uploaded images"""
+        images = self.cleaned_data.get('images')
+        
+        if not images:
+            raise forms.ValidationError("Please select at least one image to upload.")
+        
+        # Ensure images is a list
+        if not isinstance(images, list):
+            images = [images]
+        
+        # Limit number of images that can be uploaded at once
+        max_images = 5
+        if len(images) > max_images:
+            raise forms.ValidationError(f"You can upload a maximum of {max_images} images at once.")
+        
+        # Validate each image
+        max_size = 10 * 1024 * 1024  # 10MB per image
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        
+        for image in images:
+            # Check file size
+            if hasattr(image, 'size') and image.size > max_size:
+                raise forms.ValidationError(f"Image '{image.name}' is too large. Maximum size is 10MB.")
+            
+            # Check content type
+            if hasattr(image, 'content_type') and image.content_type not in allowed_types:
+                raise forms.ValidationError(f"Image '{image.name}' has an unsupported format. Please use JPEG, PNG, GIF, or WebP.")
+        
+        return images

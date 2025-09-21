@@ -22,4 +22,5 @@ urlpatterns = [
     
     # Image URLs
     path('<slug:issue_slug>/images/<slug:image_slug>/delete/', central_admin.IssueImageDeleteView.as_view(), name='image_delete'),
+    path('<slug:issue_slug>/images/upload/', central_admin.IssueImageUploadView.as_view(), name='image_upload'),
 ]
