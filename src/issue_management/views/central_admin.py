@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm
 
 
 class IssueListView(ListView):
@@ -398,3 +398,58 @@ class IssueVoiceDeleteView(View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
+class IssueVoiceUploadView(View):
+    """Upload a voice recording to an existing issue"""
+    
+    def get(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue already has a voice recording
+        if issue.voice:
+            messages.error(request, 'This issue already has a voice recording. Delete it first to upload a new one.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        form = VoiceUploadForm()
+        
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'central_admin/issue_management/voice_upload.html', context)
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue already has a voice recording
+        if issue.voice:
+            messages.error(request, 'This issue already has a voice recording. Delete it first to upload a new one.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        form = VoiceUploadForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Get the voice file from cleaned_data
+            voice_file = form.cleaned_data.get('voice')
+            
+            if voice_file:
+                try:
+                    # Save the voice file to the issue
+                    issue.voice = voice_file
+                    issue.save()
+                    
+                    messages.success(request, 'Voice recording successfully uploaded.')
+                    return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+                    
+                except Exception as e:
+                    messages.error(request, f'Failed to upload voice recording: {str(e)}')
+        
+        # If form is not valid, show errors
+        context = {
+            'issue': issue,
+            'form': form,
+        }
+        return render(request, 'central_admin/issue_management/voice_upload.html', context)

@@ -2,11 +2,41 @@
 
 {% load static %}
 
-{% block title %}Issue Management{% endblock %}
-
-{% block styles %}
+{% block title %}Issue Management{% endbloc            {% endif %}
+            {% if issue.voice %}
+            <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
+            <div class="d-flex align-items-center gap-2">
+              <audio controls class="flex-grow-1">
+                <source src="{{ issue.voice.url }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+              <button type="button" 
+                      class="btn btn-danger btn-sm" 
+                      onclick="deleteVoice('{{ issue.slug }}')"
+                      title="Delete voice recording">
+                <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+              </button>
+            </div>
+            {% else %}
+            <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
+            <div class="voice-recording-section">
+              <form method="post" action="{% url 'issue_management:central_admin:voice_upload' issue_slug=issue.slug %}" enctype="multipart/form-data" id="voiceUploadForm">
+                {% csrf_token %}
+                <div id="voiceRecorderContainer">
+                  <!-- Voice recorder will be initialized here by JavaScript -->
+                </div>
+                <input type="file" name="voice" id="id_voice" class="voice-file-input" accept="audio/*" style="display: none;">
+                <div class="mt-2">
+                  <button type="submit" class="btn btn-primary btn-sm" id="addVoiceButton" style="display: none;">
+                    <span class="material-symbols-outlined me-1" style="font-size: 16px;">add</span>
+                    Add Voice Recording
+                  </button>
+                  <small class="form-text text-muted d-block mt-1">Hold the microphone button to record a voice message</small>
+                </div>
+              </form>
+            </div>
+            {% endif %} styles %}
 <link rel="stylesheet" href="{% static 'styles/issue_management/issue_detail/style.css' %}">
-<link rel="stylesheet" href="{% static 'styles/components/voice-recorder.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -14,7 +44,7 @@
 {% endblock %}
 
 {% block sidebar %}
-{% include 'space_admin/sidebar.html' %}
+{% include 'central_admin/sidebar.html' %}
 {% endblock %}
 
 {% block content %}
@@ -36,12 +66,12 @@
       <p class="alert-text text-body-secondary mb-0 fw-semibold">{{ issue.reporter.phone_number | default:"N/A" }}</p>
     </div>
     <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">
-      <a href="{% url 'issue_management:space_admin:issue_create' %}"
+      <a href="{% url 'issue_management:central_admin:issue_create' %}"
         class="btn btn-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">call</span>
         <span class="ms-2">Call</span>
       </a>
-      <a href="{% url 'issue_management:space_admin:issue_create' %}"
+      <a href="{% url 'issue_management:central_admin:issue_create' %}"
         class="btn btn-outline-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">edit</span>
         <span class="ms-2 d-inline">Edit</span>
@@ -71,7 +101,7 @@
           <h6 class="card-subtitle mt-2 text-body-secondary mb-2">Attached Images</h6>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="badge bg-info">{{ issue.images.count }} image{{ issue.images.count|pluralize }}</span>
-            <a href="{% url 'issue_management:space_admin:image_upload' issue_slug=issue.slug %}" 
+            <a href="{% url 'issue_management:central_admin:image_upload' issue_slug=issue.slug %}" 
                class="btn btn-outline-primary btn-sm">
               <i class="fas fa-plus me-1"></i>Add Images
             </a>
@@ -101,8 +131,6 @@
               <p class="mb-0 small">No images uploaded yet</p>
             </div>
             {% endif %}
-            
-            <!-- Voice Recording Section -->
             {% if issue.voice %}
             <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
             <div class="d-flex align-items-center gap-2">
@@ -119,21 +147,13 @@
             </div>
             {% else %}
             <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
-            <div class="voice-recording-section">
-              <form method="post" action="{% url 'issue_management:space_admin:voice_upload' issue_slug=issue.slug %}" enctype="multipart/form-data" id="voiceUploadForm">
-                {% csrf_token %}
-                <div id="voiceRecorderContainer">
-                  <!-- Voice recorder will be initialized here by JavaScript -->
-                </div>
-                <input type="file" name="voice" id="id_voice" class="voice-file-input" accept="audio/*" style="display: none;">
-                <div class="mt-2">
-                  <button type="submit" class="btn btn-primary btn-sm">
-                    <span class="material-symbols-outlined me-1" style="font-size: 16px;">save</span>
-                    Save Voice Recording
-                  </button>
-                  <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}" class="btn btn-secondary btn-sm ms-2">Cancel</a>
-                </div>
-              </form>
+            <div class="text-center py-3 text-muted border rounded">
+              <i class="fas fa-microphone fa-2x mb-2"></i>
+              <p class="mb-2 small">No voice recording attached</p>
+              <a href="{% url 'issue_management:central_admin:voice_upload' issue_slug=issue.slug %}" 
+                 class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-microphone me-1"></i>Add Voice Recording
+              </a>
             </div>
             {% endif %}
           </div>
@@ -405,7 +425,7 @@ function deleteImage(imageSlug, issueSlug) {
         // Create a form and submit it
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/issues/space-admin/${issueSlug}/images/${imageSlug}/delete/`;
+        form.action = `/issues/central-admin/${issueSlug}/images/${imageSlug}/delete/`;
         
         // Add CSRF token
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -428,7 +448,7 @@ function deleteVoice(issueSlug) {
         // Create a form and submit it
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/issues/space-admin/${issueSlug}/voice/delete/`;
+        form.action = `/issues/central-admin/${issueSlug}/voice/delete/`;
         
         // Add CSRF token
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -445,5 +465,25 @@ function deleteVoice(issueSlug) {
         form.submit();
     }
 }
+
+// Initialize voice recorder and handle form submission
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize voice recorder if container exists
+    if (document.getElementById('voiceRecorderContainer') && document.getElementById('id_voice')) {
+        new VoiceRecorder('voiceRecorderContainer', 'id_voice');
+        
+        // Show submit button when voice is recorded
+        const voiceInput = document.getElementById('id_voice');
+        const submitButton = document.getElementById('addVoiceButton');
+        
+        voiceInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                submitButton.style.display = 'inline-block';
+            } else {
+                submitButton.style.display = 'none';
+            }
+        });
+    }
+});
 </script>
 {% endblock scripts %}

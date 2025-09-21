@@ -26,4 +26,5 @@ urlpatterns = [
     
     # Voice URLs
     path('<slug:issue_slug>/voice/delete/', central_admin.IssueVoiceDeleteView.as_view(), name='voice_delete'),
+    path('<slug:issue_slug>/voice/upload/', central_admin.IssueVoiceUploadView.as_view(), name='voice_upload'),
 ]

@@ -235,3 +235,42 @@ class AdditionalImageUploadForm(BootstrapFormMixin, forms.Form):
                 raise forms.ValidationError(f"Image '{image.name}' has an unsupported format. Please use JPEG, PNG, GIF, or WebP.")
         
         return images
+
+
+class VoiceUploadForm(BootstrapFormMixin, forms.Form):
+    """Form for adding voice recording to existing issues"""
+    voice = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'class': 'voice-file-input',
+            'accept': 'audio/*',
+            'style': 'display: none;'
+        }),
+        help_text='Record or upload a voice message for this issue',
+        required=True
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['voice'].label = "Voice Recording"
+        
+    def clean_voice(self):
+        """Validate uploaded voice file"""
+        voice = self.cleaned_data.get('voice')
+        
+        if not voice:
+            raise forms.ValidationError("Please record or select a voice file.")
+        
+        # Check file size (max 50MB for audio files)
+        max_size = 50 * 1024 * 1024  # 50MB
+        if hasattr(voice, 'size') and voice.size > max_size:
+            raise forms.ValidationError(f"Voice file is too large. Maximum size is 50MB.")
+        
+        # Check content type
+        allowed_types = [
+            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 
+            'audio/m4a', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/webm'
+        ]
+        if hasattr(voice, 'content_type') and voice.content_type not in allowed_types:
+            raise forms.ValidationError(f"Audio format not supported. Please use MP3, WAV, M4A, AAC, or WebM.")
+        
+        return voice
