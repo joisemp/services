@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views.space_admin import IssueListView, IssueCreateView, IssueDetailView, IssueImageDeleteView, IssueImageUploadView
+from ..views.space_admin import IssueListView, IssueCreateView, IssueDetailView, IssueImageDeleteView, IssueImageUploadView, IssueVoiceDeleteView
 
 app_name = "space_admin"
 
@@ -11,4 +11,10 @@ urlpatterns = [
     # Image URLs
     path('<slug:issue_slug>/images/<slug:image_slug>/delete/', IssueImageDeleteView.as_view(), name='image_delete'),
     path('<slug:issue_slug>/images/upload/', IssueImageUploadView.as_view(), name='image_upload'),
+    
+    # Voice URLs
+    path('<slug:issue_slug>/voice/delete/', IssueVoiceDeleteView.as_view(), name='voice_delete'),
+    
+    # Voice URLs
+    path('<slug:issue_slug>/voice/delete/', IssueVoiceDeleteView.as_view(), name='voice_delete'),
 ]

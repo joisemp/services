@@ -138,5 +138,29 @@ class IssueImageUploadView(View):
             'form': form,
         }
         return render(request, 'space_admin/issue_management/image_upload.html', context)
+
+
+class IssueVoiceDeleteView(View):
+    """Delete the voice recording attached to an issue"""
     
-    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue has a voice recording
+        if not issue.voice:
+            messages.error(request, 'No voice recording found for this issue.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+        
+        # Delete the voice file from storage
+        if issue.voice:
+            issue.voice.delete(save=False)
+        
+        # Clear the voice field and save the issue
+        issue.voice = None
+        issue.save()
+        
+        messages.success(request, 'Voice recording successfully deleted.')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
