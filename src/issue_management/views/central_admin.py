@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm
 
 
 class IssueListView(ListView):
@@ -73,6 +73,25 @@ class IssueDetailView(DetailView):
         # Add comment form to context
         context['comment_form'] = IssueCommentForm()
         return context
+    
+    
+class IssueUpdateView(UpdateView):
+    template_name = "central_admin/issue_management/issue_update.html"
+    form_class = IssueUpdateForm
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def get_queryset(self):
+        return Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter')
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Issue "{form.instance.title}" updated successfully!')
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
 
 
 class WorkTaskCreateView(CreateView):
