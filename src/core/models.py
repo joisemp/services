@@ -304,6 +304,7 @@ class Organization(models.Model):
     
 class Space(models.Model):
     name = models.CharField(max_length=255)
+    label = models.CharField(max_length=100, blank=True, null=True, help_text="Optional short label for the space")
     description = models.TextField(blank=True, null=True)
     org = models.ForeignKey(Organization, related_name='spaces', on_delete=models.CASCADE)
     slug = models.SlugField(unique=True, blank=True)

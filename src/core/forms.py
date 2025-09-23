@@ -8,7 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.urls import reverse
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm, UserCreationForm
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Organization, User
+from .models import Organization, User, Space
 
 
 class CustomPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
@@ -448,3 +448,46 @@ Best regards,
             recipient_list=[user.email],
             fail_silently=False,
         )
+        
+class SpaceCreateForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Form for creating a new space
+    """
+    name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={'placeholder': 'Space Name'}),
+        label="Space Name",
+        help_text="Enter the name of the space"
+    )
+    label = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Optional short label'}),
+        label="Label",
+        help_text="Optional short label for the space"
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Space Description'}),
+        required=False,
+        label="Description",
+        help_text="Optional description of the space"
+    )
+
+    class Meta:
+        model = Space
+        fields = ['name', 'label', 'description', 'org']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Map the org field to organization for clarity in the form
+        self.fields['org'].label = "Organization"
+        self.fields['org'].help_text = "Select the organization this space belongs to"
+        self.fields['org'].empty_label = "Select an organization"
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if Space.objects.filter(name=name).exists():
+            raise forms.ValidationError("A space with this name already exists.")
+        return name
+    
+    
