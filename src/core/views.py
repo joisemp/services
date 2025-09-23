@@ -9,10 +9,11 @@ from .forms import (
     OtherRoleUserCreateForm,
     PhoneLoginForm,
     EmailLoginForm,
-    SpaceCreateForm
+    SpaceCreateForm,
+    SpaceUpdateForm
 )
 from .models import Update, User, Space
-from django.views.generic import ListView, CreateView, TemplateView, DetailView
+from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -280,3 +281,26 @@ class SpaceDetailView(DetailView):
         context['in_progress_issues_count'] = issues.filter(status='in_progress').count()
         
         return context
+
+
+class SpaceUpdateView(UpdateView):
+    """
+    View to update an existing space
+    """
+    model = Space
+    template_name = 'core/space_update.html'
+    form_class = SpaceUpdateForm
+    slug_field = 'slug'
+    slug_url_kwarg = 'space_slug'
+
+    def get_queryset(self):
+        return Space.objects.select_related('org')
+
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.object.slug})
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        from django.contrib import messages
+        messages.success(self.request, f'Space "{self.object.name}" updated successfully.')
+        return response

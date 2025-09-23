@@ -66,10 +66,10 @@
 
       <div class="space-actions">
         <div class="btn-group" role="group">
-          <button type="button" class="btn btn-outline-primary">
+          <a href="{% url 'core:space_update' space_slug=space.slug %}" class="btn btn-outline-primary">
             <span class="material-symbols-outlined me-1" style="font-size: 16px;">edit</span>
             Edit Space
-          </button>
+          </a>
           <button type="button" class="btn btn-primary">
             <span class="material-symbols-outlined me-1" style="font-size: 16px;">add</span>
             Add Issue

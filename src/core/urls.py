@@ -50,6 +50,10 @@ urlpatterns = [
          views.SpaceDetailView.as_view(), 
          name='space_detail'),
     
+    path('spaces/<slug:space_slug>/edit/', 
+         views.SpaceUpdateView.as_view(), 
+         name='space_update'),
+    
     path('spaces/create/', 
          views.SpaceCreateView.as_view(), 
          name='space_create'),
