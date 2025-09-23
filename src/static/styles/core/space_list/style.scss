@@ -1,2 +1,28 @@
 @use '../../sidebar_base';
 
+#no-data{
+   .container{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60vh;
+        .content{
+            text-align: center;
+            h2{
+                span{
+                    font-size: 3rem;
+                    color: #686868;
+                }
+            }
+            p{
+                font-size: 1.5rem;
+                color: #777;
+            }
+            #button{
+                display: flex !important;
+                align-items: center;
+                width: fit-content;
+            }
+        }
+   }
+}

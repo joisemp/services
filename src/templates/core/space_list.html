@@ -15,26 +15,26 @@
 {% endblock %}
 
 {% block content %}
+
+
+
     <h1>Spaces</h1>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Organization</th>
-            </tr>
-        </thead>
-        <tbody>
+    
             {% for space in spaces %}
-                <tr>
+                <!-- <tr>
                     <td>{{ space.name }}</td>
                     <td>{{ space.description }}</td>
                     <td>{{ space.org.name }}</td>
-                </tr>
+                </tr> -->
             {% empty %}
-                <tr>
-                    <td colspan="3">No spaces found.</td>
-                </tr>
+                <section id="no-data">
+                    <div class="container d-flex">
+                        <div class="content">
+                            <h2><span class="material-symbols-outlined">apartment</span></h2>
+                            <p>No spaces found</p>
+                            <a href="#" class="btn btn-primary btn-sm d-flex" id="button"><span class="material-symbols-outlined">add</span><span>Create Space</span></a>
+                        </div>
+                    </div>
             {% endfor %}
         </tbody>
     </table>
