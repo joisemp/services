@@ -139,4 +139,28 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+#no-data .container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+#no-data .container .content {
+  text-align: center;
+}
+#no-data .container .content h2 span {
+  font-size: 3rem;
+  color: #686868;
+}
+#no-data .container .content p {
+  font-size: 1.5rem;
+  color: #777;
+}
+#no-data .container .content #button {
+  display: flex !important;
+  align-items: center;
+  width: -moz-fit-content;
+  width: fit-content;
 }/*# sourceMappingURL=style.css.map */
