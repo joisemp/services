@@ -174,7 +174,8 @@
               {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
                 <button class="btn btn-success d-flex align-items-center" 
                         data-bs-toggle="modal" 
-                        data-bs-target="#markResolvedModal">
+                        data-bs-target="#markResolvedModal"
+                        {% if has_incomplete_tasks %}disabled title="Cannot resolve issue while work tasks are incomplete"{% endif %}>
                   <span class="material-symbols-outlined me-2">check_circle</span>
                   Mark Resolved
                 </button>

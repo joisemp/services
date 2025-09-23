@@ -53,7 +53,7 @@
           <span class="ms-2">Call</span>
         </button>
       {% endif %}
-      <a href="{% url 'issue_management:central_admin:issue_create' %}"
+      <a href="{% url 'issue_management:central_admin:issue_update' issue_slug=issue.slug %}"
         class="btn btn-outline-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">edit</span>
         <span class="ms-2 d-inline">Edit</span>
@@ -174,7 +174,8 @@
               {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
                 <button class="btn btn-success d-flex align-items-center" 
                         data-bs-toggle="modal" 
-                        data-bs-target="#markResolvedModal">
+                        data-bs-target="#markResolvedModal"
+                        {% if has_incomplete_tasks %}disabled title="Cannot resolve issue while work tasks are incomplete"{% endif %}>
                   <span class="material-symbols-outlined me-2">check_circle</span>
                   Mark Resolved
                 </button>

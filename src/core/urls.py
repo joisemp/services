@@ -41,4 +41,8 @@ urlpatterns = [
     path('logout/', 
          views.custom_logout_view, 
          name='logout'),
+    
+    path('spaces/', 
+         views.SpaceListView.as_view(),
+         name='spaces'),
 ]

@@ -58,7 +58,16 @@ class IssueDetailView(DetailView):
     slug_url_kwarg = 'issue_slug'
     
     def get_queryset(self):
-        return Issue.objects.prefetch_related('images').select_related('org', 'space')
+        return Issue.objects.prefetch_related('images', 'work_tasks__assigned_to').select_related('org', 'space')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add work tasks to context
+        work_tasks = self.object.work_tasks.all().order_by('-created_at')
+        context['work_tasks'] = work_tasks
+        # Check if there are any incomplete work tasks
+        context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
+        return context
 
 
 class IssueImageDeleteView(View):
@@ -232,6 +241,14 @@ class IssueResolveView(View):
         # Check if issue is already resolved, closed, or cancelled
         if issue.status in ['resolved', 'closed', 'cancelled']:
             messages.error(request, f'This issue is already {issue.get_status_display().lower()} and cannot be resolved again.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+        
+        # Check if there are any incomplete work tasks
+        incomplete_tasks = issue.work_tasks.filter(completed=False)
+        if incomplete_tasks.exists():
+            incomplete_count = incomplete_tasks.count()
+            task_word = 'task' if incomplete_count == 1 else 'tasks'
+            messages.error(request, f'Cannot resolve issue while {incomplete_count} work {task_word} remain incomplete. Please complete all work tasks before marking the issue as resolved.')
             return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
         
         # Get resolution notes from the form

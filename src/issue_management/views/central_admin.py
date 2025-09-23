@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm
 
 
 class IssueListView(ListView):
@@ -69,10 +69,32 @@ class IssueDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add work tasks to context
-        context['work_tasks'] = self.object.work_tasks.all().order_by('-created_at')
+        work_tasks = self.object.work_tasks.all().order_by('-created_at')
+        context['work_tasks'] = work_tasks
+        # Check if there are any incomplete work tasks
+        context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
         # Add comment form to context
         context['comment_form'] = IssueCommentForm()
         return context
+    
+    
+class IssueUpdateView(UpdateView):
+    template_name = "central_admin/issue_management/issue_update.html"
+    form_class = IssueUpdateForm
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def get_queryset(self):
+        return Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter')
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Issue "{form.instance.title}" updated successfully!')
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
 
 
 class WorkTaskCreateView(CreateView):
@@ -465,6 +487,14 @@ class IssueResolveView(View):
         # Check if issue is already resolved, closed, or cancelled
         if issue.status in ['resolved', 'closed', 'cancelled']:
             messages.error(request, f'This issue is already {issue.get_status_display().lower()} and cannot be resolved again.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        # Check if there are any incomplete work tasks
+        incomplete_tasks = issue.work_tasks.filter(completed=False)
+        if incomplete_tasks.exists():
+            incomplete_count = incomplete_tasks.count()
+            task_word = 'task' if incomplete_count == 1 else 'tasks'
+            messages.error(request, f'Cannot resolve issue while {incomplete_count} work {task_word} remain incomplete. Please complete all work tasks before marking the issue as resolved.')
             return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
         
         # Get resolution notes from the form
