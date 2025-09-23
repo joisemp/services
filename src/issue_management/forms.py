@@ -274,3 +274,13 @@ class VoiceUploadForm(BootstrapFormMixin, forms.Form):
             raise forms.ValidationError(f"Audio format not supported. Please use MP3, WAV, M4A, AAC, or WebM.")
         
         return voice
+    
+
+class IssueUpdateForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for updating existing issues - excludes image and voice fields"""
+    class Meta:
+        model = Issue
+        fields = ['title', 'description', 'status', 'priority']
+
+        
+        

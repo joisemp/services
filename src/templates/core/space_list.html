@@ -1,0 +1,41 @@
+{% extends "sidebar_base.html" %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/core/space_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Spaces</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Organization</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for space in spaces %}
+                <tr>
+                    <td>{{ space.name }}</td>
+                    <td>{{ space.description }}</td>
+                    <td>{{ space.org.name }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3">No spaces found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -10,7 +10,7 @@ from .forms import (
     PhoneLoginForm,
     EmailLoginForm
 )
-from .models import Update, User
+from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView
 
 
@@ -213,5 +213,31 @@ class UpdateListView(ListView):
 
     def get_queryset(self):
         return Update.objects.all().order_by('-created_at')
+
+
+class SpaceCreateView(CreateView):
+    """
+    View to create a new space
+    """
+    model = Space
+    template_name = 'core/space_form.html'
+    fields = ['name', 'description', 'org']
+    success_url = reverse_lazy('core:space_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        from django.contrib import messages
+        messages.success(self.request, f'Space {self.object.name} created successfully.')
+        return response
     
     
+class SpaceListView(ListView):
+    """
+    View to list all spaces
+    """
+    model = Space
+    template_name = 'core/space_list.html'
+    context_object_name = 'spaces'
+
+    def get_queryset(self):
+        return Space.objects.select_related('org').order_by('name')
