@@ -6,7 +6,8 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/core/space_list/style.css' %}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 {% endblock %}
 
 {% block navbar %}
@@ -19,76 +20,72 @@
 
 {% block content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex align-items-center">
-      <span class="material-symbols-outlined me-2" style="font-size: 32px;">domain</span>
-      <h3 class="mb-0">Spaces</h3>
-    </div>
-    <a href="{% url 'core:space_create' %}" class="btn btn-primary d-flex align-items-center">
-      <span class="material-symbols-outlined me-2">add</span>
-      Create Space
-    </a>
-  </div>
-
-  {% if spaces %}
-    <div class="card">
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>
-                  <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">label</span>
-                  Name
-                </th>
-                <th>
-                  <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">description</span>
-                  Description
-                </th>
-                <th>
-                  <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">business</span>
-                  Organization
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for space in spaces %}
-                <tr>
-                  <td>
-                    <strong>{{ space.name }}</strong>
-                    <br>
-                    <small class="text-muted">{{ space.slug }}</small>
-                  </td>
-                  <td>
-                    {% if space.description %}
-                      {{ space.description|truncatewords:15 }}
-                    {% else %}
-                      <em class="text-muted">No description</em>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <span class="badge bg-secondary">{{ space.org.name }}</span>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    <section id="alert-details" class="mb-3">
+        <div class="alert alert-primary  d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center"
+            role="alert">
+            <div class="message flex-grow-1">
+                <h3 class="mb-1">Spaces</h3>
+                <span class="alert-text text-body-secondary">Manage all the spaces in your organisation</span>
+            </div>
+            <div class="alert-buttons">
+                <a href="{% url 'core:space_create' %}"
+                    class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto  mt-2">
+                    <span class="material-symbols-outlined">add</span>
+                    <span class="ms-2">Create Space</span>
+                </a>
+            </div>
         </div>
-      </div>
-    </div>
-  {% else %}
-    <section id="no-data">
-      <div class="container d-flex">
-        <div class="content">
-          <h2><span class="material-symbols-outlined">apartment</span></h2>
-          <p>No spaces found</p>
-          <a href="{% url 'core:space_create' %}" class="btn btn-primary btn-sm d-flex" id="button">
-            <span class="material-symbols-outlined">add</span>
-            <span>Create Space</span>
-          </a>
-        </div>
-      </div>
     </section>
-  {% endif %}
+
+    {% if spaces %}
+    <section id="space-cards">
+        <div class="row">
+            <div class="col-12 col-md-6 col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="content">
+                            <h5 class="card-title">SFS Public School</h5>
+                            <p class="card-text text-muted mb-0">sfsgrpi@gmail.com</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="card-text text-muted">Ashish, Mello...</p>
+                                <span class="badge rounded-pill text-bg-primary">Primary</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="content">
+                            <h5 class="card-title">SFS Public School</h5>
+                            <p class="card-text text-muted mb-0">sfsgrpi@gmail.com</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="card-text text-muted">Ashish, Mello...</p>
+                                <span class="badge rounded-pill text-bg-primary">Primary</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% else %}
+    <section id="no-data">
+        <div class="container d-flex">
+            <div class="content">
+                <h2><span class="material-symbols-outlined">apartment</span></h2>
+                <p>No spaces found</p>
+                <div class="button-div">
+                    <a href="{% url 'core:space_create' %}" class="btn btn-primary btn-sm d-flex" id="button">
+                        <span class="material-symbols-outlined">add</span>
+                        <span>Create Space</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
