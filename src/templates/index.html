@@ -6,10 +6,18 @@
 <link rel="stylesheet" href="{% static 'styles/home/style.css' %}">
 {% endblock styles %}
 
-{% block navbar %}
-    {% include 'navbar.html' %}
-{% endblock navbar %}
-
 {% block content %}
-<h1>Hello world</h1>
+
+<section id="home">
+    <div class="container d-flex">
+        <div class="content">
+            <h1>Simplifying Life with Seamless Service</h1>
+            <p>Report, track, and manage issues efficiently for your organisation.</p>
+            <div class="button-container">
+                <button class="btn btn-light">Get Started</button>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock content %}
