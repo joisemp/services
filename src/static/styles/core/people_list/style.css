@@ -215,25 +215,183 @@ tr {
     width: 100%;
   }
 }
+/* Profile card responsive styles */
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.card .card-body {
+  padding: 1.5rem;
+}
+.card .card-body .profile-content .profile-pic .pic {
+  width: 60px;
+  height: 60px;
+  background-color: #6b7280;
+  border-radius: 50%;
+}
+.card .card-body .profile-content .profile-pic .pic h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.card .card-body .profile-content .text-content .card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+.card .card-body .profile-content .text-content .card-text {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+.card .card-body .profile-content .label .badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Mobile adjustments for cards */
+@media (max-width: 575.98px) {
+  .card .card-body {
+    padding: 1rem;
+  }
+  .card .card-body .profile-content {
+    gap: 1rem !important;
+  }
+  .card .card-body .profile-content .profile-pic .pic {
+    width: 50px;
+    height: 50px;
+  }
+  .card .card-body .profile-content .profile-pic .pic h3 {
+    font-size: 1rem;
+  }
+  .card .card-body .profile-content .text-content .card-title {
+    font-size: 1rem;
+  }
+  .card .card-body .profile-content .text-content .card-text {
+    font-size: 0.85rem;
+  }
+  .card .card-body .profile-content .label {
+    margin-top: 0.5rem;
+  }
+  .card .card-body .profile-content .label .badge {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+/* Medium screen adjustments */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .card .card-body .profile-content .label {
+    align-self: flex-start !important;
+    margin-top: 0.25rem;
+  }
+}
+#search-bar {
+  width: 100%;
+}
+
+#options-bar {
+  width: 100%;
+}
+#options-bar .container-nav {
+  width: 100%;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.card .card-body {
+  padding: 1.5rem;
+}
 .card .card-body .profile-content {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 1rem;
 }
 .card .card-body .profile-content .profile-pic .pic {
-  width: 74px;
-  background-color: #878787;
+  width: 60px;
+  height: 60px;
+  background-color: #6b7280;
   border-radius: 50%;
-  height: 74px;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.card .card-body .profile-content .profile-pic .pic h3 {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+.card .card-body .profile-content .text-content {
+  flex-grow: 1;
+}
+.card .card-body .profile-content .text-content .card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+.card .card-body .profile-content .text-content .card-text {
+  font-size: 0.9rem;
+  color: #6b7280;
 }
 .card .card-body .profile-content .label {
   display: flex;
   justify-content: flex-end;
 }
 .card .card-body .profile-content .label span {
-  font-size: 0.7rem !important;
-  padding: 7px !important;
+  font-size: 0.75rem !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Mobile adjustments for cards */
+@media (max-width: 575.98px) {
+  .card .card-body {
+    padding: 1rem;
+  }
+  .card .card-body .profile-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem !important;
+  }
+  .card .card-body .profile-content .profile-pic .pic {
+    width: 50px;
+    height: 50px;
+  }
+  .card .card-body .profile-content .profile-pic .pic h3 {
+    font-size: 1rem;
+  }
+  .card .card-body .profile-content .text-content {
+    text-align: center;
+  }
+  .card .card-body .profile-content .text-content .card-title {
+    font-size: 1rem;
+  }
+  .card .card-body .profile-content .text-content .card-text {
+    font-size: 0.85rem;
+  }
+  .card .card-body .profile-content .label {
+    justify-content: center;
+  }
+  .card .card-body .profile-content .label span {
+    font-size: 0.7rem !important;
+    padding: 0.4rem 0.8rem !important;
+  }
+}
+/* Medium screen adjustments */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .card .card-body .profile-content .label {
+    align-self: flex-start;
+    margin-top: 0.25rem;
+  }
 }/*# sourceMappingURL=style.css.map */
