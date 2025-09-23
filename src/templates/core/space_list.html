@@ -54,7 +54,12 @@
             {% for space in spaces %}
               <tr>
                 <td>
-                  <strong>{{ space.name }}</strong>
+                  <a href="{% url 'core:space_detail' space_slug=space.slug %}" class="text-decoration-none">
+                    <strong>{{ space.name }}</strong>
+                    {% if space.label %}
+                      <span class="badge bg-info ms-2">{{ space.label }}</span>
+                    {% endif %}
+                  </a>
                   <br>
                   <small class="text-muted">{{ space.slug }}</small>
                 </td>
