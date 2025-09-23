@@ -1,0 +1,28 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Create Space{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/forms/style.css' %}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+ <form method="post">
+    {% csrf_token %}
+    {{ form.as_p | safe }}
+    <button type="submit" class="btn btn-primary">Create Space</button>
+ </form>
+</div>
+{% endblock %}

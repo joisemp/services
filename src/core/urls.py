@@ -44,5 +44,9 @@ urlpatterns = [
     
     path('spaces/', 
          views.SpaceListView.as_view(),
-         name='spaces'),
+         name='space_list'),
+    
+    path('spaces/create/', 
+         views.SpaceCreateView.as_view(), 
+         name='space_create'),
 ]

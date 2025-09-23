@@ -8,7 +8,8 @@ from .forms import (
     GeneralUserCreateForm, 
     OtherRoleUserCreateForm,
     PhoneLoginForm,
-    EmailLoginForm
+    EmailLoginForm,
+    SpaceCreateForm
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView
@@ -220,8 +221,8 @@ class SpaceCreateView(CreateView):
     View to create a new space
     """
     model = Space
-    template_name = 'core/space_form.html'
-    fields = ['name', 'description', 'org']
+    template_name = 'core/space_create.html'
+    form_class = SpaceCreateForm
     success_url = reverse_lazy('core:space_list')
 
     def form_valid(self, form):
