@@ -148,8 +148,6 @@ tr {
 }
 
 #alert-details .alert {
-  margin-bottom: 15px;
-  margin-top: 3rem !important;
   border: 0.5px solid #2563EB !important;
   background-color: #e2eefd !important;
 }
