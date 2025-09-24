@@ -242,7 +242,7 @@ class SpaceListView(ListView):
     context_object_name = 'spaces'
 
     def get_queryset(self):
-        return Space.objects.select_related('org').order_by('name')
+        return Space.objects.select_related('org').prefetch_related('users').order_by('name')
 
 
 class SpaceDetailView(DetailView):
