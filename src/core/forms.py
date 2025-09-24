@@ -490,4 +490,43 @@ class SpaceCreateForm(BootstrapFormMixin, forms.ModelForm):
             raise forms.ValidationError("A space with this name already exists.")
         return name
     
+
+class SpaceUpdateForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Form for updating an existing space
+    """
+    name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={'placeholder': 'Space Name'}),
+        label="Space Name",
+        help_text="Enter the name of the space"
+    )
+    label = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Optional short label'}),
+        label="Label",
+        help_text="Optional short label for the space"
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Space Description'}),
+        required=False,
+        label="Description",
+        help_text="Optional description of the space"
+    )
+
+    class Meta:
+        model = Space
+        fields = ['name', 'label', 'description']
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        # Exclude current instance from validation
+        qs = Space.objects.filter(name=name)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("A space with this name already exists.")
+        return name
+    
     

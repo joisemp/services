@@ -1,0 +1,227 @@
+{% extends "sidebar_base.html" %}
+
+{% load static %}
+
+{% block title %}{{ space.name }} - Space Details{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/core/space_detail/style.css' %}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'core:space_list' %}" class="text-decoration-none">
+          <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">domain</span>
+          Spaces
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">{{ space.name }}</li>
+    </ol>
+  </nav>
+
+  <!-- Space Header -->
+  <div class="space-header mb-4">
+    <div class="d-flex justify-content-between align-items-start">
+      <div class="space-info">
+        <div class="d-flex align-items-center mb-2">
+          <span class="material-symbols-outlined me-2 text-primary" style="font-size: 32px;">domain</span>
+          <div>
+            <h2 class="mb-0">{{ space.name }}</h2>
+            {% if space.label %}
+              <span class="badge bg-secondary ms-2">{{ space.label }}</span>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="space-meta text-muted mb-3">
+          <div class="d-flex align-items-center mb-1">
+            <span class="material-symbols-outlined me-1" style="font-size: 16px;">business</span>
+            <span>{{ space.org.name }}</span>
+          </div>
+          <div class="d-flex align-items-center">
+            <span class="material-symbols-outlined me-1" style="font-size: 16px;">tag</span>
+            <small class="text-muted">{{ space.slug }}</small>
+          </div>
+        </div>
+
+        {% if space.description %}
+          <div class="space-description">
+            <p class="text-muted">{{ space.description }}</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="space-actions">
+        <div class="btn-group" role="group">
+          <a href="{% url 'core:space_update' space_slug=space.slug %}" class="btn btn-outline-primary">
+            <span class="material-symbols-outlined me-1" style="font-size: 16px;">edit</span>
+            Edit Space
+          </a>
+          <button type="button" class="btn btn-primary">
+            <span class="material-symbols-outlined me-1" style="font-size: 16px;">add</span>
+            Add Issue
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <div class="d-flex align-items-center justify-content-center mb-2">
+            <span class="material-symbols-outlined text-primary me-2" style="font-size: 24px;">list</span>
+            <h5 class="mb-0">{{ issues_count }}</h5>
+          </div>
+          <p class="text-muted mb-0 small">Total Issues</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <div class="d-flex align-items-center justify-content-center mb-2">
+            <span class="material-symbols-outlined text-warning me-2" style="font-size: 24px;">schedule</span>
+            <h5 class="mb-0">{{ open_issues_count }}</h5>
+          </div>
+          <p class="text-muted mb-0 small">Open Issues</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <div class="d-flex align-items-center justify-content-center mb-2">
+            <span class="material-symbols-outlined text-info me-2" style="font-size: 24px;">pending</span>
+            <h5 class="mb-0">{{ in_progress_issues_count }}</h5>
+          </div>
+          <p class="text-muted mb-0 small">In Progress</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <div class="d-flex align-items-center justify-content-center mb-2">
+            <span class="material-symbols-outlined text-success me-2" style="font-size: 24px;">check_circle</span>
+            <h5 class="mb-0">{{ resolved_issues_count }}</h5>
+          </div>
+          <p class="text-muted mb-0 small">Resolved</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row">
+    <!-- Issues Section -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">bug_report</span>
+            Recent Issues
+          </h5>
+          <a href="#" class="btn btn-sm btn-outline-primary">
+            <span class="material-symbols-outlined me-1" style="font-size: 14px;">visibility</span>
+            View All
+          </a>
+        </div>
+        <div class="card-body">
+          {% if issues %}
+            <div class="list-group list-group-flush">
+              {% for issue in issues|slice:":5" %}
+                <div class="list-group-item border-0 px-0">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="issue-info flex-grow-1">
+                      <h6 class="mb-1">
+                        <a href="#" class="text-decoration-none">{{ issue.title }}</a>
+                      </h6>
+                      <p class="mb-1 text-muted small">{{ issue.description|truncatewords:15 }}</p>
+                      <div class="d-flex align-items-center">
+                        <span class="badge bg-{{ issue.status|default:'secondary' }} me-2">{{ issue.get_status_display }}</span>
+                        <span class="badge bg-{{ issue.priority|default:'secondary' }} me-2">{{ issue.get_priority_display }}</span>
+                        <small class="text-muted">
+                          by {{ issue.reporter.get_full_name|default:issue.reporter.get_short_name }}
+                          • {{ issue.created_at|timesince }} ago
+                        </small>
+                      </div>
+                    </div>
+                    {% if issue.images.exists %}
+                      <span class="material-symbols-outlined text-muted ms-2" style="font-size: 16px;">image</span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 48px;">bug_report</span>
+              <p class="text-muted mb-0">No issues found in this space.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Section -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">people</span>
+            Users ({{ users_count }})
+          </h5>
+          <button class="btn btn-sm btn-outline-primary">
+            <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
+            Add User
+          </button>
+        </div>
+        <div class="card-body">
+          {% if users %}
+            <div class="list-group list-group-flush">
+              {% for user in users %}
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex align-items-center">
+                    <div class="user-avatar me-3">
+                      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <span class="small fw-bold">
+                          {% if user.first_name %}{{ user.first_name|first|upper }}{% else %}{{ user.get_short_name|first|upper }}{% endif %}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="user-info flex-grow-1">
+                      <h6 class="mb-0 small">{{ user.get_full_name|default:user.get_short_name }}</h6>
+                      <small class="text-muted">{{ user.get_user_type_display }}</small>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-3">
+              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">people</span>
+              <p class="text-muted mb-0 small">No users assigned to this space.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
