@@ -5,5 +5,6 @@ app_name = 'dashboard'
 
 
 urlpatterns = [
-    # Dashboard home
+    path('central-admin/', views.CentralAdminDashboardView.as_view(), name='central_admin_dashboard'),
+    path('space-admin/', views.SpaceAdminDashboardView.as_view(), name='space_admin_dashboard'),
 ]

@@ -1,0 +1,24 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Central Admin Dashboard{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<h3>Welcome to the Central Admin Dashboard</h3>
+<p>This is the central admin dashboard where you can manage various aspects of the application.</p>
+
+{% endblock %}
