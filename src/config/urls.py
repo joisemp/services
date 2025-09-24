@@ -35,6 +35,9 @@ urlpatterns = [
     
     # Issue management application URLs
     path('issues/', include('issue_management.urls')),
+    
+    # Dashboard application URLs
+    path('dashboard/', include('dashboard.urls')),
 ]
 
 # Serve media files in development
