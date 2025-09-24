@@ -139,4 +139,57 @@ tr {
   white-space: nowrap;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+#alert-details .alert {
+  margin-bottom: 15px;
+  border: 0.5px solid #2563EB !important;
+  background-color: #e2eefd !important;
+}
+#alert-details .alert .alert-buttons {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
+#no-data .container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+#no-data .container .content {
+  text-align: center;
+}
+#no-data .container .content h2 span {
+  font-size: 3rem;
+  color: #686868;
+}
+#no-data .container .content p {
+  font-size: 1rem !important;
+  color: #777;
+}
+#no-data .container .content .button-div {
+  display: flex;
+  justify-content: center;
+}
+#no-data .container .content .button-div #button {
+  display: flex !important;
+  align-items: center;
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
+#space-cards .card {
+  width: 100%;
+  transition: all 0.3s ease;
+  border: 1px solid #ebf1f6;
+  cursor: pointer;
+}
+#space-cards .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-color: rgb(144, 144, 144);
+}
+#space-cards .card .content .card-text p {
+  margin-bottom: 0;
 }/*# sourceMappingURL=style.css.map */

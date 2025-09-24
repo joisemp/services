@@ -1,2 +1,73 @@
 @use '../../sidebar_base';
+@use '../../colors' as colors;
 
+#alert-details {
+    .alert {
+        margin-bottom: 15px;
+        border: 0.5px solid colors.$primary !important;
+        background-color: #e2eefd !important;
+    }
+
+    .alert .alert-buttons {
+        width: fit-content;
+    }
+}
+
+#no-data {
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60vh;
+
+        .content {
+            text-align: center;
+
+            h2 {
+                span {
+                    font-size: 3rem;
+                    color: #686868;
+                }
+            }
+
+            p {
+                font-size: 1rem !important;
+                color: #777;
+            }
+
+            .button-div {
+                display: flex;
+                justify-content: center;
+
+                #button {
+                    display: flex !important;
+                    align-items: center;
+                    width: fit-content;
+                }
+            }
+        }
+    }
+}
+
+#space-cards {
+    .card {
+        width: 100%;
+        transition: all 0.3s ease;
+        border: 1px solid #ebf1f6;
+        cursor: pointer;
+        
+        &:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-color: rgb(144, 144, 144);
+        }
+        
+        .content {
+            .card-text {
+                p {
+                    margin-bottom: 0;
+                }
+            }
+        }
+    }
+}
