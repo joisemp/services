@@ -18,7 +18,75 @@
 
 {% block content %}
 
-<h3>Welcome to the Space Admin Dashboard</h3>
-<p>This is the space admin dashboard where you can manage various aspects of your space.</p>
+<section id="heading" class="mt-2">
+    <div class="alert alert-notification alert-primary" role="alert">
+        <h5>Welcome back Mello</h5>
+        <p class="mb-0">Here's what's happening in your organization today.</p>
+    </div>
+</section>
+
+<section id="stats" class="mt-4">
+   <div style="width: 100%; height: 290px;"> <!-- wrapper controls height -->
+    <canvas id="myChart"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const ctx = document.getElementById('myChart');
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [
+          {
+            label: 'Sales 2024',
+            data: [10, 20, 15, 25, 30, 28],
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            fill: true,
+            tension: 0.4
+          },
+          {
+            label: 'Sales 2025',
+            data: [12, 18, 22, 30, 26, 35],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            fill: true,
+            tension: 0.4
+          },
+          {
+            label: 'Target',
+            data: [15, 15, 20, 25, 25, 30],
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            fill: true,
+            tension: 0.4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false, // 🔹 lets us use the wrapper's height
+        plugins: {
+          legend: {
+            position: 'top'
+          }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  </script>
+</section>
+
+<section id="issue-card ">
+     <div class="title-recent-issues d-flex justify-content-between align-items-center mt-4">
+            <h3 class="mb-1">Recent Issues</h3>
+            <a href="#" class="btn btn-primary btn-sm d-flex justify-content-between align-items-center"><span>View All</span><span class="material-symbols-outlined ms-2" style="font-size: 12px;">arrow_forward_ios</span></a>
+     </div>
+</section>
 
 {% endblock %}
