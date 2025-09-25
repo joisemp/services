@@ -526,6 +526,47 @@ class IssueAssignmentView(UpdateView):
         return context
 
 
+class IssueReopenView(View):
+    """Reopen a resolved, closed, or cancelled issue"""
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue can be reopened
+        if issue.status not in ['resolved', 'closed', 'cancelled']:
+            messages.error(request, f'Only resolved, closed, or cancelled issues can be reopened. This issue is currently {issue.get_status_display().lower()}.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        try:
+            # Store the previous status for the message
+            previous_status = issue.get_status_display()
+            
+            # Reopen the issue
+            if issue.assigned_to:
+                issue.status = 'assigned'
+            else:
+                issue.status = 'open'
+            
+            # Clear resolution notes when reopening
+            issue.resolution_notes = None
+            
+            # Clear review information when reopening
+            issue.reviewed_by = None
+            issue.reviewed_at = None
+            issue.review_notes = None
+            
+            issue.save()
+            
+            messages.success(request, f'Issue "{issue.title}" has been reopened from {previous_status.lower()} status.')
+            
+        except Exception as e:
+            messages.error(request, f'Failed to reopen issue: {str(e)}')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
 class IssueResolveView(View):
     """Mark an issue as resolved with resolution notes"""
     
