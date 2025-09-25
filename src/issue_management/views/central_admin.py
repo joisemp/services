@@ -3,8 +3,9 @@ from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
 
 
 class IssueListView(ListView):
@@ -475,6 +476,54 @@ class IssueVoiceUploadView(View):
             'form': form,
         }
         return render(request, 'central_admin/issue_management/voice_upload.html', context)
+
+
+class IssueAssignmentView(UpdateView):
+    """Assign an issue to a supervisor with optional review requirement"""
+    template_name = "central_admin/issue_management/issue_assignment.html"
+    form_class = IssueAssignmentForm
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        # Set assignment metadata
+        form.instance.assigned_by = self.request.user
+        form.instance.assigned_at = timezone.now()
+        
+        # Update status to assigned when a supervisor is assigned
+        # Only change status if it's not already resolved, closed, or cancelled
+        if form.instance.status not in ['resolved', 'closed', 'cancelled']:
+            form.instance.status = 'assigned'
+        
+        response = super().form_valid(form)
+        
+        assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
+        review_text = " (with review required)" if form.instance.requires_review else ""
+        
+        messages.success(
+            self.request, 
+            f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}{review_text}.'
+        )
+        
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        return context
 
 
 class IssueResolveView(View):

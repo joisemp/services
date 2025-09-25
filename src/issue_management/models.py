@@ -30,6 +30,40 @@ class Issue(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     resolution_notes = models.TextField(blank=True, null=True, help_text="Notes describing how the issue was resolved")
+    
+    # Issue assignment fields
+    assigned_to = models.ForeignKey(
+        'core.User', 
+        related_name='assigned_issues', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Supervisor assigned to handle this issue"
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True, help_text="When the issue was assigned")
+    assigned_by = models.ForeignKey(
+        'core.User', 
+        related_name='issues_assigned_by_me', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Who assigned this issue"
+    )
+    requires_review = models.BooleanField(
+        default=False, 
+        help_text="Whether this issue requires review before being marked as resolved"
+    )
+    reviewed_by = models.ForeignKey(
+        'core.User', 
+        related_name='reviewed_issues', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Who reviewed this issue (if review required)"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True, help_text="When the issue was reviewed")
+    review_notes = models.TextField(blank=True, null=True, help_text="Notes from the review process")
+    
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
     slug = models.SlugField(unique=True)

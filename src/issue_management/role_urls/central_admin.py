@@ -8,6 +8,7 @@ urlpatterns = [
     path('create/', central_admin.IssueCreateView.as_view(), name='issue_create'),
     path('<slug:issue_slug>/edit/', central_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', central_admin.IssueDetailView.as_view(), name='issue_detail'),
+    path('<slug:issue_slug>/assign/', central_admin.IssueAssignmentView.as_view(), name='issue_assign'),
     path('<slug:issue_slug>/resolve/', central_admin.IssueResolveView.as_view(), name='issue_resolve'),
     path('<slug:issue_slug>/delete/', central_admin.IssueDeleteView.as_view(), name='issue_delete'),
     
