@@ -38,6 +38,10 @@ urlpatterns = [
          views.GeneratePasswordView.as_view(), 
          name='generate_password'),
     
+    path('people/delete-user/', 
+         views.DeleteUserView.as_view(), 
+         name='delete_user'),
+    
     path('updates/', 
          views.UpdateListView.as_view(), 
          name='updates'),

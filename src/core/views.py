@@ -534,3 +534,93 @@ class GeneratePasswordView(View):
         secrets.SystemRandom().shuffle(password)
         
         return ''.join(password)
+
+
+class DeleteUserView(View):
+    """
+    View to delete a user with proper validation and safety checks
+    """
+    
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST request to delete a specific user
+        """
+        try:
+            user_id = request.POST.get('user_id')
+            confirm_text = request.POST.get('confirm_text', '').strip()
+            
+            if not user_id:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'User ID is required'
+                }, status=400)
+            
+            # Get the user
+            user = get_object_or_404(User, id=user_id)
+            
+            # Safety checks - prevent deletion of important users
+            if user.is_superuser:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Cannot delete superuser accounts'
+                }, status=400)
+            
+            # Prevent self-deletion if implemented in the future
+            if hasattr(request, 'user') and request.user.id == user.id:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'You cannot delete your own account'
+                }, status=400)
+            
+            # Require confirmation text to match user's name or email
+            expected_confirmation = user.get_full_name() or user.email or user.phone_number or f"User {user.id}"
+            if confirm_text.lower() != expected_confirmation.lower():
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'Confirmation text must match exactly: "{expected_confirmation}"'
+                }, status=400)
+            
+            # Check for related data that might prevent deletion
+            related_issues_count = 0
+            related_comments_count = 0
+            
+            # Check if user has reported issues
+            if hasattr(user, 'reported_issues'):
+                related_issues_count = user.reported_issues.count()
+            
+            # Check if user has comments (if comment model exists)
+            if hasattr(user, 'comments'):
+                related_comments_count = user.comments.count()
+            
+            # Store user info for success message before deletion
+            user_name = user.get_full_name() or user.email or user.phone_number
+            user_email = user.email
+            user_org = user.organization.name if user.organization else "No organization"
+            
+            # Perform the deletion
+            user.delete()
+            
+            messages.success(
+                request, 
+                f'User "{user_name}" has been successfully deleted. '
+                f'Organization: {user_org}. '
+                f'Related data: {related_issues_count} issues, {related_comments_count} comments were also removed.'
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'User "{user_name}" has been successfully deleted.',
+                'redirect': True  # Signal to reload the page
+            })
+            
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'User not found'
+            }, status=404)
+        except Exception as e:
+            messages.error(request, f'Error deleting user: {str(e)}')
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error deleting user: {str(e)}'
+            }, status=500)

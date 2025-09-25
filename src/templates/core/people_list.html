@@ -262,7 +262,7 @@
                     </div>
                     
                     <!-- View Details Option -->
-                    <div class="border rounded p-3 mb-0">
+                    <div class="border rounded p-3 mb-3">
                         <div class="d-flex align-items-start">
                             <i class="fas fa-eye text-success me-3 mt-1"></i>
                             <div class="flex-grow-1">
@@ -273,6 +273,24 @@
                                 <button type="button" class="btn btn-success btn-sm" disabled>
                                     <i class="fas fa-eye me-2"></i>
                                     View Profile <small class="text-muted">(Coming Soon)</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Delete User Option -->
+                    <div class="border border-danger rounded p-3 mb-0" id="delete-user-option">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-trash text-danger me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2 text-danger">Delete User</h6>
+                                <p class="text-muted mb-2 small">
+                                    <strong class="text-danger">Warning:</strong> This action cannot be undone. 
+                                    The user and all their associated data will be permanently removed.
+                                </p>
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="deleteUserBtn">
+                                    <i class="fas fa-trash me-2"></i>
+                                    Delete User
                                 </button>
                             </div>
                         </div>
@@ -289,6 +307,64 @@
     </div>
 </div>
 
+<!-- Delete User Confirmation Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteUserModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm User Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-flex align-items-start" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                    <div>
+                        <strong>This action cannot be undone!</strong>
+                        <p class="mb-0 mt-1">You are about to permanently delete this user and all their associated data.</p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">User to be deleted:</h6>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-1"><strong>Name:</strong> <span id="delete-modal-user-name">-</span></p>
+                        <p class="mb-1" id="delete-modal-email-row"><strong>Email:</strong> <span id="delete-modal-user-email">-</span></p>
+                        <p class="mb-1" id="delete-modal-phone-row"><strong>Phone:</strong> <span id="delete-modal-user-phone">-</span></p>
+                        <p class="mb-0"><strong>Role:</strong> <span id="delete-modal-user-type">-</span></p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="deleteConfirmInput" class="form-label">
+                        <strong>Type the user's name exactly to confirm deletion:</strong>
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="deleteConfirmInput" 
+                           placeholder="Enter user's name to confirm"
+                           autocomplete="off">
+                    <div class="form-text text-muted">
+                        Expected: <span id="expectedConfirmText" class="fw-bold">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                    <i class="fas fa-trash me-2"></i>
+                    Delete User Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -296,12 +372,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     // User options modal handling
     const userOptionsModal = document.getElementById('userOptionsModal');
+    const deleteUserModal = document.getElementById('deleteUserModal');
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const generatePasswordBtn = document.getElementById('generatePasswordBtn');
     const copyPasswordBtn = document.getElementById('copyPasswordBtn');
+    const deleteUserBtn = document.getElementById('deleteUserBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const deleteConfirmInput = document.getElementById('deleteConfirmInput');
     let selectedUserId = null;
     let selectedUserAuthMethod = null;
     let selectedUserType = null;
+    let selectedUserData = null;
     
     if (userOptionsModal) {
         userOptionsModal.addEventListener('show.bs.modal', function (event) {
@@ -316,6 +397,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const userEmail = card.getAttribute('data-user-email');
             const userPhone = card.getAttribute('data-user-phone');
             const userOrganization = card.getAttribute('data-user-organization');
+            
+            // Store user data for delete confirmation
+            selectedUserData = {
+                id: selectedUserId,
+                name: userName,
+                email: userEmail,
+                phone: userPhone,
+                type: selectedUserType,
+                organization: userOrganization
+            };
             
             // Update the modal's content
             document.getElementById('modal-title-name').textContent = userName || 'User Options';
@@ -518,6 +609,131 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Remove temporary input
                 document.body.removeChild(tempInput);
+            });
+        });
+    }
+    
+    // Delete User functionality
+    if (deleteUserBtn) {
+        deleteUserBtn.addEventListener('click', function() {
+            if (!selectedUserData) {
+                alert('No user selected');
+                return;
+            }
+            
+            // Populate delete confirmation modal
+            document.getElementById('delete-modal-user-name').textContent = selectedUserData.name || 'N/A';
+            document.getElementById('delete-modal-user-email').textContent = selectedUserData.email || 'N/A';
+            document.getElementById('delete-modal-user-phone').textContent = selectedUserData.phone || 'N/A';
+            document.getElementById('delete-modal-user-type').textContent = selectedUserData.type || 'N/A';
+            
+            // Show/hide email and phone rows
+            const deleteEmailRow = document.getElementById('delete-modal-email-row');
+            const deletePhoneRow = document.getElementById('delete-modal-phone-row');
+            deleteEmailRow.style.display = selectedUserData.email ? 'block' : 'none';
+            deletePhoneRow.style.display = selectedUserData.phone ? 'block' : 'none';
+            
+            // Set expected confirmation text
+            const expectedText = selectedUserData.name || selectedUserData.email || selectedUserData.phone || `User ${selectedUserData.id}`;
+            document.getElementById('expectedConfirmText').textContent = expectedText;
+            
+            // Reset confirmation input
+            deleteConfirmInput.value = '';
+            confirmDeleteBtn.disabled = true;
+            
+            // Hide user options modal and show delete confirmation modal
+            const userModal = bootstrap.Modal.getInstance(userOptionsModal);
+            userModal.hide();
+            
+            // Show delete confirmation modal after user options modal is hidden
+            userOptionsModal.addEventListener('hidden.bs.modal', function() {
+                const deleteModal = new bootstrap.Modal(deleteUserModal);
+                deleteModal.show();
+            }, { once: true });
+        });
+    }
+    
+    // Delete confirmation input validation
+    if (deleteConfirmInput) {
+        deleteConfirmInput.addEventListener('input', function() {
+            const expectedText = document.getElementById('expectedConfirmText').textContent;
+            const inputText = this.value.trim();
+            
+            // Enable/disable confirm button based on exact match
+            if (inputText.toLowerCase() === expectedText.toLowerCase()) {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.classList.remove('btn-outline-danger');
+                confirmDeleteBtn.classList.add('btn-danger');
+            } else {
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.classList.remove('btn-danger');
+                confirmDeleteBtn.classList.add('btn-outline-danger');
+            }
+        });
+    }
+    
+    // Confirm Delete functionality
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (!selectedUserData || !selectedUserId) {
+                alert('No user selected');
+                return;
+            }
+            
+            const expectedText = document.getElementById('expectedConfirmText').textContent;
+            const confirmText = deleteConfirmInput.value.trim();
+            
+            if (confirmText.toLowerCase() !== expectedText.toLowerCase()) {
+                alert('Confirmation text does not match. Please type the exact name shown.');
+                return;
+            }
+            
+            // Final confirmation
+            if (!confirm(`Are you absolutely sure you want to delete "${selectedUserData.name}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            // Disable button and show loading state
+            confirmDeleteBtn.disabled = true;
+            const originalContent = confirmDeleteBtn.innerHTML;
+            confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Send AJAX request
+            fetch('{% url "core:delete_user" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `user_id=${selectedUserId}&confirm_text=${encodeURIComponent(confirmText)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and show success message
+                    const modal = bootstrap.Modal.getInstance(deleteUserModal);
+                    modal.hide();
+                    
+                    if (data.redirect) {
+                        // Reload page to show success message and updated list
+                        window.location.reload();
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the user.');
+            })
+            .finally(() => {
+                // Re-enable button
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.innerHTML = originalContent;
             });
         });
     }
