@@ -1,0 +1,35 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Issue Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/forms/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'space_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <h3>Edit Issue</h3>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="mb-3">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+      </div>
+    {% endfor %}
+    <div class="d-flex">
+      <button type="submit" class="btn btn-primary">Update Issue</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
