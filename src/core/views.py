@@ -1,7 +1,17 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import views as auth_views, authenticate, login, logout
 from django.urls import reverse_lazy
-from django.views.generic import FormView
+from django.views.generic import FormView, View
+from django.http import JsonResponse
+from django.contrib import messages
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+import secrets
+import string
 from .forms import (
     CustomPasswordResetForm, 
     CustomSetPasswordForm, 
@@ -304,3 +314,223 @@ class SpaceUpdateView(UpdateView):
         from django.contrib import messages
         messages.success(self.request, f'Space "{self.object.name}" updated successfully.')
         return response
+
+
+class RegeneratePasswordView(View):
+    """
+    View to regenerate password for users with email authentication
+    Sends a new password reset email to the user
+    """
+    
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST request to regenerate password for a specific user
+        """
+        try:
+            user_id = request.POST.get('user_id')
+            if not user_id:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'User ID is required'
+                }, status=400)
+            
+            # Get the user
+            user = get_object_or_404(User, id=user_id)
+            
+            # Only allow password regeneration for email authentication users
+            if user.auth_method != 'email':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Password regeneration is only available for users with email authentication'
+                }, status=400)
+            
+            # Don't allow regeneration for general users
+            if user.user_type == 'general_user':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'General users use phone authentication and do not have passwords'
+                }, status=400)
+            
+            # Send password reset email
+            self._send_password_reset_email(user, request)
+            
+            messages.success(
+                request, 
+                f'Password reset email sent to {user.email}. '
+                f'{user.get_full_name()} should check their email to set a new password.'
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'Password reset email sent to {user.email}'
+            })
+            
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'User not found'
+            }, status=404)
+        except Exception as e:
+            messages.error(request, f'Error sending password reset email: {str(e)}')
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error sending password reset email: {str(e)}'
+            }, status=500)
+
+    def _send_password_reset_email(self, user, request):
+        """
+        Send password reset email to the user
+        """
+        current_site = get_current_site(request)
+        site_name = current_site.name
+        domain = current_site.domain
+        
+        # Generate password reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Create password reset URL
+        password_reset_url = request.build_absolute_uri(
+            reverse_lazy('core:password_reset_confirm', kwargs={
+                'uidb64': uid,
+                'token': token,
+            })
+        )
+        
+        # Email context
+        context = {
+            'user': user,
+            'site_name': site_name,
+            'domain': domain,
+            'password_reset_url': password_reset_url,
+            'protocol': 'https' if request.is_secure() else 'http',
+        }
+        
+        # Render email subject and body
+        subject = f'{site_name} - Password Reset Request'
+        
+        # Simple text email
+        message = f"""
+Hi {user.get_full_name()},
+
+A password reset has been requested for your account:
+
+Account Details:
+- Name: {user.get_full_name()}
+- Email: {user.email}
+- Role: {user.get_user_type_display()}
+
+Please click the link below to set your new password:
+{password_reset_url}
+
+This link will expire in 24 hours for security reasons.
+
+If you did not request this password reset, please ignore this email.
+
+Best regards,
+{site_name} Team
+        """
+        
+        # Send email
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=None,  # Uses DEFAULT_FROM_EMAIL
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+
+class GeneratePasswordView(View):
+    """
+    View to generate a new password for users with email authentication
+    Returns the generated password for manual sharing
+    """
+    
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST request to generate a new password for a specific user
+        """
+        try:
+            user_id = request.POST.get('user_id')
+            if not user_id:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'User ID is required'
+                }, status=400)
+            
+            # Get the user
+            user = get_object_or_404(User, id=user_id)
+            
+            # Only allow password generation for email authentication users
+            if user.auth_method != 'email':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Password generation is only available for users with email authentication'
+                }, status=400)
+            
+            # Don't allow generation for general users
+            if user.user_type == 'general_user':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'General users use phone authentication and do not have passwords'
+                }, status=400)
+            
+            # Generate a secure password
+            password = self._generate_secure_password()
+            
+            # Set the new password for the user
+            user.set_password(password)
+            user.save()
+            
+            messages.success(
+                request, 
+                f'New password generated for {user.get_full_name()}. '
+                f'The password has been set and is ready to use.'
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'password': password,
+                'message': f'New password generated for {user.get_full_name()}'
+            })
+            
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'User not found'
+            }, status=404)
+        except Exception as e:
+            messages.error(request, f'Error generating password: {str(e)}')
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error generating password: {str(e)}'
+            }, status=500)
+
+    def _generate_secure_password(self, length=12):
+        """
+        Generate a secure random password
+        """
+        # Define character sets
+        lowercase = string.ascii_lowercase
+        uppercase = string.ascii_uppercase
+        digits = string.digits
+        special_chars = "!@#$%^&*"
+        
+        # Ensure at least one character from each set
+        password = [
+            secrets.choice(uppercase),      # At least one uppercase
+            secrets.choice(lowercase),      # At least one lowercase
+            secrets.choice(digits),         # At least one digit
+            secrets.choice(special_chars)   # At least one special character
+        ]
+        
+        # Fill the rest with random characters from all sets
+        all_chars = lowercase + uppercase + digits + special_chars
+        for _ in range(length - 4):
+            password.append(secrets.choice(all_chars))
+        
+        # Shuffle the password list to avoid predictable patterns
+        secrets.SystemRandom().shuffle(password)
+        
+        return ''.join(password)

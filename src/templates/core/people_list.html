@@ -71,7 +71,17 @@
             {% for user in users %}
             <!-- Profile Card for {{ user.get_full_name|default:user.get_short_name }} -->
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100">
+                <div class="card h-100 user-card" 
+                     style="cursor: pointer;"
+                     data-bs-toggle="modal" 
+                     data-bs-target="#userOptionsModal"
+                     data-user-id="{{ user.id }}"
+                     data-user-name="{{ user.get_full_name|default:user.get_short_name|default:'No Name' }}"
+                     data-user-email="{{ user.email|default:'' }}"
+                     data-user-phone="{{ user.phone_number|default:'' }}"
+                     data-user-type="{{ user.get_user_type_display }}"
+                     data-user-auth-method="{{ user.auth_method }}"
+                     data-user-organization="{{ user.organization.name|default:'' }}">
                     <div class="card-body">
                         <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
                             <div class="profile-pic flex-shrink-0">
@@ -132,5 +142,385 @@
     </div>
 </section>
 
+<!-- User Options Modal -->
+<div class="modal fade" id="userOptionsModal" tabindex="-1" aria-labelledby="userOptionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userOptionsModalLabel">
+                    <i class="fas fa-user text-primary me-2"></i>
+                    <span id="modal-title-name">User Options</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- User Information -->
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">User Information</h6>
+                    <div class="bg-light p-3 rounded">
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Name:</strong></div>
+                            <div class="col-sm-8" id="modal-user-name">-</div>
+                        </div>
+                        <div class="row mt-2" id="modal-email-row">
+                            <div class="col-sm-4"><strong>Email:</strong></div>
+                            <div class="col-sm-8" id="modal-user-email">-</div>
+                        </div>
+                        <div class="row mt-2" id="modal-phone-row">
+                            <div class="col-sm-4"><strong>Phone:</strong></div>
+                            <div class="col-sm-8" id="modal-user-phone">-</div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-sm-4"><strong>Role:</strong></div>
+                            <div class="col-sm-8" id="modal-user-type">-</div>
+                        </div>
+                        <div class="row mt-2" id="modal-org-row">
+                            <div class="col-sm-4"><strong>Organization:</strong></div>
+                            <div class="col-sm-8" id="modal-user-organization">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Available Actions -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-3">Available Actions</h6>
+                    
+                    <!-- Password Management Options -->
+                    <div id="password-options" class="d-none">
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-key text-warning me-3 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-2">Password Management</h6>
+                                    <p class="text-muted mb-3 small">
+                                        Choose how to provide a new password for this user:
+                                    </p>
+                                    
+                                    <!-- Password Reset Email Option -->
+                                    <div class="mb-3 pb-3 border-bottom">
+                                        <h6 class="mb-2 small text-muted">OPTION 1: Email Reset Link</h6>
+                                        <p class="text-muted mb-2 small">
+                                            Send a password reset email. The user will receive a secure link to set their own password.
+                                        </p>
+                                        <button type="button" class="btn btn-warning btn-sm" id="resetPasswordBtn">
+                                            <i class="fas fa-paper-plane me-2"></i>
+                                            Send Reset Email
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Generate Password Option -->
+                                    <div class="mb-0">
+                                        <h6 class="mb-2 small text-muted">OPTION 2: Generate Password</h6>
+                                        <p class="text-muted mb-2 small">
+                                            Generate a secure password that you can copy and share manually with the user.
+                                        </p>
+                                        <button type="button" class="btn btn-info btn-sm" id="generatePasswordBtn">
+                                            <i class="fas fa-random me-2"></i>
+                                            Generate Password
+                                        </button>
+                                        
+                                        <!-- Generated password display -->
+                                        <div id="generatedPasswordContainer" class="mt-3 p-3 bg-light rounded d-none">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <strong class="text-success">Generated Password:</strong>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="copyPasswordBtn" title="Copy to clipboard">
+                                                    <i class="fas fa-copy me-1"></i>
+                                                    Copy
+                                                </button>
+                                            </div>
+                                            <div class="font-monospace fw-bold text-dark p-2 bg-white rounded border" id="generatedPassword">
+                                                <!-- Password will be displayed here -->
+                                            </div>
+                                            <div class="alert alert-warning mt-2 mb-0 py-2">
+                                                <small>
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    <strong>Important:</strong> Share this password securely with the user. It's immediately active and ready to use.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit User Option -->
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-edit text-info me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2">Edit User</h6>
+                                <p class="text-muted mb-2 small">
+                                    Modify user information, role, or organization assignment.
+                                </p>
+                                <button type="button" class="btn btn-info btn-sm" disabled>
+                                    <i class="fas fa-edit me-2"></i>
+                                    Edit User <small class="text-muted">(Coming Soon)</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- View Details Option -->
+                    <div class="border rounded p-3 mb-0">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-eye text-success me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2">View Details</h6>
+                                <p class="text-muted mb-2 small">
+                                    View detailed user profile, activity history, and associated spaces.
+                                </p>
+                                <button type="button" class="btn btn-success btn-sm" disabled>
+                                    <i class="fas fa-eye me-2"></i>
+                                    View Profile <small class="text-muted">(Coming Soon)</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // User options modal handling
+    const userOptionsModal = document.getElementById('userOptionsModal');
+    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+    const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+    const copyPasswordBtn = document.getElementById('copyPasswordBtn');
+    let selectedUserId = null;
+    let selectedUserAuthMethod = null;
+    let selectedUserType = null;
+    
+    if (userOptionsModal) {
+        userOptionsModal.addEventListener('show.bs.modal', function (event) {
+            // Card that triggered the modal
+            const card = event.relatedTarget;
+            
+            // Extract info from data-* attributes
+            selectedUserId = card.getAttribute('data-user-id');
+            selectedUserAuthMethod = card.getAttribute('data-user-auth-method');
+            selectedUserType = card.getAttribute('data-user-type');
+            const userName = card.getAttribute('data-user-name');
+            const userEmail = card.getAttribute('data-user-email');
+            const userPhone = card.getAttribute('data-user-phone');
+            const userOrganization = card.getAttribute('data-user-organization');
+            
+            // Update the modal's content
+            document.getElementById('modal-title-name').textContent = userName || 'User Options';
+            document.getElementById('modal-user-name').textContent = userName || 'N/A';
+            document.getElementById('modal-user-email').textContent = userEmail || 'N/A';
+            document.getElementById('modal-user-phone').textContent = userPhone || 'N/A';
+            document.getElementById('modal-user-type').textContent = selectedUserType || 'N/A';
+            document.getElementById('modal-user-organization').textContent = userOrganization || 'N/A';
+            
+            // Show/hide email and phone rows based on availability
+            const emailRow = document.getElementById('modal-email-row');
+            const phoneRow = document.getElementById('modal-phone-row');
+            const orgRow = document.getElementById('modal-org-row');
+            
+            emailRow.style.display = userEmail ? 'flex' : 'none';
+            phoneRow.style.display = userPhone ? 'flex' : 'none';
+            orgRow.style.display = userOrganization ? 'flex' : 'none';
+            
+            // Show password options only for email auth users who are not general users
+            const passwordOptions = document.getElementById('password-options');
+            if (selectedUserAuthMethod === 'email' && selectedUserType !== 'General User') {
+                passwordOptions.classList.remove('d-none');
+            } else {
+                passwordOptions.classList.add('d-none');
+            }
+            
+            // Reset generated password display
+            const generatedPasswordContainer = document.getElementById('generatedPasswordContainer');
+            if (generatedPasswordContainer) {
+                generatedPasswordContainer.classList.add('d-none');
+            }
+        });
+    }
+    
+    if (resetPasswordBtn) {
+        resetPasswordBtn.addEventListener('click', function() {
+            if (!selectedUserId) {
+                alert('No user selected');
+                return;
+            }
+            
+            // Confirm action
+            if (!confirm('Are you sure you want to send a password reset email to this user?')) {
+                return;
+            }
+            
+            // Disable button and show loading state
+            resetPasswordBtn.disabled = true;
+            const originalContent = resetPasswordBtn.innerHTML;
+            resetPasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Send AJAX request
+            fetch('{% url "core:regenerate_password" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `user_id=${selectedUserId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and show success message
+                    const modal = bootstrap.Modal.getInstance(userOptionsModal);
+                    modal.hide();
+                    
+                    // Reload page to show success message
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the password reset email.');
+            })
+            .finally(() => {
+                // Re-enable button
+                resetPasswordBtn.disabled = false;
+                resetPasswordBtn.innerHTML = originalContent;
+            });
+        });
+    }
+    
+    // Generate Password functionality
+    if (generatePasswordBtn) {
+        generatePasswordBtn.addEventListener('click', function() {
+            if (!selectedUserId) {
+                alert('No user selected');
+                return;
+            }
+            
+            // Confirm action
+            if (!confirm('Are you sure you want to generate a new password for this user? This will replace their current password.')) {
+                return;
+            }
+            
+            // Disable button and show loading state
+            generatePasswordBtn.disabled = true;
+            const originalContent = generatePasswordBtn.innerHTML;
+            generatePasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Send AJAX request
+            fetch('{% url "core:generate_password" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `user_id=${selectedUserId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Display the generated password
+                    document.getElementById('generatedPassword').textContent = data.password;
+                    document.getElementById('generatedPasswordContainer').classList.remove('d-none');
+                    
+                    // Store password for copying
+                    copyPasswordBtn.setAttribute('data-password', data.password);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while generating the password.');
+            })
+            .finally(() => {
+                // Re-enable button
+                generatePasswordBtn.disabled = false;
+                generatePasswordBtn.innerHTML = originalContent;
+            });
+        });
+    }
+    
+    // Copy Password functionality
+    if (copyPasswordBtn) {
+        copyPasswordBtn.addEventListener('click', function() {
+            const password = this.getAttribute('data-password');
+            if (!password) {
+                alert('No password to copy');
+                return;
+            }
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(password).then(function() {
+                // Show success feedback
+                const originalContent = copyPasswordBtn.innerHTML;
+                copyPasswordBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                copyPasswordBtn.classList.remove('btn-outline-secondary');
+                copyPasswordBtn.classList.add('btn-success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    copyPasswordBtn.innerHTML = originalContent;
+                    copyPasswordBtn.classList.remove('btn-success');
+                    copyPasswordBtn.classList.add('btn-outline-secondary');
+                }, 2000);
+            }, function(err) {
+                // Fallback for older browsers
+                console.error('Could not copy password: ', err);
+                
+                // Create a temporary input element
+                const tempInput = document.createElement('input');
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-1000px';
+                tempInput.value = password;
+                document.body.appendChild(tempInput);
+                
+                // Select and copy
+                tempInput.select();
+                tempInput.setSelectionRange(0, 99999);
+                
+                try {
+                    document.execCommand('copy');
+                    // Show success feedback
+                    const originalContent = copyPasswordBtn.innerHTML;
+                    copyPasswordBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                    copyPasswordBtn.classList.remove('btn-outline-secondary');
+                    copyPasswordBtn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        copyPasswordBtn.innerHTML = originalContent;
+                        copyPasswordBtn.classList.remove('btn-success');
+                        copyPasswordBtn.classList.add('btn-outline-secondary');
+                    }, 2000);
+                } catch(err) {
+                    alert('Failed to copy password. Please copy manually: ' + password);
+                }
+                
+                // Remove temporary input
+                document.body.removeChild(tempInput);
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

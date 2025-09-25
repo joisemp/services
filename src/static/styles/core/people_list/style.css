@@ -337,6 +337,17 @@ tr {
   border-radius: 12px;
   transition: all 0.2s ease;
 }
+.card.user-card {
+  cursor: pointer;
+}
+.card.user-card:hover {
+  box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  border-color: #2563EB;
+}
+.card.user-card:active {
+  transform: translateY(0);
+}
 .card:hover {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
