@@ -40,34 +40,36 @@
     {% if spaces %}
     <section id="space-cards">
         <div class="row">
-            <div class="col-12 col-md-6 col-lg-4 mb-4">
+            {% for space in spaces %}
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
                 <div class="card">
-                    <div class="card-body">
-                        <div class="content">
-                            <h5 class="card-title">SFS Public School</h5>
-                            <p class="card-text text-muted mb-0">sfsgrpi@gmail.com</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <p class="card-text text-muted">Ashish, Mello...</p>
-                                <span class="badge rounded-pill text-bg-primary">Primary</span>
+                    <a href="{% url 'core:space_detail' space_slug=space.slug %}" class="text-decoration-none text-dark">
+                        <div class="card-body">
+                            <div class="content">
+                                <h5 class="card-title">{{ space.name }}</h5>
+                                <p class="card-text text-muted mb-0">{{ space.org.name }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    {% with users=space.users.all|slice:":2" %}
+                                        <p class="card-text text-muted">
+                                            {% if users %}
+                                                {% for user in users %}{{ user.first_name|default:user.email|default:user.phone_number }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if space.users.count > 2 %}...{% endif %}
+                                            {% else %}
+                                                No users assigned
+                                            {% endif %}
+                                        </p>
+                                    {% endwith %}
+                                    {% if space.label %}
+                                    <span class="badge rounded-pill text-bg-primary">{{ space.label }}</span>
+                                    {% else %}
+                                    <span class="badge rounded-pill text-bg-primary">Space</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg-4 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="content">
-                            <h5 class="card-title">SFS Public School</h5>
-                            <p class="card-text text-muted mb-0">sfsgrpi@gmail.com</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <p class="card-text text-muted">Ashish, Mello...</p>
-                                <span class="badge rounded-pill text-bg-primary">Primary</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </section>
 

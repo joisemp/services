@@ -1,0 +1,24 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Central Admin Dashboard{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/space_admin/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'space_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<h3>Welcome to the Space Admin Dashboard</h3>
+<p>This is the space admin dashboard where you can manage various aspects of your space.</p>
+
+{% endblock %}

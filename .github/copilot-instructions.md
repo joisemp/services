@@ -5,6 +5,8 @@ This is a Django 5.2-based issue management system with role-based access contro
 
 **Tech Stack**: Django 5.2, PostgreSQL, Docker, Bootstrap 5, HTMX, DigitalOcean Spaces (S3-compatible), WhiteNoise
 
+**Key Dependencies**: `django-environ` (environment management), `django-storages` (S3 integration), `psycopg2-binary` (PostgreSQL), `pillow` (image handling)
+
 ## Architecture & Key Components
 
 ### Custom User Authentication (`core/models.py`, `core/backends.py`)
@@ -103,9 +105,15 @@ docker exec -it sfs-services-dev-container python manage.py shell
 ```
 
 ### Database Migrations
-- Always run migrations inside container: `docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate`
-- Custom User model requires careful migration handling - organization is optional for superusers only
-- For Windows PowerShell, join commands with `;` instead of `&&`
+- **Always run migrations inside container**: 
+  ```bash
+  # Linux/Mac
+  docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate
+  
+  # Windows PowerShell (join with ;)  
+  docker exec -it sfs-services-dev-container python manage.py makemigrations ; docker exec -it sfs-services-dev-container python manage.py migrate
+  ```
+- **Migration Considerations**: Custom User model requires careful migration handling - organization is optional for superusers only
 
 ### Environment Configuration
 - Create `src/config/.env` with required variables (Django looks for this path automatically):
@@ -121,11 +129,11 @@ docker exec -it sfs-services-dev-container python manage.py shell
 - **Always create SCSS files for page-specific styles** - do NOT create raw CSS files
 - **Each page gets its own folder** within the appropriate module directory (e.g., `issue_list/`, `issue_detail/`)
 - **Inside each page folder**, create a `style.scss` file, then compile to `style.css` in the same folder
-- SCSS files are NOT automatically compiled - you need to compile them manually or use a build tool
-- Always import base styles in SCSS files:
+- **SCSS Compilation**: Files are NOT automatically compiled - you need to compile them manually or use a build tool
+- **Base Style Imports**: Always import base styles in SCSS files:
   - `@use '../_base'` for basic navbar/header styles only
   - `@use '../../_sidebar_base'` for full sidebar layout with responsive design
-- Color variables are in `static/styles/_colors.scss` - use these instead of hardcoded colors
+- **Variables**: Use color variables from `static/styles/_colors.scss` instead of hardcoded colors
 
 ### Key Files to Know
 - `config/settings.py`: Environment-based configuration with django-environ

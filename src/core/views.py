@@ -9,10 +9,11 @@ from .forms import (
     OtherRoleUserCreateForm,
     PhoneLoginForm,
     EmailLoginForm,
-    SpaceCreateForm
+    SpaceCreateForm,
+    SpaceUpdateForm
 )
 from .models import Update, User, Space
-from django.views.generic import ListView, CreateView, TemplateView
+from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -241,4 +242,65 @@ class SpaceListView(ListView):
     context_object_name = 'spaces'
 
     def get_queryset(self):
-        return Space.objects.select_related('org').order_by('name')
+        return Space.objects.select_related('org').prefetch_related('users').order_by('name')
+
+
+class SpaceDetailView(DetailView):
+    """
+    View to display space details with related issues and users
+    """
+    model = Space
+    template_name = 'core/space_detail.html'
+    context_object_name = 'space'
+    slug_field = 'slug'
+    slug_url_kwarg = 'space_slug'
+
+    def get_queryset(self):
+        return Space.objects.select_related('org').prefetch_related(
+            'users',
+            'issues__reporter',
+            'issues__images'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get related issues for this space
+        issues = self.object.issues.select_related('reporter').prefetch_related('images').order_by('-created_at')
+        context['issues'] = issues
+        context['issues_count'] = issues.count()
+        
+        # Get users associated with this space
+        users = self.object.users.all().order_by('first_name', 'last_name')
+        context['users'] = users
+        context['users_count'] = users.count()
+        
+        # Get issue statistics
+        context['open_issues_count'] = issues.filter(status='open').count()
+        context['resolved_issues_count'] = issues.filter(status='resolved').count()
+        context['in_progress_issues_count'] = issues.filter(status='in_progress').count()
+        
+        return context
+
+
+class SpaceUpdateView(UpdateView):
+    """
+    View to update an existing space
+    """
+    model = Space
+    template_name = 'core/space_update.html'
+    form_class = SpaceUpdateForm
+    slug_field = 'slug'
+    slug_url_kwarg = 'space_slug'
+
+    def get_queryset(self):
+        return Space.objects.select_related('org')
+
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.object.slug})
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        from django.contrib import messages
+        messages.success(self.request, f'Space "{self.object.name}" updated successfully.')
+        return response

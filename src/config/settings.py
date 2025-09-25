@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core.apps.CoreConfig',
     'issue_management.apps.IssueManagementConfig',
+    'dashboard.apps.DashboardConfig',
 ]
 
 MIDDLEWARE = [

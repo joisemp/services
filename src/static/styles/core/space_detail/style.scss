@@ -1,0 +1,172 @@
+@use '../../sidebar_base';
+@use '../../colors' as colors;
+
+.space-header {
+  .space-info {
+    .space-meta {
+      font-size: 0.9rem;
+    }
+    
+    .space-description {
+      max-width: 600px;
+    }
+  }
+  
+  .space-actions {
+    .btn-group .btn {
+      border-radius: 0.375rem;
+      
+      &:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      
+      &:last-child {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+  }
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  
+  .card-header {
+    background-color: colors.$base-white;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 500;
+  }
+}
+
+.list-group-item {
+  border: none !important;
+  padding: 0.75rem 0;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid #f1f3f4 !important;
+  }
+  
+  .issue-info {
+    h6 a {
+      color: colors.$primary;
+      text-decoration: none;
+      
+      &:hover {
+        text-decoration: underline !important;
+      }
+    }
+    
+    .badge {
+      font-size: 0.75rem;
+      
+      &.bg-open {
+        background-color: #ffc107 !important;
+        color: #000;
+      }
+      
+      &.bg-in_progress {
+        background-color: #0dcaf0 !important;
+      }
+      
+      &.bg-resolved {
+        background-color: #198754 !important;
+      }
+      
+      &.bg-low {
+        background-color: #6c757d !important;
+      }
+      
+      &.bg-medium {
+        background-color: #fd7e14 !important;
+      }
+      
+      &.bg-high {
+        background-color: #dc3545 !important;
+      }
+      
+      &.bg-critical {
+        background-color: #6f42c1 !important;
+      }
+    }
+  }
+}
+
+.user-avatar {
+  .rounded-circle {
+    width: 32px;
+    height: 32px;
+    background-color: colors.$primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+}
+
+.breadcrumb {
+  background-color: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  
+  .breadcrumb-item {
+    a {
+      color: colors.$primary;
+      text-decoration: none;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    
+    &.active {
+      color: #6c757d;
+    }
+  }
+}
+
+// Statistics cards styling
+.row .col-md-3 .card {
+  transition: transform 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+  
+  .card-body {
+    padding: 1.25rem;
+    
+    h5 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+  }
+}
+
+// Responsive improvements
+@media (max-width: 768px) {
+  .space-header {
+    .d-flex {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .space-actions {
+      align-self: stretch;
+      
+      .btn-group {
+        width: 100%;
+        
+        .btn {
+          flex: 1;
+        }
+      }
+    }
+  }
+  
+  .row .col-md-3 {
+    margin-bottom: 1rem;
+  }
+}
