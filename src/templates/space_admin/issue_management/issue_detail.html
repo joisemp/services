@@ -214,10 +214,14 @@
             <p class="card-text text-muted mb-3">Lets start the work.</p>
             <div class="d-flex gap-2 flex-wrap">
               {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
-              <button class="btn btn-dark d-flex align-items-center">
-                <span class="material-symbols-outlined me-2">play_arrow</span>
-                Start work
-              </button>
+              <form method="post" action="{% url 'issue_management:space_admin:issue_start_work' issue_slug=issue.slug %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark d-flex align-items-center"
+                        {% if issue.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
+                  <span class="material-symbols-outlined me-2">play_arrow</span>
+                  {% if issue.status == 'in_progress' %}Work in Progress{% else %}Start work{% endif %}
+                </button>
+              </form>
                 <button class="btn btn-success d-flex align-items-center" 
                         data-bs-toggle="modal" 
                         data-bs-target="#markResolvedModal"
@@ -244,7 +248,7 @@
           <div class="card-body">
             <h5 class="card-title mb-3 t-danger" style="color:rgb(130, 18, 18);">Delete Issue</h5>
             <p class="card-text text-danger mb-3">Deleting issue is a permanent action. Once done can't be undone.</p>
-            {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' or issue.status == 'assigned' %}
+            {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' or issue.status == 'assigned' or issue.status == 'in_progress' %}
             <button class="btn btn-danger d-inline-flex align-items-center" 
                     disabled 
                     title="Cannot delete issues that are {{ issue.get_status_display|lower }}. Please reopen the issue first.">

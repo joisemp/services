@@ -11,6 +11,7 @@ urlpatterns = [
     path('<slug:issue_slug>/assign/', space_admin.IssueAssignmentView.as_view(), name='issue_assign'),
     path('<slug:issue_slug>/resolve/', space_admin.IssueResolveView.as_view(), name='issue_resolve'),
     path('<slug:issue_slug>/reopen/', space_admin.IssueReopenView.as_view(), name='issue_reopen'),
+    path('<slug:issue_slug>/start-work/', space_admin.IssueStartWorkView.as_view(), name='issue_start_work'),
     path('<slug:issue_slug>/delete/', space_admin.IssueDeleteView.as_view(), name='issue_delete'),
     
     # Work Task URLs
