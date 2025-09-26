@@ -1,141 +1,169 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ form_title }}</title>
-</head>
-<body>
-    <h1>{{ form_title }}</h1>
-    <a href="{% url 'core:people_list' %}">← Back to People</a>
+{% extends "sidebar_base.html" %}
+{% load static %}
 
-    <!-- User Type Selection -->
-    <div>
-        <h3>User Type</h3>
-        <p>
-            <a href="?type=general" {% if user_type == 'general' %}style="font-weight: bold;"{% endif %}>
-                General User (Phone Only)
-            </a>
-            |
-            <a href="?type=other" {% if user_type != 'general' %}style="font-weight: bold;"{% endif %}>
-                Other Roles (Email + Password)
-            </a>
-        </p>
-        <p>
-            {% if user_type == 'general' %}
-                General users authenticate with phone number only (passwordless login).
-            {% else %}
-                All other roles require email and password authentication.
-            {% endif %}
-        </p>
-    </div>
+{% block title %}{{ form_title }}{% endblock title %}
 
-    <!-- Form -->
-    <form method="post">
-        {% csrf_token %}
-        
-        {% if form.non_field_errors %}
-            <div style="color: red;">
-                {{ form.non_field_errors }}
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/core/people_form/style.css' %}">
+{% endblock styles %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock navbar %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="people-form-page py-4">
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-7 col-lg-8">
+            <div>
+                <a href="{% url 'core:people_list' %}" class="btn btn-sm btn-dark mb-3 d-flex align-items-center" style="width: fit-content;">
+                    <span class="material-symbols-outlined align-middle me-2" style="font-size:1.1em; vertical-align:-2px;">
+                        arrow_back
+                    </span>
+                    Go back
+                </a>
+                <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
             </div>
-        {% endif %}
+            <div class="card border-0 people-form-card">
 
-        <table>
-            {% if user_type == 'general' %}
-                <!-- General User Form Fields -->
-                <tr>
-                    <td>
-                        <label for="{{ form.phone_number.id_for_label }}">
-                            Phone Number <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.phone_number }}
-                        {% if form.phone_number.help_text %}
-                            <br><small>{{ form.phone_number.help_text }}</small>
-                        {% endif %}
-                        {% if form.phone_number.errors %}
-                            <br><span style="color: red;">{{ form.phone_number.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <!-- Other Roles Form Fields -->
-                <tr>
-                    <td>
-                        <label for="{{ form.email.id_for_label }}">
-                            Email Address <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <br><span style="color: red;">{{ form.email.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <label for="{{ form.user_type.id_for_label }}">
-                            User Role <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.user_type }}
-                        {% if form.user_type.errors %}
-                            <br><span style="color: red;">{{ form.user_type.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endif %}
+                <div class="card-body p-4 p-lg-5">
+                    <div class="mb-4">
+                        <h1 class="h4 fw-semibold mb-0">{{ form_title }}</h1>
+                        <p class="text-muted mb-0">Add new members to your organisation and assign the right access.</p>
+                    </div>
+                    <div class="btn-group w-100 mb-4" role="group">
+                        <a href="?type=general"
+                            class="btn btn-outline-primary {% if user_type == 'general' %}active{% endif %}">
+                            General user (phone only)
+                        </a>
+                        <a href="?type=other"
+                            class="btn btn-outline-primary {% if user_type != 'general' %}active{% endif %}">
+                            Team member (email)
+                        </a>
+                    </div>
 
-            <!-- Common Fields -->
-            <tr>
-                <td>
-                    <label for="{{ form.first_name.id_for_label }}">
-                        First Name <span style="color: red;">*</span>
-                    </label>
-                </td>
-                <td>
-                    {{ form.first_name }}
-                    {% if form.first_name.errors %}
-                        <br><span style="color: red;">{{ form.first_name.errors }}</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <label for="{{ form.last_name.id_for_label }}">
-                        Last Name <span style="color: red;">*</span>
-                    </label>
-                </td>
-                <td>
-                    {{ form.last_name }}
-                    {% if form.last_name.errors %}
-                        <br><span style="color: red;">{{ form.last_name.errors }}</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <label for="{{ form.organization.id_for_label }}">
-                        Organization <span style="color: red;">*</span>
-                    </label>
-                </td>
-                <td>
-                    {{ form.organization }}
-                    {% if form.organization.errors %}
-                        <br><span style="color: red;">{{ form.organization.errors }}</span>
-                    {% endif %}
-                </td>
-            </tr>
-        </table>
+                    <p class="text-muted small mb-4">
+                        {% if user_type == 'general' %}
+                        These users sign in with their phone number. They'll receive a one-time code when they need
+                        access.
+                        {% else %}
+                        We'll email these users a password reset link so they can set their own password securely.
+                        {% endif %}
+                    </p>
 
-        <p>
-            {% if user_type != 'general' %}
-                <em>Note: A password reset link will be sent to the user's email address.</em><br>
-            {% endif %}
-            <a href="{% url 'core:people_list' %}">Cancel</a>
-            <button type="submit">Create User</button>
-        </p>
-    </form>
-</body>
-</html>
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate class="vstack gap-3">
+                        {% csrf_token %}
+
+                        {% if user_type == 'general' %}
+                        <div class="form-group">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone number</label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.help_text %}
+                            <small class="text-muted d-block mt-1">{{ form.phone_number.help_text }}</small>
+                            {% endif %}
+                            {% if form.phone_number.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.phone_number.errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.email.errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.user_type.id_for_label }}" class="form-label">User role</label>
+                            {{ form.user_type }}
+                            {% if form.user_type.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.user_type.errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.first_name.errors %}
+                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.last_name.errors %}
+                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.organization.id_for_label }}" class="form-label">Organisation</label>
+                            {{ form.organization }}
+                            {% if form.organization.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.organization.errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if user_type != 'general' %}
+                        <div class="alert alert-info mt-2" role="alert">
+                            We'll send this user a password reset email so they can finish setting up their account.
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex flex-column flex-md-row gap-2 gap-md-3">
+                            <button type="submit" class="btn btn-primary flex-fill flex-md-grow-0">
+                                Create user
+                            </button>
+                            <a href="{% url 'core:people_list' %}"
+                                class="btn btn-outline-secondary flex-fill flex-md-grow-0">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
