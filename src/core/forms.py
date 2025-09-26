@@ -272,17 +272,10 @@ class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = User
         fields = ['phone_number', 'first_name', 'last_name', 'organization']
-        widgets = {
-            'phone_number': forms.TextInput(attrs={
-                'placeholder': '+1234567890',
-            }),
-            'first_name': forms.TextInput(attrs={'placeholder': 'First Name'}),
-            'last_name': forms.TextInput(attrs={'placeholder': 'Last Name'}),
-        }
-
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['phone_number'].help_text = 'Enter phone number with country code (e.g., +1234567890)'
+        self.fields['phone_number'].help_text = 'Enter phone number without country code'
         self.fields['organization'].queryset = Organization.objects.all()
         self.fields['organization'].empty_label = "Select an organization"
 
@@ -332,17 +325,14 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
 
     email = forms.EmailField(
         required=True,
-        widget=forms.EmailInput(attrs={'placeholder': 'user@example.com'})
     )
     first_name = forms.CharField(
         max_length=30, 
         required=True,
-        widget=forms.TextInput(attrs={'placeholder': 'First Name'})
     )
     last_name = forms.CharField(
         max_length=30, 
         required=True,
-        widget=forms.TextInput(attrs={'placeholder': 'Last Name'})
     )
     user_type = forms.ChoiceField(
         choices=USER_TYPE_CHOICES, 
