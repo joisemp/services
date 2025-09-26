@@ -31,7 +31,6 @@ class CustomSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
     """
     new_password1 = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'placeholder': 'Enter your new password',
             'autocomplete': 'new-password'
         }),
         label="New Password",
@@ -40,7 +39,6 @@ class CustomSetPasswordForm(BootstrapFormMixin, SetPasswordForm):
     
     new_password2 = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'placeholder': 'Confirm your new password',
             'autocomplete': 'new-password'
         }),
         label="Confirm New Password",
