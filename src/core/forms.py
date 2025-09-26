@@ -18,7 +18,6 @@ class CustomPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
     email = forms.EmailField(
         max_length=254,
         widget=forms.EmailInput(attrs={
-            'placeholder': 'Enter your email address',
             'autocomplete': 'email'
         }),
         label="Email Address",
