@@ -218,3 +218,8 @@ else:
 
 # Password reset token validity (24 hours)
 PASSWORD_RESET_TIMEOUT = 86400
+
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
+]

@@ -1,121 +1,107 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ form_title }}</title>
-</head>
-<body>
-    <h1>{{ form_title }}</h1>
+{% extends "base.html" %}
+{% load static %}
 
-    <!-- User Type Selection -->
-    <div>
-        <h3>Login Type</h3>
-        <p>
-            <a href="?type=phone" {% if user_type == 'phone' %}style="font-weight: bold;"{% endif %}>
-                Phone Login (General Users)
-            </a>
-            |
-            <a href="?type=email" {% if user_type != 'phone' %}style="font-weight: bold;"{% endif %}>
-                Email Login (Other Roles)
-            </a>
-        </p>
-        <p>
-            {% if user_type == 'phone' %}
-                General users login with phone number only (no password required).
-            {% else %}
-                Other roles login with email and password.
-            {% endif %}
-        </p>
-    </div>
+{% block title %}Login{% endblock title %}
 
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div style="padding: 10px; margin: 10px 0; border: 1px solid;">
-                {% if message.tags == 'error' %}
-                    <span style="color: red;">{{ message }}</span>
-                {% elif message.tags == 'success' %}
-                    <span style="color: green;">{{ message }}</span>
-                {% else %}
-                    {{ message }}
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-lg-5 col-md-7">
+    <div class="card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <div class="text-center mb-4">
+                    <img src="{% static 'images/logo-icon.svg' %}" alt="Services logo" class="img-fluid" style="max-width: 50px;">
+                </div>
+                <h1 class="h4 fw-bold text-center mb-1">{{ form_title }}</h1>
+                <p class="text-muted text-center mb-4">
+                    {% if user_type == 'phone' %}
+                        General users can sign in with their phone number only.
+                    {% else %}
+                        Team members sign in with their email and password.
+                    {% endif %}
+                </p>
+
+                <div class="btn-group w-100 mb-4" role="group">
+                    <a href="?type=phone" class="btn btn-outline-primary {% if user_type == 'phone' %}active{% endif %}">
+                        Phone Login
+                    </a>
+                    <a href="?type=email" class="btn btn-outline-primary {% if user_type != 'phone' %}active{% endif %}">
+                        Email Login
+                    </a>
+                </div>
+
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if user_type == 'phone' %}
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.help_text %}
+                                <small class="text-muted d-block mt-1">{{ form.phone_number.help_text }}</small>
+                            {% endif %}
+                            {% if form.phone_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.phone_number.errors %}
+                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end mb-4">
+                            <a href="{% url 'core:password_reset' %}" class="link-primary">Forgot your password?</a>
+                        </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100 py-2">Sign In</button>
+                </form>
+
+                <div class="border-top mt-4 pt-3 text-center">
+                    <p class="mb-0 text-muted">Don't have an account? Contact your administrator to create one.</p>
+                </div>
             </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Login Form -->
-    <form method="post">
-        {% csrf_token %}
-        
-        {% if form.non_field_errors %}
-            <div style="color: red;">
-                {{ form.non_field_errors }}
-            </div>
-        {% endif %}
-
-        <table>
-            {% if user_type == 'phone' %}
-                <!-- Phone Login Form -->
-                <tr>
-                    <td>
-                        <label for="{{ form.phone_number.id_for_label }}">
-                            Phone Number <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.phone_number }}
-                        {% if form.phone_number.help_text %}
-                            <br><small>{{ form.phone_number.help_text }}</small>
-                        {% endif %}
-                        {% if form.phone_number.errors %}
-                            <br><span style="color: red;">{{ form.phone_number.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <!-- Email Login Form -->
-                <tr>
-                    <td>
-                        <label for="{{ form.email.id_for_label }}">
-                            Email Address <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <br><span style="color: red;">{{ form.email.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <label for="{{ form.password.id_for_label }}">
-                            Password <span style="color: red;">*</span>
-                        </label>
-                    </td>
-                    <td>
-                        {{ form.password }}
-                        {% if form.password.errors %}
-                            <br><span style="color: red;">{{ form.password.errors }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endif %}
-        </table>
-
-        <p>
-            <button type="submit">Login</button>
-        </p>
-
-        {% if user_type == 'email' %}
-            <p>
-                <a href="{% url 'core:password_reset' %}">Forgot your password?</a>
-            </p>
-        {% endif %}
-    </form>
-
-    <hr>
-    <p>
-        Don't have an account? Contact your administrator to create one.
-    </p>
-</body>
-</html>
+        </div>
+    </div>
+</div>
+{% endblock content %}
