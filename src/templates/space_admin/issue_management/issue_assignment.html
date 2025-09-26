@@ -1,0 +1,63 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Assign Issue - {{ issue.title }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/forms/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'space_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+
+            <h3 class="mb-3">Assign Issue - {{ issue.title }}</h3>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <!-- Current Assignment Status -->
+                {% if issue.assigned_to %}
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Current Assignment:</strong>
+                    This issue is currently assigned to
+                    <strong>{{ issue.assigned_to.get_full_name|default:issue.assigned_to.email }}</strong>
+                    {% if issue.assigned_at %}on {{ issue.assigned_at|date:"M d, Y \a\t g:i A" }}{% endif %}
+                    {% if issue.requires_review %}
+                    <br><small class="text-muted">
+                        <i class="fas fa-eye me-1"></i>Review is required for this issue
+                    </small>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {{ form.as_p|safe }}
+
+                <!-- Form Actions -->
+                <hr>
+
+                <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}"
+                    class="btn btn-dark">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check me-1"></i>
+                    {% if issue.assigned_to %}Update Assignment{% else %}Assign Issue{% endif %}
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

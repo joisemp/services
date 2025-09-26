@@ -59,4 +59,32 @@
   #issue-work .material-symbols-outlined {
     font-size: 20px;
   }
+
+// Assignment Styles
+.assignment-alert {
+  padding: 12px;
+  border-radius: 5px;
+  border: 0.5px solid colors.$primary !important;
+  background-color: #e7f1ff !important;
+  margin-bottom: 15px;
+
+  .assignment-actions {
+    width: fit-content;
+  }
+
+  .badge {
+    font-size: 0.875rem;
+    padding: 0.5em 0.75em;
+  }
+
+  h5 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .alert-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+}
   

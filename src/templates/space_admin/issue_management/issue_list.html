@@ -56,14 +56,14 @@
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
       {% for issue in issues %}
       <div class="col mt-2">
-        <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
+        <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
           <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">{{ issue.title }}</h5>
               <hr>
               <div class="d-flex justify-content-between mt-4">
                 <h6 class="card-subtitle mb-2 text-body-secondary">{{ issue.created_at|date:"M d, Y" }}</h6>
-                <span class="badge rounded-pill text-bg-primary">{{ issue.get_priority_display }}</span>
+                <span class="badge badge-{{ issue.priority }} rounded-pill">{{ issue.get_priority_display }}</span>
               </div>
               <div class="d-flex justify-content-between mt-4">
                 <h6 class="card-text me-2">Reporter</h6>
@@ -73,7 +73,7 @@
                 <h6 class="card-text text-body-secondary me-2">
                   {{ issue.reporter.get_full_name|default:issue.reporter.phone_number|default:issue.reporter.email|default:"Mello Hello" }}
                 </h6>
-                <h6 class="card-text text-body-secondary ms-2">{{ issue.get_status_display }}</h6>
+                <span class="badge badge-{{ issue.status }} rounded-pill d-flex align-items-center">{{ issue.get_status_display }}</span>
               </div>
             </div>
           </div>

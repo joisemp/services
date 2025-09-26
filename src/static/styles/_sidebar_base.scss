@@ -161,3 +161,54 @@ tr {
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
+
+
+// Badge styles for status and priority
+.badge {
+  // Status badges
+  &.badge-open {
+    background-color: #6c757d;
+  }
+
+  &.badge-assigned {
+    background-color: colors.$primary;
+  }
+
+  &.badge-in_progress {
+    background-color: #fd7e14;
+  }
+
+  &.badge-resolved {
+    background-color: #198754;
+  }
+
+  &.badge-escalated {
+    background-color: #dc3545;
+  }
+
+  &.badge-closed {
+    background-color: #6f42c1;
+  }
+
+  &.badge-cancelled {
+    background-color: #6c757d;
+  }
+
+  // Priority badges
+  &.badge-low {
+    background-color: #20c997;
+  }
+
+  &.badge-medium {
+    background-color: #ffc107;
+    color: #000;
+  }
+
+  &.badge-high {
+    background-color: #fd7e14;
+  }
+
+  &.badge-critical {
+    background-color: #dc3545;
+  }
+}

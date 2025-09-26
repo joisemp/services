@@ -1,0 +1,31 @@
+<!-- Comment Form Partial -->
+<form hx-post="{% url 'issue_management:space_admin:comment_create' issue_slug=issue.slug %}"
+      hx-target="#comments-section"
+      hx-swap="innerHTML"
+      class="comment-form mt-4">
+  {% csrf_token %}
+  <div class="d-flex align-items-start">
+    <div class="comment-avatar me-3">
+      <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" 
+           style="width: 40px; height: 40px; font-size: 14px; font-weight: bold;">
+        {{ request.user.get_full_name|default:request.user.email|slice:":2"|upper }}
+      </div>
+    </div>
+    <div class="comment-input flex-grow-1">
+      {{ form.comment }}
+      {% if form.comment.errors %}
+        <div class="invalid-feedback d-block">
+          {% for error in form.comment.errors %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="comment-actions mt-2 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fas fa-paper-plane me-1"></i>
+          Post Comment
+        </button>
+      </div>
+    </div>
+  </div>
+</form>

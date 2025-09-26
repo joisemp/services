@@ -3,8 +3,9 @@ from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm
+from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
 
 
 class IssueListView(ListView):
@@ -477,6 +478,95 @@ class IssueVoiceUploadView(View):
         return render(request, 'central_admin/issue_management/voice_upload.html', context)
 
 
+class IssueAssignmentView(UpdateView):
+    """Assign an issue to a supervisor with optional review requirement"""
+    template_name = "central_admin/issue_management/issue_assignment.html"
+    form_class = IssueAssignmentForm
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        # Set assignment metadata
+        form.instance.assigned_by = self.request.user
+        form.instance.assigned_at = timezone.now()
+        
+        # Update status to assigned when a supervisor is assigned
+        # Only change status if it's not already resolved, closed, or cancelled
+        if form.instance.status not in ['resolved', 'closed', 'cancelled']:
+            form.instance.status = 'assigned'
+        
+        response = super().form_valid(form)
+        
+        assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
+        review_text = " (with review required)" if form.instance.requires_review else ""
+        
+        messages.success(
+            self.request, 
+            f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}{review_text}.'
+        )
+        
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        return context
+
+
+class IssueReopenView(View):
+    """Reopen a resolved, closed, or cancelled issue"""
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue can be reopened
+        if issue.status not in ['resolved', 'closed', 'cancelled']:
+            messages.error(request, f'Only resolved, closed, or cancelled issues can be reopened. This issue is currently {issue.get_status_display().lower()}.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        try:
+            # Store the previous status for the message
+            previous_status = issue.get_status_display()
+            
+            # Reopen the issue
+            if issue.assigned_to:
+                issue.status = 'assigned'
+            else:
+                issue.status = 'open'
+            
+            # Clear resolution notes when reopening
+            issue.resolution_notes = None
+            
+            # Clear review information when reopening
+            issue.reviewed_by = None
+            issue.reviewed_at = None
+            issue.review_notes = None
+            
+            issue.save()
+            
+            messages.success(request, f'Issue "{issue.title}" has been reopened from {previous_status.lower()} status.')
+            
+        except Exception as e:
+            messages.error(request, f'Failed to reopen issue: {str(e)}')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
 class IssueResolveView(View):
     """Mark an issue as resolved with resolution notes"""
     
@@ -514,6 +604,39 @@ class IssueResolveView(View):
             
         except Exception as e:
             messages.error(request, f'Failed to resolve issue: {str(e)}')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
+class IssueStartWorkView(View):
+    """Start work on an issue by changing its status to in_progress"""
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+        
+        # Check if issue can be started
+        if issue.status in ['resolved', 'closed', 'cancelled']:
+            messages.error(request, f'Cannot start work on {issue.get_status_display().lower()} issues. Please reopen the issue first.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        if issue.status == 'in_progress':
+            messages.info(request, 'Work is already in progress on this issue.')
+            return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+        
+        try:
+            # Store the previous status for the message
+            previous_status = issue.get_status_display()
+            
+            # Change status to in_progress
+            issue.status = 'in_progress'
+            issue.save()
+            
+            messages.success(request, f'Started work on issue "{issue.title}". Status changed from {previous_status.lower()} to in progress.')
+            
+        except Exception as e:
+            messages.error(request, f'Failed to start work on issue: {str(e)}')
         
         # Redirect back to the issue detail page
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
