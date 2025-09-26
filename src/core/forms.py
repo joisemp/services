@@ -194,11 +194,10 @@ class PhoneLoginForm(BootstrapFormMixin, forms.Form):
     phone_number = forms.CharField(
         max_length=17,
         widget=forms.TextInput(attrs={
-            'placeholder': '+1234567890',
             'autocomplete': 'tel'
         }),
         label="Phone Number",
-        help_text="Enter your phone number with country code"
+        help_text="Enter your phone number without country code"
     )
 
     def clean_phone_number(self):
@@ -224,18 +223,20 @@ class EmailLoginForm(BootstrapFormMixin, forms.Form):
     """
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={
-            'placeholder': 'user@example.com',
             'autocomplete': 'email'
         }),
         label="Email Address"
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'placeholder': 'Password',
             'autocomplete': 'current-password'
         }),
         label="Password"
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['password'].widget.attrs.pop('placeholder', None)
 
     def clean(self):
         cleaned_data = super().clean()
