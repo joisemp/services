@@ -213,6 +213,20 @@
   border-radius: 12px;
   transition: all 0.2s ease;
   
+  &.user-card {
+    cursor: pointer;
+    
+    &:hover {
+      box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+      border-color: colors.$primary;
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
   &:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }

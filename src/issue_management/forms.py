@@ -282,5 +282,50 @@ class IssueUpdateForm(BootstrapFormMixin, forms.ModelForm):
         model = Issue
         fields = ['title', 'description', 'status', 'priority']
 
+
+class IssueAssignmentForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for assigning issues to supervisors with review requirement option"""
+    
+    class Meta:
+        model = Issue
+        fields = ['assigned_to', 'requires_review']
+        widgets = {
+            'assigned_to': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'requires_review': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        # Extract the issue from kwargs to filter supervisors from same organization
+        self.issue = kwargs.pop('issue', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter assigned_to to only show supervisors from the same organization
+        if self.issue and self.issue.org:
+            from core.models import User
+            self.fields['assigned_to'].queryset = self.issue.org.users.filter(
+                user_type='supervisor',
+                is_active=True
+            )
+            self.fields['assigned_to'].empty_label = "Select a supervisor to assign"
+        
+        # Add labels and help text
+        self.fields['assigned_to'].label = "Assign to Supervisor"
+        self.fields['assigned_to'].help_text = "Select a supervisor to handle this issue"
+        self.fields['assigned_to'].required = True
+        self.fields['requires_review'].label = "Requires Review"
+        self.fields['requires_review'].help_text = "Check this if the issue requires review before being marked as resolved"
+    
+    def clean_assigned_to(self):
+        """Validate that assigned user is a supervisor"""
+        assigned_to = self.cleaned_data.get('assigned_to')
+        
+        if assigned_to and assigned_to.user_type != 'supervisor':
+            raise forms.ValidationError("Issues can only be assigned to supervisors.")
+        
+        return assigned_to
         
         

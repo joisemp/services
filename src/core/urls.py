@@ -30,6 +30,18 @@ urlpatterns = [
          views.PeopleCreateView.as_view(), 
          name='people_create'),
     
+    path('people/regenerate-password/', 
+         views.RegeneratePasswordView.as_view(), 
+         name='regenerate_password'),
+    
+    path('people/generate-password/', 
+         views.GeneratePasswordView.as_view(), 
+         name='generate_password'),
+    
+    path('people/delete-user/', 
+         views.DeleteUserView.as_view(), 
+         name='delete_user'),
+    
     path('updates/', 
          views.UpdateListView.as_view(), 
          name='updates'),

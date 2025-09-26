@@ -141,6 +141,41 @@ tr {
   word-wrap: break-word;
 }
 
+.badge.badge-open {
+  background-color: #6c757d;
+}
+.badge.badge-assigned {
+  background-color: #2563EB;
+}
+.badge.badge-in_progress {
+  background-color: #fd7e14;
+}
+.badge.badge-resolved {
+  background-color: #198754;
+}
+.badge.badge-escalated {
+  background-color: #dc3545;
+}
+.badge.badge-closed {
+  background-color: #6f42c1;
+}
+.badge.badge-cancelled {
+  background-color: #6c757d;
+}
+.badge.badge-low {
+  background-color: #20c997;
+}
+.badge.badge-medium {
+  background-color: #ffc107;
+  color: #000;
+}
+.badge.badge-high {
+  background-color: #fd7e14;
+}
+.badge.badge-critical {
+  background-color: #dc3545;
+}
+
 .comments-section {
   background-color: #f8f9fa;
   border-radius: 8px;
@@ -438,4 +473,28 @@ tr {
 
 #issue-work .material-symbols-outlined {
   font-size: 20px;
+}
+
+.assignment-alert {
+  padding: 12px;
+  border-radius: 5px;
+  border: 0.5px solid #2563EB !important;
+  background-color: #e7f1ff !important;
+  margin-bottom: 15px;
+}
+.assignment-alert .assignment-actions {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+.assignment-alert .badge {
+  font-size: 0.875rem;
+  padding: 0.5em 0.75em;
+}
+.assignment-alert h5 {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+.assignment-alert .alert-text {
+  font-size: 0.95rem;
+  line-height: 1.4;
 }/*# sourceMappingURL=style.css.map */
