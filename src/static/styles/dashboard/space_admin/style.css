@@ -174,4 +174,22 @@ tr {
 }
 .badge.badge-critical {
   background-color: #dc3545;
+}
+
+@media (max-width: 575.98px) {
+  #space-issue-cards .card {
+    width: 100% !important;
+  }
+}
+#space-issue-cards .card-link-wrapper {
+  display: block;
+  color: inherit;
+}
+#space-issue-cards .card-link-wrapper:hover .card {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2509803922);
+  border-color: #0d6efd;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+#space-issue-cards .card-link-wrapper:focus {
+  outline: none;
 }/*# sourceMappingURL=style.css.map */
