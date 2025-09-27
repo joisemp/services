@@ -1,6 +1,17 @@
 @use '../../sidebar_base';
 @use '../../colors' as colors;
 
+
+#alert-details {
+  .alert {
+    border: 0.5px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+}
 .space-header {
   .space-info {
     .space-meta {

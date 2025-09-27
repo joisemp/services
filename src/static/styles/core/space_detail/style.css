@@ -176,6 +176,15 @@ tr {
   background-color: #dc3545;
 }
 
+#alert-details .alert {
+  border: 0.5px solid #2563EB !important;
+  background-color: #e2eefd !important;
+}
+#alert-details .alert .alert-buttons {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
 .space-header .space-info .space-meta {
   font-size: 0.9rem;
 }
