@@ -1,6 +1,6 @@
 {% extends 'sidebar_base.html' %}
 
-{% block title %}Central Admin Dashboard{% endblock %}
+{% block title %}Space Admin Dashboard{% endblock %}
 
 {% load static %}
 
@@ -19,129 +19,203 @@
 {% block content %}
 
 <section id="heading" class="mt-2">
-    <div class="alert alert-notification alert-primary" role="alert">
-        <h5>Welcome back Mello</h5>
-        <p class="mb-0">Here's what's happening in your organization today.</p>
+  <div class="alert alert-notification alert-primary" role="alert">
+    <h5 class="mb-1">Welcome back {{ greeting_name }}</h5>
+    {% if dashboard_scope_label %}
+    <p class="mb-0">Here's what's happening across {{ dashboard_scope_label }} today.</p>
+    {% else %}
+    <p class="mb-0">Here's what's happening across your spaces today.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section id="overview" class="mt-3">
+  <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-xl-4 overview-cards">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted text-uppercase small mb-1">Total Issues</p>
+                    <h3 class="fw-semibold mb-0">{{ total_issues }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted text-uppercase small mb-1">Open Issues</p>
+                    <h3 class="fw-semibold mb-0">{{ open_issues }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted text-uppercase small mb-1">Active (Assigned / In Progress)</p>
+                    <h3 class="fw-semibold mb-0">{{ active_issues }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted text-uppercase small mb-1">Resolved / Closed</p>
+                    <h3 class="fw-semibold mb-0">{{ resolved_issues }}</h3>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
 <section id="stats" class="mt-4">
-   <div style="width: 100%; height: 290px;"> <!-- wrapper controls height -->
-    <canvas id="myChart"></canvas>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <script>
-    const ctx = document.getElementById('myChart');
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [
-          {
-            label: 'Sales 2024',
-            data: [10, 20, 15, 25, 30, 28],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Sales 2025',
-            data: [12, 18, 22, 30, 26, 35],
-            borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Target',
-            data: [15, 15, 20, 25, 25, 30],
-            borderColor: 'rgba(54, 162, 235, 1)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            fill: true,
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false, // 🔹 lets us use the wrapper's height
-        plugins: {
-          legend: {
-            position: 'top'
-          }
-        },
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-  </script>
-</section>
-
-<section id="issue-card ">
-     <div class="title-recent-issues d-flex justify-content-between align-items-center mt-4">
-            <h3 class="mb-1">Recent Issues</h3>
-            <a href="#" class="btn btn-primary btn-sm d-flex justify-content-between align-items-center"><span>View All</span><span class="material-symbols-outlined ms-2" style="font-size: 12px;">arrow_forward_ios</span></a>
-     </div>
-</section>
-
-<section id="space-issue-cards">
-     <div class="container-fluid mt-3">
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Title</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Date</h6>
-                <span class="badge badge text-bg-warning rounded-pill">Medium</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Status</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">
-                  John Doe
-                </h6>
-                <span class="badge badge text-bg-secondary rounded-pill d-flex align-items-center">Open</span>
-              </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="chart-wrapper" style="width: 100%; height: 320px;">
+                <canvas id="space-admin-chart"></canvas>
             </div>
-          </div>
-        </a>
-      </div>
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Title</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Date</h6>
-                <span class="badge badge text-bg-warning rounded-pill">Medium</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Status</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">
-                  John Doe
-                </h6>
-                <span class="badge badge text-bg-secondary rounded-pill d-flex align-items-center">Open</span>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+            {% if not chart_data.has_activity %}
+                <p class="text-center text-muted small mb-0 mt-3">No issue activity in the last six months. Once new issues are reported, you'll see the trend here.</p>
+            {% endif %}
+        </div>
     </div>
-  </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {{ chart_data|json_script:"space-admin-chart-data" }}
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const canvas = document.getElementById('space-admin-chart');
+        const rawConfig = document.getElementById('space-admin-chart-data');
+        if (!canvas || !rawConfig) {
+          return;
+        }
+
+        const chartConfig = JSON.parse(rawConfig.textContent);
+        const datasets = chartConfig.datasets.map(function (dataset) {
+          return Object.assign({
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            fill: dataset.fill || false,
+          }, dataset);
+        });
+
+        new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: chartConfig.labels,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                },
+                grid: {
+                  color: 'rgba(15, 23, 42, 0.08)',
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 20,
+                },
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  label: function (context) {
+                    const label = context.dataset.label || '';
+                    const value = context.parsed.y ?? 0;
+                    return `${label}: ${value}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      });
+    </script>
+</section>
+
+<section id="issue-card" class="mt-4">
+     <div class="title-recent-issues d-flex justify-content-between align-items-center">
+            <h3 class="mb-1">Recent Issues</h3>
+            <a href="{% url 'issue_management:space_admin:issue_list' %}" class="btn btn-primary btn-sm d-flex justify-content-between align-items-center"><span>View All</span><span class="material-symbols-outlined ms-2" style="font-size: 12px;">arrow_forward_ios</span></a>
+     </div>
+
+    {% if recent_issues %}
+    <div id="space-issue-cards" class="container-fluid mt-3">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+            {% for issue in recent_issues %}
+            <div class="col">
+                <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0 text-truncate" title="{{ issue.title }}">{{ issue.title }}</h5>
+                                <span class="badge {{ issue.priority_badge_class }} text-uppercase">{{ issue.get_priority_display }}</span>
+                            </div>
+                            <p class="text-muted small mb-3">{{ issue.created_at|date:"M j, Y" }}</p>
+
+                            {% if issue.space %}
+                            <p class="text-muted small mb-1">Space: {{ issue.space.name }}</p>
+                            {% endif %}
+
+                            <p class="card-text">{{ issue.description|truncatechars:120 }}</p>
+
+                            <div class="mt-auto pt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <p class="text-muted small mb-1">Reporter</p>
+                                        <p class="mb-0 fw-medium">{{ issue.reporter.get_full_name|default:issue.reporter }}</p>
+                                    </div>
+                                    <span class="badge {{ issue.status_badge_class }} rounded-pill">{{ issue.get_status_display }}</span>
+                                </div>
+                <div class="d-flex justify-content-between align-items-center text-muted small">
+                  <span>
+                    Assigned to:
+                    {% if issue.assigned_to %}
+                      {{ issue.assigned_to.get_full_name|default:issue.assigned_to }}
+                    {% else %}
+                      Unassigned
+                    {% endif %}
+                  </span>
+                                    <span>{{ issue.created_at|timesince }} ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card mt-3">
+        <div class="card-body text-center text-muted py-4">
+            <p class="mb-2">No recent issues yet. You're all caught up!</p>
+            <a href="{% url 'issue_management:space_admin:issue_create' %}" class="btn btn-sm btn-primary">Create an Issue</a>
+        </div>
+    </div>
+    {% endif %}
 </section>
 
 {% endblock %}
