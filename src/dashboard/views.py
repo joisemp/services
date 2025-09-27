@@ -7,7 +7,14 @@ from issue_management.models import Issue
 
 
 class DashboardMetricsMixin:
-    """Shared helpers for dashboard views that expose issue metrics."""
+    """Shared helpers for dashboard views that expose issue metrics.
+
+    The mixin centralises how we gather, annotate, and structure the data that is
+    rendered on dashboard screens. Any dashboard view can subclass this mixin to
+    re-use the aggregation logic while customising the queryset it wants to work
+    with (for example, limiting to a specific organisation or the current user's
+    spaces).
+    """
 
     status_badge_classes = {
         'open': 'text-bg-primary',
@@ -27,13 +34,26 @@ class DashboardMetricsMixin:
     }
 
     def get_issue_queryset(self):
-        """Return the base queryset used for metrics. Override per view."""
+        """Return the base queryset used for metrics.
+
+        Dashboard views override this method to control *which* issues should be
+        considered for the statistics. By default we return ``Issue.objects.none``
+        so that consumer views make the scope explicit.
+        """
         return Issue.objects.none()
 
     def get_dashboard_scope_label(self):
+        """Human friendly label explaining what the dashboard is summarising."""
         return 'your organization'
 
     def get_context_data(self, **kwargs):
+        """Populate context with derived issue metrics and helper values.
+
+        The heavy lifting is delegated to :meth:`_build_issue_metrics`; the
+        resulting dictionary is merged into the context that the template will
+        receive. We also stash the scope label and organisation name so the UI
+        can tailor copy for the logged-in user.
+        """
         context = super().get_context_data(**kwargs)
 
         issues_queryset = self.get_issue_queryset().select_related(
@@ -47,6 +67,12 @@ class DashboardMetricsMixin:
         return context
 
     def _build_issue_metrics(self, user, issues_queryset):
+        """Aggregate counters, recent issue cards, and chart payload.
+
+        The method keeps template logic simple by precomputing everything that is
+        needed for the dashboard widgets: total counts, recent issue information
+        with badge class hints, and the JSON-safe structure expected by Chart.js.
+        """
         counts = issues_queryset.aggregate(
             total=Count('id'),
             open=Count('id', filter=Q(status='open')),
@@ -54,6 +80,7 @@ class DashboardMetricsMixin:
             resolved=Count('id', filter=Q(status__in=['resolved', 'closed'])),
         )
 
+        # Keep only the newest handful of issues so the dashboard stays concise.
         recent_issues = list(issues_queryset.order_by('-created_at')[:6])
         for issue in recent_issues:
             issue.status_badge_class = self.status_badge_classes.get(issue.status, 'text-bg-secondary')
@@ -72,7 +99,15 @@ class DashboardMetricsMixin:
         }
 
     def _build_chart_data(self, issues_queryset):
+        """Prepare a six month window of trend data for Chart.js.
+
+        We build two data series: how many issues were reported per month and how
+        many were resolved/closed. The method returns labels, datasets, and a flag
+        that lets the template display a helpful message when there is no recent
+        activity.
+        """
         def shift_month(reference, delta):
+            """Return ``reference`` moved ``delta`` months forward/backward."""
             year = reference.year + (reference.month - 1 + delta) // 12
             month = (reference.month - 1 + delta) % 12 + 1
             return reference.replace(year=year, month=month)
@@ -135,18 +170,22 @@ class CentralAdminDashboardView(DashboardMetricsMixin, TemplateView):
     template_name = 'central_admin/dashboard.html'
 
     def get_issue_queryset(self):
+        """Return issues the central admin is allowed to oversee."""
         user = self.request.user
         organization = getattr(user, 'organization', None)
 
         if user.is_superuser and organization is None:
+            # Superusers without an organisation assignment see everything.
             return Issue.objects.all()
 
         if organization:
+            # Otherwise fall back to the user's organisation scope.
             return Issue.objects.filter(org=organization)
 
         return Issue.objects.none()
 
     def get_dashboard_scope_label(self):
+        """Name the collection of issues exposed on the dashboard."""
         organization = getattr(self.request.user, 'organization', None)
         if organization:
             return organization.name
@@ -157,10 +196,13 @@ class SpaceAdminDashboardView(DashboardMetricsMixin, TemplateView):
     template_name = 'space_admin/dashboard.html'
 
     def get_issue_queryset(self):
+        """Limit issues to the current space admin's organisation and spaces."""
         user = self.request.user
         organization = getattr(user, 'organization', None)
 
         if not organization:
+            # Safety net: space admins should always belong to an organisation,
+            # but returning an empty queryset avoids exposing unrelated data.
             return Issue.objects.none()
 
         queryset = Issue.objects.filter(org=organization)
@@ -169,9 +211,12 @@ class SpaceAdminDashboardView(DashboardMetricsMixin, TemplateView):
         if spaces_manager is not None:
             user_spaces = spaces_manager.all()
             if user_spaces.exists():
+                # Space admins only see issues in their assigned spaces while
+                # still being aware of organisation-wide issues without a space.
                 queryset = queryset.filter(Q(space__in=user_spaces) | Q(space__isnull=True))
 
         return queryset
 
     def get_dashboard_scope_label(self):
+        """Space admins monitor their spaces rather than the whole org."""
         return 'your spaces'
