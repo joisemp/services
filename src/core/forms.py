@@ -8,7 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.urls import reverse
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm, UserCreationForm
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Organization, User, Space
+from core.models import Organization, User, Space
 
 
 class CustomPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
@@ -516,5 +516,78 @@ class SpaceUpdateForm(BootstrapFormMixin, forms.ModelForm):
         if qs.exists():
             raise forms.ValidationError("A space with this name already exists.")
         return name
+
+
+class SpaceUserAddForm(BootstrapFormMixin, forms.Form):
+    """
+    Form for adding existing users to a space
+    """
+    users = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Users",
+        help_text="Choose users to add to this space"
+    )
+
+    def __init__(self, space, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.space = space
+        # Get only space_admin users from the same organization who aren't already in this space
+        available_users = User.objects.filter(
+            organization=space.org,
+            user_type='space_admin'
+        ).exclude(
+            spaces=space
+        ).order_by('first_name', 'last_name')
+        
+        # Set choices for the multiple choice field (ensure keys are strings)
+        self.fields['users'].choices = [
+            (str(user.id), str(user)) for user in available_users
+        ]
+        
+        # Store available users for validation (use string keys to match choices)
+        self.available_users = {str(user.id): user for user in available_users}
     
+    def clean_users(self):
+        """
+        Custom validation and conversion for users field
+        """
+        user_ids = self.cleaned_data.get('users', [])
+        if not user_ids:
+            return []
+        
+        # Get user objects from string IDs
+        users = []
+        for user_id in user_ids:
+            if user_id in self.available_users:
+                users.append(self.available_users[user_id])
+            else:
+                raise forms.ValidationError(f"Invalid user selection: {user_id}")
+        
+        return users
+
+
+class SpaceUserRemoveForm(BootstrapFormMixin, forms.Form):
+    """
+    Form for removing users from a space
+    """
+    user_id = forms.IntegerField(widget=forms.HiddenInput())
+
+    def __init__(self, space, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.space = space
     
+    def clean_user_id(self):
+        """
+        Validate that the user exists and is in the space
+        """
+        user_id = self.cleaned_data.get('user_id')
+        if not user_id:
+            raise forms.ValidationError("User ID is required.")
+        
+        try:
+            user = User.objects.get(id=user_id)
+            if user not in self.space.users.all():
+                raise forms.ValidationError("User is not in this space.")
+            return user
+        except User.DoesNotExist:
+            raise forms.ValidationError("User not found.")

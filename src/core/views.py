@@ -20,7 +20,9 @@ from .forms import (
     PhoneLoginForm,
     EmailLoginForm,
     SpaceCreateForm,
-    SpaceUpdateForm
+    SpaceUpdateForm,
+    SpaceUserAddForm,
+    SpaceUserRemoveForm
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
@@ -285,12 +287,46 @@ class SpaceDetailView(DetailView):
         context['users'] = users
         context['users_count'] = users.count()
         
+        # Add user addition form
+        context['user_add_form'] = SpaceUserAddForm(space=self.object)
+        
         # Get issue statistics
         context['open_issues_count'] = issues.filter(status='open').count()
         context['resolved_issues_count'] = issues.filter(status='resolved').count()
         context['in_progress_issues_count'] = issues.filter(status='in_progress').count()
         
         return context
+
+
+class SpaceUserAddView(FormView):
+    """
+    View to handle adding users to a space
+    """
+    form_class = SpaceUserAddForm
+    template_name = 'core/space_detail.html'  # Will handle form in the same template
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get space instance for the form
+        self.space = get_object_or_404(Space, slug=self.kwargs['space_slug'])
+        kwargs['space'] = self.space
+        return kwargs
+    
+    def form_valid(self, form):
+        # Add selected users to space
+        users = form.cleaned_data['users']
+        self.space.users.add(*users)
+        
+        # Add success message
+        messages.success(self.request, f"Successfully added {len(users)} user(s) to {self.space.name}")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error adding users to space. Please try again.")
+        return redirect('core:space_detail', space_slug=self.kwargs['space_slug'])
+    
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
 
 
 class SpaceUpdateView(UpdateView):
@@ -314,6 +350,36 @@ class SpaceUpdateView(UpdateView):
         from django.contrib import messages
         messages.success(self.request, f'Space "{self.object.name}" updated successfully.')
         return response
+
+
+class SpaceUserRemoveView(FormView):
+    """
+    View to handle removing users from a space
+    """
+    form_class = SpaceUserRemoveForm
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get space instance for the form
+        self.space = get_object_or_404(Space, slug=self.kwargs['space_slug'])
+        kwargs['space'] = self.space
+        return kwargs
+    
+    def form_valid(self, form):
+        # Remove the user from space
+        user = form.cleaned_data['user_id']
+        self.space.users.remove(user)
+        
+        # Add success message
+        messages.success(self.request, f"Successfully removed {user.get_full_name() or user.get_short_name()} from {self.space.name}")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error removing user from space. Please try again.")
+        return redirect('core:space_detail', space_slug=self.kwargs['space_slug'])
+    
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
 
 
 class RegeneratePasswordView(View):
