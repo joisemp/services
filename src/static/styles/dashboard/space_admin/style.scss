@@ -1,24 +1,2 @@
 @use '../../sidebar_base';
 
-#space-issue-cards{
-        @media (max-width: 575.98px) {
-        .card {
-            width: 100% !important;
-        }
-        }
-    
-        .card-link-wrapper {
-        display: block;
-        color: inherit;
-        }
-    
-        .card-link-wrapper:hover .card {
-        box-shadow: 0 0 0 0.2rem #0d6efd40;
-        border-color: #0d6efd;
-        transition: box-shadow 0.2s, border-color 0.2s;
-        }
-    
-        .card-link-wrapper:focus {
-        outline: none;
-        }
-}

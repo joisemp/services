@@ -50,7 +50,82 @@
         <canvas id="dashboardChart" aria-label="Issue trend chart" role="img"></canvas>
       </div>
     </div>
-  </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {{ chart_data|json_script:"central-admin-chart-data" }}
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const canvas = document.getElementById('central-admin-chart');
+        const rawConfig = document.getElementById('central-admin-chart-data');
+        if (!canvas || !rawConfig) {
+          return;
+        }
+
+        const chartConfig = JSON.parse(rawConfig.textContent);
+        const datasets = chartConfig.datasets.map(function (dataset) {
+          return Object.assign({
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            fill: dataset.fill || false,
+          }, dataset);
+        });
+
+        new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: chartConfig.labels,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                },
+                grid: {
+                  color: 'rgba(15, 23, 42, 0.08)',
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 20,
+                },
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  label: function (context) {
+                    const label = context.dataset.label || '';
+                    const value = context.parsed.y ?? 0;
+                    return `${label}: ${value}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      });
+    </script>
 </section>
 
 <section id="issue-card" class="mt-4">
