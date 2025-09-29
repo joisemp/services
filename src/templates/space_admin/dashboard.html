@@ -20,128 +20,95 @@
 
 <section id="heading" class="mt-2">
     <div class="alert alert-notification alert-primary" role="alert">
-        <h5>Welcome back Mello</h5>
-        <p class="mb-0">Here's what's happening in your organization today.</p>
+        <h5 class="mb-1">Welcome back {{ request.user.first_name|default:request.user.get_short_name }}</h5>
+        <p class="mb-0">Here's what's happening across the spaces you manage.</p>
+    </div>
+</section>
+
+<section id="summary" class="mt-4">
+    <div class="row g-3">
+        {% for card in summary_cards %}
+            <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+                <div class="card h-100 border-0">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted small mb-1">{{ card.label }}</p>
+                            <h4 class="fw-semibold mb-0">{{ card.value }}</h4>
+                        </div>
+                        <span class="material-symbols-outlined fs-2 text-{{ card.variant }}">{{ card.icon }}</span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
     </div>
 </section>
 
 <section id="stats" class="mt-4">
-   <div style="width: 100%; height: 290px;"> <!-- wrapper controls height -->
-    <canvas id="myChart"></canvas>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <script>
-    const ctx = document.getElementById('myChart');
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [
-          {
-            label: 'Sales 2024',
-            data: [10, 20, 15, 25, 30, 28],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Sales 2025',
-            data: [12, 18, 22, 30, 26, 35],
-            borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Target',
-            data: [15, 15, 20, 25, 25, 30],
-            borderColor: 'rgba(54, 162, 235, 1)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            fill: true,
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false, // 🔹 lets us use the wrapper's height
-        plugins: {
-          legend: {
-            position: 'top'
-          }
-        },
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-  </script>
-</section>
-
-<section id="issue-card ">
-     <div class="title-recent-issues d-flex justify-content-between align-items-center mt-4">
-            <h3 class="mb-1">Recent Issues</h3>
-            <a href="#" class="btn btn-primary btn-sm d-flex justify-content-between align-items-center"><span>View All</span><span class="material-symbols-outlined ms-2" style="font-size: 12px;">arrow_forward_ios</span></a>
-     </div>
-</section>
-
-<section id="space-issue-cards">
-     <div class="container-fluid mt-3">
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Title</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Date</h6>
-                <span class="badge badge text-bg-warning rounded-pill">Medium</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Status</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">
-                  John Doe
-                </h6>
-                <span class="badge badge text-bg-secondary rounded-pill d-flex align-items-center">Open</span>
-              </div>
+    <div>
+        <div class="card-body">
+            <div style="width: 100%; height: 320px;">
+                <canvas id="dashboardChart" aria-label="Issue trend chart" role="img"></canvas>
             </div>
-          </div>
-        </a>
-      </div>
-      <div class="col mt-2">
-        <a href="#" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">Title</h5>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">Date</h6>
-                <span class="badge badge text-bg-warning rounded-pill">Medium</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Status</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">
-                  John Doe
-                </h6>
-                <span class="badge badge text-bg-secondary rounded-pill d-flex align-items-center">Open</span>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+        </div>
     </div>
-  </div>
 </section>
+
+
+<section id="space-issue-cards" class="mt-4">
+    <div class="title-recent-issues d-flex justify-content-between align-items-center">
+        <h3 class="mb-1">Recent Issues</h3>
+        <a href="{{ view_all_issues_url }}" class="btn btn-primary btn-sm d-flex align-items-center">
+            <span>View All</span>
+            <span class="material-symbols-outlined ms-2" style="font-size: 16px;">arrow_forward_ios</span>
+        </a>
+    </div>
+    <div class="container-fluid px-0 mt-3">
+        {% if recent_issues %}
+            <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+                {% for issue in recent_issues %}
+                    <div class="col">
+                        <a href="{{ issue.url }}" class="text-decoration-none card-link-wrapper">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h5 class="card-title mb-0">{{ issue.title }}</h5>
+                                        <span class="badge {{ issue.priority_class }} rounded-pill text-uppercase">{{ issue.priority_display }}</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between text-muted small mb-2">
+                                        <span>{{ issue.created_at|date:"M j, Y" }}</span>
+                                        <span>{{ issue.created_at|time:"H:i" }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <p class="mb-1 text-muted small">Reporter</p>
+                                            <p class="mb-0 fw-semibold">{{ issue.reporter }}</p>
+                                        </div>
+                                        <span class="badge {{ issue.status_class }} rounded-pill">{{ issue.status_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-light border mt-3" role="alert">
+                No issues have been reported for your spaces yet. They'll show up here once activity starts.
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ chart_config|json_script:"dashboard-chart-config" }}
+<script>
+    const chartCanvas = document.getElementById('dashboardChart');
+    const chartDataElement = document.getElementById('dashboard-chart-config');
+    if (chartCanvas && chartDataElement) {
+        const chartConfig = JSON.parse(chartDataElement.textContent);
+        new Chart(chartCanvas, chartConfig);
+    }
+</script>
 
 {% endblock %}
