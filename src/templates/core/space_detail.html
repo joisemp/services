@@ -19,70 +19,28 @@
 
 {% block content %}
 <div class="container-fluid">
-  <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb" class="mb-4">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a href="{% url 'core:space_list' %}" class="text-decoration-none">
-          <span class="material-symbols-outlined me-1" style="font-size: 16px; vertical-align: middle;">domain</span>
-          Spaces
-        </a>
-      </li>
-      <li class="breadcrumb-item active" aria-current="page">{{ space.name }}</li>
-    </ol>
-  </nav>
-
-  <!-- Space Header -->
-  <div class="space-header mb-4">
-    <div class="d-flex justify-content-between align-items-start">
-      <div class="space-info">
-        <div class="d-flex align-items-center mb-2">
-          <span class="material-symbols-outlined me-2 text-primary" style="font-size: 32px;">domain</span>
-          <div>
-            <h2 class="mb-0">{{ space.name }}</h2>
-            {% if space.label %}
-              <span class="badge bg-secondary ms-2">{{ space.label }}</span>
-            {% endif %}
-          </div>
+  <!-- Alert and Actions -->
+   <section id="alert-details" class="mb-3">
+    <div class="alert custom-alert d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3"
+        role="alert">
+        <div class="message flex-grow-1">
+            <h3 class="mb-1">{{ space.name }}</h3>
+            <span class="alert-text text-body-secondary">ICSE</span>
         </div>
-        
-        <div class="space-meta text-muted mb-3">
-          <div class="d-flex align-items-center mb-1">
-            <span class="material-symbols-outlined me-1" style="font-size: 16px;">business</span>
-            <span>{{ space.org.name }}</span>
-          </div>
-          <div class="d-flex align-items-center">
-            <span class="material-symbols-outlined me-1" style="font-size: 16px;">tag</span>
-            <small class="text-muted">{{ space.slug }}</small>
-          </div>
+        <div class="alert-buttons">
+            <a href="{% url 'core:people_create' %}"
+                class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto">
+                <span class="material-symbols-outlined">edit_square</span>
+                <span class="ms-2">Edit Space</span>
+            </a>
         </div>
-
-        {% if space.description %}
-          <div class="space-description">
-            <p class="text-muted">{{ space.description }}</p>
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="space-actions">
-        <div class="btn-group" role="group">
-          <a href="{% url 'core:space_update' space_slug=space.slug %}" class="btn btn-outline-primary">
-            <span class="material-symbols-outlined me-1" style="font-size: 16px;">edit</span>
-            Edit Space
-          </a>
-          <button type="button" class="btn btn-primary">
-            <span class="material-symbols-outlined me-1" style="font-size: 16px;">add</span>
-            Add Issue
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
+</section>
 
   <!-- Statistics Cards -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm">
+  <div class="row row-cols-2 row-cols-md-4 g-3 stats-cards mb-4">
+    <div class="col">
+      <div class="card border-0">
         <div class="card-body text-center">
           <div class="d-flex align-items-center justify-content-center mb-2">
             <span class="material-symbols-outlined text-primary me-2" style="font-size: 24px;">list</span>
@@ -92,8 +50,8 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm">
+    <div class="col">
+      <div class="card border-0">
         <div class="card-body text-center">
           <div class="d-flex align-items-center justify-content-center mb-2">
             <span class="material-symbols-outlined text-warning me-2" style="font-size: 24px;">schedule</span>
@@ -103,8 +61,8 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm">
+    <div class="col">
+      <div class="card border-0">
         <div class="card-body text-center">
           <div class="d-flex align-items-center justify-content-center mb-2">
             <span class="material-symbols-outlined text-info me-2" style="font-size: 24px;">pending</span>
@@ -114,8 +72,8 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm">
+    <div class="col">
+      <div class="card border-0">
         <div class="card-body text-center">
           <div class="d-flex align-items-center justify-content-center mb-2">
             <span class="material-symbols-outlined text-success me-2" style="font-size: 24px;">check_circle</span>
