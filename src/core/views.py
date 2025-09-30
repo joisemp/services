@@ -26,6 +26,7 @@ from .forms import (
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -63,7 +64,7 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     template_name = 'registration/password_reset_complete.html'
     
 
-class PeopleListView(ListView):
+class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     """
     View to list all users in the system
     """
@@ -75,7 +76,7 @@ class PeopleListView(ListView):
         return User.objects.select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
-class PeopleCreateView(CreateView):
+class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
     """
     View to create a new user with role-specific forms
     """
@@ -229,7 +230,7 @@ class UpdateListView(ListView):
         return Update.objects.all().order_by('-created_at')
 
 
-class SpaceCreateView(CreateView):
+class SpaceCreateView(CentralAdminOnlyAccessMixin, CreateView):
     """
     View to create a new space
     """
@@ -245,7 +246,7 @@ class SpaceCreateView(CreateView):
         return response
     
     
-class SpaceListView(ListView):
+class SpaceListView(CentralAdminOnlyAccessMixin, ListView):
     """
     View to list all spaces
     """
@@ -257,7 +258,7 @@ class SpaceListView(ListView):
         return Space.objects.select_related('org').prefetch_related('users').order_by('name')
 
 
-class SpaceDetailView(DetailView):
+class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
     """
     View to display space details with related issues and users
     """
@@ -298,7 +299,7 @@ class SpaceDetailView(DetailView):
         return context
 
 
-class SpaceUserAddView(FormView):
+class SpaceUserAddView(CentralAdminOnlyAccessMixin, FormView):
     """
     View to handle adding users to a space
     """
@@ -329,7 +330,7 @@ class SpaceUserAddView(FormView):
         return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
 
 
-class SpaceUpdateView(UpdateView):
+class SpaceUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
     """
     View to update an existing space
     """
@@ -352,7 +353,7 @@ class SpaceUpdateView(UpdateView):
         return response
 
 
-class SpaceUserRemoveView(FormView):
+class SpaceUserRemoveView(CentralAdminOnlyAccessMixin, FormView):
     """
     View to handle removing users from a space
     """
@@ -382,7 +383,7 @@ class SpaceUserRemoveView(FormView):
         return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
 
 
-class RegeneratePasswordView(View):
+class RegeneratePasswordView(CentralAdminOnlyAccessMixin, View):
     """
     View to regenerate password for users with email authentication
     Sends a new password reset email to the user
@@ -507,7 +508,7 @@ Best regards,
         )
 
 
-class GeneratePasswordView(View):
+class GeneratePasswordView(CentralAdminOnlyAccessMixin, View):
     """
     View to generate a new password for users with email authentication
     Returns the generated password for manual sharing
@@ -602,7 +603,7 @@ class GeneratePasswordView(View):
         return ''.join(password)
 
 
-class DeleteUserView(View):
+class DeleteUserView(CentralAdminOnlyAccessMixin, View):
     """
     View to delete a user with proper validation and safety checks
     """
