@@ -91,7 +91,7 @@ class BaseRoleAccessMixin(LoginRequiredMixin):
         if not getattr(request.user, self.role_property, False):
             logout(request)
             messages.error(request, "You do not have permission to access this page. Please log in with the correct account.")
-            return redirect("home")
+            return redirect("core:login")
 
         return super().dispatch(request, *args, **kwargs)
 
