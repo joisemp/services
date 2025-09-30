@@ -1,222 +1,283 @@
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.db.models.functions import TruncMonth
+from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from issue_management.models import Issue
+from issue_management.models import Issue, WorkTask
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, SpaceAdminOnlyAccessMixin
 
 
-class DashboardMetricsMixin:
-    """Shared helpers for dashboard views that expose issue metrics.
+class DashboardDataMixin:
+    """Reusable helpers for dashboard views."""
 
-    The mixin centralises how we gather, annotate, and structure the data that is
-    rendered on dashboard screens. Any dashboard view can subclass this mixin to
-    re-use the aggregation logic while customising the queryset it wants to work
-    with (for example, limiting to a specific organisation or the current user's
-    spaces).
-    """
+    template_name = ''
+    recent_issue_limit = 6
+    trend_months = 6
 
-    status_badge_classes = {
-        'open': 'text-bg-primary',
+    status_style_map = {
+        'open': 'text-bg-secondary',
         'assigned': 'text-bg-info',
-        'in_progress': 'text-bg-info',
+        'in_progress': 'text-bg-primary',
         'resolved': 'text-bg-success',
         'escalated': 'text-bg-warning',
-        'closed': 'text-bg-secondary',
-        'cancelled': 'text-bg-dark',
+        'closed': 'text-bg-dark',
+        'cancelled': 'text-bg-light text-dark',
     }
 
-    priority_badge_classes = {
+    priority_style_map = {
         'low': 'text-bg-success',
         'medium': 'text-bg-warning',
         'high': 'text-bg-danger',
         'critical': 'text-bg-danger',
     }
 
-    def get_issue_queryset(self):
-        """Return the base queryset used for metrics.
+    @staticmethod
+    def _month_floor(dt):
+        return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        Dashboard views override this method to control *which* issues should be
-        considered for the statistics. By default we return ``Issue.objects.none``
-        so that consumer views make the scope explicit.
-        """
-        return Issue.objects.none()
+    @staticmethod
+    def _subtract_months(dt, months):
+        year = dt.year
+        month = dt.month
+        for _ in range(months):
+            month -= 1
+            if month == 0:
+                month = 12
+                year -= 1
+        return dt.replace(year=year, month=month)
 
-    def get_dashboard_scope_label(self):
-        """Human friendly label explaining what the dashboard is summarising."""
-        return 'your organization'
-
-    def get_context_data(self, **kwargs):
-        """Populate context with derived issue metrics and helper values.
-
-        The heavy lifting is delegated to :meth:`_build_issue_metrics`; the
-        resulting dictionary is merged into the context that the template will
-        receive. We also stash the scope label and organisation name so the UI
-        can tailor copy for the logged-in user.
-        """
-        context = super().get_context_data(**kwargs)
-
-        issues_queryset = self.get_issue_queryset().select_related(
-            'reporter', 'assigned_to', 'space', 'org'
-        )
-
-        metrics = self._build_issue_metrics(self.request.user, issues_queryset)
-        context.update(metrics)
-        context['dashboard_scope_label'] = self.get_dashboard_scope_label()
-        context['organization_name'] = getattr(getattr(self.request.user, 'organization', None), 'name', None)
-        return context
-
-    def _build_issue_metrics(self, user, issues_queryset):
-        """Aggregate counters, recent issue cards, and chart payload.
-
-        The method keeps template logic simple by precomputing everything that is
-        needed for the dashboard widgets: total counts, recent issue information
-        with badge class hints, and the JSON-safe structure expected by Chart.js.
-        """
-        counts = issues_queryset.aggregate(
-            total=Count('id'),
-            open=Count('id', filter=Q(status='open')),
-            active=Count('id', filter=Q(status__in=['assigned', 'in_progress'])),
-            resolved=Count('id', filter=Q(status__in=['resolved', 'closed'])),
-        )
-
-        # Keep only the newest handful of issues so the dashboard stays concise.
-        recent_issues = list(issues_queryset.order_by('-created_at')[:6])
-        for issue in recent_issues:
-            issue.status_badge_class = self.status_badge_classes.get(issue.status, 'text-bg-secondary')
-            issue.priority_badge_class = self.priority_badge_classes.get(issue.priority, 'text-bg-secondary')
-
-        chart_data = self._build_chart_data(issues_queryset)
-
-        return {
-            'total_issues': counts['total'],
-            'open_issues': counts['open'],
-            'active_issues': counts['active'],
-            'resolved_issues': counts['resolved'],
-            'greeting_name': user.first_name or user.get_short_name() or 'there',
-            'recent_issues': recent_issues,
-            'chart_data': chart_data,
-        }
-
-    def _build_chart_data(self, issues_queryset):
-        """Prepare a six month window of trend data for Chart.js.
-
-        We build two data series: how many issues were reported per month and how
-        many were resolved/closed. The method returns labels, datasets, and a flag
-        that lets the template display a helpful message when there is no recent
-        activity.
-        """
-        def shift_month(reference, delta):
-            """Return ``reference`` moved ``delta`` months forward/backward."""
-            year = reference.year + (reference.month - 1 + delta) // 12
-            month = (reference.month - 1 + delta) % 12 + 1
-            return reference.replace(year=year, month=month)
-
-        now = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month_starts = [shift_month(now, -offset) for offset in range(5, -1, -1)]
-        month_labels = [month.strftime('%b %Y') for month in month_starts]
-
-        def month_key(dt):
-            return dt.strftime('%Y-%m')
-
-        reported_counts = {
-            month_key(entry['month']): entry['total']
-            for entry in (
-                issues_queryset.annotate(month=TruncMonth('created_at'))
-                .filter(month__gte=month_starts[0])
-                .values('month')
-                .annotate(total=Count('id'))
-            )
-        }
-
-        closed_counts = {
-            month_key(entry['month']): entry['total']
-            for entry in (
-                issues_queryset.filter(status__in=['resolved', 'closed'])
-                .annotate(month=TruncMonth('updated_at'))
-                .filter(month__gte=month_starts[0])
-                .values('month')
-                .annotate(total=Count('id'))
-            )
-        }
-
-        datasets = [
-            {
-                'label': 'Reported Issues',
-                'data': [reported_counts.get(month_key(month), 0) for month in month_starts],
-                'borderColor': '#4C6EF5',
-                'backgroundColor': 'rgba(76, 110, 245, 0.1)',
-                'fill': True,
-            },
-            {
-                'label': 'Resolved Issues',
-                'data': [closed_counts.get(month_key(month), 0) for month in month_starts],
-                'borderColor': '#2F9E44',
-                'backgroundColor': 'rgba(47, 158, 68, 0.1)',
-                'fill': True,
-            },
-        ]
-
-        total_points = sum(sum(dataset['data']) for dataset in datasets)
-
-        return {
-            'labels': month_labels,
-            'datasets': datasets,
-            'has_activity': total_points > 0,
-        }
-
-
-class CentralAdminDashboardView(DashboardMetricsMixin, TemplateView):
-    template_name = 'central_admin/dashboard.html'
+    @staticmethod
+    def _add_month(dt):
+        year = dt.year
+        month = dt.month + 1
+        if month > 12:
+            month = 1
+            year += 1
+        return dt.replace(year=year, month=month)
 
     def get_issue_queryset(self):
-        """Return issues the central admin is allowed to oversee."""
         user = self.request.user
-        organization = getattr(user, 'organization', None)
+        org = getattr(user, 'organization', None)
 
-        if user.is_superuser and organization is None:
-            # Superusers without an organisation assignment see everything.
-            return Issue.objects.all()
-
-        if organization:
-            # Otherwise fall back to the user's organisation scope.
-            return Issue.objects.filter(org=organization)
-
-        return Issue.objects.none()
-
-    def get_dashboard_scope_label(self):
-        """Name the collection of issues exposed on the dashboard."""
-        organization = getattr(self.request.user, 'organization', None)
-        if organization:
-            return organization.name
-        return 'all organizations'
-
-
-class SpaceAdminDashboardView(DashboardMetricsMixin, TemplateView):
-    template_name = 'space_admin/dashboard.html'
-
-    def get_issue_queryset(self):
-        """Limit issues to the current space admin's organisation and spaces."""
-        user = self.request.user
-        organization = getattr(user, 'organization', None)
-
-        if not organization:
-            # Safety net: space admins should always belong to an organisation,
-            # but returning an empty queryset avoids exposing unrelated data.
+        if not org and not user.is_superuser:
             return Issue.objects.none()
 
-        queryset = Issue.objects.filter(org=organization)
+        queryset = Issue.objects.all()
+        if org:
+            queryset = queryset.filter(org=org)
 
-        spaces_manager = getattr(user, 'spaces', None)
-        if spaces_manager is not None:
-            user_spaces = spaces_manager.all()
-            if user_spaces.exists():
-                # Space admins only see issues in their assigned spaces while
-                # still being aware of organisation-wide issues without a space.
-                queryset = queryset.filter(Q(space__in=user_spaces) | Q(space__isnull=True))
+        if not user.is_superuser and getattr(user, 'user_type', '') == 'space_admin':
+            spaces = user.spaces.all()
+            if spaces.exists():
+                queryset = queryset.filter(space__in=spaces)
+            else:
+                return Issue.objects.none()
 
-        return queryset
+        return queryset.select_related('reporter', 'assigned_to', 'org', 'space')
 
-    def get_dashboard_scope_label(self):
-        """Space admins monitor their spaces rather than the whole org."""
-        return 'your spaces'
+    def get_recent_issues(self, queryset):
+        recent_queryset = queryset.order_by('-created_at')[: self.recent_issue_limit]
+        issues = []
+        status_labels = dict(Issue.STATUS_CHOICES)
+        priority_labels = dict(Issue.PRIORITY_CHOICES)
+
+        for issue in recent_queryset:
+            reporter = issue.reporter.get_full_name() or issue.reporter.email or issue.reporter.phone_number
+            issues.append(
+                {
+                    'title': issue.title,
+                    'created_at': issue.created_at,
+                    'priority': issue.priority,
+                    'priority_display': priority_labels.get(issue.priority, issue.priority.title()),
+                    'priority_class': self.priority_style_map.get(issue.priority, 'text-bg-secondary'),
+                    'reporter': reporter,
+                    'status': issue.status,
+                    'status_display': status_labels.get(issue.status, issue.status.title()),
+                    'status_class': self.status_style_map.get(issue.status, 'text-bg-secondary'),
+                    'url': self.get_issue_detail_url(issue),
+                }
+            )
+        return issues
+
+    def get_issue_detail_url(self, issue):
+        return reverse(self.get_issue_detail_route_name(), kwargs={'issue_slug': issue.slug})
+
+    def get_view_all_url(self):
+        return reverse(self.get_issue_list_route_name())
+
+    def get_issue_list_route_name(self):
+        raise NotImplementedError
+
+    def get_issue_detail_route_name(self):
+        raise NotImplementedError
+
+    def get_summary_cards(self, queryset):
+        now = timezone.now()
+        month_start = self._month_floor(now)
+
+        total_issues = queryset.count()
+        active_statuses = ['open', 'assigned', 'in_progress', 'escalated']
+        active_issues = queryset.filter(status__in=active_statuses).count()
+        resolved_this_month = queryset.filter(
+            status__in=['resolved', 'closed'],
+            updated_at__gte=month_start,
+        ).count()
+
+        issue_ids = list(queryset.values_list('pk', flat=True))
+        if issue_ids:
+            work_tasks = WorkTask.objects.filter(issue__in=issue_ids)
+            pending_tasks = work_tasks.filter(completed=False).count()
+            overdue_tasks = work_tasks.filter(
+                completed=False,
+                due_date__isnull=False,
+                due_date__lt=now,
+            ).count()
+        else:
+            pending_tasks = 0
+            overdue_tasks = 0
+
+        summary = [
+            {'label': 'Total Issues', 'value': total_issues, 'variant': 'primary', 'icon': 'insights'},
+            {'label': 'Active Issues', 'value': active_issues, 'variant': 'info', 'icon': 'pending'},
+            {'label': 'Resolved This Month', 'value': resolved_this_month, 'variant': 'success', 'icon': 'task_alt'},
+            {'label': 'Overdue Tasks', 'value': overdue_tasks, 'variant': 'danger', 'icon': 'warning'},
+            {'label': 'Pending Tasks', 'value': pending_tasks, 'variant': 'warning', 'icon': 'assignment'},
+        ]
+
+        return summary
+
+    def get_trend_config(self, queryset):
+        now = timezone.now()
+        base_month = self._month_floor(now)
+        start_month = self._subtract_months(base_month, self.trend_months - 1)
+
+        created_counts = (
+            queryset.filter(created_at__gte=start_month)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+        )
+        resolved_counts = (
+            queryset.filter(status__in=['resolved', 'closed'], updated_at__gte=start_month)
+            .annotate(month=TruncMonth('updated_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+        )
+
+        created_map = {entry['month'].date(): entry['count'] for entry in created_counts if entry['month']}
+        resolved_map = {entry['month'].date(): entry['count'] for entry in resolved_counts if entry['month']}
+
+        labels = []
+        created_data = []
+        resolved_data = []
+
+        current_month = start_month
+        for _ in range(self.trend_months):
+            month_point = current_month.date()
+            labels.append(current_month.strftime('%b %Y'))
+            created_data.append(created_map.get(month_point, 0))
+            resolved_data.append(resolved_map.get(month_point, 0))
+            current_month = self._add_month(current_month)
+
+        return {
+            'type': 'line',
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'New Issues',
+                        'data': created_data,
+                        'borderColor': 'rgba(54, 162, 235, 1)',
+                        'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                        'fill': True,
+                        'tension': 0.3,
+                    },
+                    {
+                        'label': 'Issues Resolved',
+                        'data': resolved_data,
+                        'borderColor': 'rgba(75, 192, 192, 1)',
+                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'fill': True,
+                        'tension': 0.3,
+                    },
+                ],
+            },
+            'options': {
+                'responsive': True,
+                'maintainAspectRatio': False,
+                'interaction': {'mode': 'index', 'intersect': False},
+                'plugins': {'legend': {'position': 'top'}},
+                'scales': {'y': {'beginAtZero': True, 'precision': 0}},
+            },
+        }
+
+    def get_status_breakdown(self, queryset):
+        status_counts = queryset.values('status').annotate(count=Count('id'))
+        count_map = {item['status']: item['count'] for item in status_counts}
+
+        breakdown = []
+        for key, label in Issue.STATUS_CHOICES:
+            breakdown.append(
+                {
+                    'status': key,
+                    'label': label,
+                    'count': count_map.get(key, 0),
+                    'badge_class': self.status_style_map.get(key, 'text-bg-secondary'),
+                }
+            )
+        return breakdown
+
+    def get_priority_breakdown(self, queryset):
+        priority_counts = queryset.values('priority').annotate(count=Count('id'))
+        count_map = {item['priority']: item['count'] for item in priority_counts}
+        breakdown = []
+        for key, label in Issue.PRIORITY_CHOICES:
+            breakdown.append(
+                {
+                    'priority': key,
+                    'label': label,
+                    'count': count_map.get(key, 0),
+                    'badge_class': self.priority_style_map.get(key, 'text-bg-secondary'),
+                }
+            )
+        return breakdown
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        issue_queryset = self.get_issue_queryset()
+
+        context.update(
+            {
+                'summary_cards': self.get_summary_cards(issue_queryset),
+                'chart_config': self.get_trend_config(issue_queryset),
+                'recent_issues': self.get_recent_issues(issue_queryset),
+                'status_breakdown': self.get_status_breakdown(issue_queryset),
+                'priority_breakdown': self.get_priority_breakdown(issue_queryset),
+                'view_all_issues_url': self.get_view_all_url(),
+                'status_style_map': self.status_style_map,
+                'priority_style_map': self.priority_style_map,
+            }
+        )
+
+        return context
+
+
+class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
+    template_name = 'central_admin/dashboard.html'
+
+    def get_issue_list_route_name(self):
+        return 'issue_management:central_admin:issue_list'
+
+    def get_issue_detail_route_name(self):
+        return 'issue_management:central_admin:issue_detail'
+
+
+class SpaceAdminDashboardView(SpaceAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
+    template_name = 'space_admin/dashboard.html'
+
+    def get_issue_list_route_name(self):
+        return 'issue_management:space_admin:issue_list'
+
+    def get_issue_detail_route_name(self):
+        return 'issue_management:space_admin:issue_detail'

@@ -23,8 +23,8 @@ class BootstrapFormMixin:
             if isinstance(widget, forms.Select):
                 widget.attrs['class'] += ' form-select'
 
-            # Add Bootstrap class for error styling
-            if field_name in self.errors:
+            # Add Bootstrap class for error styling (only if form has been bound and validated)
+            if hasattr(self, '_errors') and self._errors is not None and field_name in self.errors:
                 widget.attrs['class'] += ' is-invalid'
 
     def as_p(self):

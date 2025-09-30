@@ -283,6 +283,31 @@ class User(AbstractBaseUser, PermissionsMixin):
             return self.phone_number
         else:
             return self.email
+        
+    @property
+    def is_central_admin(self):
+        return self.user_type == 'central_admin'
+
+    @property
+    def is_space_admin(self):
+        return self.user_type == 'space_admin'
+
+    @property
+    def is_maintainer(self):
+        return self.user_type == 'maintainer'
+
+    @property
+    def is_supervisor(self):
+        return self.user_type == 'supervisor'
+
+    @property
+    def is_reviewer(self):
+        return self.user_type == 'reviewer'
+
+    @property
+    def is_general_user(self):
+        return self.user_type == 'general_user'
+
 
 
 class Organization(models.Model):

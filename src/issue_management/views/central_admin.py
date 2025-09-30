@@ -6,9 +6,10 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from ..models import Issue, IssueImage, WorkTask, IssueComment
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 
 
-class IssueListView(ListView):
+class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     template_name = "central_admin/issue_management/issue_list.html"
     context_object_name = "issues"
     model = Issue
@@ -32,7 +33,7 @@ class IssueListView(ListView):
         return context
 
     
-class IssueCreateView(CreateView):
+class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     template_name = "central_admin/issue_management/issue_create.html"
     form_class = IssueForm
     success_url = reverse_lazy('issue_management:central_admin:issue_list')
@@ -57,7 +58,7 @@ class IssueCreateView(CreateView):
         return response
     
 
-class IssueDetailView(DetailView):
+class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
     template_name = "central_admin/issue_management/issue_detail.html"
     context_object_name = "issue"
     model = Issue
@@ -79,7 +80,7 @@ class IssueDetailView(DetailView):
         return context
     
     
-class IssueUpdateView(UpdateView):
+class IssueUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
     template_name = "central_admin/issue_management/issue_update.html"
     form_class = IssueUpdateForm
     model = Issue
@@ -98,7 +99,7 @@ class IssueUpdateView(UpdateView):
         return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
 
 
-class WorkTaskCreateView(CreateView):
+class WorkTaskCreateView(CentralAdminOnlyAccessMixin, CreateView):
     template_name = "central_admin/issue_management/work_task_create.html"
     form_class = WorkTaskForm
     model = WorkTask
@@ -129,7 +130,7 @@ class WorkTaskCreateView(CreateView):
         return context
 
 
-class WorkTaskUpdateView(UpdateView):
+class WorkTaskUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
     template_name = "central_admin/issue_management/work_task_update.html"
     form_class = WorkTaskUpdateForm
     model = WorkTask
@@ -162,7 +163,7 @@ class WorkTaskUpdateView(UpdateView):
         return context
 
 
-class WorkTaskCompleteView(UpdateView):
+class WorkTaskCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
     """Complete a work task with resolution notes"""
     template_name = "central_admin/issue_management/work_task_complete.html"
     form_class = WorkTaskCompleteForm
@@ -191,7 +192,7 @@ class WorkTaskCompleteView(UpdateView):
         return context
 
 
-class WorkTaskToggleCompleteView(UpdateView):
+class WorkTaskToggleCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
     """Toggle the completion status of a work task"""
     model = WorkTask
     slug_field = 'slug'
@@ -212,7 +213,7 @@ class WorkTaskToggleCompleteView(UpdateView):
         return redirect('issue_management:central_admin:issue_detail', issue_slug=self.work_task.issue.slug)
 
 
-class WorkTaskDeleteView(View):
+class WorkTaskDeleteView(CentralAdminOnlyAccessMixin, View):
     """Delete a work task"""
     
     def post(self, request, work_task_slug):
@@ -276,7 +277,7 @@ class IssueCommentCreateView(View):
         })
 
 
-class IssueDeleteView(DeleteView):
+class IssueDeleteView(CentralAdminOnlyAccessMixin, DeleteView):
     """Delete an issue and all its related data"""
     template_name = "central_admin/issue_management/issue_delete.html"
     model = Issue
@@ -317,7 +318,7 @@ class IssueDeleteView(DeleteView):
         return context
 
 
-class IssueImageDeleteView(View):
+class IssueImageDeleteView(CentralAdminOnlyAccessMixin, View):
     """Delete a specific image attached to an issue"""
     
     def post(self, request, issue_slug, image_slug):
@@ -341,7 +342,7 @@ class IssueImageDeleteView(View):
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueImageUploadView(View):
+class IssueImageUploadView(CentralAdminOnlyAccessMixin, View):
     """Upload additional images to an existing issue"""
     
     def get(self, request, issue_slug):
@@ -397,7 +398,7 @@ class IssueImageUploadView(View):
         return render(request, 'central_admin/issue_management/image_upload.html', context)
 
 
-class IssueVoiceDeleteView(View):
+class IssueVoiceDeleteView(CentralAdminOnlyAccessMixin, View):
     """Delete the voice recording attached to an issue"""
     
     def post(self, request, issue_slug):
@@ -423,7 +424,7 @@ class IssueVoiceDeleteView(View):
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueVoiceUploadView(View):
+class IssueVoiceUploadView(CentralAdminOnlyAccessMixin, View):
     """Upload a voice recording to an existing issue"""
     
     def get(self, request, issue_slug):
@@ -478,7 +479,7 @@ class IssueVoiceUploadView(View):
         return render(request, 'central_admin/issue_management/voice_upload.html', context)
 
 
-class IssueAssignmentView(UpdateView):
+class IssueAssignmentView(CentralAdminOnlyAccessMixin, UpdateView):
     """Assign an issue to a supervisor with optional review requirement"""
     template_name = "central_admin/issue_management/issue_assignment.html"
     form_class = IssueAssignmentForm
@@ -526,7 +527,7 @@ class IssueAssignmentView(UpdateView):
         return context
 
 
-class IssueReopenView(View):
+class IssueReopenView(CentralAdminOnlyAccessMixin, View):
     """Reopen a resolved, closed, or cancelled issue"""
     
     def post(self, request, issue_slug):
@@ -567,7 +568,7 @@ class IssueReopenView(View):
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueResolveView(View):
+class IssueResolveView(CentralAdminOnlyAccessMixin, View):
     """Mark an issue as resolved with resolution notes"""
     
     def post(self, request, issue_slug):
@@ -609,7 +610,7 @@ class IssueResolveView(View):
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueStartWorkView(View):
+class IssueStartWorkView(CentralAdminOnlyAccessMixin, View):
     """Start work on an issue by changing its status to in_progress"""
     
     def post(self, request, issue_slug):

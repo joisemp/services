@@ -69,4 +69,12 @@ urlpatterns = [
     path('spaces/<slug:space_slug>/edit/', 
          views.SpaceUpdateView.as_view(), 
          name='space_update'),
+    
+    path('spaces/<slug:space_slug>/add-users/', 
+         views.SpaceUserAddView.as_view(), 
+         name='space_add_users'),
+    
+    path('spaces/<slug:space_slug>/remove-user/', 
+         views.SpaceUserRemoveView.as_view(), 
+         name='space_remove_user'),
 ]

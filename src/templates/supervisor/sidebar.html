@@ -1,52 +1,16 @@
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                dashboard
-            </span>
-            <span class="menu-text">Dashboard</span>
-        </a>
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                groups
-            </span>
-            <span class="menu-text">People</span>
-        </a>
-
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                tile_medium
-            </span>
-            <span class="menu-text">Departments</span>
-        </a>
-
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                door_open
-            </span>
-            <span class="menu-text">Rooms</span>
-        </a>
-
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                storefront
-            </span>
-            <span class="menu-text">Vendors</span>
-        </a>
-
-    <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                shopping_cart
-            </span>
-            <span class="menu-text">Purchases</span>
-        </a>
-
-    <a class="navlink" href="#">
+        <a class="navlink" href="{% url 'issue_management:supervisor:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
         </a>
-
+        <a class="navlink" href="#">
+            <span class="material-symbols-outlined me-2">
+                task
+            </span>
+            <span class="menu-text">Tasks</span>
+        </a>
     </div>
 </section>

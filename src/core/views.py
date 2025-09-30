@@ -20,10 +20,13 @@ from .forms import (
     PhoneLoginForm,
     EmailLoginForm,
     SpaceCreateForm,
-    SpaceUpdateForm
+    SpaceUpdateForm,
+    SpaceUserAddForm,
+    SpaceUserRemoveForm
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, RedirectLoggedinUsers
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -61,7 +64,7 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     template_name = 'registration/password_reset_complete.html'
     
 
-class PeopleListView(ListView):
+class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     """
     View to list all users in the system
     """
@@ -73,7 +76,7 @@ class PeopleListView(ListView):
         return User.objects.select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
-class PeopleCreateView(CreateView):
+class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
     """
     View to create a new user with role-specific forms
     """
@@ -130,12 +133,11 @@ class PeopleCreateView(CreateView):
         return response
 
 
-class CustomLoginView(FormView):
+class CustomLoginView(RedirectLoggedinUsers, FormView):
     """
     Custom login view that handles both phone and email authentication
     """
     template_name = 'core/login.html'
-    success_url = reverse_lazy('core:people_list')  # Redirect after successful login
 
     def get_form_class(self):
         """
@@ -198,7 +200,8 @@ class CustomLoginView(FormView):
         Redirect already authenticated users
         """
         if request.user.is_authenticated:
-            return redirect(self.success_url)
+            # Let the RedirectLoggedinUsers mixin handle it
+            return super().dispatch(request, *args, **kwargs)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -227,7 +230,7 @@ class UpdateListView(ListView):
         return Update.objects.all().order_by('-created_at')
 
 
-class SpaceCreateView(CreateView):
+class SpaceCreateView(CentralAdminOnlyAccessMixin, CreateView):
     """
     View to create a new space
     """
@@ -243,7 +246,7 @@ class SpaceCreateView(CreateView):
         return response
     
     
-class SpaceListView(ListView):
+class SpaceListView(CentralAdminOnlyAccessMixin, ListView):
     """
     View to list all spaces
     """
@@ -255,7 +258,7 @@ class SpaceListView(ListView):
         return Space.objects.select_related('org').prefetch_related('users').order_by('name')
 
 
-class SpaceDetailView(DetailView):
+class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
     """
     View to display space details with related issues and users
     """
@@ -285,6 +288,9 @@ class SpaceDetailView(DetailView):
         context['users'] = users
         context['users_count'] = users.count()
         
+        # Add user addition form
+        context['user_add_form'] = SpaceUserAddForm(space=self.object)
+        
         # Get issue statistics
         context['open_issues_count'] = issues.filter(status='open').count()
         context['resolved_issues_count'] = issues.filter(status='resolved').count()
@@ -293,7 +299,38 @@ class SpaceDetailView(DetailView):
         return context
 
 
-class SpaceUpdateView(UpdateView):
+class SpaceUserAddView(CentralAdminOnlyAccessMixin, FormView):
+    """
+    View to handle adding users to a space
+    """
+    form_class = SpaceUserAddForm
+    template_name = 'core/space_detail.html'  # Will handle form in the same template
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get space instance for the form
+        self.space = get_object_or_404(Space, slug=self.kwargs['space_slug'])
+        kwargs['space'] = self.space
+        return kwargs
+    
+    def form_valid(self, form):
+        # Add selected users to space
+        users = form.cleaned_data['users']
+        self.space.users.add(*users)
+        
+        # Add success message
+        messages.success(self.request, f"Successfully added {len(users)} user(s) to {self.space.name}")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error adding users to space. Please try again.")
+        return redirect('core:space_detail', space_slug=self.kwargs['space_slug'])
+    
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
+
+
+class SpaceUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
     """
     View to update an existing space
     """
@@ -316,7 +353,37 @@ class SpaceUpdateView(UpdateView):
         return response
 
 
-class RegeneratePasswordView(View):
+class SpaceUserRemoveView(CentralAdminOnlyAccessMixin, FormView):
+    """
+    View to handle removing users from a space
+    """
+    form_class = SpaceUserRemoveForm
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Get space instance for the form
+        self.space = get_object_or_404(Space, slug=self.kwargs['space_slug'])
+        kwargs['space'] = self.space
+        return kwargs
+    
+    def form_valid(self, form):
+        # Remove the user from space
+        user = form.cleaned_data['user_id']
+        self.space.users.remove(user)
+        
+        # Add success message
+        messages.success(self.request, f"Successfully removed {user.get_full_name() or user.get_short_name()} from {self.space.name}")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error removing user from space. Please try again.")
+        return redirect('core:space_detail', space_slug=self.kwargs['space_slug'])
+    
+    def get_success_url(self):
+        return reverse_lazy('core:space_detail', kwargs={'space_slug': self.kwargs['space_slug']})
+
+
+class RegeneratePasswordView(CentralAdminOnlyAccessMixin, View):
     """
     View to regenerate password for users with email authentication
     Sends a new password reset email to the user
@@ -441,7 +508,7 @@ Best regards,
         )
 
 
-class GeneratePasswordView(View):
+class GeneratePasswordView(CentralAdminOnlyAccessMixin, View):
     """
     View to generate a new password for users with email authentication
     Returns the generated password for manual sharing
@@ -536,7 +603,7 @@ class GeneratePasswordView(View):
         return ''.join(password)
 
 
-class DeleteUserView(View):
+class DeleteUserView(CentralAdminOnlyAccessMixin, View):
     """
     View to delete a user with proper validation and safety checks
     """
