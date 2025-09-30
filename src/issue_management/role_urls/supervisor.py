@@ -5,5 +5,5 @@ app_name = "supervisor"
 
 urlpatterns = [
     path('', supervisor.SupervisorIssueListView.as_view(), name='issue_list'),
-    # Add supervisor URLs here
+    path('issue/<slug:issue_slug>/', supervisor.IssueDetailView.as_view(), name='issue_detail'),
 ]

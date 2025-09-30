@@ -34,19 +34,19 @@
   <div class="container-nav">
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:space_admin:issue_list' %}">All</a>
+        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}">All</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:space_admin:issue_list' %}?status=open">Open</a>
+        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=open">Open</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:space_admin:issue_list' %}?status=assigned">Assigned</a>
+        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=assigned">Assigned</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:space_admin:issue_list' %}?status=in_progress">In progress</a>
+        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=in_progress">In progress</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:space_admin:issue_list' %}?status=critical">Critical</a>
+        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=critical">Critical</a>
       </li>
     </ul>
   </div>
@@ -56,7 +56,7 @@
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
       {% for issue in issues %}
       <div class="col mt-2">
-        <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
+        <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
           <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">{{ issue.title }}</h5>
