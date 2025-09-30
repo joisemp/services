@@ -5,10 +5,11 @@ from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTas
 from django.contrib import messages
 from .. models import Issue, WorkTask
 from django.shortcuts import redirect
+from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 
 
 
-class SupervisorIssueListView(ListView):
+class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     model = Issue
     template_name = "supervisor/issue_management/issue_list.html"
     context_object_name = "issues"
@@ -17,7 +18,7 @@ class SupervisorIssueListView(ListView):
         return Issue.objects.filter(assigned_to=self.request.user).order_by('-created_at')
     
     
-class IssueDetailView(DetailView):
+class IssueDetailView(SupervisorOnlyAccessMixin, DetailView):
     template_name = "supervisor/issue_management/issue_detail.html"
     context_object_name = "issue"
     model = Issue
@@ -39,7 +40,7 @@ class IssueDetailView(DetailView):
         return context
     
 
-class IssueResolveView(View):
+class IssueResolveView(SupervisorOnlyAccessMixin, View):
     """Mark an issue as resolved with resolution notes"""
     
     def post(self, request, issue_slug):
@@ -82,7 +83,7 @@ class IssueResolveView(View):
 
     
 
-class WorkTaskCreateView(CreateView):
+class WorkTaskCreateView(SupervisorOnlyAccessMixin, CreateView):
     template_name = "supervisor/issue_management/work_task_create.html"
     form_class = WorkTaskForm
     model = WorkTask
@@ -113,7 +114,7 @@ class WorkTaskCreateView(CreateView):
         return context
 
 
-class WorkTaskUpdateView(UpdateView):
+class WorkTaskUpdateView(SupervisorOnlyAccessMixin,UpdateView):
     template_name = "supervisor/issue_management/work_task_update.html"
     form_class = WorkTaskUpdateForm
     model = WorkTask
@@ -146,7 +147,7 @@ class WorkTaskUpdateView(UpdateView):
         return context
 
 
-class WorkTaskCompleteView(UpdateView):
+class WorkTaskCompleteView(SupervisorOnlyAccessMixin, UpdateView):
     """Complete a work task with resolution notes"""
     template_name = "supervisor/issue_management/work_task_complete.html"
     form_class = WorkTaskCompleteForm
@@ -175,7 +176,7 @@ class WorkTaskCompleteView(UpdateView):
         return context
 
 
-class WorkTaskToggleCompleteView(UpdateView):
+class WorkTaskToggleCompleteView(SupervisorOnlyAccessMixin, UpdateView):
     """Toggle the completion status of a work task"""
     model = WorkTask
     slug_field = 'slug'
@@ -196,7 +197,7 @@ class WorkTaskToggleCompleteView(UpdateView):
         return redirect('issue_management:supervisor:issue_detail', issue_slug=self.work_task.issue.slug)
 
 
-class WorkTaskDeleteView(View):
+class WorkTaskDeleteView(SupervisorOnlyAccessMixin, View):
     """Delete a work task"""
     
     def post(self, request, work_task_slug):
