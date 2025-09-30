@@ -26,7 +26,7 @@ from .forms import (
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
-from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, RedirectLoggedinUsers
 
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
@@ -133,12 +133,11 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
         return response
 
 
-class CustomLoginView(FormView):
+class CustomLoginView(RedirectLoggedinUsers, FormView):
     """
     Custom login view that handles both phone and email authentication
     """
     template_name = 'core/login.html'
-    success_url = reverse_lazy('core:people_list')  # Redirect after successful login
 
     def get_form_class(self):
         """
@@ -201,7 +200,8 @@ class CustomLoginView(FormView):
         Redirect already authenticated users
         """
         if request.user.is_authenticated:
-            return redirect(self.success_url)
+            # Let the RedirectLoggedinUsers mixin handle it
+            return super().dispatch(request, *args, **kwargs)
         return super().dispatch(request, *args, **kwargs)
 
 
