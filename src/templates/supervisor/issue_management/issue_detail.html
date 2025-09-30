@@ -120,23 +120,25 @@
             <h5 class="card-title text-muted mb-3">Start working</h5>
             <p class="card-text text-muted mb-3">Lets start the work.</p>
             <div class="d-flex gap-2 flex-wrap">
-              {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
-              <form method="post" action="{% url 'issue_management:central_admin:issue_start_work' issue_slug=issue.slug %}" class="d-inline">
+                {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
+                <form method="post" action="{% url 'issue_management:supervisor:issue_start_work' issue_slug=issue.slug %}" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-dark d-flex align-items-center"
-                        {% if issue.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
+                    {% if issue.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
                   <span class="material-symbols-outlined me-2">play_arrow</span>
                   {% if issue.status == 'in_progress' %}Work in Progress{% else %}Start work{% endif %}
                 </button>
-              </form>
+                </form>
+                {% if issue.status == 'in_progress' %}
                 <button class="btn btn-success d-flex align-items-center" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#markResolvedModal"
-                        {% if has_incomplete_tasks %}disabled title="Cannot resolve issue while work tasks are incomplete"{% endif %}>
+                    data-bs-toggle="modal" 
+                    data-bs-target="#markResolvedModal"
+                    {% if has_incomplete_tasks %}disabled title="Cannot resolve issue while work tasks are incomplete"{% endif %}>
                   <span class="material-symbols-outlined me-2">check_circle</span>
                   Mark Resolved
                 </button>
-              {% endif %}
+                {% endif %}
+                {% endif %}
             </div>
           </div>
         </div>

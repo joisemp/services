@@ -7,6 +7,7 @@ urlpatterns = [
     path('', supervisor.SupervisorIssueListView.as_view(), name='issue_list'),
     path('issue/<slug:issue_slug>/', supervisor.IssueDetailView.as_view(), name='issue_detail'),
     path('issue/<slug:issue_slug>/resolve/', supervisor.IssueResolveView.as_view(), name='issue_resolve'),
+    path('issue/<slug:issue_slug>/start-work/', supervisor.IssueStartWorkView.as_view(), name='issue_start_work'),
     
     # Work Task URLs
     path('<slug:issue_slug>/work-tasks/create/', supervisor.WorkTaskCreateView.as_view(), name='work_task_create'),

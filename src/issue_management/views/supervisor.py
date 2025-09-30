@@ -209,3 +209,31 @@ class WorkTaskDeleteView(SupervisorOnlyAccessMixin, View):
         messages.success(request, f'Work task "{task_title}" has been deleted.')
 
         return redirect('issue_management:supervisor:issue_detail', issue_slug=issue_slug)
+    
+
+class IssueStartWorkView(SupervisorOnlyAccessMixin, View):
+    """Start work on an issue by changing its status to in_progress"""
+    
+    def post(self, request, issue_slug):
+        # Get the issue
+        issue = get_object_or_404(Issue, slug=issue_slug)
+
+        if issue.status == 'in_progress':
+            messages.info(request, 'Work is already in progress on this issue.')
+            return redirect('issue_management:supervisor:issue_detail', issue_slug=issue.slug)
+
+        try:
+            # Store the previous status for the message
+            previous_status = issue.get_status_display()
+            
+            # Change status to in_progress
+            issue.status = 'in_progress'
+            issue.save()
+            
+            messages.success(request, f'Started work on issue "{issue.title}". Status changed from {previous_status.lower()} to in progress.')
+            
+        except Exception as e:
+            messages.error(request, f'Failed to start work on issue: {str(e)}')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:supervisor:issue_detail', issue_slug=issue.slug)
