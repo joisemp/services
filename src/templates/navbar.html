@@ -17,8 +17,14 @@
                         height="40px" width="40px"
                         style="border-radius: 50%; object-fit: cover; border: 3px solid #013198;" alt="">
                 </div>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item text-danger" href="{% url 'core:logout' %}">Logout</a></li>
+                <ul class="dropdown-menu" style="width:100%; min-width: 300px;">
+                    <li class="dropdown-item">
+                        <strong>{{ user.get_full_name }}</strong><br>
+                        <small class="text-muted">{{ user.email }}</small>
+                        <small class="text-primary d-block">{{ user.get_user_type_display }}</small>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item p-3 text-danger" href="{% url 'core:logout' %}">Logout</a></li>
                 </ul>
             </div>
         </div>
