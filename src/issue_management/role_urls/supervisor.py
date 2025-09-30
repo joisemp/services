@@ -1,12 +1,9 @@
 from django.urls import path
-# from ...views import supervisor  # Uncomment when views are created
+from ..views import supervisor  # Uncomment when views are created
 
 app_name = "supervisor"
 
 urlpatterns = [
-    # Supervisor URLs for oversight and management
-    # path('', supervisor.dashboard, name='dashboard'),
-    # path('reports/', supervisor.reports, name='reports'),
-    # path('oversight/', supervisor.oversight, name='oversight'),
+    path('', supervisor.SupervisorIssueListView.as_view(), name='issue_list'),
     # Add supervisor URLs here
 ]
