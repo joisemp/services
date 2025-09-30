@@ -1,5 +1,8 @@
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.contrib.auth import logout
 
 
 class BaseRoleAccessMixin(LoginRequiredMixin):
@@ -11,7 +14,9 @@ class BaseRoleAccessMixin(LoginRequiredMixin):
             return self.handle_no_permission()
 
         if not getattr(request.user, self.role_property, False):
-            raise PermissionDenied("You do not have permission to access this page.")
+            logout(request)
+            messages.error(request, "You do not have permission to access this page. Please log in with the correct account.")
+            return redirect("core:login")
 
         return super().dispatch(request, *args, **kwargs)
 
