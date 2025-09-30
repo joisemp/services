@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from issue_management.models import Issue, WorkTask
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 
 
 class DashboardDataMixin:
@@ -262,7 +263,7 @@ class DashboardDataMixin:
         return context
 
 
-class CentralAdminDashboardView(DashboardDataMixin, TemplateView):
+class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
     template_name = 'central_admin/dashboard.html'
 
     def get_issue_list_route_name(self):
