@@ -19,7 +19,7 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
     
     class Meta:
         model = Issue
-        fields = ['title', 'description', 'status', 'priority', 'org', 'space', 'voice']
+        fields = ['title', 'description', 'priority', 'space', 'voice']
         widgets = {
             'voice': forms.FileInput(attrs={
                 'class': 'voice-file-input',
@@ -32,10 +32,18 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         # Make space field optional
         self.fields['space'].required = False
         self.fields['space'].empty_label = "Select a space (optional)"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Set organization on instance before validation
+        if hasattr(self, 'instance') and self.current_user and self.current_user.organization:
+            self.instance.org = self.current_user.organization
+        return cleaned_data
 
 
 class WorkTaskForm(BootstrapFormMixin, forms.ModelForm):
