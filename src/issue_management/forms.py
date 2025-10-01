@@ -46,6 +46,52 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
         return cleaned_data
 
 
+class SpaceAdminIssueForm(BootstrapFormMixin, forms.ModelForm):
+    """
+    Form for space admins to create issues.
+    Excludes the space field since it's auto-assigned from active_space.
+    """
+    # Add image fields for up to 3 images
+    image1 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image2 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image3 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    
+    class Meta:
+        model = Issue
+        fields = ['title', 'description', 'priority', 'voice']
+        widgets = {
+            'voice': forms.FileInput(attrs={
+                'class': 'voice-file-input',
+                'accept': 'audio/*',
+                'style': 'display: none;'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        self.active_space = kwargs.pop('active_space', None)
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Set organization and space on instance before validation
+        if hasattr(self, 'instance'):
+            if self.current_user and self.current_user.organization:
+                self.instance.org = self.current_user.organization
+            if self.active_space:
+                self.instance.space = self.active_space
+        return cleaned_data
+
+
 class WorkTaskForm(BootstrapFormMixin, forms.ModelForm):
     """Form for creating work tasks - no resolution notes field"""
     class Meta:

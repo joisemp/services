@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
+from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
@@ -38,29 +38,32 @@ class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
 
 class IssueCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
     template_name = "space_admin/issue_management/issue_create.html"
-    form_class = IssueForm
+    form_class = SpaceAdminIssueForm
     success_url = reverse_lazy('issue_management:space_admin:issue_list')
     
     def get_form_kwargs(self):
-        """Pass current_user to form"""
+        """Pass current_user and active_space to form"""
         kwargs = super().get_form_kwargs()
         kwargs['current_user'] = self.request.user
+        kwargs['active_space'] = self.request.user.active_space if self.request.user.is_space_admin else None
         return kwargs
     
     def form_valid(self, form):
-        # Set the reporter to the current user before saving
+        # Set the reporter and space BEFORE saving the instance
         form.instance.reporter = self.request.user
         
-        # If user has an active space and no space is selected, use the active space
-        if (self.request.user.is_space_admin and 
-            self.request.user.active_space and 
-            not form.instance.space):
+        # Ensure active space is assigned before save
+        if self.request.user.is_space_admin and self.request.user.active_space:
             form.instance.space = self.request.user.active_space
         
-        # Save the issue first
+        # Ensure organization is set before save
+        if self.request.user.organization:
+            form.instance.org = self.request.user.organization
+        
+        # Now save the issue (super().form_valid() calls form.save())
         response = super().form_valid(form)
         
-        # Handle image uploads
+        # Handle image uploads after the issue is saved
         image_fields = ['image1', 'image2', 'image3']
         for field_name in image_fields:
             image_file = form.cleaned_data.get(field_name)
