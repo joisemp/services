@@ -66,14 +66,18 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
 
 class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     """
-    View to list all users in the system
+    View to list users in the same organization as the central admin user
     """
     model = User
     template_name = 'core/people_list.html'
     context_object_name = 'users'
 
     def get_queryset(self):
-        return User.objects.select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
+        # Filter users by the central admin's organization
+        admin_organization = self.request.user.organization
+        return User.objects.filter(
+            organization=admin_organization
+        ).select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
 class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
