@@ -53,6 +53,31 @@
 </section>
 <section id="issue-list">
   <div class="container-fluid mt-3">
+    {% if not user.active_space %}
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+      <span class="material-symbols-outlined me-3" style="font-size: 2rem;">info</span>
+      <div>
+        <h5 class="mb-1">No Active Space Selected</h5>
+        <p class="mb-2">You need to select a space to view issues specific to that space context.</p>
+        <a href="{% url 'core:switch_space' %}" class="btn btn-primary btn-sm">
+          <span class="material-symbols-outlined me-1" style="font-size: 1rem;">workspaces</span>
+          Select Space
+        </a>
+      </div>
+    </div>
+    {% elif not issues %}
+    <div class="alert alert-secondary d-flex align-items-center" role="alert">
+      <span class="material-symbols-outlined me-3" style="font-size: 2rem;">task_alt</span>
+      <div>
+        <h5 class="mb-1">No Issues Found</h5>
+        <p class="mb-2">There are no issues in the "{{ user.active_space.name }}" space yet.</p>
+        <a href="{% url 'issue_management:space_admin:issue_create' %}" class="btn btn-primary btn-sm">
+          <span class="material-symbols-outlined me-1" style="font-size: 1rem;">add</span>
+          Create First Issue
+        </a>
+      </div>
+    </div>
+    {% else %}
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
       {% for issue in issues %}
       <div class="col mt-2">
@@ -81,6 +106,7 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

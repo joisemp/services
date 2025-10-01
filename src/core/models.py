@@ -183,6 +183,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name='users',
         help_text="Spaces are optional for users"
     )
+    active_space = models.ForeignKey(
+        'Space',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='active_users',
+        help_text="Currently active space for space admins (used for context switching)"
+    )
     
     objects = UserManager()
     
@@ -307,6 +315,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_general_user(self):
         return self.user_type == 'general_user'
+    
+    def get_available_spaces(self):
+        """Get all spaces this user has access to"""
+        if self.is_space_admin:
+            return self.spaces.all()
+        return Space.objects.none()
+    
+    def can_access_space(self, space):
+        """Check if user can access a specific space"""
+        if not self.is_space_admin:
+            return False
+        return self.spaces.filter(pk=space.pk).exists()
+    
+    def set_active_space(self, space):
+        """Set the active space for this user"""
+        if self.can_access_space(space):
+            self.active_space = space
+            self.save(skip_validation=True)
+            return True
+        return False
 
 
 

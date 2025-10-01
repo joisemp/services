@@ -22,7 +22,22 @@
                         <strong>{{ user.get_full_name }}</strong><br>
                         <small class="text-muted">{{ user.email }}</small>
                         <small class="text-primary d-block">{{ user.get_user_type_display }}</small>
+                        {% if user.is_space_admin and user.active_space %}
+                        <small class="text-success d-block mt-1">
+                            <span class="material-symbols-outlined" style="font-size: 0.9rem; vertical-align: middle;">workspaces</span>
+                            {{ user.active_space.name }}
+                        </small>
+                        {% endif %}
                     </li>
+                    {% if user.is_space_admin %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item p-3" href="{% url 'core:switch_space' %}">
+                            <span class="material-symbols-outlined me-2" style="vertical-align: middle;">swap_horiz</span>
+                            Switch Space
+                        </a>
+                    </li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item p-3 text-danger" href="{% url 'core:logout' %}">Logout</a></li>
                 </ul>

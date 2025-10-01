@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from issue_management.models import Issue, WorkTask
-from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, SpaceAdminOnlyAccessMixin
+from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 
 class DashboardDataMixin:
@@ -68,11 +68,15 @@ class DashboardDataMixin:
             queryset = queryset.filter(org=org)
 
         if not user.is_superuser and getattr(user, 'user_type', '') == 'space_admin':
-            spaces = user.spaces.all()
-            if spaces.exists():
-                queryset = queryset.filter(space__in=spaces)
+            active_space = getattr(user, 'active_space', None)
+            if active_space:
+                queryset = queryset.filter(space=active_space)
             else:
-                return Issue.objects.none()
+                spaces = user.spaces.all()
+                if spaces.exists():
+                    queryset = queryset.filter(space__in=spaces)
+                else:
+                    return Issue.objects.none()
 
         return queryset.select_related('reporter', 'assigned_to', 'org', 'space')
 
@@ -257,6 +261,7 @@ class DashboardDataMixin:
                 'view_all_issues_url': self.get_view_all_url(),
                 'status_style_map': self.status_style_map,
                 'priority_style_map': self.priority_style_map,
+                'active_space': getattr(self.request.user, 'active_space', None),
             }
         )
 
@@ -273,7 +278,7 @@ class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin,
         return 'issue_management:central_admin:issue_detail'
 
 
-class SpaceAdminDashboardView(SpaceAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
+class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin, TemplateView):
     template_name = 'space_admin/dashboard.html'
 
     def get_issue_list_route_name(self):

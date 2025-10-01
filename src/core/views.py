@@ -22,7 +22,8 @@ from .forms import (
     SpaceCreateForm,
     SpaceUpdateForm,
     SpaceUserAddForm,
-    SpaceUserRemoveForm
+    SpaceUserRemoveForm,
+    SpaceSwitcherForm
 )
 from .models import Update, User, Space
 from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
@@ -66,14 +67,18 @@ class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
 
 class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     """
-    View to list all users in the system
+    View to list users in the same organization as the central admin user
     """
     model = User
     template_name = 'core/people_list.html'
     context_object_name = 'users'
 
     def get_queryset(self):
-        return User.objects.select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
+        # Filter users by the central admin's organization
+        admin_organization = self.request.user.organization
+        return User.objects.filter(
+            organization=admin_organization
+        ).select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
 class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
@@ -100,11 +105,20 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
         context['form_title'] = 'Create General User' if user_type == 'general' else 'Create User'
         return context
 
+    def get_form_kwargs(self):
+        """
+        Return the keyword arguments for instantiating the form.
+        """
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+
     def form_valid(self, form):
         """
         Handle successful form submission
         """
-        response = super().form_valid(form)
+        # Save the user with current user's organization
+        self.object = form.save()
         user_type = self.request.GET.get('type', 'other')
         
         # Add success message
@@ -130,7 +144,8 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
                     f'User {self.object.get_full_name()} created successfully, but there was an error sending the password reset email. '
                     f'Please manually send them a password reset link.'
                 )
-        return response
+        
+        return redirect(self.get_success_url())
 
 
 class CustomLoginView(RedirectLoggedinUsers, FormView):
@@ -370,6 +385,11 @@ class SpaceUserRemoveView(CentralAdminOnlyAccessMixin, FormView):
         # Remove the user from space
         user = form.cleaned_data['user_id']
         self.space.users.remove(user)
+
+        # If the user had this space selected as active, clear it so they must pick again
+        if user.active_space_id == self.space.id:
+            user.active_space = None
+            user.save(update_fields=['active_space'], skip_validation=True)
         
         # Add success message
         messages.success(self.request, f"Successfully removed {user.get_full_name() or user.get_short_name()} from {self.space.name}")
@@ -691,3 +711,77 @@ class DeleteUserView(CentralAdminOnlyAccessMixin, View):
                 'success': False, 
                 'message': f'Error deleting user: {str(e)}'
             }, status=500)
+
+
+class SpaceSwitcherView(FormView):
+    """
+    View for space admins to switch their active space context
+    """
+    form_class = SpaceSwitcherForm
+    template_name = 'core/space_switcher.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Only allow space admins to access this view
+        if not request.user.is_authenticated or not request.user.is_space_admin:
+            messages.error(request, "Only space admins can switch spaces.")
+            return redirect('core:login')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST request for space switching
+        """
+        space_slug = request.POST.get('space')
+        if space_slug:
+            try:
+                # Get the space by slug
+                space = Space.objects.get(slug=space_slug)
+                
+                # Verify user can access this space
+                if request.user.can_access_space(space):
+                    # Set as active space
+                    if request.user.set_active_space(space):
+                        messages.success(
+                            request,
+                            f'Successfully switched to space: {space.name}. Welcome to your workspace!'
+                        )
+                        # Redirect to space admin dashboard
+                        return redirect('dashboard:space_admin_dashboard')
+                    else:
+                        messages.error(request, 'Failed to switch space due to access restrictions.')
+                else:
+                    messages.error(request, 'You do not have access to that space.')
+            except Space.DoesNotExist:
+                messages.error(request, 'The selected space could not be found.')
+        else:
+            messages.error(request, 'Please select a space.')
+        
+        # If we get here, something went wrong, show form again
+        return self.get(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """
+        Handle form-based space switching (fallback for dropdown)
+        """
+        if form.save():
+            space = form.cleaned_data['space']
+            messages.success(
+                self.request, 
+                f'Successfully switched to space: {space.name}'
+            )
+            # Redirect to space admin dashboard
+            return redirect('dashboard:space_admin_dashboard')
+        else:
+            messages.error(self.request, 'Failed to switch space.')
+            return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_space'] = self.request.user.active_space
+        context['available_spaces'] = self.request.user.get_available_spaces()
+        return context

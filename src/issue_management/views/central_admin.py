@@ -38,6 +38,12 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     form_class = IssueForm
     success_url = reverse_lazy('issue_management:central_admin:issue_list')
     
+    def get_form_kwargs(self):
+        """Pass current_user to form"""
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+    
     def form_valid(self, form):
         # Set the reporter to the current user before saving
         form.instance.reporter = self.request.user
