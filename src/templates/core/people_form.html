@@ -132,18 +132,6 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="{{ form.organization.id_for_label }}" class="form-label">Organisation</label>
-                            {{ form.organization }}
-                            {% if form.organization.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.organization.errors %}
-                                {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
                         {% if user_type != 'general' %}
                         <div class="alert alert-info mt-2" role="alert">
                             We'll send this user a password reset email so they can finish setting up their account.

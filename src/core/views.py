@@ -104,11 +104,20 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
         context['form_title'] = 'Create General User' if user_type == 'general' else 'Create User'
         return context
 
+    def get_form_kwargs(self):
+        """
+        Return the keyword arguments for instantiating the form.
+        """
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+
     def form_valid(self, form):
         """
         Handle successful form submission
         """
-        response = super().form_valid(form)
+        # Save the user with current user's organization
+        self.object = form.save()
         user_type = self.request.GET.get('type', 'other')
         
         # Add success message
@@ -134,7 +143,8 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
                     f'User {self.object.get_full_name()} created successfully, but there was an error sending the password reset email. '
                     f'Please manually send them a password reset link.'
                 )
-        return response
+        
+        return redirect(self.get_success_url())
 
 
 class CustomLoginView(RedirectLoggedinUsers, FormView):

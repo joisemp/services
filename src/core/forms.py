@@ -271,13 +271,12 @@ class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     """
     class Meta:
         model = User
-        fields = ['phone_number', 'first_name', 'last_name', 'organization']
+        fields = ['phone_number', 'first_name', 'last_name']
         
     def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['phone_number'].help_text = 'Enter phone number without country code'
-        self.fields['organization'].queryset = Organization.objects.all()
-        self.fields['organization'].empty_label = "Select an organization"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -286,21 +285,15 @@ class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
             self.instance.user_type = 'general_user'
             self.instance.auth_method = 'phone'
             self.instance.email = None  # Clear email for phone users
+            # Assign organization before validation
+            if self.current_user and self.current_user.organization:
+                self.instance.organization = self.current_user.organization
             # Set a dummy password to pass Django's built-in validation
             self.instance.set_password('dummy_password_for_validation')
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # Set these fields before any validation
-        user.user_type = 'general_user'
-        user.auth_method = 'phone'
-        
-        # Clear email field for phone users to avoid validation conflicts
-        user.email = None
-        
-        # Set a dummy password first to pass validation, then make it unusable
-        user.set_password('dummy_password_for_validation')
         
         if commit:
             user.save()
@@ -339,15 +332,14 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
         required=True,
         label="User Role"
     )
-    organization = forms.ModelChoiceField(
-        queryset=Organization.objects.all(),
-        required=True,
-        empty_label="Select an organization"
-    )
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'user_type', 'organization']
+        fields = ['email', 'first_name', 'last_name', 'user_type']
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
 
     def clean_email(self):
         email = self.cleaned_data['email']
@@ -355,14 +347,18 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
             raise forms.ValidationError("A user with this email already exists.")
         return email
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # Set organization and other fields on instance before validation
+        if hasattr(self, 'instance'):
+            self.instance.auth_method = 'email'
+            # Assign organization before validation
+            if self.current_user and self.current_user.organization:
+                self.instance.organization = self.current_user.organization
+        return cleaned_data
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
-        user.first_name = self.cleaned_data['first_name']
-        user.last_name = self.cleaned_data['last_name']
-        user.user_type = self.cleaned_data['user_type']
-        user.organization = self.cleaned_data['organization']
-        user.auth_method = 'email'
         
         # Set a dummy password first to pass validation
         user.set_password('dummy_password_for_validation')
