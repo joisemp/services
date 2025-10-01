@@ -77,4 +77,8 @@ urlpatterns = [
     path('spaces/<slug:space_slug>/remove-user/', 
          views.SpaceUserRemoveView.as_view(), 
          name='space_remove_user'),
+    
+    path('switch-space/', 
+         views.SpaceSwitcherView.as_view(), 
+         name='switch_space'),
 ]

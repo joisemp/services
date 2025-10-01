@@ -587,3 +587,44 @@ class SpaceUserRemoveForm(BootstrapFormMixin, forms.Form):
             return user
         except User.DoesNotExist:
             raise forms.ValidationError("User not found.")
+
+
+class SpaceSwitcherForm(BootstrapFormMixin, forms.Form):
+    """
+    Form for space admins to switch their active space context
+    """
+    space = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=True
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        # Set the current active space slug as initial value
+        if user.active_space:
+            self.fields['space'].initial = user.active_space.slug
+
+    def clean_space(self):
+        """
+        Validate that the space exists and user has access to it
+        """
+        space_slug = self.cleaned_data['space']
+        try:
+            space = Space.objects.get(slug=space_slug)
+            if not self.user.can_access_space(space):
+                raise forms.ValidationError("You do not have access to this space.")
+            return space_slug
+        except Space.DoesNotExist:
+            raise forms.ValidationError("The selected space does not exist.")
+
+    def save(self):
+        """Set the selected space as the user's active space"""
+        if self.is_valid():
+            space_slug = self.cleaned_data['space']
+            try:
+                space = Space.objects.get(slug=space_slug)
+                return self.user.set_active_space(space)
+            except Space.DoesNotExist:
+                return False
+        return False

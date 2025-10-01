@@ -6,15 +6,19 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from ..models import Issue, IssueImage, WorkTask, IssueComment
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
-from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin
+from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
-class IssueListView(SpaceAdminOnlyAccessMixin, ListView):
+class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
     template_name = "space_admin/issue_management/issue_list.html"
     context_object_name = "issues"
     model = Issue
     
     def get_queryset(self):
         queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
+        
+        # Filter by active space for space admins
+        if self.request.user.is_space_admin and self.request.user.active_space:
+            queryset = queryset.filter(space=self.request.user.active_space)
         
         # Filter by status if provided
         status_filter = self.request.GET.get('status')
@@ -32,7 +36,7 @@ class IssueListView(SpaceAdminOnlyAccessMixin, ListView):
         return context
     
 
-class IssueCreateView(SpaceAdminOnlyAccessMixin, CreateView):
+class IssueCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
     template_name = "space_admin/issue_management/issue_create.html"
     form_class = IssueForm
     success_url = reverse_lazy('issue_management:space_admin:issue_list')
@@ -46,6 +50,12 @@ class IssueCreateView(SpaceAdminOnlyAccessMixin, CreateView):
     def form_valid(self, form):
         # Set the reporter to the current user before saving
         form.instance.reporter = self.request.user
+        
+        # If user has an active space and no space is selected, use the active space
+        if (self.request.user.is_space_admin and 
+            self.request.user.active_space and 
+            not form.instance.space):
+            form.instance.space = self.request.user.active_space
         
         # Save the issue first
         response = super().form_valid(form)
@@ -63,7 +73,7 @@ class IssueCreateView(SpaceAdminOnlyAccessMixin, CreateView):
         return response    
 
 
-class IssueDetailView(SpaceAdminOnlyAccessMixin, DetailView):
+class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
     template_name = "space_admin/issue_management/issue_detail.html"
     context_object_name = "issue"
     model = Issue
@@ -71,7 +81,13 @@ class IssueDetailView(SpaceAdminOnlyAccessMixin, DetailView):
     slug_url_kwarg = 'issue_slug'
     
     def get_queryset(self):
-        return Issue.objects.prefetch_related('images', 'comments', 'work_tasks__assigned_to').select_related('org', 'space')
+        queryset = Issue.objects.prefetch_related('images', 'comments', 'work_tasks__assigned_to').select_related('org', 'space')
+        
+        # Filter by active space for space admins
+        if self.request.user.is_space_admin and self.request.user.active_space:
+            queryset = queryset.filter(space=self.request.user.active_space)
+            
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -85,7 +101,7 @@ class IssueDetailView(SpaceAdminOnlyAccessMixin, DetailView):
         return context
 
 
-class IssueImageDeleteView(SpaceAdminOnlyAccessMixin, View):
+class IssueImageDeleteView(SpaceAdminWithActiveSpaceMixin, View):
     """Delete a specific image attached to an issue"""
     
     def post(self, request, issue_slug, image_slug):
@@ -109,7 +125,7 @@ class IssueImageDeleteView(SpaceAdminOnlyAccessMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueImageUploadView(SpaceAdminOnlyAccessMixin, View):
+class IssueImageUploadView(SpaceAdminWithActiveSpaceMixin, View):
     """Upload additional images to an existing issue"""
     
     def get(self, request, issue_slug):
@@ -165,7 +181,7 @@ class IssueImageUploadView(SpaceAdminOnlyAccessMixin, View):
         return render(request, 'space_admin/issue_management/image_upload.html', context)
 
 
-class IssueVoiceDeleteView(SpaceAdminOnlyAccessMixin, View):
+class IssueVoiceDeleteView(SpaceAdminWithActiveSpaceMixin, View):
     """Delete the voice recording attached to an issue"""
     
     def post(self, request, issue_slug):
@@ -191,7 +207,7 @@ class IssueVoiceDeleteView(SpaceAdminOnlyAccessMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueVoiceUploadView(SpaceAdminOnlyAccessMixin, View):
+class IssueVoiceUploadView(SpaceAdminWithActiveSpaceMixin, View):
     """Upload a voice recording to an existing issue"""
     
     def get(self, request, issue_slug):
@@ -246,7 +262,7 @@ class IssueVoiceUploadView(SpaceAdminOnlyAccessMixin, View):
         return render(request, 'space_admin/issue_management/voice_upload.html', context)
 
 
-class IssueResolveView(SpaceAdminOnlyAccessMixin, View):
+class IssueResolveView(SpaceAdminWithActiveSpaceMixin, View):
     """Mark an issue as resolved with resolution notes"""
     
     def post(self, request, issue_slug):
@@ -288,7 +304,7 @@ class IssueResolveView(SpaceAdminOnlyAccessMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueUpdateView(SpaceAdminOnlyAccessMixin, UpdateView):
+class IssueUpdateView(SpaceAdminWithActiveSpaceMixin, UpdateView):
     template_name = "space_admin/issue_management/issue_update.html"
     form_class = IssueUpdateForm
     model = Issue
@@ -307,7 +323,7 @@ class IssueUpdateView(SpaceAdminOnlyAccessMixin, UpdateView):
         return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
 
 
-class WorkTaskCreateView(SpaceAdminOnlyAccessMixin, CreateView):
+class WorkTaskCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
     template_name = "space_admin/issue_management/work_task_create.html"
     form_class = WorkTaskForm
     model = WorkTask
@@ -338,7 +354,7 @@ class WorkTaskCreateView(SpaceAdminOnlyAccessMixin, CreateView):
         return context
 
 
-class WorkTaskUpdateView(SpaceAdminOnlyAccessMixin, UpdateView):
+class WorkTaskUpdateView(SpaceAdminWithActiveSpaceMixin, UpdateView):
     template_name = "space_admin/issue_management/work_task_update.html"
     form_class = WorkTaskUpdateForm
     model = WorkTask
@@ -371,7 +387,7 @@ class WorkTaskUpdateView(SpaceAdminOnlyAccessMixin, UpdateView):
         return context
 
 
-class WorkTaskCompleteView(SpaceAdminOnlyAccessMixin, UpdateView):
+class WorkTaskCompleteView(SpaceAdminWithActiveSpaceMixin, UpdateView):
     """Complete a work task with resolution notes"""
     template_name = "space_admin/issue_management/work_task_complete.html"
     form_class = WorkTaskCompleteForm
@@ -400,7 +416,7 @@ class WorkTaskCompleteView(SpaceAdminOnlyAccessMixin, UpdateView):
         return context
 
 
-class WorkTaskToggleCompleteView(SpaceAdminOnlyAccessMixin, UpdateView):
+class WorkTaskToggleCompleteView(SpaceAdminWithActiveSpaceMixin, UpdateView):
     """Toggle the completion status of a work task"""
     model = WorkTask
     slug_field = 'slug'
@@ -421,7 +437,7 @@ class WorkTaskToggleCompleteView(SpaceAdminOnlyAccessMixin, UpdateView):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=self.work_task.issue.slug)
 
 
-class WorkTaskDeleteView(SpaceAdminOnlyAccessMixin, View):
+class WorkTaskDeleteView(SpaceAdminWithActiveSpaceMixin, View):
     """Delete a work task"""
     
     def post(self, request, work_task_slug):
@@ -435,7 +451,7 @@ class WorkTaskDeleteView(SpaceAdminOnlyAccessMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)
 
 
-class IssueCommentListView(SpaceAdminOnlyAccessMixin, View):
+class IssueCommentListView(SpaceAdminWithActiveSpaceMixin, View):
     """HTMX endpoint to return the list of comments for an issue"""
     
     def get(self, request, issue_slug):
@@ -448,7 +464,7 @@ class IssueCommentListView(SpaceAdminOnlyAccessMixin, View):
         })
 
 
-class IssueCommentCreateView(SpaceAdminOnlyAccessMixin, View):
+class IssueCommentCreateView(SpaceAdminWithActiveSpaceMixin, View):
     """HTMX endpoint to create a new comment"""
     
     def post(self, request, issue_slug):
@@ -485,7 +501,7 @@ class IssueCommentCreateView(SpaceAdminOnlyAccessMixin, View):
         })
 
 
-class IssueDeleteView(SpaceAdminOnlyAccessMixin, DeleteView):
+class IssueDeleteView(SpaceAdminWithActiveSpaceMixin, DeleteView):
     """Delete an issue and all its related data"""
     template_name = "space_admin/issue_management/issue_delete.html"
     model = Issue
@@ -526,7 +542,7 @@ class IssueDeleteView(SpaceAdminOnlyAccessMixin, DeleteView):
         return context
 
 
-class IssueAssignmentView(SpaceAdminOnlyAccessMixin, UpdateView):
+class IssueAssignmentView(SpaceAdminWithActiveSpaceMixin, UpdateView):
     """Assign an issue to a supervisor with optional review requirement"""
     template_name = "space_admin/issue_management/issue_assignment.html"
     form_class = IssueAssignmentForm
@@ -574,7 +590,7 @@ class IssueAssignmentView(SpaceAdminOnlyAccessMixin, UpdateView):
         return context
 
 
-class IssueReopenView(SpaceAdminOnlyAccessMixin, View):
+class IssueReopenView(SpaceAdminWithActiveSpaceMixin, View):
     """Reopen a resolved, closed, or cancelled issue"""
     
     def post(self, request, issue_slug):
@@ -615,7 +631,7 @@ class IssueReopenView(SpaceAdminOnlyAccessMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
 
 
-class IssueStartWorkView(SpaceAdminOnlyAccessMixin, View):
+class IssueStartWorkView(SpaceAdminWithActiveSpaceMixin, View):
     """Start work on an issue by changing its status to in_progress"""
     
     def post(self, request, issue_slug):

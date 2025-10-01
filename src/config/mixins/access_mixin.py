@@ -18,7 +18,7 @@ class RedirectLoggedinUsers(AccessMixin):
 
     role_redirects = {
         "is_central_admin": "dashboard:central_admin_dashboard",
-        "is_space_admin": "dashboard:space_admin_dashboard",
+        "is_space_admin": "core:switch_space",  # Netflix-style: always go to space selection first
         "is_supervisor": "issue_management:supervisor:issue_list",
     }
 
@@ -102,6 +102,31 @@ class CentralAdminOnlyAccessMixin(BaseRoleAccessMixin):
 
 class SpaceAdminOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_space_admin"
+
+
+class SpaceAdminWithActiveSpaceMixin(SpaceAdminOnlyAccessMixin):
+    """
+    Mixin for space admin views that require an active space context.
+    Redirects to space switcher if no active space is set.
+    """
+    
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and getattr(request.user, self.role_property, False):
+            active_space = request.user.active_space
+
+            # If the user has no active space or no longer has access to it, reset and redirect
+            if not active_space or not request.user.can_access_space(active_space):
+                if active_space:
+                    request.user.active_space = None
+                    request.user.save(update_fields=['active_space'], skip_validation=True)
+
+                messages.info(
+                    request,
+                    "Your previously selected space is no longer available. Please pick another space to continue."
+                )
+                return redirect("core:switch_space")
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class MaintainerOnlyAccessMixin(BaseRoleAccessMixin):
