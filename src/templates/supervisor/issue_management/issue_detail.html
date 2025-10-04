@@ -168,7 +168,7 @@
                class="comments-list-scrollable flex-grow-1">
             
             <!-- Comments will be loaded here via HTMX -->
-            <div hx-get="{% url 'issue_management:central_admin:comment_list' issue_slug=issue.slug %}"
+            <div hx-get="{% url 'issue_management:comment_list' issue_slug=issue.slug %}"
                  hx-trigger="load"
                  hx-swap="innerHTML">
               <div class="text-center text-muted py-4">
@@ -181,7 +181,7 @@
           <!-- Fixed Comment Form at Bottom -->
           <div id="comment-form-sticky" 
                class="comment-form-sticky border-top bg-white">
-            <form hx-post="{% url 'issue_management:central_admin:comment_create' issue_slug=issue.slug %}"
+            <form hx-post="{% url 'issue_management:comment_create' issue_slug=issue.slug %}"
                   hx-target="#comments-list-area"
                   hx-swap="innerHTML"
                   class="comment-form">

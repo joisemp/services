@@ -454,56 +454,6 @@ class WorkTaskDeleteView(SpaceAdminWithActiveSpaceMixin, View):
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)
 
 
-class IssueCommentListView(SpaceAdminWithActiveSpaceMixin, View):
-    """HTMX endpoint to return the list of comments for an issue"""
-    
-    def get(self, request, issue_slug):
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        comments = issue.comments.select_related('user').all()
-        
-        return render(request, 'space_admin/issue_management/partials/comment_list.html', {
-            'comments': comments,
-            'issue': issue
-        })
-
-
-class IssueCommentCreateView(SpaceAdminWithActiveSpaceMixin, View):
-    """HTMX endpoint to create a new comment"""
-    
-    def post(self, request, issue_slug):
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        form = IssueCommentForm(request.POST)
-        
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.issue = issue
-            comment.user = request.user
-            comment.save()
-            
-            # Return the updated comment list
-            comments = issue.comments.select_related('user').all()
-            return render(request, 'space_admin/issue_management/partials/comment_list.html', {
-                'comments': comments,
-                'issue': issue
-            })
-        else:
-            # Return form errors
-            return render(request, 'space_admin/issue_management/partials/comment_form.html', {
-                'form': form,
-                'issue': issue
-            }, status=400)
-    
-    def get(self, request, issue_slug):
-        """Return empty form for HTMX to display"""
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        form = IssueCommentForm()
-        
-        return render(request, 'space_admin/issue_management/partials/comment_form.html', {
-            'form': form,
-            'issue': issue
-        })
-
-
 class IssueDeleteView(SpaceAdminWithActiveSpaceMixin, DeleteView):
     """Delete an issue and all its related data"""
     template_name = "space_admin/issue_management/issue_delete.html"

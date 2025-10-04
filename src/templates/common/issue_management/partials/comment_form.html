@@ -1,5 +1,5 @@
 <!-- Comment Form Partial -->
-<form hx-post="{% url 'issue_management:central_admin:comment_create' issue_slug=issue.slug %}"
+<form hx-post="{% url 'issue_management:comment_create' issue_slug=issue.slug %}"
       hx-target="#comments-section"
       hx-swap="innerHTML"
       class="comment-form mt-4">
