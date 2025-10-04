@@ -16,10 +16,15 @@ class UserManager(BaseUserManager):
     def create_user(self, phone_number=None, email=None, password=None, user_type='general_user', organization=None, **extra_fields):
         """
         Create and return a regular user with proper role-based authentication
+        Phone number is now REQUIRED for all user types
         """
         # Only require organization for non-superusers
         if not organization and not extra_fields.get('is_superuser', False):
             raise ValueError('All users (except superusers) must be associated with an organization')
+        
+        # Phone number is MANDATORY for all users
+        if not phone_number:
+            raise ValueError('Phone number is required for all users')
         
         # Determine authentication method based on user type
         if user_type == 'general_user':
@@ -27,8 +32,6 @@ class UserManager(BaseUserManager):
             if phone_number and not email:
                 # Phone authentication - no password required
                 auth_method = 'phone'
-                if not phone_number:
-                    raise ValueError('Phone authentication requires a phone number')
                 user = self.model(
                     phone_number=phone_number, 
                     user_type=user_type, 
@@ -47,6 +50,7 @@ class UserManager(BaseUserManager):
                     raise ValueError('Email authentication requires a password')
                 email = self.normalize_email(email)
                 user = self.model(
+                    phone_number=phone_number,
                     email=email, 
                     user_type=user_type, 
                     auth_method=auth_method,
@@ -63,6 +67,7 @@ class UserManager(BaseUserManager):
                 raise ValueError(f'{user_type} users must have a password')
             email = self.normalize_email(email)
             user = self.model(
+                phone_number=phone_number,
                 email=email, 
                 user_type=user_type, 
                 auth_method=auth_method,
@@ -131,10 +136,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(
         validators=[phone_regex], 
         max_length=17, 
-        unique=True, 
-        null=True, 
-        blank=True,
-        help_text="Phone number for passwordless authentication (general users only)"
+        unique=True,
+        help_text="Phone number is required for all users"
     )
     
     # Email field
@@ -238,6 +241,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not self.organization and not self.is_superuser:
             raise ValidationError('Every user (except superusers) must be associated with an organization')
         
+        # Phone number is MANDATORY for all users
+        if not self.phone_number:
+            raise ValidationError('Phone number is required for all users')
+        
         # Only general users can use phone authentication
         if self.auth_method == 'phone' and self.user_type != 'general_user':
             raise ValidationError('Only general users can use phone authentication. Other user types must use email authentication.')
@@ -255,12 +262,10 @@ class User(AbstractBaseUser, PermissionsMixin):
             if self.email and not self.is_superuser:
                 self.email = None
         elif self.auth_method == 'email':
-            # Email authentication: requires email (password handled separately)
+            # Email authentication: requires both email and phone (password handled separately)
             if not self.email:
                 raise ValidationError('Email authentication users must have an email address')
-            # Clear phone for email users (except superusers)
-            if self.phone_number and not self.is_superuser:
-                self.phone_number = None
+            # Phone number is still required for email authentication users
     
     def save(self, *args, **kwargs):
         # Only run full_clean if not explicitly skipped
