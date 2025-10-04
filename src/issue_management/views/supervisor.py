@@ -8,6 +8,24 @@ from django.shortcuts import redirect
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 
 
+class WorkTaskListView(SupervisorOnlyAccessMixin, ListView):
+    """List all work tasks assigned to the supervisor"""
+    model = WorkTask
+    template_name = "supervisor/issue_management/work_task_list.html"
+    context_object_name = "work_tasks"
+
+    def get_queryset(self):
+        queryset = WorkTask.objects.filter(assigned_to=self.request.user).select_related('issue', 'issue__org', 'issue__space').order_by('-created_at')
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter == 'pending':
+            queryset = queryset.filter(completed=False)
+        elif status_filter == 'completed':
+            queryset = queryset.filter(completed=True)
+        
+        return queryset
+
 
 class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     model = Issue
