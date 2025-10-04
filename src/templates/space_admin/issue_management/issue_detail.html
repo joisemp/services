@@ -58,11 +58,6 @@
         <span class="material-symbols-outlined">edit</span>
         <span class="ms-2 d-inline">Edit</span>
       </a>
-      <a href="{% url 'issue_management:space_admin:issue_assign' issue_slug=issue.slug %}"
-        class="btn btn-success d-flex align-items-center justify-content-center">
-        <span class="material-symbols-outlined">person_add</span>
-        <span class="ms-2 d-inline">{% if issue.assigned_to %}Reassign{% else %}Assign{% endif %}</span>
-      </a>
     </div>
   </div>
 
@@ -206,22 +201,19 @@
     </div>
 
     <div class="col-12 col-lg-6">
-      <!-- Start working card -->
+      <!-- Assign Issue card -->
       <div class="col-12 mb-3">
         <div class="card h-100 background-light">
           <div class="card-body">
-            <h5 class="card-title text-muted mb-3">Start working</h5>
-            <p class="card-text text-muted mb-3">Lets start the work.</p>
+            <h5 class="card-title text-muted mb-3">Issue Management</h5>
+            <p class="card-text text-muted mb-3">{% if issue.assigned_to %}Manage issue assignment and completion status.{% else %}Assign this issue to a supervisor to start work.{% endif %}</p>
             <div class="d-flex gap-2 flex-wrap">
+              <a href="{% url 'issue_management:space_admin:issue_assign' issue_slug=issue.slug %}"
+                class="btn btn-dark d-flex align-items-center">
+                <span class="material-symbols-outlined me-2">person_add</span>
+                <span>{% if issue.assigned_to %}Reassign{% else %}Assign{% endif %}</span>
+              </a>
               {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
-              <form method="post" action="{% url 'issue_management:space_admin:issue_start_work' issue_slug=issue.slug %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-dark d-flex align-items-center"
-                        {% if issue.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
-                  <span class="material-symbols-outlined me-2">play_arrow</span>
-                  {% if issue.status == 'in_progress' %}Work in Progress{% else %}Start work{% endif %}
-                </button>
-              </form>
                 <button class="btn btn-success d-flex align-items-center" 
                         data-bs-toggle="modal" 
                         data-bs-target="#markResolvedModal"
