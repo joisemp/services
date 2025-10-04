@@ -16,10 +16,17 @@
                     <h1 class="h3 mb-0">Complete Work Task</h1>
                     <p class="text-muted">{{ work_task.title }}</p>
                 </div>
+                {% if next_param == 'task_detail' %}
+                <a href="{% url 'issue_management:supervisor:work_task_detail' work_task_slug=work_task.slug %}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Task
+                </a>
+                {% else %}
                 <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}" 
                    class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-2"></i>Back to Issue
                 </a>
+                {% endif %}
             </div>
 
             <div class="row">
@@ -36,7 +43,7 @@
                                 Please provide details about how this task was completed. This information will help with future reference and reporting.
                             </div>
 
-                            <form method="post">
+                            <form method="post"{% if next_param %} action="?next={{ next_param }}"{% endif %}>
                                 {% csrf_token %}
                                 {{ form.as_p | safe }}
                                 
@@ -44,10 +51,17 @@
                                     <button type="submit" class="btn btn-success">
                                         <i class="fas fa-check me-2"></i>Complete Task
                                     </button>
+                                    {% if next_param == 'task_detail' %}
+                                    <a href="{% url 'issue_management:supervisor:work_task_detail' work_task_slug=work_task.slug %}" 
+                                       class="btn btn-secondary">
+                                        Cancel
+                                    </a>
+                                    {% else %}
                                     <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}" 
                                        class="btn btn-secondary">
                                         Cancel
                                     </a>
+                                    {% endif %}
                                 </div>
                             </form>
                         </div>
@@ -65,11 +79,7 @@
                                 <dd class="col-sm-7">{{ work_task.title }}</dd>
                                 
                                 <dt class="col-sm-5">Issue:</dt>
-                                <dd class="col-sm-7">
-                                    <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}">
-                                        {{ issue.title }}
-                                    </a>
-                                </dd>
+                                <dd class="col-sm-7">{{ issue.title }}</dd>
                                 
                                 <dt class="col-sm-5">Assigned to:</dt>
                                 <dd class="col-sm-7">{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to }}</dd>

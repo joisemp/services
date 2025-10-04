@@ -56,7 +56,7 @@
       <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
         {% for task in work_tasks %}
         <div class="col mt-2">
-          <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=task.issue.slug %}" class="text-decoration-none card-link-wrapper">
+          <a href="{% url 'issue_management:supervisor:work_task_detail' work_task_slug=task.slug %}" class="text-decoration-none card-link-wrapper">
             <div class="card h-100 {% if task.completed %}task-completed{% endif %}">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">

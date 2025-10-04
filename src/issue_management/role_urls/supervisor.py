@@ -12,6 +12,7 @@ urlpatterns = [
     
     # Work Task URLs
     path('<slug:issue_slug>/work-tasks/create/', supervisor.WorkTaskCreateView.as_view(), name='work_task_create'),
+    path('work-tasks/<slug:work_task_slug>/', supervisor.WorkTaskDetailView.as_view(), name='work_task_detail'),
     path('work-tasks/<slug:work_task_slug>/edit/', supervisor.WorkTaskUpdateView.as_view(), name='work_task_update'),
     path('work-tasks/<slug:work_task_slug>/complete/', supervisor.WorkTaskCompleteView.as_view(), name='work_task_complete'),
     path('work-tasks/<slug:work_task_slug>/toggle-complete/', supervisor.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),

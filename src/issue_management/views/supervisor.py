@@ -27,6 +27,28 @@ class WorkTaskListView(SupervisorOnlyAccessMixin, ListView):
         return queryset
 
 
+class WorkTaskDetailView(SupervisorOnlyAccessMixin, DetailView):
+    """View details of a specific work task"""
+    model = WorkTask
+    template_name = "supervisor/issue_management/work_task_detail.html"
+    context_object_name = "work_task"
+    slug_field = 'slug'
+    slug_url_kwarg = 'work_task_slug'
+    
+    def get_queryset(self):
+        return WorkTask.objects.filter(assigned_to=self.request.user).select_related(
+            'issue', 
+            'issue__org', 
+            'issue__space',
+            'issue__reporter'
+        ).prefetch_related('issue__images')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.object.issue
+        return context
+
+
 class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     model = Issue
     template_name = "supervisor/issue_management/issue_list.html"
@@ -185,12 +207,19 @@ class WorkTaskCompleteView(SupervisorOnlyAccessMixin, UpdateView):
         return response
     
     def get_success_url(self):
+        # Check if 'next' parameter is set to redirect to task detail page
+        next_param = self.request.GET.get('next', None)
+        if next_param == 'task_detail':
+            return reverse_lazy('issue_management:supervisor:work_task_detail', kwargs={'work_task_slug': self.work_task.slug})
+        # Default redirect to issue detail page
         return reverse_lazy('issue_management:supervisor:issue_detail', kwargs={'issue_slug': self.work_task.issue.slug})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['work_task'] = self.work_task
         context['issue'] = self.work_task.issue
+        # Pass the next parameter to the template
+        context['next_param'] = self.request.GET.get('next', None)
         return context
 
 

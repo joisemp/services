@@ -1,0 +1,182 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Task Detail{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/work_task_detail/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/components/voice-recorder.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'issue_management:supervisor:work_task_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Go back</a>
+
+<section id="breadcrumb" class="mb-3">
+  {% if work_task.completed %}
+    <span class="badge bg-success rounded-pill ms-2">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">check_circle</span>
+      Completed
+    </span>
+  {% else %}
+    <span class="badge bg-warning rounded-pill ms-2">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">schedule</span>
+      Pending
+    </span>
+  {% endif %}
+  {% if work_task.due_date %}
+    <span class="badge rounded-pill text-bg-dark ms-2">Due: {{ work_task.due_date|date:"M d, Y" }}</span>
+  {% endif %}
+  <span class="badge rounded-pill text-bg-dark ms-2">{{ work_task.created_at|date:"M d, Y" }}</span>
+</section>
+
+<section id="task-details">
+  <!--Task Headline-->
+  <div
+    class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-md-3 py-3"
+    role="alert">
+    <div class="message flex-grow-1 mb-2 mb-md-0">
+      <h4 class="mb-2">{{ work_task.title }}</h4>
+      <p class="alert-text text-body-secondary mb-0">Assigned to {{ work_task.assigned_to.get_full_name }}</p>
+      <p class="alert-text text-body-secondary mb-0 fw-semibold">Created {{ work_task.created_at|date:"M d, Y \a\t H:i" }}</p>
+    </div>
+    <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">
+      {% if issue.reporter.phone_number %}
+        <a href="tel:{{ issue.reporter.phone_number }}"
+          class="btn btn-primary d-flex align-items-center justify-content-center"
+          title="Call {{ issue.reporter.get_full_name|default:'Reporter' }} at {{ issue.reporter.phone_number }}">
+          <span class="material-symbols-outlined">call</span>
+          <span class="ms-2">Call</span>
+        </a>
+      {% else %}
+        <button class="btn btn-primary d-flex align-items-center justify-content-center" 
+                disabled 
+                title="No phone number available for {{ issue.reporter.get_full_name|default:'Reporter' }}">
+          <span class="material-symbols-outlined">call</span>
+          <span class="ms-2">Call</span>
+        </button>
+      {% endif %}
+      {% if not work_task.completed %}
+        <a href="{% url 'issue_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}?next=task_detail" 
+           class="btn btn-success d-flex align-items-center justify-content-center">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span class="ms-2">Mark Complete</span>
+        </a>
+      {% else %}
+        <button class="btn btn-success d-flex align-items-center justify-content-center" disabled>
+          <span class="material-symbols-outlined">check_circle</span>
+          <span class="ms-2">Completed</span>
+        </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!--Resolution Notes-->
+  {% if work_task.completed and work_task.resolution_notes %}
+  <div
+    class="resolved-alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-3 py-4"
+    role="alert">
+    <div class="message flex-grow-1 mb-2 mb-md-0">
+      <h5 class="mb-1" style="color:darkgreen">
+        <span class="material-symbols-outlined me-2" style="color:darkgreen;">check_circle</span>
+        Resolution notes
+      </h5>
+      <p class="alert-text text-success mb-md-0">{{ work_task.resolution_notes|linebreaksbr }}</p>
+      <small class="text-muted">Completed on {{ work_task.updated_at|date:"M d, Y \a\t H:i" }}</small>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section id="task-content" class="mt-4">
+  <div class="row g-3">
+    <!-- Task details card -->
+    <div class="col-12">
+      <div class="card" style="width: 100%;">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-body-secondary">Task Description</h6>
+          <p class="card-text mt-0">{{ work_task.description }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="related-issue" class="mt-4">
+  <h5 class="mb-3">Related Issue</h5>
+  <div class="row g-3">
+    <!-- Issue details card -->
+    <div class="col-12">
+      <div class="card issue-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">{{ issue.title }}</h5>
+          <span class="badge badge-{{ issue.status }} rounded-pill">{{ issue.get_status_display }}</span>
+        </div>
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-body-secondary">Issue Description</h6>
+          <p class="card-text mt-0">{{ issue.description }}</p>
+          
+          <div class="images-log">
+            {% if issue.images.exists %}
+            <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Attached Images</h6>
+            <div class="d-flex flex-wrap">
+              {% for image in issue.images.all %}
+              <div class="position-relative me-2 mb-2">
+                <a href="{{ image.image.url }}" target="_blank">
+                  <img src="{{ image.image.url }}" alt="Issue image" class="img-thumbnail"
+                    style="width: 100px; height: 100px; object-fit: cover;">
+                </a>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Voice Recording Section -->
+            {% if issue.voice %}
+            <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
+            <div class="d-flex align-items-center gap-2">
+              <audio controls class="flex-grow-1">
+                <source src="{{ issue.voice.url }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="issue-meta mt-3 pt-3 border-top">
+            <div class="row">
+              <div class="col-md-6">
+                <small class="text-muted d-block">Reported by</small>
+                <strong>{{ issue.reporter.get_full_name }}</strong>
+                {% if issue.reporter.phone_number %}
+                  <div class="mt-1">
+                    <span>{{ issue.reporter.phone_number }}</span>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Location</small>
+                <strong>{% if issue.space %}{{ issue.space.name }}{% else %}Organization wide{% endif %}</strong>
+                <div class="mt-1">
+                  <small class="text-muted">{{ issue.created_at|date:"M d, Y" }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock content %}
