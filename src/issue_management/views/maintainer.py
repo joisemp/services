@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, View
 from django.contrib import messages
+from django.db.models import Case, When, IntegerField
 from ..models import WorkTask
 from config.mixins.access_mixin import MaintainerOnlyAccessMixin
 
@@ -18,7 +19,7 @@ class WorkTaskListView(MaintainerOnlyAccessMixin, ListView):
             'issue', 
             'issue__org', 
             'issue__space'
-        ).order_by('-created_at')
+        )
         
         # Filter by status if provided
         status_filter = self.request.GET.get('status', None)
@@ -27,7 +28,17 @@ class WorkTaskListView(MaintainerOnlyAccessMixin, ListView):
         elif status_filter == 'completed':
             queryset = queryset.filter(completed=True)
         
-        return queryset
+        # Order by completion status, issue priority (critical first, low last), then due date
+        return queryset.annotate(
+            priority_order=Case(
+                When(issue__priority='critical', then=1),
+                When(issue__priority='high', then=2),
+                When(issue__priority='medium', then=3),
+                When(issue__priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('completed', 'priority_order', 'due_date')
 
 
 class WorkTaskDetailView(MaintainerOnlyAccessMixin, DetailView):

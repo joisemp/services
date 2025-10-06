@@ -31,6 +31,9 @@ class Issue(models.Model):
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     resolution_notes = models.TextField(blank=True, null=True, help_text="Notes describing how the issue was resolved")
     
+    class Meta:
+        ordering = ['-created_at']  # Default ordering, overridden in views with priority
+    
     # Issue assignment fields
     assigned_to = models.ForeignKey(
         'core.User', 
@@ -124,6 +127,9 @@ class WorkTask(models.Model):
     due_date = models.DateTimeField(blank=True, null=True)
     completed = models.BooleanField(default=False)
     slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['completed', 'due_date']  # Incomplete first, then by due date
     
     def save(self, *args, **kwargs):
         if not self.slug:
