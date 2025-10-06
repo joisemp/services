@@ -275,9 +275,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         if self.auth_method == 'phone' and self.phone_number:
-            return f"{self.phone_number} ({self.get_user_type_display()})"
+            return f"{self.get_full_name()} ({self.get_user_type_display()})"
         elif self.auth_method == 'email' and self.email:
-            return f"{self.email} ({self.get_user_type_display()})"
+            return f"{self.get_full_name()} ({self.get_user_type_display()})"
         else:
             return f"User {self.id} ({self.get_user_type_display()})"
     
