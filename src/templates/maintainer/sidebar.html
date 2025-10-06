@@ -1,11 +1,19 @@
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-    <a class="navlink" href="#">
+    <!-- <a class="navlink" href="#">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
             <span class="menu-text">Dashboard</span>
+        </a> -->
+
+    <a class="navlink" href="{% url 'issue_management:maintainer:work_task_list' %}">
+            <span class="material-symbols-outlined me-2">
+                task
+            </span>
+            <span class="menu-text">My Tasks</span>
         </a>
+
     <!-- <a class="navlink" href="#">
             <span class="material-symbols-outlined me-2">
                 groups
@@ -41,12 +49,12 @@
             <span class="menu-text">Purchases</span>
         </a> -->
 
-    <a class="navlink" href="#">
+    <!-- <a class="navlink" href="#">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
-        </a>
+        </a> -->
 
     </div>
 </section>

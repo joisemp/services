@@ -1,12 +1,11 @@
 from django.urls import path
-# from ...views import maintainer  # Uncomment when views are created
+from ..views import maintainer
 
 app_name = "maintainer"
 
 urlpatterns = [
-    # Maintainer-specific URLs for issue management
-    # path('', maintainer.dashboard, name='dashboard'),
-    # path('issues/', maintainer.issue_list, name='issue_list'),
-    # path('issues/<int:issue_id>/', maintainer.issue_detail, name='issue_detail'),
-    # Add maintainer URLs here
+    # Work Task Management URLs - Maintainer can only view tasks and toggle completion
+    path('tasks/', maintainer.WorkTaskListView.as_view(), name='work_task_list'),
+    path('work-tasks/<slug:work_task_slug>/', maintainer.WorkTaskDetailView.as_view(), name='work_task_detail'),
+    path('work-tasks/<slug:work_task_slug>/toggle-complete/', maintainer.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),
 ]

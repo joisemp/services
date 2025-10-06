@@ -20,6 +20,7 @@ class RedirectLoggedinUsers(AccessMixin):
         "is_central_admin": "dashboard:central_admin_dashboard",
         "is_space_admin": "core:switch_space",  # Netflix-style: always go to space selection first
         "is_supervisor": "issue_management:supervisor:issue_list",
+        "is_maintainer": "issue_management:maintainer:work_task_list",
     }
 
     default_redirect = "home"
