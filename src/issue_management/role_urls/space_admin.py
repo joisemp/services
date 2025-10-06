@@ -21,10 +21,6 @@ urlpatterns = [
     path('work-tasks/<slug:work_task_slug>/toggle-complete/', space_admin.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),
     path('work-tasks/<slug:work_task_slug>/delete/', space_admin.WorkTaskDeleteView.as_view(), name='work_task_delete'),
     
-    # Comment URLs
-    path('<slug:issue_slug>/comments/', space_admin.IssueCommentListView.as_view(), name='comment_list'),
-    path('<slug:issue_slug>/comments/create/', space_admin.IssueCommentCreateView.as_view(), name='comment_create'),
-    
     # Image URLs
     path('<slug:issue_slug>/images/<slug:image_slug>/delete/', space_admin.IssueImageDeleteView.as_view(), name='image_delete'),
     path('<slug:issue_slug>/images/upload/', space_admin.IssueImageUploadView.as_view(), name='image_upload'),

@@ -176,27 +176,85 @@ tr {
   background-color: #dc3545;
 }
 
-#myChart {
-  height: 10vh;
-  width: 100%;
+#alert .alert {
+  margin-bottom: 15px;
+  border: 1px solid #0d6efd !important;
+  background-color: #e2eefd !important;
+}
+#alert .alert .alert-buttons {
+  width: -moz-fit-content;
+  width: fit-content;
+}
+
+#options-bar .container-nav {
+  background-color: #f1f7ff;
+  padding: 5px;
+  border-radius: 5px;
+  width: -moz-fit-content;
+  width: fit-content;
+}
+#options-bar .container-nav .nav .nav-item .nav-active {
+  background-color: #f9f9ff;
+  color: #060606 !important;
+}
+#options-bar .container-nav .nav .nav-item a {
+  text-decoration: none;
+  font-weight: 500;
+  color: #4e4e4e !important;
+  border-radius: 0px !important;
+}
+#options-bar .container-nav .nav .nav-item a:hover {
+  background-color: #f9f9ff;
+  color: #060606 !important;
 }
 
 @media (max-width: 575.98px) {
-  #issue-card .card {
+  #task-list .card {
     width: 100% !important;
   }
 }
-#issue-card .card-link-wrapper {
+#task-list .card-link-wrapper {
   display: block;
   color: inherit;
 }
-#issue-card .card-link-wrapper:hover .card {
+#task-list .card-link-wrapper:hover .card {
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2509803922);
   border-color: #0d6efd;
   transition: box-shadow 0.2s, border-color 0.2s;
 }
-#issue-card .card-link-wrapper:focus {
+#task-list .card-link-wrapper:focus {
   outline: none;
+}
+#task-list .task-completed {
+  opacity: 0.85;
+  background-color: #f8f9fa;
+}
+#task-list .task-description {
+  font-size: 0.9rem;
+  min-height: 3rem;
+}
+#task-list .task-meta {
+  font-size: 0.875rem;
+}
+#task-list .task-meta .icon-small {
+  font-size: 18px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+#task-list .issue-info {
+  width: 100%;
+}
+#task-list .empty-state .empty-icon {
+  font-size: 80px;
+  color: #6c757d;
+  opacity: 0.5;
+}
+#task-list .empty-state h4 {
+  color: #495057;
+  font-weight: 600;
+}
+#task-list .empty-state p {
+  font-size: 1.1rem;
 }
 
 @media (max-width: 767.98px) {

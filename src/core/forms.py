@@ -76,6 +76,11 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
     )
     
     # Central Admin fields
+    admin_phone_number = forms.CharField(
+        max_length=17,
+        label="Central Admin Phone Number",
+        help_text="Phone number for the central admin (required for all users)"
+    )
     admin_first_name = forms.CharField(
         max_length=30,
         label="Central Admin First Name",
@@ -118,6 +123,7 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
         
         # Create central admin user
         central_admin = User.objects.create_user(
+            phone_number=self.cleaned_data['admin_phone_number'],
             email=self.cleaned_data['admin_email'],
             password='temporary_password_will_be_reset',  # Temporary password, will be made unusable
             user_type='central_admin',
@@ -276,7 +282,7 @@ class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        self.fields['phone_number'].help_text = 'Enter phone number without country code'
+        self.fields['phone_number'].help_text = 'Phone number is required for all users (enter without country code)'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -307,6 +313,7 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     """
     Form for creating users with email + auto-generated password authentication
     (central_admin, space_admin, maintainer, supervisor, reviewer)
+    Phone number is now required for all user types
     """
     USER_TYPE_CHOICES = [
         ('central_admin', 'Central Admin'),
@@ -316,6 +323,12 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
         ('reviewer', 'Reviewer'),
     ]
 
+    phone_number = forms.CharField(
+        max_length=17,
+        required=True,
+        label="Phone Number",
+        help_text="Phone number is required for all users (enter without country code)"
+    )
     email = forms.EmailField(
         required=True,
     )
@@ -335,7 +348,7 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'user_type']
+        fields = ['phone_number', 'email', 'first_name', 'last_name', 'user_type']
 
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)

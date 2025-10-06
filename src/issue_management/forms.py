@@ -119,12 +119,37 @@ class WorkTaskForm(BootstrapFormMixin, forms.ModelForm):
         # Make due_date optional
         self.fields['due_date'].required = False
         
-        # Filter assigned_to to only show users from the same organization
+        # Filter assigned_to to only show supervisors or maintainers from the same organization
         if self.issue and self.issue.org:
-            self.fields['assigned_to'].queryset = self.issue.org.users.filter(is_active=True)
+            self.fields['assigned_to'].queryset = self.issue.org.users.filter(
+                is_active=True,
+                user_type__in=['supervisor', 'maintainer']
+            ).order_by('first_name', 'last_name')
+            self.fields['assigned_to'].empty_label = "Select a supervisor or maintainer"
         
-        # Add help text
+        # Update label and help text
+        self.fields['assigned_to'].label = "Assign to"
+        self.fields['assigned_to'].help_text = "Tasks can only be assigned to supervisors or maintainers"
         self.fields['due_date'].help_text = "When should this task be completed?"
+    
+    def clean_assigned_to(self):
+        """Validate that the assigned user is a supervisor or maintainer from the same organization"""
+        assigned_to = self.cleaned_data.get('assigned_to')
+        
+        if assigned_to and self.issue:
+            # Check if user is from the same organization
+            if assigned_to.organization != self.issue.org:
+                raise forms.ValidationError(
+                    'Selected user must be from the same organization as the issue.'
+                )
+            
+            # Check if user is a supervisor or maintainer
+            if assigned_to.user_type not in ['supervisor', 'maintainer']:
+                raise forms.ValidationError(
+                    'Tasks can only be assigned to supervisors or maintainers.'
+                )
+        
+        return assigned_to
 
 
 class WorkTaskUpdateForm(BootstrapFormMixin, forms.ModelForm):
@@ -154,12 +179,37 @@ class WorkTaskUpdateForm(BootstrapFormMixin, forms.ModelForm):
         # Make due_date optional
         self.fields['due_date'].required = False
         
-        # Filter assigned_to to only show users from the same organization
+        # Filter assigned_to to only show supervisors or maintainers from the same organization
         if self.issue and self.issue.org:
-            self.fields['assigned_to'].queryset = self.issue.org.users.filter(is_active=True)
+            self.fields['assigned_to'].queryset = self.issue.org.users.filter(
+                is_active=True,
+                user_type__in=['supervisor', 'maintainer']
+            ).order_by('first_name', 'last_name')
+            self.fields['assigned_to'].empty_label = "Select a supervisor or maintainer"
         
-        # Add help text
+        # Update label and help text
+        self.fields['assigned_to'].label = "Assign to"
+        self.fields['assigned_to'].help_text = "Tasks can only be assigned to supervisors or maintainers"
         self.fields['due_date'].help_text = "When should this task be completed?"
+    
+    def clean_assigned_to(self):
+        """Validate that the assigned user is a supervisor or maintainer from the same organization"""
+        assigned_to = self.cleaned_data.get('assigned_to')
+        
+        if assigned_to and self.issue:
+            # Check if user is from the same organization
+            if assigned_to.organization != self.issue.org:
+                raise forms.ValidationError(
+                    'Selected user must be from the same organization as the issue.'
+                )
+            
+            # Check if user is a supervisor or maintainer
+            if assigned_to.user_type not in ['supervisor', 'maintainer']:
+                raise forms.ValidationError(
+                    'Tasks can only be assigned to supervisors or maintainers.'
+                )
+        
+        return assigned_to
 
 
 class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):

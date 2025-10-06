@@ -1,12 +1,63 @@
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
 from django.urls import reverse_lazy
+from django.db.models import Case, When, IntegerField
 from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm
 from django.contrib import messages
 from .. models import Issue, WorkTask
 from django.shortcuts import redirect
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 
+
+class WorkTaskListView(SupervisorOnlyAccessMixin, ListView):
+    """List all work tasks assigned to the supervisor"""
+    model = WorkTask
+    template_name = "supervisor/issue_management/work_task_list.html"
+    context_object_name = "work_tasks"
+
+    def get_queryset(self):
+        queryset = WorkTask.objects.filter(assigned_to=self.request.user).select_related('issue', 'issue__org', 'issue__space')
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter == 'pending':
+            queryset = queryset.filter(completed=False)
+        elif status_filter == 'completed':
+            queryset = queryset.filter(completed=True)
+        
+        # Order by completion status, issue priority (critical first, low last), then due date
+        return queryset.annotate(
+            priority_order=Case(
+                When(issue__priority='critical', then=1),
+                When(issue__priority='high', then=2),
+                When(issue__priority='medium', then=3),
+                When(issue__priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('completed', 'priority_order', 'due_date')
+
+
+class WorkTaskDetailView(SupervisorOnlyAccessMixin, DetailView):
+    """View details of a specific work task"""
+    model = WorkTask
+    template_name = "supervisor/issue_management/work_task_detail.html"
+    context_object_name = "work_task"
+    slug_field = 'slug'
+    slug_url_kwarg = 'work_task_slug'
+    
+    def get_queryset(self):
+        return WorkTask.objects.filter(assigned_to=self.request.user).select_related(
+            'issue', 
+            'issue__org', 
+            'issue__space',
+            'issue__reporter'
+        ).prefetch_related('issue__images')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.object.issue
+        return context
 
 
 class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
@@ -15,7 +66,28 @@ class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     context_object_name = "issues"
 
     def get_queryset(self):
-        return Issue.objects.filter(assigned_to=self.request.user).order_by('-created_at')
+        # Order by status (open/assigned/in_progress first), then priority (critical first, low last), then creation date
+        return Issue.objects.filter(assigned_to=self.request.user).annotate(
+            status_order=Case(
+                When(status='open', then=1),
+                When(status='assigned', then=2),
+                When(status='in_progress', then=3),
+                When(status='resolved', then=4),
+                When(status='escalated', then=5),
+                When(status='closed', then=6),
+                When(status='cancelled', then=7),
+                default=8,
+                output_field=IntegerField(),
+            ),
+            priority_order=Case(
+                When(priority='critical', then=1),
+                When(priority='high', then=2),
+                When(priority='medium', then=3),
+                When(priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', 'priority_order', '-created_at')
     
     
 class IssueDetailView(SupervisorOnlyAccessMixin, DetailView):
@@ -30,8 +102,17 @@ class IssueDetailView(SupervisorOnlyAccessMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add work tasks to context
-        work_tasks = self.object.work_tasks.all().order_by('-created_at')
+        # Add work tasks to context sorted by completion status and issue priority
+        work_tasks = self.object.work_tasks.select_related('issue').all().annotate(
+            priority_order=Case(
+                When(issue__priority='critical', then=1),
+                When(issue__priority='high', then=2),
+                When(issue__priority='medium', then=3),
+                When(issue__priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('completed', 'priority_order', 'due_date')
         context['work_tasks'] = work_tasks
         # Check if there are any incomplete work tasks
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
@@ -167,12 +248,19 @@ class WorkTaskCompleteView(SupervisorOnlyAccessMixin, UpdateView):
         return response
     
     def get_success_url(self):
+        # Check if 'next' parameter is set to redirect to task detail page
+        next_param = self.request.GET.get('next', None)
+        if next_param == 'task_detail':
+            return reverse_lazy('issue_management:supervisor:work_task_detail', kwargs={'work_task_slug': self.work_task.slug})
+        # Default redirect to issue detail page
         return reverse_lazy('issue_management:supervisor:issue_detail', kwargs={'issue_slug': self.work_task.issue.slug})
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['work_task'] = self.work_task
         context['issue'] = self.work_task.issue
+        # Pass the next parameter to the template
+        context['next_param'] = self.request.GET.get('next', None)
         return context
 
 

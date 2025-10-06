@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from django.db.models import Case, When, IntegerField
 from ..models import Issue, IssueImage, WorkTask, IssueComment
 from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
@@ -28,7 +29,29 @@ class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
             else:
                 queryset = queryset.filter(status=status_filter)
         
-        return queryset.order_by('-created_at')
+        # Order by status groups, then priority, then creation date
+        # Active issues (open/assigned/in_progress) first, then resolved/escalated, then closed/cancelled
+        return queryset.annotate(
+            status_order=Case(
+                When(status='open', then=1),
+                When(status='assigned', then=2),
+                When(status='in_progress', then=3),
+                When(status='resolved', then=4),
+                When(status='escalated', then=5),
+                When(status='closed', then=6),
+                When(status='cancelled', then=7),
+                default=8,
+                output_field=IntegerField(),
+            ),
+            priority_order=Case(
+                When(priority='critical', then=1),
+                When(priority='high', then=2),
+                When(priority='medium', then=3),
+                When(priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', 'priority_order', '-created_at')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -94,8 +117,19 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add work tasks to context
-        work_tasks = self.object.work_tasks.all().order_by('-created_at')
+        # Add work tasks to context sorted by completion status, then by issue priority
+        # Incomplete tasks first, ordered by issue's priority (critical to low)
+        issue_priority_order = Case(
+            When(issue__priority='critical', then=1),
+            When(issue__priority='high', then=2),
+            When(issue__priority='medium', then=3),
+            When(issue__priority='low', then=4),
+            default=5,
+            output_field=IntegerField(),
+        )
+        work_tasks = self.object.work_tasks.select_related('issue').annotate(
+            priority_order=issue_priority_order
+        ).order_by('completed', 'priority_order', 'due_date')
         context['work_tasks'] = work_tasks
         # Check if there are any incomplete work tasks
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
@@ -452,56 +486,6 @@ class WorkTaskDeleteView(SpaceAdminWithActiveSpaceMixin, View):
         messages.success(request, f'Work task "{task_title}" has been deleted.')
         
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)
-
-
-class IssueCommentListView(SpaceAdminWithActiveSpaceMixin, View):
-    """HTMX endpoint to return the list of comments for an issue"""
-    
-    def get(self, request, issue_slug):
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        comments = issue.comments.select_related('user').all()
-        
-        return render(request, 'space_admin/issue_management/partials/comment_list.html', {
-            'comments': comments,
-            'issue': issue
-        })
-
-
-class IssueCommentCreateView(SpaceAdminWithActiveSpaceMixin, View):
-    """HTMX endpoint to create a new comment"""
-    
-    def post(self, request, issue_slug):
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        form = IssueCommentForm(request.POST)
-        
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.issue = issue
-            comment.user = request.user
-            comment.save()
-            
-            # Return the updated comment list
-            comments = issue.comments.select_related('user').all()
-            return render(request, 'space_admin/issue_management/partials/comment_list.html', {
-                'comments': comments,
-                'issue': issue
-            })
-        else:
-            # Return form errors
-            return render(request, 'space_admin/issue_management/partials/comment_form.html', {
-                'form': form,
-                'issue': issue
-            }, status=400)
-    
-    def get(self, request, issue_slug):
-        """Return empty form for HTMX to display"""
-        issue = get_object_or_404(Issue, slug=issue_slug)
-        form = IssueCommentForm()
-        
-        return render(request, 'space_admin/issue_management/partials/comment_form.html', {
-            'form': form,
-            'issue': issue
-        })
 
 
 class IssueDeleteView(SpaceAdminWithActiveSpaceMixin, DeleteView):

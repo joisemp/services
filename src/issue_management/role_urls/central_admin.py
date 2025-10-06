@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views import central_admin  # Uncomment when views are created
+from ..views import central_admin
 
 app_name = "central_admin"
 
@@ -20,10 +20,6 @@ urlpatterns = [
     path('work-tasks/<slug:work_task_slug>/complete/', central_admin.WorkTaskCompleteView.as_view(), name='work_task_complete'),
     path('work-tasks/<slug:work_task_slug>/toggle-complete/', central_admin.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),
     path('work-tasks/<slug:work_task_slug>/delete/', central_admin.WorkTaskDeleteView.as_view(), name='work_task_delete'),
-    
-    # Comment URLs
-    path('<slug:issue_slug>/comments/', central_admin.IssueCommentListView.as_view(), name='comment_list'),
-    path('<slug:issue_slug>/comments/create/', central_admin.IssueCommentCreateView.as_view(), name='comment_create'),
     
     # Image URLs
     path('<slug:issue_slug>/images/<slug:image_slug>/delete/', central_admin.IssueImageDeleteView.as_view(), name='image_delete'),

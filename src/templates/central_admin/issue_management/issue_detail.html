@@ -53,16 +53,20 @@
           <span class="ms-2">Call</span>
         </button>
       {% endif %}
+      {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+      <button class="btn btn-outline-primary d-flex align-items-center justify-content-center" 
+              disabled 
+              title="Cannot edit {{ issue.get_status_display|lower }} issues">
+        <span class="material-symbols-outlined">edit</span>
+        <span class="ms-2 d-inline">Edit</span>
+      </button>
+      {% else %}
       <a href="{% url 'issue_management:central_admin:issue_update' issue_slug=issue.slug %}"
         class="btn btn-outline-primary d-flex align-items-center justify-content-center">
         <span class="material-symbols-outlined">edit</span>
         <span class="ms-2 d-inline">Edit</span>
       </a>
-      <a href="{% url 'issue_management:central_admin:issue_assign' issue_slug=issue.slug %}"
-        class="btn btn-success d-flex align-items-center justify-content-center">
-        <span class="material-symbols-outlined">person_add</span>
-        <span class="ms-2 d-inline">{% if issue.assigned_to %}Reassign{% else %}Assign{% endif %}</span>
-      </a>
+      {% endif %}
     </div>
   </div>
 
@@ -135,10 +139,18 @@
           <h6 class="card-subtitle mt-2 text-body-secondary mb-2">Attached Images</h6>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="badge bg-info">{{ issue.images.count }} image{{ issue.images.count|pluralize }}</span>
+            {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+            <button class="btn btn-outline-primary btn-sm" 
+                    disabled 
+                    title="Cannot add images to {{ issue.get_status_display|lower }} issues">
+              <i class="fas fa-plus me-1"></i>Add Images
+            </button>
+            {% else %}
             <a href="{% url 'issue_management:central_admin:image_upload' issue_slug=issue.slug %}" 
                class="btn btn-outline-primary btn-sm">
               <i class="fas fa-plus me-1"></i>Add Images
             </a>
+            {% endif %}
           </div>
           <div class="images-log">
             {% if issue.images.exists %}
@@ -150,12 +162,14 @@
                     style="width: 100px; height: 100px; object-fit: cover;">
                 </a>
                 <!-- Delete button overlay -->
+                {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
                 <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" 
                         style="padding: 2px 6px; font-size: 12px; line-height: 1; transform: translate(25%, -25%);"
                         onclick="deleteImage('{{ image.slug }}', '{{ issue.slug }}')"
                         title="Delete image">
                   <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
                 </button>
+                {% endif %}
               </div>
               {% endfor %}
             </div>
@@ -174,15 +188,18 @@
                 <source src="{{ issue.voice.url }}" type="audio/mpeg">
                 Your browser does not support the audio element.
               </audio>
+              {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
               <button type="button" 
                       class="btn btn-danger btn-sm" 
                       onclick="deleteVoice('{{ issue.slug }}')"
                       title="Delete voice recording">
                 <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
               </button>
+              {% endif %}
             </div>
             {% else %}
             <h6 class="card-subtitle mt-3 text-body-secondary mb-2">Voice Recording</h6>
+            {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
             <div class="voice-recording-section">
               <form method="post" action="{% url 'issue_management:central_admin:voice_upload' issue_slug=issue.slug %}" enctype="multipart/form-data" id="voiceUploadForm">
                 {% csrf_token %}
@@ -199,6 +216,11 @@
                 </div>
               </form>
             </div>
+            {% else %}
+            <div class="text-center py-3 text-muted">
+              <p class="mb-0 small">Voice recording upload is disabled for {{ issue.get_status_display|lower }} issues</p>
+            </div>
+            {% endif %}
             {% endif %}
           </div>
         </div>
@@ -206,22 +228,28 @@
     </div>
 
     <div class="col-12 col-lg-6">
-      <!-- Start working card -->
+      <!-- Assign Issue card -->
       <div class="col-12 mb-3">
         <div class="card h-100 background-light">
           <div class="card-body">
-            <h5 class="card-title text-muted mb-3">Start working</h5>
-            <p class="card-text text-muted mb-3">Lets start the work.</p>
+            <h5 class="card-title text-muted mb-3">Issue Management</h5>
+            <p class="card-text text-muted mb-3">{% if issue.assigned_to %}Manage issue assignment and completion status.{% else %}Assign this issue to a supervisor to start work.{% endif %}</p>
             <div class="d-flex gap-2 flex-wrap">
+              {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+              <button class="btn btn-dark d-flex align-items-center" 
+                      disabled 
+                      title="Cannot reassign {{ issue.get_status_display|lower }} issues">
+                <span class="material-symbols-outlined me-2">person_add</span>
+                <span>{% if issue.assigned_to %}Reassign{% else %}Assign{% endif %}</span>
+              </button>
+              {% else %}
+              <a href="{% url 'issue_management:central_admin:issue_assign' issue_slug=issue.slug %}"
+                class="btn btn-dark d-flex align-items-center">
+                <span class="material-symbols-outlined me-2">person_add</span>
+                <span>{% if issue.assigned_to %}Reassign{% else %}Assign{% endif %}</span>
+              </a>
+              {% endif %}
               {% if issue.status != 'resolved' and issue.status != 'closed' and issue.status != 'cancelled' %}
-              <form method="post" action="{% url 'issue_management:central_admin:issue_start_work' issue_slug=issue.slug %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-dark d-flex align-items-center"
-                        {% if issue.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
-                  <span class="material-symbols-outlined me-2">play_arrow</span>
-                  {% if issue.status == 'in_progress' %}Work in Progress{% else %}Start work{% endif %}
-                </button>
-              </form>
                 <button class="btn btn-success d-flex align-items-center" 
                         data-bs-toggle="modal" 
                         data-bs-target="#markResolvedModal"
@@ -288,7 +316,7 @@
                class="comments-list-scrollable flex-grow-1">
             
             <!-- Comments will be loaded here via HTMX -->
-            <div hx-get="{% url 'issue_management:central_admin:comment_list' issue_slug=issue.slug %}"
+            <div hx-get="{% url 'issue_management:comment_list' issue_slug=issue.slug %}"
                  hx-trigger="load"
                  hx-swap="innerHTML">
               <div class="text-center text-muted py-4">
@@ -301,7 +329,13 @@
           <!-- Fixed Comment Form at Bottom -->
           <div id="comment-form-sticky" 
                class="comment-form-sticky border-top bg-white">
-            <form hx-post="{% url 'issue_management:central_admin:comment_create' issue_slug=issue.slug %}"
+            {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+            <div class="p-3 text-center text-muted">
+              <i class="fas fa-lock me-2"></i>
+              <span>Comments are disabled for {{ issue.get_status_display|lower }} issues</span>
+            </div>
+            {% else %}
+            <form hx-post="{% url 'issue_management:comment_create' issue_slug=issue.slug %}"
                   hx-target="#comments-list-area"
                   hx-swap="innerHTML"
                   class="comment-form">
@@ -333,6 +367,7 @@
                 </div>
               </div>
             </form>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -343,10 +378,19 @@
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0">Work Tasks</h5>
+          {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+          <button class="btn btn-primary btn-sm" 
+                  disabled 
+                  title="Cannot add tasks to {{ issue.get_status_display|lower }} issues">
+            <span class="material-symbols-outlined">add</span>
+            Add Task
+          </button>
+          {% else %}
           <a href="{% url 'issue_management:central_admin:work_task_create' issue_slug=issue.slug %}" class="btn btn-primary btn-sm">
             <span class="material-symbols-outlined">add</span>
             Add Task
           </a>
+          {% endif %}
         </div>
         <div class="card-body">
           {% if work_tasks %}
@@ -445,9 +489,17 @@
             <div class="text-center py-4">
               <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
               <p class="text-muted mb-3">No work tasks yet</p>
+              {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+              <button class="btn btn-primary" 
+                      disabled 
+                      title="Cannot add tasks to {{ issue.get_status_display|lower }} issues">
+                <i class="fas fa-plus"></i> Create First Task
+              </button>
+              {% else %}
               <a href="{% url 'issue_management:central_admin:work_task_create' issue_slug=issue.slug %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create First Task
               </a>
+              {% endif %}
             </div>
           {% endif %}
         </div>

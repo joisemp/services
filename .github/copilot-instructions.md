@@ -5,7 +5,7 @@ This is a Django 5.2-based issue management system with role-based access contro
 
 **Tech Stack**: Django 5.2, PostgreSQL, Docker, Bootstrap 5, HTMX, DigitalOcean Spaces (S3-compatible), WhiteNoise
 
-**Key Dependencies**: `django-environ` (environment management), `django-storages` (S3 integration), `psycopg2-binary` (PostgreSQL), `pillow` (image handling)
+**Key Dependencies**: `django-environ` (environment management), `django-storages` (S3 integration), `psycopg2-binary` (PostgreSQL), `pillow` (image handling), `whitenoise` (static file serving), `boto3` (AWS SDK)
 
 ## Architecture & Key Components
 
@@ -32,6 +32,14 @@ URLs are organized by user role with parallel structures:
 /issues/supervisor/       → issue_management.role_urls.supervisor
 ```
 Each role has its own URL namespace and corresponding view modules in `views/`.
+
+### Common Shared Components (`issue_management/views/common.py`)
+Role-agnostic functionality accessible to all authenticated users:
+- **Issue Comments**: `IssueCommentListView` and `IssueCommentCreateView` handle comment viewing and creation
+- **HTMX Integration**: Common views use HTMX for dynamic updates without page reloads
+- **Shared URLs**: Comment endpoints at `/issues/<slug>/comments/` and `/issues/<slug>/comments/create/`
+- **Partial Templates**: Common components stored in `templates/common/issue_management/partials/` (e.g., `comment_list.html`, `comment_form.html`)
+- **Pattern**: Common views handle cross-role functionality; use `LoginRequiredMixin` for authentication and return partial templates for HTMX swaps
 
 ### Issue Management System
 - **Models**: `Issue`, `IssueImage`, `IssueComment`, `WorkTask`, `WorkTaskShare` with automatic slug generation using `config.utils.generate_unique_slug()`
@@ -107,13 +115,14 @@ docker exec -it sfs-services-dev-container python manage.py shell
 ### Database Migrations
 - **Always run migrations inside container**: 
   ```bash
-  # Linux/Mac
+  # Linux/Mac (use && to chain commands)
   docker exec -it sfs-services-dev-container python manage.py makemigrations && docker exec -it sfs-services-dev-container python manage.py migrate
   
-  # Windows PowerShell (join with ;)  
+  # Windows PowerShell (use ; to separate commands - they run sequentially regardless of success)
   docker exec -it sfs-services-dev-container python manage.py makemigrations ; docker exec -it sfs-services-dev-container python manage.py migrate
   ```
 - **Migration Considerations**: Custom User model requires careful migration handling - organization is optional for superusers only
+- **Important**: Always run `makemigrations` BEFORE `migrate` when model changes are made
 
 ### Environment Configuration
 - Create `src/config/.env` with required variables (Django looks for this path automatically):
@@ -129,11 +138,15 @@ docker exec -it sfs-services-dev-container python manage.py shell
 - **Always create SCSS files for page-specific styles** - do NOT create raw CSS files
 - **Each page gets its own folder** within the appropriate module directory (e.g., `issue_list/`, `issue_detail/`)
 - **Inside each page folder**, create a `style.scss` file, then compile to `style.css` in the same folder
-- **SCSS Compilation**: Files are NOT automatically compiled - you need to compile them manually or use a build tool
+- **SCSS Compilation**: 
+  - Files are NOT automatically compiled - compile manually using a SCSS compiler
+  - Example: `sass src/static/styles/home/style.scss src/static/styles/home/style.css`
+  - Both `.scss` source and `.css` compiled files are committed to the repository
 - **Base Style Imports**: Always import base styles in SCSS files:
   - `@use '../_base'` for basic navbar/header styles only
   - `@use '../../_sidebar_base'` for full sidebar layout with responsive design
-- **Variables**: Use color variables from `static/styles/_colors.scss` instead of hardcoded colors
+- **Variables**: Use color variables from `static/styles/_colors.scss` (e.g., `$primary`, `$nav-bg`, `$base-white`) instead of hardcoded colors
+- **Template Loading**: Reference compiled CSS in templates: `{% static 'styles/path/to/style.css' %}` in `{% block styles %}`
 
 ### Key Files to Know
 - `config/settings.py`: Environment-based configuration with django-environ
@@ -175,6 +188,30 @@ docker exec -it sfs-services-dev-container python manage.py check
 2. Add URL in `issue_management/role_urls/{role}.py` with `app_name = "{role}"`
 3. Create template in `templates/{role}/issue_management/{action}.html`
 4. Use `BootstrapFormMixin` for forms and include `slug_field = 'slug'` for DetailViews
+
+### Adding Common/Shared Features
+For functionality that should be accessible across all roles:
+1. Create view in `issue_management/views/common.py` (use `LoginRequiredMixin` for auth)
+2. Add URL directly in `issue_management/urls.py` (not in role_urls subdirectory)
+3. Create partial templates in `templates/common/issue_management/partials/` for HTMX responses
+4. Example pattern - Issue Comments:
+   ```python
+   # View in common.py
+   class IssueCommentCreateView(LoginRequiredMixin, View):
+       def post(self, request, issue_slug):
+           issue = get_object_or_404(Issue, slug=issue_slug)
+           form = IssueCommentForm(request.POST)
+           if form.is_valid():
+               comment = form.save(commit=False)
+               comment.issue = issue
+               comment.user = request.user
+               comment.save()
+               # Return partial template for HTMX swap
+               return render(request, 'common/issue_management/partials/comment_list.html', {...})
+   
+   # URL in urls.py
+   path('issues/<slug:issue_slug>/comments/create/', common.IssueCommentCreateView.as_view(), name='comment_create')
+   ```
 
 ### Custom User Creation with Auth Method
 ```python
@@ -240,8 +277,12 @@ class MyModel(models.Model):
 
 ### Media File Handling
 - **Development**: Files stored in `src/media/public/` locally
-- **Production**: Files uploaded to DigitalOcean Spaces with `public-read` ACL for `media/public/` paths
-- **Image Uploads**: Forms handle multiple images; views create separate `IssueImage` instances in `form_valid()`
+- **Production**: Files uploaded to DigitalOcean Spaces (S3-compatible) using custom `MediaStorage` class
+  - Default ACL is `private` for security
+  - Files in `media/public/` paths automatically get `public-read` ACL (see `config/storages.py`)
+  - This allows public access to issue images/voices while keeping other files private
+- **Image Uploads**: Forms handle multiple images via `image1`, `image2`, `image3` fields; views create separate `IssueImage` instances in `form_valid()`
+- **Storage Classes**: `StaticStorage` (public-read for all static files) and `MediaStorage` (conditional ACL based on path)
 
 ## Security & Permissions
 - Role-based access handled via URL routing and view inheritance, not Django's permission system

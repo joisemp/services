@@ -1,12 +1,13 @@
+{% load core_tags %}
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-        <a class="navlink" href="{% url 'dashboard:central_admin_dashboard' %}">
+        <a class="navlink {% is_active 'dashboard:central_admin_dashboard' %}" href="{% url 'dashboard:central_admin_dashboard' %}">
             <span class="material-symbols-outlined me-2">
                 dashboard
             </span>
             <span class="menu-text">Dashboard</span>
         </a>
-        <a class="navlink" href="{% url 'core:people_list' %}">
+        <a class="navlink {% is_active 'core:people_list,core:people_create,core:people_update,core:people_detail' %}" href="{% url 'core:people_list' %}">
             <span class="material-symbols-outlined me-2">
                 groups
             </span>
@@ -41,14 +42,14 @@
             <span class="menu-text">Purchases</span>
         </a> -->
 
-        <a class="navlink" href="{% url 'issue_management:central_admin:issue_list' %}">
+        <a class="navlink {% is_active 'issue_management:central_admin:*' %}" href="{% url 'issue_management:central_admin:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
         </a>
 
-        <a class="navlink" href="{% url 'core:space_list' %}">
+        <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">
             <span class="material-symbols-outlined">
                 apartment
             </span>

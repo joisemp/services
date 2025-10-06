@@ -1,0 +1,131 @@
+@use '../../sidebar_base';
+@use '../../colors' as colors;
+
+#breadcrumb{
+  display: flex;
+  justify-content: right;
+  margin:5px;
+}
+
+#task-details {
+  .alert {
+    margin-bottom: 15px;
+    border: 0.5px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+  
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+  
+  .resolved-alert{
+    padding: 12px;
+    border-radius: 5px;
+    border: 0.5px solid #104920 !important;
+    background-color: #edffec !important;
+  }
+}
+
+#task-content {
+  .card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+  }
+  
+  .card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+}
+
+#related-issue {
+  h5 {
+    font-weight: 600;
+    color: #212529;
+  }
+
+  .issue-card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+    
+    .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e3e6f0;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .badge-open {
+      background-color: #0d6efd;
+    }
+
+    .badge-assigned {
+      background-color: #6c757d;
+    }
+
+    .badge-in_progress {
+      background-color: #ffc107;
+      color: #000;
+    }
+
+    .badge-resolved {
+      background-color: #198754;
+    }
+
+    .badge-escalated {
+      background-color: #dc3545;
+    }
+
+    .badge-closed {
+      background-color: #6c757d;
+    }
+
+    .badge-cancelled {
+      background-color: #adb5bd;
+    }
+  }
+
+  .issue-meta {
+    .row > div {
+      margin-bottom: 1rem;
+    }
+
+    small.text-muted {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    strong {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 1rem;
+    }
+  }
+}
+
+.material-symbols-outlined {
+  font-size: 20px;
+  vertical-align: middle;
+}
+
+// Image thumbnails styling
+.img-thumbnail {
+  border: 2px solid #e3e6f0;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: colors.$primary;
+  }
+}
+
+// Audio controls styling
+audio {
+  width: 100%;
+  max-width: 500px;
+}

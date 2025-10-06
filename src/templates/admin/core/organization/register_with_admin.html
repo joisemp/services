@@ -18,7 +18,7 @@
         
         <div class="description">
             <p>Use this form to register a new organization along with its central administrator. 
-            The central admin will receive a welcome email with a password reset link to set up their account.</p>
+            Phone number and email are required for all users. The central admin will receive a welcome email with a password reset link to set up their account.</p>
         </div>
 
         <form method="post" novalidate>
@@ -124,6 +124,23 @@
                         {% if form.admin_last_name.errors %}
                             <ul class="errorlist">
                                 {% for error in form.admin_last_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="{{ form.admin_phone_number.id_for_label }}" class="required">{{ form.admin_phone_number.label }}:</label>
+                        {{ form.admin_phone_number }}
+                        {% if form.admin_phone_number.help_text %}
+                            <div class="help">{{ form.admin_phone_number.help_text|safe }}</div>
+                        {% endif %}
+                        {% if form.admin_phone_number.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.admin_phone_number.errors %}
                                     <li>{{ error }}</li>
                                 {% endfor %}
                             </ul>
