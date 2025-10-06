@@ -1,3 +1,4 @@
+{% load core_tags %}
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
     <!-- <a class="navlink" href="#">
@@ -7,7 +8,7 @@
             <span class="menu-text">Dashboard</span>
         </a> -->
 
-    <a class="navlink" href="{% url 'issue_management:maintainer:work_task_list' %}">
+    <a class="navlink {% is_active 'issue_management:maintainer:*' %}" href="{% url 'issue_management:maintainer:work_task_list' %}">
             <span class="material-symbols-outlined me-2">
                 task
             </span>
