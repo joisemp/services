@@ -34,11 +34,16 @@
             <h3 class="mb-1">{{ space.name }}</h3>
             <span class="alert-text text-body-secondary">ICSE</span>
         </div>
-        <div class="alert-buttons">
+        <div class="alert-buttons d-flex flex-column flex-sm-row gap-2">
             <a href="{% url 'core:space_update' space_slug=space.slug %}"
-                class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto">
-                <span class="material-symbols-outlined">edit_square</span>
-                <span class="ms-2">Edit Space</span>
+                class="btn btn-primary space-action-btn d-flex align-items-center justify-content-center">
+                <span class="material-symbols-outlined me-2" style="font-size: 18px;">edit_square</span>
+                <span>Edit Space</span>
+            </a>
+            <a href="{% url 'core:space_delete' space_slug=space.slug %}"
+                class="btn btn-danger space-action-btn d-flex align-items-center justify-content-center">
+                <span class="material-symbols-outlined me-2" style="font-size: 18px;">delete</span>
+                <span>Delete Space</span>
             </a>
         </div>
     </div>
