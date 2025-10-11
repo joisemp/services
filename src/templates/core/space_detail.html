@@ -102,45 +102,53 @@
     <!-- Issues Section -->
     <div class="col-lg-8">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
           <h5 class="mb-0">
             <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">bug_report</span>
             Recent Issues
           </h5>
-          <a href="#" class="btn btn-sm btn-outline-primary">
+          <a href="{% url 'issue_management:central_admin:issue_list' %}?space={{ space.slug }}" class="btn btn-sm btn-outline-primary">
             <span class="material-symbols-outlined me-1" style="font-size: 14px;">visibility</span>
             View All
           </a>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
           {% if issues %}
             <div class="list-group list-group-flush">
               {% for issue in issues|slice:":5" %}
-                <div class="list-group-item border-0 px-0">
+                <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" 
+                   class="list-group-item list-group-item-action border-0 px-3 py-3 issue-item">
                   <div class="d-flex justify-content-between align-items-start">
-                    <div class="issue-info flex-grow-1">
-                      <h6 class="mb-1">
-                        <a href="#" class="text-decoration-none">{{ issue.title }}</a>
-                      </h6>
-                      <p class="mb-1 text-muted small">{{ issue.description|truncatewords:15 }}</p>
-                      <div class="d-flex align-items-center">
-                        <span class="badge bg-{{ issue.status|default:'secondary' }} me-2">{{ issue.get_status_display }}</span>
-                        <span class="badge bg-{{ issue.priority|default:'secondary' }} me-2">{{ issue.get_priority_display }}</span>
+                    <div class="issue-info flex-grow-1 me-2">
+                      <div class="d-flex align-items-start mb-2">
+                        <h6 class="mb-0 fw-semibold text-dark">{{ issue.title }}</h6>
+                        {% if issue.images.exists %}
+                          <span class="material-symbols-outlined text-muted ms-2" style="font-size: 18px;" title="Has attachments">image</span>
+                        {% endif %}
+                      </div>
+                      <p class="mb-2 text-muted small">{{ issue.description|truncatewords:20 }}</p>
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge rounded-pill badge-{{ issue.status }}">{{ issue.get_status_display }}</span>
+                        <span class="badge rounded-pill badge-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
                         <small class="text-muted">
-                          by {{ issue.reporter.get_full_name|default:issue.reporter.get_short_name }}
-                          • {{ issue.created_at|timesince }} ago
+                          <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">person</span>
+                          {{ issue.reporter.get_full_name|default:issue.reporter.get_short_name }}
+                        </small>
+                        <small class="text-muted">
+                          <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">schedule</span>
+                          {{ issue.created_at|timesince }} ago
                         </small>
                       </div>
                     </div>
-                    {% if issue.images.exists %}
-                      <span class="material-symbols-outlined text-muted ms-2" style="font-size: 16px;">image</span>
-                    {% endif %}
+                    <div class="issue-arrow align-self-center">
+                      <span class="material-symbols-outlined text-muted" style="font-size: 20px;">chevron_right</span>
+                    </div>
                   </div>
-                </div>
+                </a>
               {% endfor %}
             </div>
           {% else %}
-            <div class="text-center py-4">
+            <div class="text-center py-5">
               <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 48px;">bug_report</span>
               <p class="text-muted mb-0">No issues found in this space.</p>
             </div>
