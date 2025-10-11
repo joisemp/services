@@ -26,7 +26,7 @@ from .forms import (
     SpaceSwitcherForm
 )
 from .models import Update, User, Space
-from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView
+from django.views.generic import ListView, CreateView, TemplateView, DetailView, UpdateView, DeleteView
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, RedirectLoggedinUsers
 
 
@@ -366,6 +366,65 @@ class SpaceUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
         from django.contrib import messages
         messages.success(self.request, f'Space "{self.object.name}" updated successfully.')
         return response
+
+
+class SpaceDeleteView(CentralAdminOnlyAccessMixin, DeleteView):
+    """
+    View to delete a space and all its related data
+    """
+    model = Space
+    template_name = 'core/space_delete.html'
+    slug_field = 'slug'
+    slug_url_kwarg = 'space_slug'
+    success_url = reverse_lazy('core:space_list')
+
+    def get_queryset(self):
+        return Space.objects.select_related('org').prefetch_related(
+            'users', 
+            'issues__images', 
+            'issues__comments', 
+            'issues__work_tasks__shares'
+        )
+
+    def delete(self, request, *args, **kwargs):
+        """Override delete to add success message and handle related objects"""
+        self.object = self.get_object()
+        space_name = self.object.name
+        
+        # Clear active_space for all users who have this space selected
+        User.objects.filter(active_space=self.object).update(active_space=None)
+        
+        # Django's CASCADE will automatically delete:
+        # - Issues (related via space)
+        # - IssueImage instances (related via issues)
+        # - IssueComment instances (related via issues)
+        # - WorkTask instances (related via issues)
+        # - WorkTaskShare instances (related via work_tasks)
+        
+        success_url = self.get_success_url()
+        self.object.delete()
+        
+        messages.success(request, f'Space "{space_name}" and all its related data have been permanently deleted.')
+        
+        return redirect(success_url)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add counts of related objects that will be deleted
+        from issue_management.models import WorkTask
+        
+        issues = self.object.issues.all()
+        all_work_tasks = WorkTask.objects.filter(issue__in=issues)
+        
+        context['related_counts'] = {
+            'users': self.object.users.count(),
+            'issues': issues.count(),
+            'images': sum(issue.images.count() for issue in issues),
+            'comments': sum(issue.comments.count() for issue in issues),
+            'work_tasks': all_work_tasks.count(),
+            'work_task_shares': sum(task.shares.count() for task in all_work_tasks),
+        }
+        return context
 
 
 class SpaceUserRemoveView(CentralAdminOnlyAccessMixin, FormView):

@@ -8,6 +8,7 @@ from django.db.models import Case, When, IntegerField
 from ..models import Issue, IssueImage, WorkTask, IssueComment
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
+from core.models import Space
 
 
 class IssueListView(CentralAdminOnlyAccessMixin, ListView):
@@ -25,6 +26,16 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
                 queryset = queryset.filter(priority='critical')
             else:
                 queryset = queryset.filter(status=status_filter)
+        
+        # Filter by space if provided
+        space_filter = self.request.GET.get('space')
+        if space_filter:
+            if space_filter == 'no_space':
+                # Filter issues with no space assigned
+                queryset = queryset.filter(space__isnull=True)
+            else:
+                # Filter by specific space slug
+                queryset = queryset.filter(space__slug=space_filter)
         
         # Order by status (open/assigned/in_progress first, then resolved/escalated, then closed/cancelled)
         # Then by priority (critical→high→medium→low), then by creation date
@@ -53,6 +64,9 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_filter'] = self.request.GET.get('status', 'all')
+        context['space_filter'] = self.request.GET.get('space', '')
+        # Get all spaces for the filter dropdown
+        context['spaces'] = Space.objects.select_related('org').all().order_by('org__name', 'name')
         return context
 
     
