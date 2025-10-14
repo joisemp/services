@@ -271,6 +271,122 @@ class EmailLoginForm(BootstrapFormMixin, forms.Form):
         return cleaned_data
 
 
+class PinLoginForm(BootstrapFormMixin, forms.Form):
+    """
+    Login form for non-general users using email + 4-digit PIN
+    """
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'autocomplete': 'email'
+        }),
+        label="Email Address"
+    )
+    pin = forms.CharField(
+        max_length=4,
+        min_length=4,
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'off',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{4}',
+            'maxlength': '4'
+        }),
+        label="4-Digit PIN",
+        help_text="Enter your 4-digit PIN"
+    )
+
+    def clean_pin(self):
+        pin = self.cleaned_data.get('pin')
+        if pin and (not pin.isdigit() or len(pin) != 4):
+            raise forms.ValidationError("PIN must be exactly 4 digits.")
+        return pin
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        pin = cleaned_data.get('pin')
+        
+        if email and pin:
+            # Check if user exists and PIN is correct
+            try:
+                user = User.objects.get(
+                    email=email,
+                    auth_method='email',
+                    is_active=True
+                )
+                # Exclude general users and superusers
+                if user.user_type == 'general_user':
+                    raise forms.ValidationError("General users should use phone number login.")
+                
+                if user.is_superuser:
+                    raise forms.ValidationError("Superusers cannot use PIN login. Please use password login.")
+                
+                # Check if user has a PIN set
+                if not user.has_pin():
+                    raise forms.ValidationError("You haven't set up a PIN yet. Please login with your password first to set up your PIN.")
+                
+                # Check PIN
+                if not user.check_pin(pin):
+                    raise forms.ValidationError("Invalid email or PIN.")
+                    
+            except User.DoesNotExist:
+                raise forms.ValidationError("Invalid email or PIN.")
+        
+        return cleaned_data
+
+
+class SetPinForm(BootstrapFormMixin, forms.Form):
+    """
+    Form for users to set or change their 4-digit PIN
+    """
+    pin = forms.CharField(
+        max_length=4,
+        min_length=4,
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'off',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{4}',
+            'maxlength': '4'
+        }),
+        label="New PIN",
+        help_text="Enter a 4-digit PIN (numbers only)"
+    )
+    confirm_pin = forms.CharField(
+        max_length=4,
+        min_length=4,
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'off',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{4}',
+            'maxlength': '4'
+        }),
+        label="Confirm PIN",
+        help_text="Re-enter your 4-digit PIN"
+    )
+
+    def clean_pin(self):
+        pin = self.cleaned_data.get('pin')
+        if pin and (not pin.isdigit() or len(pin) != 4):
+            raise forms.ValidationError("PIN must be exactly 4 digits.")
+        return pin
+
+    def clean_confirm_pin(self):
+        confirm_pin = self.cleaned_data.get('confirm_pin')
+        if confirm_pin and (not confirm_pin.isdigit() or len(confirm_pin) != 4):
+            raise forms.ValidationError("PIN must be exactly 4 digits.")
+        return confirm_pin
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pin = cleaned_data.get('pin')
+        confirm_pin = cleaned_data.get('confirm_pin')
+        
+        if pin and confirm_pin:
+            if pin != confirm_pin:
+                raise forms.ValidationError("The two PIN fields didn't match.")
+        
+        return cleaned_data
+
+
 class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     """
     Form for creating general users with phone-only authentication (passwordless)

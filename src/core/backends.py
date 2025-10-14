@@ -7,12 +7,13 @@ User = get_user_model()
 
 class DualAuthBackend(BaseBackend):
     """
-    Custom authentication backend that supports both:
+    Custom authentication backend that supports:
     1. Phone-only authentication for general users (passwordless)
     2. Email + password authentication for other user types
+    3. Email + PIN authentication for other user types (4-digit PIN)
     """
     
-    def authenticate(self, request, username=None, password=None, phone_number=None, **kwargs):
+    def authenticate(self, request, username=None, password=None, phone_number=None, pin=None, **kwargs):
         """
         Authenticate user based on their auth_method
         """
@@ -27,7 +28,22 @@ class DualAuthBackend(BaseBackend):
                 )
                 # For phone authentication, no password check needed
                 return user
+            
+            elif username and pin:
+                # Email + PIN authentication for eligible user types
+                user = User.objects.get(
+                    email=username,
+                    auth_method='email',
+                    is_active=True
+                )
+                # Exclude general users and superusers from PIN authentication
+                if user.user_type == 'general_user' or user.is_superuser:
+                    return None
                 
+                # Check if PIN matches
+                if user.check_pin(pin):
+                    return user
+                    
             elif username and password:
                 # Email + password authentication for other user types
                 user = User.objects.get(
