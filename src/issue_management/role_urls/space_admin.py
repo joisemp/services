@@ -9,6 +9,7 @@ urlpatterns = [
     path('<slug:issue_slug>/edit/', space_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', space_admin.IssueDetailView.as_view(), name='issue_detail'),
     path('<slug:issue_slug>/assign/', space_admin.IssueAssignmentView.as_view(), name='issue_assign'),
+    path('<slug:issue_slug>/select-reviewers/', space_admin.IssueReviewerSelectionView.as_view(), name='issue_select_reviewers'),
     path('<slug:issue_slug>/resolve/', space_admin.IssueResolveView.as_view(), name='issue_resolve'),
     path('<slug:issue_slug>/reopen/', space_admin.IssueReopenView.as_view(), name='issue_reopen'),
     path('<slug:issue_slug>/start-work/', space_admin.IssueStartWorkView.as_view(), name='issue_start_work'),

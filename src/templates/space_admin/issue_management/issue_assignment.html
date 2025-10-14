@@ -42,6 +42,12 @@
                 {% endif %}
 
                 {{ form.as_p|safe }}
+                
+                <!-- Info message for review requirement -->
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    If you check "Requires Review", you will be redirected to select reviewers in the next step.
+                </div>
 
                 <!-- Form Actions -->
                 <hr>

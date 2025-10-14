@@ -556,17 +556,29 @@ class IssueAssignmentView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         if form.instance.status not in ['resolved', 'closed', 'cancelled']:
             form.instance.status = 'assigned'
         
+        # Save the form first (this saves the Issue instance)
         response = super().form_valid(form)
         
-        assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
-        review_text = " (with review required)" if form.instance.requires_review else ""
-        
-        messages.success(
-            self.request, 
-            f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}{review_text}.'
-        )
-        
-        return response
+        # Check if review is required
+        if form.instance.requires_review:
+            # Redirect to reviewer selection page (Step 2)
+            messages.info(
+                self.request,
+                'Issue assigned successfully. Now please select reviewers for this issue.'
+            )
+            return redirect('issue_management:space_admin:issue_select_reviewers', issue_slug=self.object.slug)
+        else:
+            # No review required, clear any existing reviewers and show success message
+            self.object.reviewers.clear()
+            
+            assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
+            
+            messages.success(
+                self.request, 
+                f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}.'
+            )
+            
+            return response
     
     def get_success_url(self):
         return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
@@ -575,6 +587,54 @@ class IssueAssignmentView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['issue'] = self.issue
         return context
+
+
+class IssueReviewerSelectionView(SpaceAdminWithActiveSpaceMixin, View):
+    """Select reviewers for an issue that requires review (Step 2 after assignment)"""
+    template_name = "space_admin/issue_management/issue_reviewer_selection.html"
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        
+        # Redirect if issue doesn't require review
+        if not self.issue.requires_review:
+            messages.warning(request, 'This issue does not require review.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request, issue_slug):
+        from ..forms import IssueReviewerSelectionForm
+        form = IssueReviewerSelectionForm(issue=self.issue)
+        return render(request, self.template_name, {
+            'form': form,
+            'issue': self.issue
+        })
+    
+    def post(self, request, issue_slug):
+        from ..forms import IssueReviewerSelectionForm
+        form = IssueReviewerSelectionForm(request.POST, issue=self.issue)
+        
+        if form.is_valid():
+            # Save the selected reviewers
+            reviewers = form.cleaned_data['reviewers']
+            self.issue.reviewers.set(reviewers)
+            
+            # Create success message with reviewer names
+            reviewer_names = ", ".join([r.get_full_name() or r.email for r in reviewers])
+            assigned_to_name = self.issue.assigned_to.get_full_name() or self.issue.assigned_to.email
+            
+            messages.success(
+                request,
+                f'Issue "{self.issue.title}" has been assigned to {assigned_to_name} with review required by: {reviewer_names}.'
+            )
+            
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+        
+        return render(request, self.template_name, {
+            'form': form,
+            'issue': self.issue
+        })
 
 
 class IssueReopenView(SpaceAdminWithActiveSpaceMixin, View):
