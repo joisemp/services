@@ -27,7 +27,7 @@
 
                 <!-- Current Assignment Status -->
                 {% if issue.assigned_to %}
-                <div class="alert alert-info mb-4">
+                <div class="alert alert-primary mb-4">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>Current Assignment:</strong>
                     This issue is currently assigned to
@@ -42,6 +42,12 @@
                 {% endif %}
 
                 {{ form.as_p|safe }}
+                
+                <!-- Info message for review requirement -->
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    If you check "Requires Review", you will be redirected to select reviewers in the next step.
+                </div>
 
                 <!-- Form Actions -->
                 <hr>

@@ -66,6 +66,12 @@ class Issue(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True, help_text="When the issue was reviewed")
     review_notes = models.TextField(blank=True, null=True, help_text="Notes from the review process")
+    reviewers = models.ManyToManyField(
+        'core.User',
+        related_name='issues_to_review',
+        blank=True,
+        help_text="Users assigned to review this issue when requires_review is checked"
+    )
     
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)

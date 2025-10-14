@@ -431,5 +431,45 @@ class IssueAssignmentForm(BootstrapFormMixin, forms.ModelForm):
             raise forms.ValidationError("Issues can only be assigned to supervisors.")
         
         return assigned_to
+
+
+class IssueReviewerSelectionForm(BootstrapFormMixin, forms.Form):
+    """Form for selecting reviewers for an issue (Step 2 after assignment)"""
+    
+    reviewers = forms.ModelMultipleChoiceField(
+        queryset=None,
+        required=True,
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Select Reviewers",
+        help_text="Choose one or more reviewers for this issue"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        # Extract the issue from kwargs to filter reviewers from same organization
+        self.issue = kwargs.pop('issue', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter reviewers to only show reviewers from the same organization
+        if self.issue and self.issue.org:
+            from core.models import User
+            self.fields['reviewers'].queryset = self.issue.org.users.filter(
+                user_type='reviewer',
+                is_active=True
+            ).order_by('first_name', 'last_name')
+            
+            # Set initial values if issue already has reviewers
+            if self.issue.reviewers.exists():
+                self.initial['reviewers'] = self.issue.reviewers.all()
+    
+    def clean_reviewers(self):
+        """Validate that at least one reviewer is selected"""
+        reviewers = self.cleaned_data.get('reviewers')
+        
+        if not reviewers:
+            raise forms.ValidationError("Please select at least one reviewer.")
+        
+        return reviewers
         
         

@@ -114,6 +114,21 @@
               {% if issue.reviewed_at %}on {{ issue.reviewed_at|date:"M d, Y" }}{% endif %}
             </small>
           {% endif %}
+          
+          <!-- Display assigned reviewers -->
+          {% if issue.reviewers.exists %}
+            <div class="mt-2">
+              <strong class="text-muted">Assigned Reviewers:</strong>
+              <ul class="list-unstyled mb-0 ms-3">
+                {% for reviewer in issue.reviewers.all %}
+                  <li class="text-muted">
+                    <i class="fas fa-user-check me-1"></i>
+                    {{ reviewer.get_full_name|default:reviewer.email }}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
         </div>
       {% endif %}
     </div>
