@@ -5,6 +5,7 @@
 
 {% block styles %}
 <link href="{% static 'styles/issue_management/forms/style.css' %}" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -33,12 +34,53 @@
                         <div class="card-body">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                Please provide details about how this task was completed. This information will help with future reference and reporting.
+                                Please provide details about how this task was completed. You can also attach up to 3 images showing the completed work (optional).
                             </div>
 
-                            <form method="post">
+                            <form method="post" enctype="multipart/form-data">
                                 {% csrf_token %}
-                                {{ form.as_p | safe }}
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.resolution_notes.id_for_label }}" class="form-label">Resolution Notes</label>
+                                    {{ form.resolution_notes }}
+                                    {% if form.resolution_notes.errors %}
+                                        <div class="text-danger">{{ form.resolution_notes.errors }}</div>
+                                    {% endif %}
+                                    {% if form.resolution_notes.help_text %}
+                                        <small class="form-text text-muted">{{ form.resolution_notes.help_text }}</small>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3 image-upload-section">
+                                    <label class="form-label">
+                                        <i class="fas fa-image me-1"></i>
+                                        Attach Resolution Images (Optional - Max 3)
+                                    </label>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label for="{{ form.image1.id_for_label }}" class="form-label">Image 1</label>
+                                            {{ form.image1 }}
+                                            {% if form.image1.errors %}
+                                                <div class="text-danger">{{ form.image1.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ form.image2.id_for_label }}" class="form-label">Image 2</label>
+                                            {{ form.image2 }}
+                                            {% if form.image2.errors %}
+                                                <div class="text-danger">{{ form.image2.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ form.image3.id_for_label }}" class="form-label">Image 3</label>
+                                            {{ form.image3 }}
+                                            {% if form.image3.errors %}
+                                                <div class="text-danger">{{ form.image3.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">You can upload up to 3 images. Supported formats: JPG, PNG, GIF. Max size: 5MB per image.</small>
+                                </div>
                                 
                                 <div class="d-flex gap-2 mt-4">
                                     <button type="submit" class="btn btn-success">
@@ -96,4 +138,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/components/image-upload.js' %}"></script>
 {% endblock %}

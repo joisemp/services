@@ -26,6 +26,9 @@ urlpatterns = [
     path('<slug:issue_slug>/images/<slug:image_slug>/delete/', central_admin.IssueImageDeleteView.as_view(), name='image_delete'),
     path('<slug:issue_slug>/images/upload/', central_admin.IssueImageUploadView.as_view(), name='image_upload'),
     
+    # Work Task Resolution Image URLs
+    path('work-tasks/<slug:work_task_slug>/resolution-images/<slug:image_slug>/delete/', central_admin.WorkTaskResolutionImageDeleteView.as_view(), name='resolution_image_delete'),
+    
     # Voice URLs
     path('<slug:issue_slug>/voice/delete/', central_admin.IssueVoiceDeleteView.as_view(), name='voice_delete'),
     path('<slug:issue_slug>/voice/upload/', central_admin.IssueVoiceUploadView.as_view(), name='voice_upload'),

@@ -99,12 +99,35 @@ class WorkTaskToggleCompleteView(MaintainerOnlyAccessMixin, View):
             )
         else:
             # Reopening completed task
+            from ..models import WorkTaskResolutionImage
+            
+            # Delete all resolution images when marking as pending
+            resolution_images = work_task.resolution_images.all()
+            image_count = resolution_images.count()
+            
+            # Delete image files and database records
+            for res_image in resolution_images:
+                # Delete the actual file from storage
+                if res_image.image:
+                    res_image.image.delete(save=False)
+                # Delete the database record
+                res_image.delete()
+            
+            # Mark task as pending
             work_task.completed = False
+            work_task.resolution_notes = None  # Clear resolution notes
             work_task.save()
-            messages.success(
-                request, 
-                f'Work task "{work_task.title}" marked as pending!'
-            )
+            
+            if image_count > 0:
+                messages.success(
+                    request, 
+                    f'Work task "{work_task.title}" marked as pending. {image_count} resolution image(s) deleted.'
+                )
+            else:
+                messages.success(
+                    request, 
+                    f'Work task "{work_task.title}" marked as pending!'
+                )
         
         return redirect(
             'issue_management:maintainer:work_task_detail', 

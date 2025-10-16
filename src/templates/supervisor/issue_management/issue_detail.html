@@ -303,6 +303,32 @@
                         <p class="small mb-0">{{ task.resolution_notes }}</p>
                       </div>
                     {% endif %}
+                    {% if task.resolution_images.all %}
+                      <div class="mt-2">
+                        <small class="text-muted d-block mb-1">
+                          <i class="fas fa-images"></i> Resolution Images ({{ task.resolution_images.count }}):
+                        </small>
+                        <div class="d-flex flex-wrap gap-2">
+                          {% for res_image in task.resolution_images.all %}
+                          <div class="position-relative">
+                            <a href="{{ res_image.image.url }}" target="_blank">
+                              <img src="{{ res_image.image.url }}" 
+                                   alt="Resolution Image" 
+                                   class="img-thumbnail" 
+                                   style="width: 100px; height: 100px; object-fit: cover;">
+                            </a>
+                            <!-- Delete button overlay -->
+                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" 
+                                    style="padding: 2px 6px; font-size: 12px; line-height: 1; transform: translate(25%, -25%);"
+                                    onclick="deleteResolutionImage('{{ res_image.slug }}', '{{ task.slug }}')"
+                                    title="Delete resolution image">
+                              <i class="fas fa-times"></i>
+                            </button>
+                          </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endif %}
                   {% else %}
                     <span class="badge bg-warning">
                       <i class="fas fa-clock"></i> Pending
@@ -415,4 +441,28 @@
 
 {% block scripts %}
 <script src="{% static 'js/comments.js' %}"></script>
+<script>
+function deleteResolutionImage(imageSlug, workTaskSlug) {
+    if (confirm('Are you sure you want to delete this resolution image? This action cannot be undone.')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/issues/supervisor/work-tasks/${workTaskSlug}/resolution-images/${imageSlug}/delete/`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        // Add form to page and submit
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 {% endblock scripts %}

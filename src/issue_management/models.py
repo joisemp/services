@@ -147,6 +147,26 @@ class WorkTask(models.Model):
         return self.title
 
 
+class WorkTaskResolutionImage(models.Model):
+    """Images attached to work task resolutions"""
+    work_task = models.ForeignKey(WorkTask, related_name='resolution_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/work_task_resolution_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.work_task.title}-resolution-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Resolution Image for Work Task: {self.work_task.title}"
+
+
 class WorkTaskShare(models.Model):
     """
     Model for sharing work tasks with external people via temporary links.
@@ -262,3 +282,27 @@ class WorkTaskShare(models.Model):
         return f"Share of '{self.work_task.title}' with {recipient}"
 
 
+# Signal to automatically delete image files when WorkTaskResolutionImage is deleted
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
+
+@receiver(pre_delete, sender=WorkTaskResolutionImage)
+def delete_resolution_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when a WorkTaskResolutionImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+@receiver(pre_delete, sender=IssueImage)
+def delete_issue_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when an IssueImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)

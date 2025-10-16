@@ -17,4 +17,7 @@ urlpatterns = [
     path('work-tasks/<slug:work_task_slug>/complete/', supervisor.WorkTaskCompleteView.as_view(), name='work_task_complete'),
     path('work-tasks/<slug:work_task_slug>/toggle-complete/', supervisor.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),
     path('work-tasks/<slug:work_task_slug>/delete/', supervisor.WorkTaskDeleteView.as_view(), name='work_task_delete'),
+    
+    # Work Task Resolution Image URLs
+    path('work-tasks/<slug:work_task_slug>/resolution-images/<slug:image_slug>/delete/', supervisor.WorkTaskResolutionImageDeleteView.as_view(), name='resolution_image_delete'),
 ]

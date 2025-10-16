@@ -109,12 +109,17 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
     slug_url_kwarg = 'issue_slug'
     
     def get_queryset(self):
-        return Issue.objects.prefetch_related('images', 'comments', 'work_tasks__assigned_to').select_related('org', 'space')
+        return Issue.objects.prefetch_related(
+            'images', 
+            'comments', 
+            'work_tasks__assigned_to',
+            'work_tasks__resolution_images'
+        ).select_related('org', 'space')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add work tasks to context sorted by completion status and issue priority
-        work_tasks = self.object.work_tasks.select_related('issue').all().annotate(
+        work_tasks = self.object.work_tasks.select_related('issue').prefetch_related('resolution_images').all().annotate(
             priority_order=Case(
                 When(issue__priority='critical', then=1),
                 When(issue__priority='high', then=2),
@@ -216,7 +221,7 @@ class WorkTaskUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
 
 
 class WorkTaskCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
-    """Complete a work task with resolution notes"""
+    """Complete a work task with resolution notes and images"""
     template_name = "central_admin/issue_management/work_task_complete.html"
     form_class = WorkTaskCompleteForm
     model = WorkTask
@@ -228,10 +233,32 @@ class WorkTaskCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
+        from ..models import WorkTaskResolutionImage
+        
         # Mark the task as completed and save resolution notes
         form.instance.completed = True
         response = super().form_valid(form)
-        messages.success(self.request, f'Work task "{form.instance.title}" marked as completed!')
+        
+        # Handle resolution images (up to 3)
+        image_count = 0
+        for i in range(1, 4):
+            image_field = f'image{i}'
+            image = form.cleaned_data.get(image_field)
+            if image:
+                WorkTaskResolutionImage.objects.create(
+                    work_task=form.instance,
+                    image=image
+                )
+                image_count += 1
+        
+        if image_count > 0:
+            messages.success(
+                self.request, 
+                f'Work task "{form.instance.title}" marked as completed with {image_count} resolution image(s)!'
+            )
+        else:
+            messages.success(self.request, f'Work task "{form.instance.title}" marked as completed!')
+        
         return response
     
     def get_success_url(self):
@@ -256,22 +283,56 @@ class WorkTaskToggleCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
+        from ..models import WorkTaskResolutionImage
+        
         # Toggle the completion status (only for reopening)
         if self.work_task.completed:
+            # Delete all resolution images when marking as pending
+            resolution_images = self.work_task.resolution_images.all()
+            image_count = resolution_images.count()
+            
+            # Delete image files and database records
+            for res_image in resolution_images:
+                # Delete the actual file from storage
+                if res_image.image:
+                    res_image.image.delete(save=False)
+                # Delete the database record
+                res_image.delete()
+            
+            # Mark task as pending
             self.work_task.completed = False
+            self.work_task.resolution_notes = None  # Clear resolution notes
             self.work_task.save()
-            messages.success(self.request, f'Work task "{self.work_task.title}" marked as pending!')
+            
+            if image_count > 0:
+                messages.success(
+                    self.request, 
+                    f'Work task "{self.work_task.title}" marked as pending. {image_count} resolution image(s) deleted.'
+                )
+            else:
+                messages.success(self.request, f'Work task "{self.work_task.title}" marked as pending!')
         
         return redirect('issue_management:central_admin:issue_detail', issue_slug=self.work_task.issue.slug)
 
 
 class WorkTaskDeleteView(CentralAdminOnlyAccessMixin, View):
-    """Delete a work task"""
+    """Delete a work task and its resolution images"""
     
     def post(self, request, work_task_slug):
+        from ..models import WorkTaskResolutionImage
+        
         work_task = get_object_or_404(WorkTask, slug=work_task_slug)
         issue_slug = work_task.issue.slug
         task_title = work_task.title
+        
+        # Delete all resolution images before deleting the work task
+        resolution_images = work_task.resolution_images.all()
+        for res_image in resolution_images:
+            # Delete the actual file from storage
+            if res_image.image:
+                res_image.image.delete(save=False)
+            # Delete the database record
+            res_image.delete()
         
         work_task.delete()
         messages.success(request, f'Work task "{task_title}" has been deleted.')
@@ -342,6 +403,29 @@ class IssueImageDeleteView(CentralAdminOnlyAccessMixin, View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
+
+
+class WorkTaskResolutionImageDeleteView(CentralAdminOnlyAccessMixin, View):
+    """Delete a specific resolution image attached to a work task"""
+    
+    def post(self, request, work_task_slug, image_slug):
+        from ..models import WorkTaskResolutionImage
+        
+        # Get the work task and resolution image
+        work_task = get_object_or_404(WorkTask, slug=work_task_slug)
+        res_image = get_object_or_404(WorkTaskResolutionImage, slug=image_slug, work_task=work_task)
+        
+        # Delete the image file from storage
+        if res_image.image:
+            res_image.image.delete(save=False)
+        
+        # Delete the image record
+        res_image.delete()
+        
+        messages.success(request, f'Resolution image successfully deleted.')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=work_task.issue.slug)
 
 
 class IssueImageUploadView(CentralAdminOnlyAccessMixin, View):

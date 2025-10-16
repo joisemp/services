@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Issue, IssueImage, IssueComment
+from .models import Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, WorkTaskShare
 
 
 class IssueImageInline(admin.TabularInline):
@@ -158,3 +158,171 @@ class IssueCommentAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('issue', 'issue__org', 'issue__space')
+
+
+class WorkTaskResolutionImageInline(admin.TabularInline):
+    model = WorkTaskResolutionImage
+    extra = 1
+    fields = ['image', 'image_preview', 'uploaded_at']
+    readonly_fields = ['image_preview', 'uploaded_at']
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="100" height="100" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+
+
+@admin.register(WorkTask)
+class WorkTaskAdmin(admin.ModelAdmin):
+    list_display = ['title', 'issue', 'assigned_to', 'completed', 'due_date', 'created_at', 'resolution_image_count']
+    list_filter = ['completed', 'created_at', 'due_date', 'issue__org']
+    search_fields = ['title', 'description', 'issue__title']
+    autocomplete_fields = ['issue', 'assigned_to']
+    date_hierarchy = 'created_at'
+    ordering = ['completed', 'due_date']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'description', 'slug')
+        }),
+        ('Assignment', {
+            'fields': ('issue', 'assigned_to', 'due_date')
+        }),
+        ('Completion Status', {
+            'fields': ('completed', 'resolution_notes')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
+    inlines = [WorkTaskResolutionImageInline]
+    
+    def resolution_image_count(self, obj):
+        return obj.resolution_images.count()
+    resolution_image_count.short_description = 'Resolution Images'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('issue', 'assigned_to').prefetch_related('resolution_images')
+    
+    actions = ['mark_as_completed', 'mark_as_incomplete']
+    
+    def mark_as_completed(self, request, queryset):
+        updated = queryset.update(completed=True)
+        self.message_user(request, f'{updated} tasks marked as completed.')
+    mark_as_completed.short_description = 'Mark selected tasks as completed'
+    
+    def mark_as_incomplete(self, request, queryset):
+        updated = queryset.update(completed=False)
+        self.message_user(request, f'{updated} tasks marked as incomplete.')
+    mark_as_incomplete.short_description = 'Mark selected tasks as incomplete'
+
+
+@admin.register(WorkTaskResolutionImage)
+class WorkTaskResolutionImageAdmin(admin.ModelAdmin):
+    list_display = ['work_task_title', 'image_preview', 'uploaded_at', 'work_task_link']
+    list_filter = ['uploaded_at', 'work_task__issue__org']
+    search_fields = ['work_task__title', 'work_task__issue__title']
+    autocomplete_fields = ['work_task']
+    date_hierarchy = 'uploaded_at'
+    ordering = ['-uploaded_at']
+    
+    def work_task_title(self, obj):
+        return obj.work_task.title
+    work_task_title.short_description = 'Work Task'
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="80" height="80" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+    
+    def work_task_link(self, obj):
+        url = reverse('admin:issue_management_worktask_change', args=[obj.work_task.pk])
+        return format_html('<a href="{}">View Work Task</a>', url)
+    work_task_link.short_description = 'Work Task Link'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('work_task', 'work_task__issue', 'work_task__issue__org')
+
+
+@admin.register(WorkTaskShare)
+class WorkTaskShareAdmin(admin.ModelAdmin):
+    list_display = ['work_task', 'recipient_info', 'permission_level', 'is_active', 'is_expired', 'access_count', 'created_at', 'expires_at']
+    list_filter = ['is_active', 'permission_level', 'created_at', 'expires_at']
+    search_fields = ['work_task__title', 'recipient_email', 'recipient_name', 'share_token']
+    autocomplete_fields = ['work_task', 'created_by']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    readonly_fields = ['share_token', 'access_count', 'last_accessed', 'created_at', 'get_share_url']
+    
+    fieldsets = (
+        ('Work Task', {
+            'fields': ('work_task', 'created_by')
+        }),
+        ('Recipient Information', {
+            'fields': ('recipient_email', 'recipient_name')
+        }),
+        ('Access Control', {
+            'fields': ('permission_level', 'is_active', 'password_protected', 'access_password', 'allow_download_attachments')
+        }),
+        ('Time Control', {
+            'fields': ('expires_at', 'max_access_count')
+        }),
+        ('Tracking', {
+            'fields': ('share_token', 'access_count', 'last_accessed', 'created_at', 'get_share_url'),
+            'classes': ('collapse',)
+        }),
+        ('Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def recipient_info(self, obj):
+        if obj.recipient_email and obj.recipient_name:
+            return f'{obj.recipient_name} ({obj.recipient_email})'
+        elif obj.recipient_email:
+            return obj.recipient_email
+        elif obj.recipient_name:
+            return obj.recipient_name
+        return 'Anonymous'
+    recipient_info.short_description = 'Recipient'
+    
+    def get_share_url(self, obj):
+        if obj.pk:
+            return format_html('<a href="{}" target="_blank">{}</a>', obj.get_absolute_url(), obj.get_absolute_url())
+        return 'Save to generate URL'
+    get_share_url.short_description = 'Share URL'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('work_task', 'work_task__issue', 'created_by')
+    
+    actions = ['deactivate_shares', 'extend_expiration_7_days', 'extend_expiration_30_days']
+    
+    def deactivate_shares(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} shares deactivated.')
+    deactivate_shares.short_description = 'Deactivate selected shares'
+    
+    def extend_expiration_7_days(self, request, queryset):
+        from datetime import timedelta
+        from django.utils import timezone
+        for share in queryset:
+            share.extend_expiration(days=7)
+        self.message_user(request, f'Extended expiration by 7 days for {queryset.count()} shares.')
+    extend_expiration_7_days.short_description = 'Extend expiration by 7 days'
+    
+    def extend_expiration_30_days(self, request, queryset):
+        from datetime import timedelta
+        from django.utils import timezone
+        for share in queryset:
+            share.extend_expiration(days=30)
+        self.message_user(request, f'Extended expiration by 30 days for {queryset.count()} shares.')
+    extend_expiration_30_days.short_description = 'Extend expiration by 30 days'

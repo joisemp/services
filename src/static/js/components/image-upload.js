@@ -68,8 +68,8 @@ class ImageUploadManager {
                 <div class="position-relative">
                     <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
                     <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-image" 
-                            style="padding: 2px 6px; font-size: 12px;">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+                            style="padding: 2px 6px; font-size: 12px;" title="Remove image">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <small class="text-muted d-block mt-1">${file.name}</small>

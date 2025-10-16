@@ -212,8 +212,61 @@ class WorkTaskUpdateForm(BootstrapFormMixin, forms.ModelForm):
         return assigned_to
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget for multiple file uploads"""
+    allow_multiple_selected = True
+
+    def value_from_datadict(self, data, files, name):
+        """Return a list of uploaded files"""
+        upload = files.getlist(name)
+        if not upload:
+            return None
+        return upload
+
+
+class MultipleFileField(forms.FileField):
+    """Custom field for handling multiple file uploads"""
+    widget = MultipleFileInput
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def to_python(self, data):
+        """Handle multiple file data"""
+        if data in self.empty_values:
+            return None
+        elif isinstance(data, list):
+            return [super(MultipleFileField, self).to_python(item) for item in data]
+        else:
+            return super().to_python(data)
+
+    def validate(self, value):
+        """Validate multiple files"""
+        if self.required and not value:
+            raise forms.ValidationError(self.error_messages['required'], code='required')
+        if isinstance(value, list):
+            for file_item in value:
+                super(MultipleFileField, self).validate(file_item)
+        else:
+            super().validate(value)
+
+
 class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
-    """Form for completing work tasks - only resolution notes field"""
+    """Form for completing work tasks - resolution notes and images"""
+    # Add image fields for up to 3 images
+    image1 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image2 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image3 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    
     class Meta:
         model = WorkTask
         fields = ['resolution_notes']
@@ -252,45 +305,6 @@ class IssueCommentForm(BootstrapFormMixin, forms.ModelForm):
         # Make comment required
         self.fields['comment'].required = True
         self.fields['comment'].label = ""  # Remove label for cleaner UI
-
-
-class MultipleFileInput(forms.ClearableFileInput):
-    """Custom widget for multiple file uploads"""
-    allow_multiple_selected = True
-
-    def value_from_datadict(self, data, files, name):
-        """Return a list of uploaded files"""
-        upload = files.getlist(name)
-        if not upload:
-            return None
-        return upload
-
-
-class MultipleFileField(forms.FileField):
-    """Custom field for handling multiple file uploads"""
-    widget = MultipleFileInput
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def to_python(self, data):
-        """Handle multiple file data"""
-        if data in self.empty_values:
-            return None
-        elif isinstance(data, list):
-            return [super(MultipleFileField, self).to_python(item) for item in data]
-        else:
-            return super().to_python(data)
-
-    def validate(self, value):
-        """Validate multiple files"""
-        if self.required and not value:
-            raise forms.ValidationError(self.error_messages['required'], code='required')
-        if isinstance(value, list):
-            for file_item in value:
-                super(MultipleFileField, self).validate(file_item)
-        else:
-            super().validate(value)
 
 
 class AdditionalImageUploadForm(BootstrapFormMixin, forms.Form):
