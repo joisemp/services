@@ -286,6 +286,41 @@ class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['resolution_notes'].help_text = "Please provide details about how the task was completed"
 
 
+class IssueResolveForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for resolving issues with resolution notes and images"""
+    # Add image fields for up to 3 images
+    image1 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image2 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    image3 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
+        'class': 'form-control',
+        'accept': 'image/*'
+    }))
+    
+    class Meta:
+        model = Issue
+        fields = ['resolution_notes']
+        widgets = {
+            'resolution_notes': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Describe how this issue was resolved...',
+                'class': 'form-control'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Make resolution_notes required for resolution
+        self.fields['resolution_notes'].required = True
+        self.fields['resolution_notes'].help_text = "Please provide details about how the issue was resolved"
+
+
 class IssueCommentForm(BootstrapFormMixin, forms.ModelForm):
     """Form for adding comments to issues"""
     class Meta:

@@ -698,6 +698,9 @@ class IssueReopenView(CentralAdminOnlyAccessMixin, View):
             # Clear resolution notes when reopening
             issue.resolution_notes = None
             
+            # Delete all resolution images
+            issue.resolution_images.all().delete()
+            
             # Clear review information when reopening
             issue.reviewed_by = None
             issue.reviewed_at = None
@@ -715,9 +718,12 @@ class IssueReopenView(CentralAdminOnlyAccessMixin, View):
 
 
 class IssueResolveView(CentralAdminOnlyAccessMixin, View):
-    """Mark an issue as resolved with resolution notes"""
+    """Mark an issue as resolved with resolution notes and images"""
     
     def post(self, request, issue_slug):
+        from ..models import IssueResolutionImage
+        from ..forms import IssueResolveForm
+        
         # Get the issue
         issue = get_object_or_404(Issue, slug=issue_slug)
         
@@ -734,20 +740,37 @@ class IssueResolveView(CentralAdminOnlyAccessMixin, View):
             messages.error(request, f'Cannot resolve issue while {incomplete_count} work {task_word} remain incomplete. Please complete all work tasks before marking the issue as resolved.')
             return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
         
-        # Get resolution notes from the form
-        resolution_notes = request.POST.get('resolution_notes', '').strip()
+        # Process the form
+        form = IssueResolveForm(request.POST, request.FILES, instance=issue)
         
-        if not resolution_notes:
-            messages.error(request, 'Resolution notes are required to mark an issue as resolved.')
+        if not form.is_valid():
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
             return redirect('issue_management:central_admin:issue_detail', issue_slug=issue.slug)
         
         try:
             # Update the issue status and resolution notes
             issue.status = 'resolved'
-            issue.resolution_notes = resolution_notes
+            issue.resolution_notes = form.cleaned_data['resolution_notes']
             issue.save()
             
-            messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved.')
+            # Handle resolution images (up to 3)
+            image_count = 0
+            for i in range(1, 4):
+                image_field = f'image{i}'
+                image = form.cleaned_data.get(image_field)
+                if image:
+                    IssueResolutionImage.objects.create(
+                        issue=issue,
+                        image=image
+                    )
+                    image_count += 1
+            
+            if image_count > 0:
+                messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved with {image_count} resolution image(s).')
+            else:
+                messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved.')
             
         except Exception as e:
             messages.error(request, f'Failed to resolve issue: {str(e)}')
