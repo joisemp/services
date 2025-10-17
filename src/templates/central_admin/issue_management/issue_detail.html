@@ -633,7 +633,9 @@
                     <!-- Visit Title and Status -->
                     <div class="d-flex align-items-center mb-2">
                       <h6 class="visit-title mb-0 me-2 {% if visit.status == 'cancelled' %}text-decoration-line-through{% endif %}">
-                        {{ visit.title }}
+                        <a href="{% url 'issue_management:central_admin:site_visit_detail' site_visit_slug=visit.slug %}" class="text-decoration-none">
+                          {{ visit.title }}
+                        </a>
                       </h6>
                       <span class="badge 
                                    {% if visit.status == 'scheduled' %}bg-primary
@@ -784,6 +786,7 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         {% endif %}
+                        {% if visit.created_by == request.user or request.user.user_type == 'central_admin' %}
                         <li>
                           <button class="dropdown-item text-danger" type="button" 
                                   data-bs-toggle="modal" 
@@ -791,6 +794,13 @@
                             <i class="fas fa-trash"></i> Delete
                           </button>
                         </li>
+                        {% else %}
+                        <li>
+                          <a class="dropdown-item disabled" href="#" title="Only the creator or central admin can delete this visit">
+                            <i class="fas fa-trash text-muted"></i> Delete
+                          </a>
+                        </li>
+                        {% endif %}
                       </ul>
                     </div>
                   </div>

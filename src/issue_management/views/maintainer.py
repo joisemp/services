@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, View
 from django.contrib import messages
 from django.db.models import Case, When, IntegerField
-from ..models import WorkTask
+from ..models import WorkTask, SiteVisit
 from config.mixins.access_mixin import MaintainerOnlyAccessMixin
 
 
@@ -133,3 +133,59 @@ class WorkTaskToggleCompleteView(MaintainerOnlyAccessMixin, View):
             'issue_management:maintainer:work_task_detail', 
             work_task_slug=work_task.slug
         )
+
+
+class SiteVisitListView(MaintainerOnlyAccessMixin, ListView):
+    """List all site visits assigned to the maintainer"""
+    model = SiteVisit
+    template_name = "maintainer/issue_management/site_visit_list.html"
+    context_object_name = "site_visits"
+
+    def get_queryset(self):
+        # Get site visits where the maintainer is assigned
+        queryset = SiteVisit.objects.filter(
+            assigned_to=self.request.user
+        ).select_related('issue', 'issue__org', 'issue__space', 'created_by', 'assigned_to').prefetch_related('images')
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Order by status (scheduled first, then in_progress, completed last), then by scheduled date
+        return queryset.annotate(
+            status_order=Case(
+                When(status='scheduled', then=1),
+                When(status='in_progress', then=2),
+                When(status='completed', then=3),
+                When(status='cancelled', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', 'scheduled_date')
+
+
+class SiteVisitDetailView(MaintainerOnlyAccessMixin, DetailView):
+    """View details of a specific site visit"""
+    model = SiteVisit
+    template_name = "maintainer/issue_management/site_visit_detail.html"
+    context_object_name = "site_visit"
+    slug_field = 'slug'
+    slug_url_kwarg = 'site_visit_slug'
+    
+    def get_queryset(self):
+        return SiteVisit.objects.filter(
+            assigned_to=self.request.user
+        ).select_related(
+            'issue',
+            'issue__org',
+            'issue__space',
+            'issue__reporter',
+            'created_by',
+            'assigned_to'
+        ).prefetch_related('images', 'issue__images')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.object.issue
+        return context

@@ -6,6 +6,7 @@ app_name = "central_admin"
 urlpatterns = [
     path('', central_admin.IssueListView.as_view(), name='issue_list'),
     path('create/', central_admin.IssueCreateView.as_view(), name='issue_create'),
+    path('site-visits/', central_admin.SiteVisitListView.as_view(), name='site_visit_list'),
     path('<slug:issue_slug>/edit/', central_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', central_admin.IssueDetailView.as_view(), name='issue_detail'),
     path('<slug:issue_slug>/assign/', central_admin.IssueAssignmentView.as_view(), name='issue_assign'),
@@ -35,6 +36,7 @@ urlpatterns = [
     
     # Site Visit URLs
     path('<slug:issue_slug>/site-visits/create/', central_admin.SiteVisitCreateView.as_view(), name='site_visit_create'),
+    path('site-visits/<slug:site_visit_slug>/', central_admin.SiteVisitDetailView.as_view(), name='site_visit_detail'),
     path('site-visits/<slug:site_visit_slug>/edit/', central_admin.SiteVisitUpdateView.as_view(), name='site_visit_update'),
     path('site-visits/<slug:site_visit_slug>/delete/', central_admin.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
 ]

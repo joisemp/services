@@ -6,6 +6,7 @@ app_name = "space_admin"
 urlpatterns = [
     path('', space_admin.IssueListView.as_view(), name='issue_list'),
     path('create/', space_admin.IssueCreateView.as_view(), name='issue_create'),
+    path('site-visits/', space_admin.SiteVisitListView.as_view(), name='site_visit_list'),
     path('<slug:issue_slug>/edit/', space_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', space_admin.IssueDetailView.as_view(), name='issue_detail'),
     path('<slug:issue_slug>/assign/', space_admin.IssueAssignmentView.as_view(), name='issue_assign'),
@@ -35,6 +36,7 @@ urlpatterns = [
     
     # Site Visit URLs
     path('<slug:issue_slug>/site-visits/create/', space_admin.SiteVisitCreateView.as_view(), name='site_visit_create'),
+    path('site-visits/<slug:site_visit_slug>/', space_admin.SiteVisitDetailView.as_view(), name='site_visit_detail'),
     path('site-visits/<slug:site_visit_slug>/edit/', space_admin.SiteVisitUpdateView.as_view(), name='site_visit_update'),
     path('site-visits/<slug:site_visit_slug>/delete/', space_admin.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
 ]

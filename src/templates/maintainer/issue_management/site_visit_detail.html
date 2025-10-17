@@ -13,12 +13,12 @@
 {% endblock %}
 
 {% block sidebar %}
-{% include 'supervisor/sidebar.html' %}
+{% include 'maintainer/sidebar.html' %}
 {% endblock %}
 
 {% block content %}
 
-<a href="{% url 'issue_management:supervisor:site_visit_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to Site Visits</a>
+<a href="{% url 'issue_management:maintainer:site_visit_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to Site Visits</a>
 
 <section id="breadcrumb" class="mb-3 mt-3">
   {% if site_visit.status == 'scheduled' %}
@@ -78,18 +78,6 @@
       {% endif %}
     </div>
     <div class="alert-buttons ms-md-3 d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center gap-2 mt-3">
-      {% if site_visit.assigned_to != request.user and site_visit.assigned_to.phone_number %}
-        <a href="tel:{{ site_visit.assigned_to.phone_number }}"
-          class="btn btn-primary d-flex align-items-center justify-content-center flex-column py-2"
-          title="Call {{ site_visit.assigned_to.get_full_name|default:'Assignee' }}">
-          <div class="d-flex align-items-center">
-            <span class="material-symbols-outlined">call</span>
-            <span class="ms-2">Call {{ site_visit.assigned_to.first_name|default:site_visit.assigned_to.email|truncatewords:1 }}</span>
-          </div>
-          <small class="text-white-50" style="font-size: 0.7rem;">Assignee</small>
-        </a>
-      {% endif %}
-      
       {% if site_visit.created_by != request.user and site_visit.created_by.phone_number %}
         <a href="tel:{{ site_visit.created_by.phone_number }}"
           class="btn btn-success d-flex align-items-center justify-content-center flex-column py-2"
@@ -111,14 +99,6 @@
             <span class="ms-2">Call {{ issue.reporter.first_name|default:issue.reporter.email|truncatewords:1 }}</span>
           </div>
           <small class="text-white-50" style="font-size: 0.7rem;">Reporter</small>
-        </a>
-      {% endif %}
-      
-      {% if site_visit.status == 'scheduled' and site_visit.created_by == request.user %}
-        <a href="{% url 'issue_management:supervisor:site_visit_update' site_visit_slug=site_visit.slug %}" 
-           class="btn btn-secondary d-flex align-items-center justify-content-center">
-          <span class="material-symbols-outlined">edit</span>
-          <span class="ms-2">Edit Visit</span>
         </a>
       {% endif %}
     </div>
@@ -215,12 +195,8 @@
     <!-- Issue details card -->
     <div class="col-12">
       <div class="card issue-card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header">
           <h5 class="mb-0">{{ issue.title }}</h5>
-          <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}" 
-             class="btn btn-sm btn-primary">
-            View Full Issue
-          </a>
         </div>
         <div class="card-body">
           <div class="row">

@@ -8,11 +8,18 @@
             <span class="menu-text">Dashboard</span>
         </a> -->
 
-    <a class="navlink {% is_active 'issue_management:maintainer:*' %}" href="{% url 'issue_management:maintainer:work_task_list' %}">
+    <a class="navlink {% is_active 'issue_management:maintainer:work_task_list,issue_management:maintainer:work_task_detail,issue_management:maintainer:work_task_toggle_complete' %}" href="{% url 'issue_management:maintainer:work_task_list' %}">
             <span class="material-symbols-outlined me-2">
                 task
             </span>
             <span class="menu-text">My Tasks</span>
+        </a>
+
+    <a class="navlink {% is_active 'issue_management:maintainer:site_visit_list,issue_management:maintainer:site_visit_detail' %}" href="{% url 'issue_management:maintainer:site_visit_list' %}">
+            <span class="material-symbols-outlined me-2">
+                location_on
+            </span>
+            <span class="menu-text">My Site Visits</span>
         </a>
 
     <!-- <a class="navlink" href="#">

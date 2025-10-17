@@ -13,12 +13,12 @@
 {% endblock %}
 
 {% block sidebar %}
-{% include 'supervisor/sidebar.html' %}
+{% include 'space_admin/sidebar.html' %}
 {% endblock %}
 
 {% block content %}
 
-<a href="{% url 'issue_management:supervisor:site_visit_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to Site Visits</a>
+<a href="{% url 'issue_management:space_admin:site_visit_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to Site Visits</a>
 
 <section id="breadcrumb" class="mb-3 mt-3">
   {% if site_visit.status == 'scheduled' %}
@@ -115,7 +115,7 @@
       {% endif %}
       
       {% if site_visit.status == 'scheduled' and site_visit.created_by == request.user %}
-        <a href="{% url 'issue_management:supervisor:site_visit_update' site_visit_slug=site_visit.slug %}" 
+        <a href="{% url 'issue_management:space_admin:site_visit_update' site_visit_slug=site_visit.slug %}" 
            class="btn btn-secondary d-flex align-items-center justify-content-center">
           <span class="material-symbols-outlined">edit</span>
           <span class="ms-2">Edit Visit</span>
@@ -217,7 +217,7 @@
       <div class="card issue-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">{{ issue.title }}</h5>
-          <a href="{% url 'issue_management:supervisor:issue_detail' issue_slug=issue.slug %}" 
+          <a href="{% url 'issue_management:space_admin:issue_detail' issue_slug=issue.slug %}" 
              class="btn btn-sm btn-primary">
             View Full Issue
           </a>
