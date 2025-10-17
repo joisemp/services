@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, WorkTaskShare
+from .models import (
+    Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, 
+    WorkTaskShare, SiteVisit, SiteVisitImage
+)
 
 
 class IssueImageInline(admin.TabularInline):
@@ -326,3 +329,126 @@ class WorkTaskShareAdmin(admin.ModelAdmin):
             share.extend_expiration(days=30)
         self.message_user(request, f'Extended expiration by 30 days for {queryset.count()} shares.')
     extend_expiration_30_days.short_description = 'Extend expiration by 30 days'
+
+
+class SiteVisitImageInline(admin.TabularInline):
+    model = SiteVisitImage
+    extra = 1
+    fields = ['image', 'caption', 'image_preview', 'uploaded_at']
+    readonly_fields = ['image_preview', 'uploaded_at']
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="100" height="100" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+
+
+@admin.register(SiteVisit)
+class SiteVisitAdmin(admin.ModelAdmin):
+    list_display = [
+        'title', 'issue', 'status', 'created_by', 'assigned_to', 
+        'scheduled_date', 'is_overdue', 'image_count'
+    ]
+    list_filter = ['status', 'scheduled_date', 'created_at', 'issue__org']
+    search_fields = ['title', 'description', 'issue__title', 'assigned_to__first_name', 'assigned_to__last_name']
+    autocomplete_fields = ['issue', 'created_by', 'assigned_to']
+    date_hierarchy = 'scheduled_date'
+    ordering = ['-scheduled_date']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'description', 'slug')
+        }),
+        ('Issue & Assignment', {
+            'fields': ('issue', 'created_by', 'assigned_to')
+        }),
+        ('Scheduling', {
+            'fields': ('scheduled_date', 'estimated_duration')
+        }),
+        ('Status Tracking', {
+            'fields': ('status', 'started_at', 'completed_at')
+        }),
+        ('Visit Details', {
+            'fields': ('findings', 'actions_taken', 'recommendations'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at', 'started_at', 'completed_at']
+    inlines = [SiteVisitImageInline]
+    
+    def image_count(self, obj):
+        return obj.images.count()
+    image_count.short_description = 'Images'
+    
+    def is_overdue(self, obj):
+        return obj.is_overdue
+    is_overdue.boolean = True
+    is_overdue.short_description = 'Overdue'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('issue', 'created_by', 'assigned_to').prefetch_related('images')
+    
+    actions = ['mark_in_progress', 'mark_completed', 'cancel_visits']
+    
+    def mark_in_progress(self, request, queryset):
+        count = 0
+        for visit in queryset:
+            if visit.status == 'scheduled':
+                visit.mark_in_progress()
+                count += 1
+        self.message_user(request, f'{count} site visits marked as in progress.')
+    mark_in_progress.short_description = 'Mark selected visits as in progress'
+    
+    def mark_completed(self, request, queryset):
+        count = 0
+        for visit in queryset:
+            if visit.status in ['scheduled', 'in_progress']:
+                visit.mark_completed()
+                count += 1
+        self.message_user(request, f'{count} site visits marked as completed.')
+    mark_completed.short_description = 'Mark selected visits as completed'
+    
+    def cancel_visits(self, request, queryset):
+        count = 0
+        for visit in queryset:
+            if visit.status in ['scheduled', 'in_progress']:
+                visit.cancel()
+                count += 1
+        self.message_user(request, f'{count} site visits cancelled.')
+    cancel_visits.short_description = 'Cancel selected visits'
+
+
+@admin.register(SiteVisitImage)
+class SiteVisitImageAdmin(admin.ModelAdmin):
+    list_display = ['site_visit_title', 'caption', 'image_preview', 'uploaded_at', 'site_visit_link']
+    list_filter = ['uploaded_at', 'site_visit__status']
+    search_fields = ['site_visit__title', 'caption']
+    autocomplete_fields = ['site_visit']
+    date_hierarchy = 'uploaded_at'
+    ordering = ['-uploaded_at']
+    
+    def site_visit_title(self, obj):
+        return obj.site_visit.title
+    site_visit_title.short_description = 'Site Visit'
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="80" height="80" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+    
+    def site_visit_link(self, obj):
+        url = reverse('admin:issue_management_sitevisit_change', args=[obj.site_visit.pk])
+        return format_html('<a href="{}">View Site Visit</a>', url)
+    site_visit_link.short_description = 'Site Visit Link'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('site_visit', 'site_visit__issue')
