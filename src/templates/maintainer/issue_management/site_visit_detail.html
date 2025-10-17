@@ -6,6 +6,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/issue_management/site_visit_detail/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -100,6 +101,31 @@
           </div>
           <small class="text-white-50" style="font-size: 0.7rem;">Reporter</small>
         </a>
+      {% endif %}
+      
+      {% if site_visit.status == 'scheduled' %}
+        <form method="post" action="{% url 'issue_management:maintainer:site_visit_start' site_visit_slug=site_visit.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center">
+            <span class="material-symbols-outlined">play_arrow</span>
+            <span class="ms-2">Start Site Visit</span>
+          </button>
+        </form>
+      {% elif site_visit.status == 'in_progress' %}
+        <button type="button" 
+                class="btn btn-success d-flex align-items-center justify-content-center"
+                data-bs-toggle="modal" 
+                data-bs-target="#markCompletedModal">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span class="ms-2">Mark Complete</span>
+        </button>
+        <form method="post" action="{% url 'issue_management:maintainer:site_visit_cancel' site_visit_slug=site_visit.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger d-flex align-items-center justify-content-center">
+            <span class="material-symbols-outlined">cancel</span>
+            <span class="ms-2">Cancel Visit</span>
+          </button>
+        </form>
       {% endif %}
     </div>
   </div>
@@ -260,4 +286,98 @@
   </div>
 </section>
 
+<!-- Mark Completed Modal -->
+<div class="modal fade" id="markCompletedModal" tabindex="-1" aria-labelledby="markCompletedModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="markCompletedModalLabel">
+          <span class="material-symbols-outlined text-success me-2">check_circle</span>
+          Complete Site Visit
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'issue_management:maintainer:site_visit_complete' site_visit_slug=site_visit.slug %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <strong>Site Visit:</strong> {{ site_visit.title }}
+          </div>
+          
+          <div class="mb-3">
+            <label for="findings" class="form-label">
+              <strong>Findings</strong> <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" 
+                      id="findings" 
+                      name="findings" 
+                      rows="4" 
+                      placeholder="Describe your findings and observations..." 
+                      required></textarea>
+            <div class="form-text">What did you observe during the site visit?</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="actions_taken" class="form-label">
+              <strong>Actions Taken</strong> <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" 
+                      id="actions_taken" 
+                      name="actions_taken" 
+                      rows="4" 
+                      placeholder="Describe actions taken during the visit..." 
+                      required></textarea>
+            <div class="form-text">What actions did you take during the visit?</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="recommendations" class="form-label">
+              <strong>Recommendations</strong>
+            </label>
+            <textarea class="form-control" 
+                      id="recommendations" 
+                      name="recommendations" 
+                      rows="4" 
+                      placeholder="Provide recommendations for follow-up..."></textarea>
+            <div class="form-text">Optional: Any recommendations for future actions?</div>
+          </div>
+          
+          <div class="mb-3 image-upload-section">
+            <label class="form-label">
+              <i class="fas fa-image me-1"></i>
+              <strong>Site Visit Images</strong> (Optional - Max 3)
+            </label>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="id_image1" class="form-label small">Image 1</label>
+                <input type="file" class="form-control" id="id_image1" name="image1" accept="image/*">
+              </div>
+              <div class="col-md-4">
+                <label for="id_image2" class="form-label small">Image 2</label>
+                <input type="file" class="form-control" id="id_image2" name="image2" accept="image/*">
+              </div>
+              <div class="col-md-4">
+                <label for="id_image3" class="form-label small">Image 3</label>
+                <input type="file" class="form-control" id="id_image3" name="image3" accept="image/*">
+              </div>
+            </div>
+            <div class="form-text mt-2">You can upload up to 3 images from the site visit (max 5MB each).</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <span class="material-symbols-outlined me-2">check_circle</span>
+            Mark as Completed
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/components/image-upload.js' %}"></script>
 {% endblock %}

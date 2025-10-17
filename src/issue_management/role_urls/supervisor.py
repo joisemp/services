@@ -27,4 +27,7 @@ urlpatterns = [
     path('issue/<slug:issue_slug>/site-visits/create/', supervisor.SiteVisitCreateView.as_view(), name='site_visit_create'),
     path('site-visits/<slug:site_visit_slug>/edit/', supervisor.SiteVisitUpdateView.as_view(), name='site_visit_update'),
     path('site-visits/<slug:site_visit_slug>/delete/', supervisor.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
+    path('site-visits/<slug:site_visit_slug>/start/', supervisor.SiteVisitStartView.as_view(), name='site_visit_start'),
+    path('site-visits/<slug:site_visit_slug>/complete/', supervisor.SiteVisitCompleteView.as_view(), name='site_visit_complete'),
+    path('site-visits/<slug:site_visit_slug>/cancel/', supervisor.SiteVisitCancelView.as_view(), name='site_visit_cancel'),
 ]

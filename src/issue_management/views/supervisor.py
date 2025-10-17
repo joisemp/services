@@ -2,7 +2,8 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
 from django.urls import reverse_lazy
 from django.db.models import Case, When, IntegerField
-from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, SiteVisitForm
+from django.utils import timezone
+from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, SiteVisitForm, SiteVisitCompleteForm
 from django.contrib import messages
 from .. models import Issue, WorkTask, SiteVisit, SiteVisitImage
 from django.shortcuts import redirect
@@ -580,4 +581,124 @@ class SiteVisitDetailView(SupervisorOnlyAccessMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['issue'] = self.object.issue
+        context['complete_form'] = SiteVisitCompleteForm()
         return context
+
+
+class SiteVisitStartView(SupervisorOnlyAccessMixin, View):
+    """Start a site visit by changing status to in_progress"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow starting if status is scheduled
+        if site_visit.status == 'scheduled':
+            site_visit.mark_in_progress()
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been started!'
+            )
+        else:
+            messages.error(
+                request,
+                'Only scheduled site visits can be started.'
+            )
+        
+        return redirect(
+            'issue_management:supervisor:site_visit_detail',
+            site_visit_slug=site_visit.slug
+        )
+
+
+class SiteVisitCancelView(SupervisorOnlyAccessMixin, View):
+    """Cancel a site visit"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow canceling if status is scheduled or in_progress
+        if site_visit.status in ['scheduled', 'in_progress']:
+            site_visit.cancel()
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been cancelled.'
+            )
+        else:
+            messages.error(
+                request,
+                'Only scheduled or in-progress site visits can be cancelled.'
+            )
+        
+        return redirect(
+            'issue_management:supervisor:site_visit_detail',
+            site_visit_slug=site_visit.slug
+        )
+
+
+class SiteVisitCompleteView(SupervisorOnlyAccessMixin, View):
+    """Complete a site visit with findings, actions, and recommendations"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow completing if status is scheduled or in_progress
+        if site_visit.status not in ['scheduled', 'in_progress']:
+            messages.error(
+                request,
+                'Only scheduled or in-progress site visits can be completed.'
+            )
+            return redirect(
+                'issue_management:supervisor:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )
+        
+        form = SiteVisitCompleteForm(request.POST, request.FILES, instance=site_visit)
+        
+        if form.is_valid():
+            # Save the site visit with findings, actions, and recommendations
+            site_visit = form.save(commit=False)
+            site_visit.mark_completed()
+            site_visit.save()
+            
+            # Handle image uploads (up to 3 images)
+            for i in range(1, 4):
+                image_field_name = f'image{i}'
+                image = request.FILES.get(image_field_name)
+                
+                if image:
+                    SiteVisitImage.objects.create(
+                        site_visit=site_visit,
+                        image=image
+                    )
+            
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been marked as completed!'
+            )
+            
+            return redirect(
+                'issue_management:supervisor:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )
+        else:
+            # Form is invalid, return to detail page with errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+            
+            return redirect(
+                'issue_management:supervisor:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )
