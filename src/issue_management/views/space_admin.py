@@ -5,8 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Case, When, IntegerField
-from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
+from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage
+from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
@@ -107,7 +107,14 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
     slug_url_kwarg = 'issue_slug'
     
     def get_queryset(self):
-        queryset = Issue.objects.prefetch_related('images', 'comments', 'work_tasks__assigned_to').select_related('org', 'space')
+        queryset = Issue.objects.prefetch_related(
+            'images', 
+            'comments', 
+            'work_tasks__assigned_to',
+            'site_visits__created_by',
+            'site_visits__assigned_to',
+            'site_visits__images'
+        ).select_related('org', 'space')
         
         # Filter by active space for space admins
         if self.request.user.is_space_admin and self.request.user.active_space:
@@ -135,6 +142,9 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
         # Add comment form to context
         context['comment_form'] = IssueCommentForm()
+        # Add site visits to context
+        site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
+        context['site_visits'] = site_visits
         return context
 
 
@@ -811,3 +821,94 @@ class IssueStartWorkView(SpaceAdminWithActiveSpaceMixin, View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+
+
+class SiteVisitCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
+    """Create a new site visit for an issue"""
+    template_name = "space_admin/issue_management/site_visit_create.html"
+    form_class = SiteVisitForm
+    model = SiteVisit
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the issue this site visit belongs to
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        # Set the issue and created_by before saving
+        form.instance.issue = self.issue
+        form.instance.created_by = self.request.user
+        
+        # Save the site visit
+        response = super().form_valid(form)
+        
+        messages.success(self.request, f'Site visit "{form.instance.title}" created successfully!')
+        
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        return context
+
+
+class SiteVisitUpdateView(SpaceAdminWithActiveSpaceMixin, UpdateView):
+    """Update an existing site visit"""
+    template_name = "space_admin/issue_management/site_visit_update.html"
+    form_class = SiteVisitForm
+    model = SiteVisit
+    slug_field = 'slug'
+    slug_url_kwarg = 'site_visit_slug'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the site visit and its associated issue
+        self.site_visit = get_object_or_404(SiteVisit, slug=kwargs['site_visit_slug'])
+        self.issue = self.site_visit.issue
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Site visit "{form.instance.title}" updated successfully!')
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        context['site_visit'] = self.site_visit
+        return context
+
+
+class SiteVisitDeleteView(SpaceAdminWithActiveSpaceMixin, View):
+    """Delete a site visit"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(SiteVisit, slug=site_visit_slug)
+        issue_slug = site_visit.issue.slug
+        visit_title = site_visit.title
+        
+        # Delete all images associated with the site visit before deleting
+        for image in site_visit.images.all():
+            if image.image:
+                image.image.delete(save=False)
+            image.delete()
+        
+        site_visit.delete()
+        messages.success(request, f'Site visit "{visit_title}" has been deleted.')
+        
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)

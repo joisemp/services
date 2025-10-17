@@ -385,6 +385,265 @@
   </div>
 </section>
 
+<!-- Site Visits Section -->
+<section id="site-visits" class="mt-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-map-marker-alt me-2"></i>
+            Site Visits
+          </h5>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-info">{{ site_visits|length }} visit{{ site_visits|length|pluralize }}</span>
+            {% if issue.status == 'resolved' or issue.status == 'closed' or issue.status == 'cancelled' %}
+            <button class="btn btn-primary btn-sm" 
+                    disabled 
+                    title="Cannot create site visits for {{ issue.get_status_display|lower }} issues">
+              <i class="fas fa-plus"></i> Create Site Visit
+            </button>
+            {% else %}
+            <a href="{% url 'issue_management:supervisor:site_visit_create' issue_slug=issue.slug %}" 
+               class="btn btn-primary btn-sm">
+              <i class="fas fa-plus"></i> Create Site Visit
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-body">
+          {% if site_visits %}
+            <div class="site-visits-list">
+              {% for visit in site_visits %}
+              <div class="site-visit-item border rounded p-3 mb-3 
+                          {% if visit.status == 'completed' %}bg-light
+                          {% elif visit.status == 'cancelled' %}bg-light text-muted
+                          {% elif visit.is_overdue %}border-danger
+                          {% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="visit-content flex-grow-1">
+                    <!-- Visit Title and Status -->
+                    <div class="d-flex align-items-center mb-2">
+                      <h6 class="visit-title mb-0 me-2 {% if visit.status == 'cancelled' %}text-decoration-line-through{% endif %}">
+                        {{ visit.title }}
+                      </h6>
+                      <span class="badge 
+                                   {% if visit.status == 'scheduled' %}bg-primary
+                                   {% elif visit.status == 'in_progress' %}bg-warning
+                                   {% elif visit.status == 'completed' %}bg-success
+                                   {% elif visit.status == 'cancelled' %}bg-secondary
+                                   {% endif %}">
+                        {% if visit.status == 'scheduled' %}<i class="fas fa-clock"></i>
+                        {% elif visit.status == 'in_progress' %}<i class="fas fa-spinner"></i>
+                        {% elif visit.status == 'completed' %}<i class="fas fa-check"></i>
+                        {% elif visit.status == 'cancelled' %}<i class="fas fa-times"></i>
+                        {% endif %}
+                        {{ visit.get_status_display }}
+                      </span>
+                      {% if visit.is_overdue and visit.status == 'scheduled' %}
+                      <span class="badge bg-danger ms-1">
+                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                      </span>
+                      {% endif %}
+                    </div>
+                    
+                    <!-- Visit Description -->
+                    <p class="visit-description text-muted small mb-2">{{ visit.description }}</p>
+                    
+                    <!-- Location -->
+                    {% if visit.location %}
+                    <div class="visit-location mb-2 p-2 bg-light rounded border-start border-primary border-3">
+                      <small class="text-muted">
+                        <i class="fas fa-map-marker-alt text-primary me-1"></i>
+                        <strong>Location:</strong> {{ visit.location }}
+                      </small>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Visit Meta Information -->
+                    <div class="visit-meta small text-muted">
+                      <div class="row g-2">
+                        <div class="col-12 col-md-6">
+                          <i class="fas fa-user-circle"></i> 
+                          <strong>Created by:</strong> {{ visit.created_by.get_full_name|default:visit.created_by.email }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <i class="fas fa-user"></i> 
+                          <strong>Assigned to:</strong> {{ visit.assigned_to.get_full_name|default:visit.assigned_to.email }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <i class="fas fa-calendar"></i> 
+                          <strong>Scheduled:</strong> {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+                        </div>
+                        {% if visit.estimated_duration %}
+                        <div class="col-12 col-md-6">
+                          <i class="fas fa-clock"></i> 
+                          <strong>Estimated Duration:</strong> {{ visit.estimated_duration }}
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    
+                    <!-- Completion Details -->
+                    {% if visit.status == 'completed' %}
+                    <div class="completion-details mt-3 p-2 bg-white rounded border">
+                      {% if visit.findings %}
+                      <div class="mb-2">
+                        <strong class="text-success">
+                          <i class="fas fa-search me-1"></i>Findings:
+                        </strong>
+                        <p class="mb-0 small">{{ visit.findings|linebreaksbr }}</p>
+                      </div>
+                      {% endif %}
+                      
+                      {% if visit.actions_taken %}
+                      <div class="mb-2">
+                        <strong class="text-primary">
+                          <i class="fas fa-tools me-1"></i>Actions Taken:
+                        </strong>
+                        <p class="mb-0 small">{{ visit.actions_taken|linebreaksbr }}</p>
+                      </div>
+                      {% endif %}
+                      
+                      {% if visit.recommendations %}
+                      <div class="mb-2">
+                        <strong class="text-info">
+                          <i class="fas fa-lightbulb me-1"></i>Recommendations:
+                        </strong>
+                        <p class="mb-0 small">{{ visit.recommendations|linebreaksbr }}</p>
+                      </div>
+                      {% endif %}
+                      
+                      {% if visit.images.all %}
+                      <div class="mt-2">
+                        <strong class="text-muted">
+                          <i class="fas fa-images me-1"></i>Site Visit Images ({{ visit.images.count }}):
+                        </strong>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                          {% for image in visit.images.all %}
+                          <div class="position-relative">
+                            <a href="{{ image.image.url }}" target="_blank">
+                              <img src="{{ image.image.url }}" 
+                                   alt="{{ image.caption|default:'Site visit image' }}" 
+                                   class="img-thumbnail" 
+                                   style="width: 80px; height: 80px; object-fit: cover;"
+                                   title="{{ image.caption|default:'Site visit image' }}">
+                            </a>
+                          </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                      {% endif %}
+                      
+                      {% if visit.completed_at %}
+                      <small class="text-muted d-block mt-2">
+                        <i class="fas fa-check-circle"></i> 
+                        Completed on {{ visit.completed_at|date:"M d, Y \a\t g:i A" }}
+                        {% if visit.duration %} (Duration: {{ visit.duration }}){% endif %}
+                      </small>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Timestamps -->
+                    <div class="visit-timestamps small text-muted mt-2">
+                      <i class="fas fa-clock"></i> Created {{ visit.created_at|date:"M d, Y" }}
+                      {% if visit.started_at and visit.status != 'completed' %}
+                        • Started {{ visit.started_at|date:"M d, Y \a\t g:i A" }}
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+                  <!-- Visit Actions -->
+                  <div class="visit-actions ms-2">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-h"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        {% if visit.status != 'completed' and visit.status != 'cancelled' %}
+                        <li>
+                          <a class="dropdown-item" href="{% url 'issue_management:supervisor:site_visit_update' site_visit_slug=visit.slug %}">
+                            <i class="fas fa-edit text-primary"></i> Edit
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% else %}
+                        <li>
+                          <a class="dropdown-item disabled" href="#" title="Cannot edit {{ visit.get_status_display|lower }} visits">
+                            <i class="fas fa-edit text-muted"></i> Edit
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li>
+                          <button class="dropdown-item text-danger" type="button" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#deleteSiteVisitModal{{ visit.id }}">
+                            <i class="fas fa-trash"></i> Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+              <p class="text-muted mb-3">No site visits scheduled yet</p>
+              <p class="text-muted small">
+                Site visits allow supervisors to assign field visits to maintainers or other supervisors to inspect and address this issue on-site.
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Delete Site Visit Modals -->
+{% for visit in site_visits %}
+<div class="modal fade" id="deleteSiteVisitModal{{ visit.id }}" tabindex="-1" aria-labelledby="deleteSiteVisitModalLabel{{ visit.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteSiteVisitModalLabel{{ visit.id }}">
+          <i class="fas fa-trash text-danger me-2"></i>Delete Site Visit
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Warning!</strong> This action cannot be undone.
+        </div>
+        <p>Are you sure you want to delete the site visit <strong>"{{ visit.title }}"</strong>?</p>
+        <div class="mb-2">
+          <small class="text-muted"><strong>Location:</strong> {{ visit.location }}</small>
+        </div>
+        <div class="mb-2">
+          <small class="text-muted"><strong>Scheduled:</strong> {{ visit.scheduled_date|date:"M d, Y g:i A" }}</small>
+        </div>
+        <p class="text-muted mb-0">All information and images associated with this site visit will be permanently removed.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'issue_management:supervisor:site_visit_delete' site_visit_slug=visit.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash me-2"></i>Delete Site Visit
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
 <!-- Mark Resolved Modal -->
 <div class="modal fade" id="markResolvedModal" tabindex="-1" aria-labelledby="markResolvedModalLabel" aria-hidden="true">
   <div class="modal-dialog">

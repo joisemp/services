@@ -32,4 +32,9 @@ urlpatterns = [
     # Voice URLs
     path('<slug:issue_slug>/voice/delete/', space_admin.IssueVoiceDeleteView.as_view(), name='voice_delete'),
     path('<slug:issue_slug>/voice/upload/', space_admin.IssueVoiceUploadView.as_view(), name='voice_upload'),
+    
+    # Site Visit URLs
+    path('<slug:issue_slug>/site-visits/create/', space_admin.SiteVisitCreateView.as_view(), name='site_visit_create'),
+    path('site-visits/<slug:site_visit_slug>/edit/', space_admin.SiteVisitUpdateView.as_view(), name='site_visit_update'),
+    path('site-visits/<slug:site_visit_slug>/delete/', space_admin.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
 ]

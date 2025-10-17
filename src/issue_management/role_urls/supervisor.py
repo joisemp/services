@@ -20,4 +20,9 @@ urlpatterns = [
     
     # Work Task Resolution Image URLs
     path('work-tasks/<slug:work_task_slug>/resolution-images/<slug:image_slug>/delete/', supervisor.WorkTaskResolutionImageDeleteView.as_view(), name='resolution_image_delete'),
+    
+    # Site Visit URLs
+    path('issue/<slug:issue_slug>/site-visits/create/', supervisor.SiteVisitCreateView.as_view(), name='site_visit_create'),
+    path('site-visits/<slug:site_visit_slug>/edit/', supervisor.SiteVisitUpdateView.as_view(), name='site_visit_update'),
+    path('site-visits/<slug:site_visit_slug>/delete/', supervisor.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
 ]
