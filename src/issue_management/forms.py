@@ -1,6 +1,6 @@
 from config.mixins.form_mixin import BootstrapFormMixin
 from django import forms
-from .models import Issue, WorkTask, IssueComment, SiteVisit
+from .models import Issue, WorkTask, IssueComment, SiteVisit, IssueReviewComment
 
 class IssueForm(BootstrapFormMixin, forms.ModelForm):
     # Add image fields for up to 3 images
@@ -718,3 +718,55 @@ class SiteVisitCompleteForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['findings'].help_text = "Required: What did you observe during the site visit?"
         self.fields['actions_taken'].help_text = "Required: What actions did you take?"
         self.fields['recommendations'].help_text = "Optional: Any recommendations for future actions?"
+
+
+
+
+
+class IssueReviewCommentForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for adding review comments to issues with optional images"""
+    # Add image fields for up to 3 images with explicit IDs
+    image1 = forms.ImageField(
+        required=False, 
+        label='Image 1',
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+            'id': 'id_image1'
+        })
+    )
+    image2 = forms.ImageField(
+        required=False,
+        label='Image 2', 
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+            'id': 'id_image2'
+        })
+    )
+    image3 = forms.ImageField(
+        required=False,
+        label='Image 3', 
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*',
+            'id': 'id_image3'
+        })
+    )
+    
+    class Meta:
+        model = IssueReviewComment
+        fields = ['comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Enter your review comment here...',
+                'class': 'form-control'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['comment'].label = 'Review Comment'
+        self.fields['comment'].help_text = 'Provide your feedback or review notes for this issue'
+        self.fields['comment'].required = True

@@ -98,5 +98,14 @@ class IssueDetailView(ReviewerOnlyAccessMixin, DetailView):
             'comments__user',
             'work_tasks__assigned_to',
             'work_tasks__resolution_images',
+            'review_comments__user',
+            'review_comments__images',
             'reviewers'
         )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Import the form for the modal
+        from ..forms import IssueReviewCommentForm
+        context['review_comment_form'] = IssueReviewCommentForm()
+        return context

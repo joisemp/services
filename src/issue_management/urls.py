@@ -7,6 +7,7 @@ urlpatterns = [
     # Common URLs - accessible to all authenticated users
     path('issues/<slug:issue_slug>/comments/', common.IssueCommentListView.as_view(), name='comment_list'),
     path('issues/<slug:issue_slug>/comments/create/', common.IssueCommentCreateView.as_view(), name='comment_create'),
+    path('issues/<slug:issue_slug>/review-comments/create/', common.IssueReviewCommentCreateView.as_view(), name='review_comment_create'),
     
     # Role-based URL patterns for issue management
     path('central-admin/', include('issue_management.role_urls.central_admin')),

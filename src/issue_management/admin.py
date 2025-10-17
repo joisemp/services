@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, 
-    WorkTaskShare, SiteVisit, SiteVisitImage
+    WorkTaskShare, SiteVisit, SiteVisitImage, IssueReviewComment, IssueReviewCommentImage
 )
 
 
@@ -452,3 +452,89 @@ class SiteVisitImageAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('site_visit', 'site_visit__issue')
+
+
+class IssueReviewCommentImageInline(admin.TabularInline):
+    model = IssueReviewCommentImage
+    extra = 1
+    fields = ['image', 'image_preview', 'uploaded_at']
+    readonly_fields = ['image_preview', 'uploaded_at']
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="100" height="100" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+
+
+@admin.register(IssueReviewComment)
+class IssueReviewCommentAdmin(admin.ModelAdmin):
+    list_display = ['issue_title', 'user', 'comment_preview', 'created_at', 'image_count', 'issue_link']
+    list_filter = ['created_at', 'issue__status', 'issue__org', 'issue__space']
+    search_fields = ['comment', 'issue__title', 'user__first_name', 'user__last_name', 'user__email']
+    autocomplete_fields = ['issue', 'user']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('issue', 'user', 'comment', 'slug')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [IssueReviewCommentImageInline]
+    
+    def issue_title(self, obj):
+        return obj.issue.title
+    issue_title.short_description = 'Issue'
+    
+    def comment_preview(self, obj):
+        return obj.comment[:100] + '...' if len(obj.comment) > 100 else obj.comment
+    comment_preview.short_description = 'Comment Preview'
+    
+    def image_count(self, obj):
+        return obj.images.count()
+    image_count.short_description = 'Images'
+    
+    def issue_link(self, obj):
+        url = reverse('admin:issue_management_issue_change', args=[obj.issue.pk])
+        return format_html('<a href="{}">View Issue</a>', url)
+    issue_link.short_description = 'Issue Link'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('issue', 'issue__org', 'issue__space', 'user').prefetch_related('images')
+
+
+@admin.register(IssueReviewCommentImage)
+class IssueReviewCommentImageAdmin(admin.ModelAdmin):
+    list_display = ['review_comment_issue', 'image_preview', 'uploaded_at', 'review_comment_link']
+    list_filter = ['uploaded_at', 'review_comment__issue__org']
+    search_fields = ['review_comment__issue__title', 'review_comment__comment']
+    autocomplete_fields = ['review_comment']
+    date_hierarchy = 'uploaded_at'
+    ordering = ['-uploaded_at']
+    
+    def review_comment_issue(self, obj):
+        return obj.review_comment.issue.title
+    review_comment_issue.short_description = 'Issue'
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="80" height="80" style="object-fit: cover;" />', obj.image.url)
+        return 'No image'
+    image_preview.short_description = 'Preview'
+    
+    def review_comment_link(self, obj):
+        url = reverse('admin:issue_management_issuereviewcomment_change', args=[obj.review_comment.pk])
+        return format_html('<a href="{}">View Review Comment</a>', url)
+    review_comment_link.short_description = 'Review Comment Link'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('review_comment', 'review_comment__issue', 'review_comment__user')

@@ -490,3 +490,63 @@ def delete_site_visit_image_file(sender, instance, **kwargs):
     if instance.image:
         # Delete the file from storage
         instance.image.delete(save=False)
+
+
+class IssueReviewComment(models.Model):
+    """
+    Review comments for issues. These are different from regular comments
+    and are specifically for reviewers to provide feedback and review notes.
+    """
+    issue = models.ForeignKey(Issue, related_name='review_comments', on_delete=models.CASCADE)
+    user = models.ForeignKey('core.User', related_name='issue_review_comments', on_delete=models.CASCADE)
+    comment = models.TextField(help_text="Review comment or feedback")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Issue Review Comment'
+        verbose_name_plural = 'Issue Review Comments'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-review-comment")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"Review Comment by {self.user.get_full_name() or self.user} on Issue: {self.issue.title}"
+
+
+class IssueReviewCommentImage(models.Model):
+    """Images attached to review comments"""
+    review_comment = models.ForeignKey(IssueReviewComment, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/review_comment_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+        verbose_name = 'Review Comment Image'
+        verbose_name_plural = 'Review Comment Images'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.review_comment.issue.title}-review-comment-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Image for Review Comment on Issue: {self.review_comment.issue.title}"
+
+
+@receiver(pre_delete, sender=IssueReviewCommentImage)
+def delete_review_comment_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when an IssueReviewCommentImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)

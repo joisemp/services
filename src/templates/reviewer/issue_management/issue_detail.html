@@ -24,7 +24,7 @@
 
 <a href="{% url 'issue_management:reviewer:issue_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to My Reviews</a>
 
-<section id="breadcrumb" class="mb-3">
+<section id="breadcrumb" class="mb-3 mt-3">
   <span class="badge badge-{{ issue.status }} rounded-pill ms-2">{{ issue.get_status_display }}</span>
   <span class="badge badge-{{ issue.priority }} rounded-pill ms-2">{{ issue.get_priority_display }}</span>
   <span class="badge rounded-pill text-bg-dark ms-2">{{ issue.created_at|date:"M d, Y" }}</span>
@@ -59,6 +59,12 @@
           <span class="ms-2">Call</span>
         </button>
       {% endif %}
+      
+      <!-- Add Review Comment Button -->
+      <button type="button" class="btn btn-success d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#reviewCommentModal">
+        <i class="fas fa-comment-dots"></i>
+        <span class="ms-2">Add Review</span>
+      </button>
     </div>
   </div>
 
@@ -100,7 +106,7 @@
 
   <!--Review Information-->
   {% if issue.reviewed_by %}
-  <div class="card mb-3 border-info">
+  <div class="card mb-3 mt-4 border-info">
     <div class="card-header bg-info bg-opacity-10">
       <h5 class="mb-0">
         <span class="material-symbols-outlined me-2">task_alt</span>
@@ -114,6 +120,73 @@
       <p><strong>Review Notes:</strong></p>
       <p class="text-muted">{{ issue.review_notes|linebreaksbr }}</p>
       {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!--Review Comments Section-->
+  {% if issue.review_comments.all %}
+  <div class="card mb-3 mt-4 border-primary">
+    <div class="card-header bg-primary bg-opacity-10">
+      <button class="btn btn-link text-primary text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" 
+              type="button" 
+              data-bs-toggle="collapse" 
+              data-bs-target="#reviewCommentsCollapse" 
+              aria-expanded="false" 
+              aria-controls="reviewCommentsCollapse">
+        <h5 class="mb-0">
+          <i class="fas fa-comments me-2"></i>
+          Review Comments ({{ issue.review_comments.count }})
+        </h5>
+        <i class="fas fa-chevron-down"></i>
+      </button>
+    </div>
+    <div id="reviewCommentsCollapse" class="collapse">
+      <div class="card-body">
+        {% for review_comment in issue.review_comments.all %}
+        <div class="review-comment-item {% if not forloop.last %}border-bottom pb-3 mb-3{% endif %}">
+          <div class="d-flex align-items-start">
+            <div class="review-comment-avatar me-3">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                   style="width: 45px; height: 45px; font-size: 16px; font-weight: bold;">
+                {{ review_comment.user.get_full_name|default:review_comment.user.email|slice:":2"|upper }}
+              </div>
+            </div>
+            <div class="review-comment-content flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <strong class="d-block">{{ review_comment.user.get_full_name|default:review_comment.user.email }}</strong>
+                  <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    {{ review_comment.created_at|date:"M d, Y \a\t H:i" }}
+                  </small>
+                </div>
+              </div>
+              <p class="mb-2">{{ review_comment.comment|linebreaksbr }}</p>
+              
+              {% if review_comment.images.all %}
+              <div class="mt-2">
+                <small class="text-muted d-block mb-2">
+                  <i class="fas fa-images me-1"></i>
+                  Attached Images ({{ review_comment.images.count }})
+                </small>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for img in review_comment.images.all %}
+                  <a href="{{ img.image.url }}" target="_blank">
+                    <img src="{{ img.image.url }}" 
+                         alt="Review Comment Image" 
+                         class="img-thumbnail" 
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                  </a>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
   </div>
   {% endif %}
@@ -288,8 +361,112 @@
   </div>
 </section>
 
+<!-- Review Comment Modal -->
+<div class="modal fade" id="reviewCommentModal" tabindex="-1" aria-labelledby="reviewCommentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reviewCommentModalLabel">
+          <i class="fas fa-comment-dots me-2"></i>
+          Add Review Comment
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'issue_management:review_comment_create' issue_slug=issue.slug %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <small>Add your review feedback or comments about this issue. You can optionally attach up to 3 images.</small>
+          </div>
+          
+          <div class="mb-3">
+            {{ review_comment_form.comment.label_tag }}
+            {{ review_comment_form.comment }}
+            {% if review_comment_form.comment.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in review_comment_form.comment.errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+            {% if review_comment_form.comment.help_text %}
+              <small class="form-text text-muted">{{ review_comment_form.comment.help_text }}</small>
+            {% endif %}
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Images (Optional - Max 3)</label>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label for="id_image1" class="form-label"><small>Image 1</small></label>
+                {{ review_comment_form.image1 }}
+              </div>
+              <div class="col-md-4">
+                <label for="id_image2" class="form-label"><small>Image 2</small></label>
+                {{ review_comment_form.image2 }}
+              </div>
+              <div class="col-md-4">
+                <label for="id_image3" class="form-label"><small>Image 3</small></label>
+                {{ review_comment_form.image3 }}
+              </div>
+            </div>
+            <div class="form-text">You can upload up to 3 images with your review comment.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-2"></i>Submit Review Comment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script src="{% static 'js/comments.js' %}"></script>
+<script src="{% static 'js/components/image-upload.js' %}"></script>
+<script>
+  // Initialize image upload manager when modal is shown
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('reviewCommentModal');
+    
+    if (modal) {
+      // Initialize image previews when modal is first shown
+      modal.addEventListener('shown.bs.modal', function() {
+        // Check if ImageUploadManager is already initialized for modal inputs
+        const previewContainer = document.getElementById('preview-container-1');
+        
+        // Only initialize if not already done
+        if (!previewContainer) {
+          // Create a new instance specifically for modal inputs
+          const modalImageManager = new ImageUploadManager();
+        }
+      });
+      
+      // Clean up previews when modal is closed
+      modal.addEventListener('hidden.bs.modal', function() {
+        // Clear all file inputs and preview containers
+        ['image1', 'image2', 'image3'].forEach((inputId, index) => {
+          const input = document.getElementById(`id_${inputId}`);
+          const previewContainer = document.getElementById(`preview-container-${index + 1}`);
+          
+          if (input) input.value = '';
+          if (previewContainer) previewContainer.innerHTML = '';
+        });
+        
+        // Reset form
+        const form = modal.querySelector('form');
+        if (form) form.reset();
+      });
+    }
+  });
+</script>
 {% endblock %}

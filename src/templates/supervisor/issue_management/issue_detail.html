@@ -175,6 +175,75 @@
   {% endfor %}
 </section>
 
+<!--Review Comments Section-->
+{% if issue.review_comments.all %}
+<section id="review-comments" class="mt-4">
+  <div class="card mb-3 border-primary">
+    <div class="card-header bg-primary bg-opacity-10">
+      <button class="btn btn-link text-primary text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" 
+              type="button" 
+              data-bs-toggle="collapse" 
+              data-bs-target="#reviewCommentsCollapse" 
+              aria-expanded="false" 
+              aria-controls="reviewCommentsCollapse">
+        <h5 class="mb-0">
+          <i class="fas fa-comments me-2"></i>
+          Review Comments ({{ issue.review_comments.count }})
+        </h5>
+        <i class="fas fa-chevron-down"></i>
+      </button>
+    </div>
+    <div id="reviewCommentsCollapse" class="collapse">
+      <div class="card-body">
+        {% for review_comment in issue.review_comments.all %}
+        <div class="review-comment-item {% if not forloop.last %}border-bottom pb-3 mb-3{% endif %}">
+          <div class="d-flex align-items-start">
+            <div class="review-comment-avatar me-3">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                   style="width: 45px; height: 45px; font-size: 16px; font-weight: bold;">
+                {{ review_comment.user.get_full_name|default:review_comment.user.email|slice:":2"|upper }}
+              </div>
+            </div>
+            <div class="review-comment-content flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <strong class="d-block">{{ review_comment.user.get_full_name|default:review_comment.user.email }}</strong>
+                  <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    {{ review_comment.created_at|date:"M d, Y \a\t H:i" }}
+                  </small>
+                </div>
+              </div>
+              <p class="mb-2">{{ review_comment.comment|linebreaksbr }}</p>
+              
+              {% if review_comment.images.all %}
+              <div class="mt-2">
+                <small class="text-muted d-block mb-2">
+                  <i class="fas fa-images me-1"></i>
+                  Attached Images ({{ review_comment.images.count }})
+                </small>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for img in review_comment.images.all %}
+                  <a href="{{ img.image.url }}" target="_blank">
+                    <img src="{{ img.image.url }}" 
+                         alt="Review Comment Image" 
+                         class="img-thumbnail" 
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                  </a>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section id="issue-content" class="mt-4">
   <div class="row g-3">
     <!-- Issue details card -->
