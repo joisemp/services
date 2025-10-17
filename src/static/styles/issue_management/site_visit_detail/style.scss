@@ -1,0 +1,167 @@
+@use '../../sidebar_base';
+@use '../../colors' as colors;
+
+#breadcrumb{
+  display: flex;
+  justify-content: right;
+  margin:5px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#visit-details {
+  .alert {
+    margin-bottom: 15px;
+    border: 0.5px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+  
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+  
+  .completed-alert{
+    padding: 12px;
+    border-radius: 5px;
+    border: 0.5px solid #104920 !important;
+    background-color: #edffec !important;
+    
+    h6 {
+      font-weight: 600;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      color: #104920;
+    }
+  }
+}
+
+#visit-content {
+  .card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+  }
+  
+  .card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+}
+
+#related-issue {
+  h5 {
+    font-weight: 600;
+    color: #212529;
+  }
+
+  .issue-card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+    
+    .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e3e6f0;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .badge-open {
+      background-color: #0d6efd;
+    }
+
+    .badge-assigned {
+      background-color: #6c757d;
+    }
+
+    .badge-in_progress {
+      background-color: #ffc107;
+      color: #000;
+    }
+
+    .badge-resolved {
+      background-color: #198754;
+    }
+
+    .badge-escalated {
+      background-color: #dc3545;
+    }
+
+    .badge-closed {
+      background-color: #6c757d;
+    }
+
+    .badge-cancelled {
+      background-color: #adb5bd;
+    }
+
+    .badge-critical {
+      background-color: #dc3545;
+    }
+
+    .badge-high {
+      background-color: #fd7e14;
+    }
+
+    .badge-medium {
+      background-color: #ffc107;
+      color: #000;
+    }
+
+    .badge-low {
+      background-color: #0dcaf0;
+      color: #000;
+    }
+  }
+
+  .issue-description {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e3e6f0;
+  }
+}
+
+.material-symbols-outlined {
+  font-size: 20px;
+  vertical-align: middle;
+}
+
+// Image thumbnails styling
+.img-thumbnail {
+  border: 2px solid #e3e6f0;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: colors.$primary;
+  }
+}
+
+// Status badges
+.bg-primary {
+  background-color: colors.$primary !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.bg-success {
+  background-color: #198754 !important;
+}
+
+.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.text-success {
+  color: #198754 !important;
+}

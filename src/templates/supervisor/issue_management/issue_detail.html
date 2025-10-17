@@ -561,12 +561,37 @@
                         <i class="fas fa-ellipsis-h"></i>
                       </button>
                       <ul class="dropdown-menu dropdown-menu-end">
+                        {% if visit.assigned_to != request.user %}
+                          {% if visit.assigned_to.phone_number %}
+                          <li>
+                            <a class="dropdown-item" href="tel:{{ visit.assigned_to.phone_number }}" title="Call {{ visit.assigned_to.get_full_name|default:'Assignee' }}">
+                              <i class="fas fa-phone text-success"></i> Call Assignee
+                            </a>
+                          </li>
+                          <li><hr class="dropdown-divider"></li>
+                          {% else %}
+                          <li>
+                            <a class="dropdown-item disabled" href="#" title="No phone number available">
+                              <i class="fas fa-phone text-muted"></i> Call Assignee
+                            </a>
+                          </li>
+                          <li><hr class="dropdown-divider"></li>
+                          {% endif %}
+                        {% endif %}
                         {% if visit.status != 'completed' and visit.status != 'cancelled' %}
-                        <li>
-                          <a class="dropdown-item" href="{% url 'issue_management:supervisor:site_visit_update' site_visit_slug=visit.slug %}">
-                            <i class="fas fa-edit text-primary"></i> Edit
-                          </a>
-                        </li>
+                          {% if visit.created_by == request.user %}
+                          <li>
+                            <a class="dropdown-item" href="{% url 'issue_management:supervisor:site_visit_update' site_visit_slug=visit.slug %}">
+                              <i class="fas fa-edit text-primary"></i> Edit
+                            </a>
+                          </li>
+                          {% else %}
+                          <li>
+                            <a class="dropdown-item disabled" href="#" title="Only the creator can edit this visit">
+                              <i class="fas fa-edit text-muted"></i> Edit
+                            </a>
+                          </li>
+                          {% endif %}
                         <li><hr class="dropdown-divider"></li>
                         {% else %}
                         <li>
