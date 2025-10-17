@@ -269,6 +269,8 @@ class SetPinView(FormView):
             return 'issue_management:supervisor:issue_list'
         elif user.is_maintainer:
             return 'issue_management:maintainer:work_task_list'
+        elif user.is_reviewer:
+            return 'issue_management:reviewer:issue_list'
         else:
             return 'home'
     
