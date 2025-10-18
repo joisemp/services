@@ -168,6 +168,8 @@ class IssueResolveView(SupervisorOnlyAccessMixin, View):
             # Update the issue status and resolution notes
             issue.status = 'resolved'
             issue.resolution_notes = form.cleaned_data['resolution_notes']
+            # Set the user who is resolving the issue for activity tracking
+            issue._changed_by = request.user
             issue.save()
             
             # Handle resolution images (up to 3)
@@ -213,6 +215,8 @@ class WorkTaskCreateView(SupervisorOnlyAccessMixin, CreateView):
     def form_valid(self, form):
         # Set the issue before saving
         form.instance.issue = self.issue
+        # Set the user who created the task for activity tracking
+        form.instance._created_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Work task "{form.instance.title}" created successfully!')
         return response
@@ -245,6 +249,8 @@ class WorkTaskUpdateView(SupervisorOnlyAccessMixin,UpdateView):
         return kwargs
     
     def form_valid(self, form):
+        # Set the user who updated the task for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Work task "{form.instance.title}" updated successfully!')
         return response
@@ -276,6 +282,8 @@ class WorkTaskCompleteView(SupervisorOnlyAccessMixin, UpdateView):
         
         # Mark the task as completed and save resolution notes
         form.instance.completed = True
+        # Set the user who is completing the task for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         
         # Handle resolution images (up to 3)
@@ -348,6 +356,8 @@ class WorkTaskToggleCompleteView(SupervisorOnlyAccessMixin, UpdateView):
             # Mark task as pending
             self.work_task.completed = False
             self.work_task.resolution_notes = None  # Clear resolution notes
+            # Set the user who is reopening the task for activity tracking
+            self.work_task._changed_by = self.request.user
             self.work_task.save()
             
             if image_count > 0:
@@ -380,6 +390,8 @@ class WorkTaskDeleteView(SupervisorOnlyAccessMixin, View):
             # Delete the database record
             res_image.delete()
         
+        # Set the user who deleted the task for activity tracking
+        work_task._deleted_by = request.user
         work_task.delete()
         messages.success(request, f'Work task "{task_title}" has been deleted.')
 
@@ -426,6 +438,8 @@ class IssueStartWorkView(SupervisorOnlyAccessMixin, View):
             
             # Change status to in_progress
             issue.status = 'in_progress'
+            # Set the user who is starting work for activity tracking
+            issue._changed_by = request.user
             issue.save()
             
             messages.success(request, f'Started work on issue "{issue.title}". Status changed from {previous_status.lower()} to in progress.')
@@ -494,6 +508,8 @@ class SiteVisitUpdateView(SupervisorOnlyAccessMixin, UpdateView):
         return kwargs
     
     def form_valid(self, form):
+        # Set the user who updated the site visit for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Site visit "{form.instance.title}" updated successfully!')
         return response

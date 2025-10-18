@@ -91,10 +91,13 @@ class IssueCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
         for field_name in image_fields:
             image_file = form.cleaned_data.get(field_name)
             if image_file:
-                IssueImage.objects.create(
+                issue_image = IssueImage(
                     issue=self.object,
                     image=image_file
                 )
+                # Set the user who uploaded the image for activity tracking
+                issue_image._uploaded_by = self.request.user
+                issue_image.save()
         
         return response    
 

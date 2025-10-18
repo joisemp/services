@@ -4,7 +4,8 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, 
-    WorkTaskShare, SiteVisit, SiteVisitImage, IssueReviewComment, IssueReviewCommentImage
+    WorkTaskShare, SiteVisit, SiteVisitImage, IssueReviewComment, IssueReviewCommentImage,
+    IssueActivity
 )
 
 
@@ -538,3 +539,57 @@ class IssueReviewCommentImageAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('review_comment', 'review_comment__issue', 'review_comment__user')
+
+
+@admin.register(IssueActivity)
+class IssueActivityAdmin(admin.ModelAdmin):
+    list_display = ['issue_title', 'activity_type', 'user_name', 'description_short', 'created_at']
+    list_filter = ['activity_type', 'created_at', 'issue__org']
+    search_fields = ['issue__title', 'description', 'user__email', 'user__phone_number']
+    readonly_fields = ['issue', 'activity_type', 'user', 'description', 'old_value', 'new_value', 'created_at', 'slug']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Activity Information', {
+            'fields': ('issue', 'activity_type', 'user', 'created_at')
+        }),
+        ('Details', {
+            'fields': ('description', 'old_value', 'new_value')
+        }),
+        ('System', {
+            'fields': ('slug',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def issue_title(self, obj):
+        url = reverse('admin:issue_management_issue_change', args=[obj.issue.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.issue.title)
+    issue_title.short_description = 'Issue'
+    
+    def user_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name() or obj.user.email or obj.user.phone_number
+        return 'System'
+    user_name.short_description = 'User'
+    
+    def description_short(self, obj):
+        return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+    description_short.short_description = 'Description'
+    
+    def has_add_permission(self, request):
+        # Don't allow manual creation of activities
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        # Don't allow editing activities
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Allow deletion only for superusers
+        return request.user.is_superuser
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('issue', 'user', 'issue__org')

@@ -550,3 +550,65 @@ def delete_review_comment_image_file(sender, instance, **kwargs):
     if instance.image:
         # Delete the file from storage
         instance.image.delete(save=False)
+
+
+class IssueActivity(models.Model):
+    """
+    Tracks all activities/changes made to an issue for audit and history purposes.
+    Excludes comments as they have their own display section.
+    """
+    ACTIVITY_TYPES = [
+        ('created', 'Issue Created'),
+        ('status_changed', 'Status Changed'),
+        ('priority_changed', 'Priority Changed'),
+        ('assigned', 'Issue Assigned'),
+        ('reassigned', 'Issue Reassigned'),
+        ('unassigned', 'Issue Unassigned'),
+        ('updated', 'Issue Updated'),
+        ('resolved', 'Issue Resolved'),
+        ('reopened', 'Issue Reopened'),
+        ('closed', 'Issue Closed'),
+        ('cancelled', 'Issue Cancelled'),
+        ('escalated', 'Issue Escalated'),
+        ('review_requested', 'Review Requested'),
+        ('reviewed', 'Issue Reviewed'),
+        ('work_task_created', 'Work Task Created'),
+        ('work_task_updated', 'Work Task Updated'),
+        ('work_task_completed', 'Work Task Completed'),
+        ('work_task_reopened', 'Work Task Reopened'),
+        ('work_task_deleted', 'Work Task Deleted'),
+        ('site_visit_created', 'Site Visit Created'),
+        ('site_visit_updated', 'Site Visit Updated'),
+        ('site_visit_completed', 'Site Visit Completed'),
+        ('site_visit_cancelled', 'Site Visit Cancelled'),
+        ('image_added', 'Image Added'),
+        ('image_deleted', 'Image Deleted'),
+        ('voice_added', 'Voice Recording Added'),
+        ('voice_deleted', 'Voice Recording Deleted'),
+    ]
+    
+    issue = models.ForeignKey(Issue, related_name='activities', on_delete=models.CASCADE)
+    activity_type = models.CharField(max_length=30, choices=ACTIVITY_TYPES)
+    user = models.ForeignKey('core.User', related_name='issue_activities', on_delete=models.SET_NULL, null=True, blank=True)
+    description = models.TextField(help_text="Detailed description of what changed")
+    old_value = models.TextField(blank=True, null=True, help_text="Previous value (if applicable)")
+    new_value = models.TextField(blank=True, null=True, help_text="New value (if applicable)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Issue Activity'
+        verbose_name_plural = 'Issue Activities'
+        indexes = [
+            models.Index(fields=['issue', '-created_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.slug}-activity")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()} - {self.issue.title}"

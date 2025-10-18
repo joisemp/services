@@ -93,10 +93,13 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
         for field_name in image_fields:
             image_file = form.cleaned_data.get(field_name)
             if image_file:
-                IssueImage.objects.create(
+                issue_image = IssueImage(
                     issue=self.object,
                     image=image_file
                 )
+                # Set the user who uploaded the image for activity tracking
+                issue_image._uploaded_by = self.request.user
+                issue_image.save()
         
         return response
     
@@ -116,7 +119,8 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
             'work_tasks__resolution_images',
             'site_visits__created_by',
             'site_visits__assigned_to',
-            'site_visits__images'
+            'site_visits__images',
+            'activities__user'
         ).select_related('org', 'space')
     
     def get_context_data(self, **kwargs):
@@ -140,6 +144,9 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
         # Add site visits to context
         site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
         context['site_visits'] = site_visits
+        # Add activity history to context
+        activities = self.object.activities.select_related('user').all()
+        context['activities'] = activities
         return context
     
     
@@ -154,6 +161,8 @@ class IssueUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
         return Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter')
     
     def form_valid(self, form):
+        # Set the user who updated the issue for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Issue "{form.instance.title}" updated successfully!')
         return response
@@ -180,6 +189,8 @@ class WorkTaskCreateView(CentralAdminOnlyAccessMixin, CreateView):
     def form_valid(self, form):
         # Set the issue before saving
         form.instance.issue = self.issue
+        # Set the user who created the task for activity tracking
+        form.instance._created_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Work task "{form.instance.title}" created successfully!')
         return response
@@ -212,6 +223,8 @@ class WorkTaskUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
         return kwargs
     
     def form_valid(self, form):
+        # Set the user who updated the task for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Work task "{form.instance.title}" updated successfully!')
         return response
@@ -243,6 +256,8 @@ class WorkTaskCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
         
         # Mark the task as completed and save resolution notes
         form.instance.completed = True
+        # Set the user who is completing the task for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         
         # Handle resolution images (up to 3)
@@ -308,6 +323,8 @@ class WorkTaskToggleCompleteView(CentralAdminOnlyAccessMixin, UpdateView):
             # Mark task as pending
             self.work_task.completed = False
             self.work_task.resolution_notes = None  # Clear resolution notes
+            # Set the user who is reopening the task for activity tracking
+            self.work_task._changed_by = self.request.user
             self.work_task.save()
             
             if image_count > 0:
@@ -340,6 +357,8 @@ class WorkTaskDeleteView(CentralAdminOnlyAccessMixin, View):
             # Delete the database record
             res_image.delete()
         
+        # Set the user who deleted the task for activity tracking
+        work_task._deleted_by = request.user
         work_task.delete()
         messages.success(request, f'Work task "{task_title}" has been deleted.')
         
@@ -402,6 +421,8 @@ class IssueImageDeleteView(CentralAdminOnlyAccessMixin, View):
         if image.image:
             image.image.delete(save=False)
         
+        # Set the user who deleted the image for activity tracking
+        image._deleted_by = request.user
         # Delete the image record
         image.delete()
         
@@ -465,10 +486,13 @@ class IssueImageUploadView(CentralAdminOnlyAccessMixin, View):
             # Create IssueImage instances for each uploaded image
             for image_file in images:
                 try:
-                    IssueImage.objects.create(
+                    issue_image = IssueImage(
                         issue=issue,
                         image=image_file
                     )
+                    # Set the user who uploaded the image for activity tracking
+                    issue_image._uploaded_by = request.user
+                    issue_image.save()
                     uploaded_count += 1
                 except Exception as e:
                     messages.error(request, f'Failed to upload image "{image_file.name}": {str(e)}')
@@ -508,6 +532,8 @@ class IssueVoiceDeleteView(CentralAdminOnlyAccessMixin, View):
         
         # Clear the voice field and save the issue
         issue.voice = None
+        # Set the user who deleted the voice for activity tracking
+        issue._changed_by = request.user
         issue.save()
         
         messages.success(request, 'Voice recording successfully deleted.')
@@ -555,6 +581,8 @@ class IssueVoiceUploadView(CentralAdminOnlyAccessMixin, View):
                 try:
                     # Save the voice file to the issue
                     issue.voice = voice_file
+                    # Set the user who uploaded the voice for activity tracking
+                    issue._changed_by = request.user
                     issue.save()
                     
                     messages.success(request, 'Voice recording successfully uploaded.')
@@ -597,6 +625,9 @@ class IssueAssignmentView(CentralAdminOnlyAccessMixin, UpdateView):
         # Only change status if it's not already resolved, closed, or cancelled
         if form.instance.status not in ['resolved', 'closed', 'cancelled']:
             form.instance.status = 'assigned'
+        
+        # Set the user who is assigning for activity tracking
+        form.instance._changed_by = self.request.user
         
         # Save the form first (this saves the Issue instance)
         response = super().form_valid(form)
@@ -660,6 +691,8 @@ class IssueReviewerSelectionView(CentralAdminOnlyAccessMixin, View):
         if form.is_valid():
             # Save the selected reviewers
             reviewers = form.cleaned_data['reviewers']
+            # Set the user who is selecting reviewers for activity tracking
+            self.issue._changed_by = request.user
             self.issue.reviewers.set(reviewers)
             
             # Create success message with reviewer names
@@ -712,6 +745,8 @@ class IssueReopenView(CentralAdminOnlyAccessMixin, View):
             issue.reviewed_at = None
             issue.review_notes = None
             
+            # Set the user who is reopening the issue for activity tracking
+            issue._changed_by = request.user
             issue.save()
             
             messages.success(request, f'Issue "{issue.title}" has been reopened from {previous_status.lower()} status.')
@@ -759,6 +794,8 @@ class IssueResolveView(CentralAdminOnlyAccessMixin, View):
             # Update the issue status and resolution notes
             issue.status = 'resolved'
             issue.resolution_notes = form.cleaned_data['resolution_notes']
+            # Set the user who is resolving the issue for activity tracking
+            issue._changed_by = request.user
             issue.save()
             
             # Handle resolution images (up to 3)
@@ -807,6 +844,8 @@ class IssueStartWorkView(CentralAdminOnlyAccessMixin, View):
             
             # Change status to in_progress
             issue.status = 'in_progress'
+            # Set the user who is starting work for activity tracking
+            issue._changed_by = request.user
             issue.save()
             
             messages.success(request, f'Started work on issue "{issue.title}". Status changed from {previous_status.lower()} to in progress.')
@@ -875,6 +914,8 @@ class SiteVisitUpdateView(CentralAdminOnlyAccessMixin, UpdateView):
         return kwargs
     
     def form_valid(self, form):
+        # Set the user who updated the site visit for activity tracking
+        form.instance._changed_by = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, f'Site visit "{form.instance.title}" updated successfully!')
         return response

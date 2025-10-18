@@ -497,4 +497,46 @@ tr {
 .assignment-alert .alert-text {
   font-size: 0.95rem;
   line-height: 1.4;
+}
+
+#activity-history .card {
+  border: 0.5px solid #e3e6f0;
+  border-radius: 12px;
+}
+#activity-history .card-header {
+  border-bottom: 1px solid #e3e6f0;
+}
+#activity-history .card-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+#activity-history .activity-timeline {
+  max-height: 600px;
+  overflow-y: auto;
+}
+#activity-history .activity-item {
+  transition: background-color 0.2s ease;
+}
+#activity-history .activity-item:hover {
+  background-color: #f8f9fa;
+}
+#activity-history .activity-icon .badge {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+#activity-history .activity-details .activity-type {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+#activity-history .activity-details .activity-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+#activity-history .activity-details .activity-changes .badge {
+  font-size: 0.8rem;
+  padding: 0.35em 0.65em;
 }/*# sourceMappingURL=style.css.map */

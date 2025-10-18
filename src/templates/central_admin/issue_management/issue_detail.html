@@ -973,6 +973,9 @@
   </div>
 </section>
 
+<!-- Activity History Section -->
+{% include 'central_admin/issue_management/partials/activity_history.html' %}
+
 <!-- Delete Site Visit Modals -->
 {% for visit in site_visits %}
 <div class="modal fade" id="deleteSiteVisitModal{{ visit.id }}" tabindex="-1" aria-labelledby="deleteSiteVisitModalLabel{{ visit.id }}" aria-hidden="true">
