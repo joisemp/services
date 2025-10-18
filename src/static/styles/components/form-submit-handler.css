@@ -1,0 +1,101 @@
+/**
+ * Form Submit Button Loading Styles
+ * Styles for loading animation on submit buttons
+ */
+
+/* Loading button state */
+.btn-loading {
+    position: relative;
+    cursor: wait !important;
+    opacity: 0.85;
+}
+
+/* Disabled button state */
+.btn-disabled {
+    pointer-events: none;
+}
+
+/* Spinner animation (Bootstrap-compatible) */
+.spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: text-bottom;
+    border: 0.2em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-width: 0.15em;
+}
+
+/* Spinner animation keyframes */
+@keyframes spinner-border {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Optional: Add pulse effect to loading buttons */
+@keyframes btn-loading-pulse {
+    0%, 100% {
+        opacity: 0.85;
+    }
+    50% {
+        opacity: 0.65;
+    }
+}
+
+.btn-loading.btn-pulse {
+    animation: btn-loading-pulse 1.5s ease-in-out infinite;
+}
+
+/* Ensure spinner doesn't break layout */
+.spinner-border + * {
+    vertical-align: middle;
+}
+
+/* Optional: Custom loading styles for different button types */
+.btn-primary.btn-loading,
+.btn-success.btn-loading,
+.btn-danger.btn-loading,
+.btn-warning.btn-loading,
+.btn-info.btn-loading {
+    opacity: 0.8;
+}
+
+/* Focus state for loading buttons */
+.btn-loading:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Loading overlay option (if you want to cover entire button) */
+.btn-loading-overlay {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+    animation: loading-overlay 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-overlay {
+    0%, 100% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+}
