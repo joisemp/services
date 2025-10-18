@@ -1,5 +1,86 @@
 import random
 import string
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
+
+
+def compress_image(image_field, max_width=1920, max_height=1920, quality=85, format='JPEG'):
+    """
+    Compresses an image while maintaining aspect ratio.
+    
+    Args:
+        image_field: Django ImageField instance
+        max_width (int): Maximum width in pixels. Defaults to 1920.
+        max_height (int): Maximum height in pixels. Defaults to 1920.
+        quality (int): JPEG quality (1-100). Defaults to 85.
+        format (str): Output format ('JPEG' or 'PNG'). Defaults to 'JPEG'.
+    
+    Returns:
+        InMemoryUploadedFile: Compressed image file
+    """
+    # Open the image
+    img = Image.open(image_field)
+    
+    # Convert RGBA to RGB if saving as JPEG
+    if format == 'JPEG' and img.mode in ('RGBA', 'LA', 'P'):
+        # Create a white background
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        img = background
+    elif img.mode not in ('RGB', 'RGBA'):
+        img = img.convert('RGB')
+    
+    # Get original dimensions
+    width, height = img.size
+    
+    # Calculate new dimensions while maintaining aspect ratio
+    if width > max_width or height > max_height:
+        # Calculate scaling factor
+        width_ratio = max_width / width
+        height_ratio = max_height / height
+        scale_factor = min(width_ratio, height_ratio)
+        
+        new_width = int(width * scale_factor)
+        new_height = int(height * scale_factor)
+        
+        # Resize image with high-quality resampling
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
+    # Save to BytesIO object
+    output = BytesIO()
+    
+    # Save with compression
+    if format == 'JPEG':
+        img.save(output, format='JPEG', quality=quality, optimize=True)
+        content_type = 'image/jpeg'
+        file_extension = '.jpg'
+    else:  # PNG
+        img.save(output, format='PNG', optimize=True)
+        content_type = 'image/png'
+        file_extension = '.png'
+    
+    output.seek(0)
+    
+    # Generate filename
+    original_name = image_field.name
+    name_without_ext = original_name.rsplit('.', 1)[0] if '.' in original_name else original_name
+    new_name = f"{name_without_ext}{file_extension}"
+    
+    # Create InMemoryUploadedFile
+    compressed_image = InMemoryUploadedFile(
+        output,
+        'ImageField',
+        new_name,
+        content_type,
+        sys.getsizeof(output),
+        None
+    )
+    
+    return compressed_image
 
 
 def generate_unique_slug(instance, base_slug, max_length=50):
