@@ -54,6 +54,10 @@ urlpatterns = [
          views.custom_logout_view, 
          name='logout'),
     
+    path('set-pin/', 
+         views.SetPinView.as_view(), 
+         name='set_pin'),
+    
     path('spaces/', 
          views.SpaceListView.as_view(),
          name='space_list'),

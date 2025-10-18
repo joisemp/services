@@ -6,6 +6,8 @@ app_name = "supervisor"
 urlpatterns = [
     path('', supervisor.SupervisorIssueListView.as_view(), name='issue_list'),
     path('tasks/', supervisor.WorkTaskListView.as_view(), name='work_task_list'),
+    path('site-visits/', supervisor.SiteVisitListView.as_view(), name='site_visit_list'),
+    path('site-visits/<slug:site_visit_slug>/', supervisor.SiteVisitDetailView.as_view(), name='site_visit_detail'),
     path('issue/<slug:issue_slug>/', supervisor.IssueDetailView.as_view(), name='issue_detail'),
     path('issue/<slug:issue_slug>/resolve/', supervisor.IssueResolveView.as_view(), name='issue_resolve'),
     path('issue/<slug:issue_slug>/start-work/', supervisor.IssueStartWorkView.as_view(), name='issue_start_work'),
@@ -17,4 +19,15 @@ urlpatterns = [
     path('work-tasks/<slug:work_task_slug>/complete/', supervisor.WorkTaskCompleteView.as_view(), name='work_task_complete'),
     path('work-tasks/<slug:work_task_slug>/toggle-complete/', supervisor.WorkTaskToggleCompleteView.as_view(), name='work_task_toggle_complete'),
     path('work-tasks/<slug:work_task_slug>/delete/', supervisor.WorkTaskDeleteView.as_view(), name='work_task_delete'),
+    
+    # Work Task Resolution Image URLs
+    path('work-tasks/<slug:work_task_slug>/resolution-images/<slug:image_slug>/delete/', supervisor.WorkTaskResolutionImageDeleteView.as_view(), name='resolution_image_delete'),
+    
+    # Site Visit URLs
+    path('issue/<slug:issue_slug>/site-visits/create/', supervisor.SiteVisitCreateView.as_view(), name='site_visit_create'),
+    path('site-visits/<slug:site_visit_slug>/edit/', supervisor.SiteVisitUpdateView.as_view(), name='site_visit_update'),
+    path('site-visits/<slug:site_visit_slug>/delete/', supervisor.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
+    path('site-visits/<slug:site_visit_slug>/start/', supervisor.SiteVisitStartView.as_view(), name='site_visit_start'),
+    path('site-visits/<slug:site_visit_slug>/complete/', supervisor.SiteVisitCompleteView.as_view(), name='site_visit_complete'),
+    path('site-visits/<slug:site_visit_slug>/cancel/', supervisor.SiteVisitCancelView.as_view(), name='site_visit_cancel'),
 ]

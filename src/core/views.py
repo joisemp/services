@@ -19,6 +19,8 @@ from .forms import (
     OtherRoleUserCreateForm,
     PhoneLoginForm,
     EmailLoginForm,
+    PinLoginForm,
+    SetPinForm,
     SpaceCreateForm,
     SpaceUpdateForm,
     SpaceUserAddForm,
@@ -150,7 +152,7 @@ class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):
 
 class CustomLoginView(RedirectLoggedinUsers, FormView):
     """
-    Custom login view that handles both phone and email authentication
+    Custom login view that handles phone, email+password, and email+PIN authentication
     """
     template_name = 'core/login.html'
 
@@ -161,13 +163,20 @@ class CustomLoginView(RedirectLoggedinUsers, FormView):
         user_type = self.request.GET.get('type', 'email')
         if user_type == 'phone':
             return PhoneLoginForm
+        elif user_type == 'pin':
+            return PinLoginForm
         return EmailLoginForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_type = self.request.GET.get('type', 'email')
         context['user_type'] = user_type
-        context['form_title'] = 'Phone Login' if user_type == 'phone' else 'Email Login'
+        if user_type == 'phone':
+            context['form_title'] = 'Phone Login'
+        elif user_type == 'pin':
+            context['form_title'] = 'PIN Login'
+        else:
+            context['form_title'] = 'Email Login'
         return context
 
     def form_valid(self, form):
@@ -183,8 +192,17 @@ class CustomLoginView(RedirectLoggedinUsers, FormView):
                 self.request,
                 phone_number=phone_number
             )
+        elif user_type == 'pin':
+            # PIN authentication
+            email = form.cleaned_data['email']
+            pin = form.cleaned_data['pin']
+            user = authenticate(
+                self.request,
+                username=email,
+                pin=pin
+            )
         else:
-            # Email authentication
+            # Email + password authentication
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
             user = authenticate(
@@ -230,7 +248,86 @@ def custom_logout_view(request):
         from django.contrib import messages
         messages.success(request, f'You have been successfully logged out. Goodbye, {user_name}!')
     
-    return redirect('core:login')  
+    return redirect('core:login')
+
+
+class SetPinView(FormView):
+    """
+    View for users to set or change their 4-digit PIN
+    Only available for eligible user types (not general_user or superuser)
+    """
+    template_name = 'core/set_pin.html'
+    form_class = SetPinForm
+    
+    def _get_redirect_url_for_user(self, user):
+        """Get the appropriate redirect URL based on user role"""
+        if user.is_central_admin:
+            return 'dashboard:central_admin_dashboard'
+        elif user.is_space_admin:
+            return 'core:switch_space'
+        elif user.is_supervisor:
+            return 'issue_management:supervisor:issue_list'
+        elif user.is_maintainer:
+            return 'issue_management:maintainer:work_task_list'
+        elif user.is_reviewer:
+            return 'issue_management:reviewer:issue_list'
+        else:
+            return 'home'
+    
+    def get_success_url(self):
+        """Redirect to the previous page or role-specific dashboard"""
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        # Get role-specific redirect
+        return reverse_lazy(self._get_redirect_url_for_user(self.request.user))
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Only allow authenticated users
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to set a PIN.")
+            return redirect('core:login')
+        
+        # Only allow eligible user types (not general_user)
+        if request.user.user_type == 'general_user':
+            messages.error(request, "General users cannot set a PIN.")
+            return redirect(self._get_redirect_url_for_user(request.user))
+        
+        # Allow central admins even if they're superusers (created via createsuperuser)
+        # Only block "pure" superusers without a proper role
+        if request.user.is_superuser and not request.user.is_central_admin:
+            messages.error(request, "Superusers without a role cannot set a PIN.")
+            return redirect(self._get_redirect_url_for_user(request.user))
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['has_pin'] = self.request.user.has_pin()
+        return context
+    
+    def form_valid(self, form):
+        """
+        Handle successful form submission and set the PIN
+        """
+        pin = form.cleaned_data['pin']
+        
+        try:
+            self.request.user.set_pin(pin)
+            self.request.user.save(skip_validation=True)
+            
+            messages.success(
+                self.request,
+                'Your PIN has been set successfully! You can now use it to login quickly.'
+            )
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'Error setting PIN: {str(e)}'
+            )
+            return self.form_invalid(form)
+        
+        return super().form_valid(form)  
 
 
 class UpdateListView(ListView):

@@ -1,0 +1,383 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Site Visit Detail{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/site_visit_detail/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'maintainer/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'issue_management:maintainer:site_visit_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Back to Site Visits</a>
+
+<section id="breadcrumb" class="mb-3 mt-3">
+  {% if site_visit.status == 'scheduled' %}
+    <span class="badge bg-primary rounded-pill">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">schedule</span>
+      Scheduled
+    </span>
+  {% elif site_visit.status == 'in_progress' %}
+    <span class="badge bg-warning rounded-pill">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">work</span>
+      In Progress
+    </span>
+  {% elif site_visit.status == 'completed' %}
+    <span class="badge bg-success rounded-pill">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">check_circle</span>
+      Completed
+    </span>
+  {% elif site_visit.status == 'cancelled' %}
+    <span class="badge bg-secondary rounded-pill">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">cancel</span>
+      Cancelled
+    </span>
+  {% endif %}
+  
+  {% if site_visit.is_overdue and site_visit.status == 'scheduled' %}
+    <span class="badge bg-danger rounded-pill ms-2">
+      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">warning</span>
+      Overdue
+    </span>
+  {% endif %}
+  
+  <span class="badge rounded-pill text-bg-dark ms-2">Created {{ site_visit.created_at|date:"M d, Y" }}</span>
+</section>
+
+<section id="visit-details">
+  <!--Visit Headline-->
+  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center px-md-3 py-3" role="alert">
+    <div class="message flex-grow-1 mb-2 mb-md-0">
+      <h4 class="mb-2">{{ site_visit.title }}</h4>
+      <p class="alert-text text-body-secondary mb-1">
+        <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">person</span>
+        Assigned to: <strong>{{ site_visit.assigned_to.get_full_name|default:site_visit.assigned_to.email }}</strong>
+      </p>
+      <p class="alert-text text-body-secondary mb-1">
+        <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">location_on</span>
+        Location: <strong>{% if issue.space %}{{ issue.space.name }} - {% endif %}{{ site_visit.location }}</strong>
+      </p>
+      <p class="alert-text text-body-secondary mb-0">
+        <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">event</span>
+        Scheduled: <strong>{{ site_visit.scheduled_date|date:"M d, Y \a\t g:i A" }}</strong>
+      </p>
+      {% if site_visit.estimated_duration %}
+      <p class="alert-text text-body-secondary mb-0">
+        <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">timer</span>
+        Estimated Duration: <strong>{{ site_visit.estimated_duration }}</strong>
+      </p>
+      {% endif %}
+    </div>
+    <div class="alert-buttons ms-md-3 d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center gap-2 mt-3">
+      {% if site_visit.created_by != request.user and site_visit.created_by.phone_number %}
+        <a href="tel:{{ site_visit.created_by.phone_number }}"
+          class="btn btn-success d-flex align-items-center justify-content-center flex-column py-2"
+          title="Call {{ site_visit.created_by.get_full_name|default:site_visit.created_by.email }}">
+          <div class="d-flex align-items-center">
+            <span class="material-symbols-outlined">call</span>
+            <span class="ms-2">Call {{ site_visit.created_by.first_name|default:site_visit.created_by.email|truncatewords:1 }}</span>
+          </div>
+          <small class="text-white-50" style="font-size: 0.7rem;">Assigner</small>
+        </a>
+      {% endif %}
+      
+      {% if issue.reporter != request.user and issue.reporter.phone_number %}
+        <a href="tel:{{ issue.reporter.phone_number }}"
+          class="btn btn-info d-flex align-items-center justify-content-center flex-column py-2"
+          title="Call {{ issue.reporter.get_full_name|default:issue.reporter.email }}">
+          <div class="d-flex align-items-center">
+            <span class="material-symbols-outlined">call</span>
+            <span class="ms-2">Call {{ issue.reporter.first_name|default:issue.reporter.email|truncatewords:1 }}</span>
+          </div>
+          <small class="text-white-50" style="font-size: 0.7rem;">Reporter</small>
+        </a>
+      {% endif %}
+      
+      {% if site_visit.status == 'scheduled' %}
+        <form method="post" action="{% url 'issue_management:maintainer:site_visit_start' site_visit_slug=site_visit.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center">
+            <span class="material-symbols-outlined">play_arrow</span>
+            <span class="ms-2">Start Site Visit</span>
+          </button>
+        </form>
+      {% elif site_visit.status == 'in_progress' %}
+        <button type="button" 
+                class="btn btn-success d-flex align-items-center justify-content-center"
+                data-bs-toggle="modal" 
+                data-bs-target="#markCompletedModal">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span class="ms-2">Mark Complete</span>
+        </button>
+        <form method="post" action="{% url 'issue_management:maintainer:site_visit_cancel' site_visit_slug=site_visit.slug %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger d-flex align-items-center justify-content-center">
+            <span class="material-symbols-outlined">cancel</span>
+            <span class="ms-2">Cancel Visit</span>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!--Visit Completion Info-->
+  {% if site_visit.status == 'completed' %}
+  <div class="completed-alert custom-alert px-3 py-4" role="alert">
+    <div class="message">
+      <h5 class="mb-3 text-success">
+        <span class="material-symbols-outlined me-2">check_circle</span>
+        Visit Completed
+      </h5>
+      
+      {% if site_visit.started_at %}
+      <p class="mb-2">
+        <strong>Started:</strong> {{ site_visit.started_at|date:"M d, Y \a\t g:i A" }}
+      </p>
+      {% endif %}
+      
+      <p class="mb-2">
+        <strong>Completed:</strong> {{ site_visit.completed_at|date:"M d, Y \a\t g:i A" }}
+      </p>
+      
+      {% if site_visit.duration %}
+      <p class="mb-3">
+        <strong>Duration:</strong> {{ site_visit.duration }}
+      </p>
+      {% endif %}
+      
+      {% if site_visit.findings %}
+      <div class="mt-3">
+        <h6 class="fw-bold">Findings:</h6>
+        <p class="mb-2">{{ site_visit.findings|linebreaksbr }}</p>
+      </div>
+      {% endif %}
+      
+      {% if site_visit.actions_taken %}
+      <div class="mt-3">
+        <h6 class="fw-bold">Actions Taken:</h6>
+        <p class="mb-2">{{ site_visit.actions_taken|linebreaksbr }}</p>
+      </div>
+      {% endif %}
+      
+      {% if site_visit.recommendations %}
+      <div class="mt-3">
+        <h6 class="fw-bold">Recommendations:</h6>
+        <p class="mb-2">{{ site_visit.recommendations|linebreaksbr }}</p>
+      </div>
+      {% endif %}
+      
+      {% if site_visit.images.all %}
+      <div class="mt-4">
+        <h6 class="fw-bold mb-2">
+          <i class="fas fa-images me-1"></i>
+          Visit Images ({{ site_visit.images.count }})
+        </h6>
+        <div class="d-flex flex-wrap gap-2">
+          {% for image in site_visit.images.all %}
+          <div class="position-relative">
+            <a href="{{ image.image.url }}" target="_blank">
+              <img src="{{ image.image.url }}" 
+                   alt="Site Visit Image" 
+                   class="img-thumbnail" 
+                   style="width: 120px; height: 120px; object-fit: cover;">
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section id="visit-content" class="mt-4">
+  <div class="row g-3">
+    <!-- Visit description card -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-body-secondary">Visit Description</h6>
+          <p class="card-text mt-2">{{ site_visit.description|linebreaksbr }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="related-issue" class="mt-4">
+  <h5 class="mb-3">Related Issue</h5>
+  <div class="row g-3">
+    <!-- Issue details card -->
+    <div class="col-12">
+      <div class="card issue-card">
+        <div class="card-header">
+          <h5 class="mb-0">{{ issue.title }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-2">
+                <strong>Status:</strong> 
+                <span class="badge badge-{{ issue.status }} rounded-pill">{{ issue.get_status_display }}</span>
+              </p>
+              <p class="mb-2">
+                <strong>Priority:</strong> 
+                <span class="badge badge-{{ issue.priority }} rounded-pill">{{ issue.get_priority_display }}</span>
+              </p>
+              <p class="mb-2">
+                <strong>Category:</strong> {{ issue.get_category_display }}
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-2">
+                <strong>Reporter:</strong> 
+                {{ issue.reporter.get_full_name|default:issue.reporter.phone_number|default:issue.reporter.email }}
+              </p>
+              <p class="mb-2">
+                <strong>Organization:</strong> {{ issue.org.name }}
+              </p>
+              {% if issue.space %}
+              <p class="mb-2">
+                <strong>Space:</strong> {{ issue.space.name }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+          
+          <hr class="my-3">
+          
+          <div class="issue-description">
+            <h6 class="fw-bold mb-2">Issue Description:</h6>
+            <p class="mb-0">{{ issue.description|truncatewords:50|linebreaksbr }}</p>
+          </div>
+          
+          {% if issue.images.all %}
+          <div class="mt-3">
+            <h6 class="fw-bold mb-2">
+              <i class="fas fa-images me-1"></i>
+              Issue Images ({{ issue.images.count }})
+            </h6>
+            <div class="d-flex flex-wrap gap-2">
+              {% for image in issue.images.all %}
+              <a href="{{ image.image.url }}" target="_blank">
+                <img src="{{ image.image.url }}" 
+                     alt="Issue Image" 
+                     class="img-thumbnail" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mark Completed Modal -->
+<div class="modal fade" id="markCompletedModal" tabindex="-1" aria-labelledby="markCompletedModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="markCompletedModalLabel">
+          <span class="material-symbols-outlined text-success me-2">check_circle</span>
+          Complete Site Visit
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'issue_management:maintainer:site_visit_complete' site_visit_slug=site_visit.slug %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <strong>Site Visit:</strong> {{ site_visit.title }}
+          </div>
+          
+          <div class="mb-3">
+            <label for="findings" class="form-label">
+              <strong>Findings</strong> <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" 
+                      id="findings" 
+                      name="findings" 
+                      rows="4" 
+                      placeholder="Describe your findings and observations..." 
+                      required></textarea>
+            <div class="form-text">What did you observe during the site visit?</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="actions_taken" class="form-label">
+              <strong>Actions Taken</strong> <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control" 
+                      id="actions_taken" 
+                      name="actions_taken" 
+                      rows="4" 
+                      placeholder="Describe actions taken during the visit..." 
+                      required></textarea>
+            <div class="form-text">What actions did you take during the visit?</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="recommendations" class="form-label">
+              <strong>Recommendations</strong>
+            </label>
+            <textarea class="form-control" 
+                      id="recommendations" 
+                      name="recommendations" 
+                      rows="4" 
+                      placeholder="Provide recommendations for follow-up..."></textarea>
+            <div class="form-text">Optional: Any recommendations for future actions?</div>
+          </div>
+          
+          <div class="mb-3 image-upload-section">
+            <label class="form-label">
+              <i class="fas fa-image me-1"></i>
+              <strong>Site Visit Images</strong> (Optional - Max 3)
+            </label>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="id_image1" class="form-label small">Image 1</label>
+                <input type="file" class="form-control" id="id_image1" name="image1" accept="image/*">
+              </div>
+              <div class="col-md-4">
+                <label for="id_image2" class="form-label small">Image 2</label>
+                <input type="file" class="form-control" id="id_image2" name="image2" accept="image/*">
+              </div>
+              <div class="col-md-4">
+                <label for="id_image3" class="form-label small">Image 3</label>
+                <input type="file" class="form-control" id="id_image3" name="image3" accept="image/*">
+              </div>
+            </div>
+            <div class="form-text mt-2">You can upload up to 3 images from the site visit (max 5MB each).</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">
+            <span class="material-symbols-outlined me-2">check_circle</span>
+            Mark as Completed
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/components/image-upload.js' %}"></script>
+{% endblock %}

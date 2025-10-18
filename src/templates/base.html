@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Services {% block title %}{% endblock title %}</title>
     <link rel="icon" type="image/x-icon" href="{% static 'images/logo-favicon.svg' %}">
+    <link rel="stylesheet" href="{% static 'styles/components/form-submit-handler.css' %}">
     <link href="{% static 'utils/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -28,6 +29,7 @@
 
     </div>
     {% block scripts %}{% endblock scripts %}
+    <script src="{% static 'js/form-submit-handler.js' %}"></script>
     <script src="{% static 'utils/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 </body>
 

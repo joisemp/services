@@ -5,8 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Case, When, IntegerField
-from ..models import Issue, IssueImage, WorkTask, IssueComment
-from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm
+from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage
+from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
@@ -91,10 +91,13 @@ class IssueCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
         for field_name in image_fields:
             image_file = form.cleaned_data.get(field_name)
             if image_file:
-                IssueImage.objects.create(
+                issue_image = IssueImage(
                     issue=self.object,
                     image=image_file
                 )
+                # Set the user who uploaded the image for activity tracking
+                issue_image._uploaded_by = self.request.user
+                issue_image.save()
         
         return response    
 
@@ -107,7 +110,14 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
     slug_url_kwarg = 'issue_slug'
     
     def get_queryset(self):
-        queryset = Issue.objects.prefetch_related('images', 'comments', 'work_tasks__assigned_to').select_related('org', 'space')
+        queryset = Issue.objects.prefetch_related(
+            'images', 
+            'comments', 
+            'work_tasks__assigned_to',
+            'site_visits__created_by',
+            'site_visits__assigned_to',
+            'site_visits__images'
+        ).select_related('org', 'space')
         
         # Filter by active space for space admins
         if self.request.user.is_space_admin and self.request.user.active_space:
@@ -135,6 +145,9 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
         # Add comment form to context
         context['comment_form'] = IssueCommentForm()
+        # Add site visits to context
+        site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
+        context['site_visits'] = site_visits
         return context
 
 
@@ -300,9 +313,12 @@ class IssueVoiceUploadView(SpaceAdminWithActiveSpaceMixin, View):
 
 
 class IssueResolveView(SpaceAdminWithActiveSpaceMixin, View):
-    """Mark an issue as resolved with resolution notes"""
+    """Mark an issue as resolved with resolution notes and images"""
     
     def post(self, request, issue_slug):
+        from ..models import IssueResolutionImage
+        from ..forms import IssueResolveForm
+        
         # Get the issue
         issue = get_object_or_404(Issue, slug=issue_slug)
         
@@ -319,20 +335,37 @@ class IssueResolveView(SpaceAdminWithActiveSpaceMixin, View):
             messages.error(request, f'Cannot resolve issue while {incomplete_count} work {task_word} remain incomplete. Please complete all work tasks before marking the issue as resolved.')
             return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
         
-        # Get resolution notes from the form
-        resolution_notes = request.POST.get('resolution_notes', '').strip()
+        # Process the form
+        form = IssueResolveForm(request.POST, request.FILES, instance=issue)
         
-        if not resolution_notes:
-            messages.error(request, 'Resolution notes are required to mark an issue as resolved.')
+        if not form.is_valid():
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
             return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
         
         try:
             # Update the issue status and resolution notes
             issue.status = 'resolved'
-            issue.resolution_notes = resolution_notes
+            issue.resolution_notes = form.cleaned_data['resolution_notes']
             issue.save()
             
-            messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved.')
+            # Handle resolution images (up to 3)
+            image_count = 0
+            for i in range(1, 4):
+                image_field = f'image{i}'
+                image = form.cleaned_data.get(image_field)
+                if image:
+                    IssueResolutionImage.objects.create(
+                        issue=issue,
+                        image=image
+                    )
+                    image_count += 1
+            
+            if image_count > 0:
+                messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved with {image_count} resolution image(s).')
+            else:
+                messages.success(request, f'Issue "{issue.title}" has been successfully marked as resolved.')
             
         except Exception as e:
             messages.error(request, f'Failed to resolve issue: {str(e)}')
@@ -425,7 +458,7 @@ class WorkTaskUpdateView(SpaceAdminWithActiveSpaceMixin, UpdateView):
 
 
 class WorkTaskCompleteView(SpaceAdminWithActiveSpaceMixin, UpdateView):
-    """Complete a work task with resolution notes"""
+    """Complete a work task with resolution notes and images"""
     template_name = "space_admin/issue_management/work_task_complete.html"
     form_class = WorkTaskCompleteForm
     model = WorkTask
@@ -437,10 +470,32 @@ class WorkTaskCompleteView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
+        from ..models import WorkTaskResolutionImage
+        
         # Mark the task as completed and save resolution notes
         form.instance.completed = True
         response = super().form_valid(form)
-        messages.success(self.request, f'Work task "{form.instance.title}" marked as completed!')
+        
+        # Handle resolution images (up to 3)
+        image_count = 0
+        for i in range(1, 4):
+            image_field = f'image{i}'
+            image = form.cleaned_data.get(image_field)
+            if image:
+                WorkTaskResolutionImage.objects.create(
+                    work_task=form.instance,
+                    image=image
+                )
+                image_count += 1
+        
+        if image_count > 0:
+            messages.success(
+                self.request, 
+                f'Work task "{form.instance.title}" marked as completed with {image_count} resolution image(s)!'
+            )
+        else:
+            messages.success(self.request, f'Work task "{form.instance.title}" marked as completed!')
+        
         return response
     
     def get_success_url(self):
@@ -465,27 +520,84 @@ class WorkTaskToggleCompleteView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
+        from ..models import WorkTaskResolutionImage
+        
         # Toggle the completion status (only for reopening)
         if self.work_task.completed:
+            # Delete all resolution images when marking as pending
+            resolution_images = self.work_task.resolution_images.all()
+            image_count = resolution_images.count()
+            
+            # Delete image files and database records
+            for res_image in resolution_images:
+                # Delete the actual file from storage
+                if res_image.image:
+                    res_image.image.delete(save=False)
+                # Delete the database record
+                res_image.delete()
+            
+            # Mark task as pending
             self.work_task.completed = False
+            self.work_task.resolution_notes = None  # Clear resolution notes
             self.work_task.save()
-            messages.success(self.request, f'Work task "{self.work_task.title}" marked as pending!')
+            
+            if image_count > 0:
+                messages.success(
+                    self.request, 
+                    f'Work task "{self.work_task.title}" marked as pending. {image_count} resolution image(s) deleted.'
+                )
+            else:
+                messages.success(self.request, f'Work task "{self.work_task.title}" marked as pending!')
         
         return redirect('issue_management:space_admin:issue_detail', issue_slug=self.work_task.issue.slug)
 
 
 class WorkTaskDeleteView(SpaceAdminWithActiveSpaceMixin, View):
-    """Delete a work task"""
+    """Delete a work task and its resolution images"""
     
     def post(self, request, work_task_slug):
+        from ..models import WorkTaskResolutionImage
+        
         work_task = get_object_or_404(WorkTask, slug=work_task_slug)
         issue_slug = work_task.issue.slug
         task_title = work_task.title
+        
+        # Delete all resolution images before deleting the work task
+        resolution_images = work_task.resolution_images.all()
+        for res_image in resolution_images:
+            # Delete the actual file from storage
+            if res_image.image:
+                res_image.image.delete(save=False)
+            # Delete the database record
+            res_image.delete()
         
         work_task.delete()
         messages.success(request, f'Work task "{task_title}" has been deleted.')
         
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)
+
+
+class WorkTaskResolutionImageDeleteView(SpaceAdminWithActiveSpaceMixin, View):
+    """Delete a specific resolution image attached to a work task"""
+    
+    def post(self, request, work_task_slug, image_slug):
+        from ..models import WorkTaskResolutionImage
+        
+        # Get the work task and resolution image
+        work_task = get_object_or_404(WorkTask, slug=work_task_slug)
+        res_image = get_object_or_404(WorkTaskResolutionImage, slug=image_slug, work_task=work_task)
+        
+        # Delete the image file from storage
+        if res_image.image:
+            res_image.image.delete(save=False)
+        
+        # Delete the image record
+        res_image.delete()
+        
+        messages.success(request, f'Resolution image successfully deleted.')
+        
+        # Redirect back to the issue detail page
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=work_task.issue.slug)
 
 
 class IssueDeleteView(SpaceAdminWithActiveSpaceMixin, DeleteView):
@@ -556,17 +668,29 @@ class IssueAssignmentView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         if form.instance.status not in ['resolved', 'closed', 'cancelled']:
             form.instance.status = 'assigned'
         
+        # Save the form first (this saves the Issue instance)
         response = super().form_valid(form)
         
-        assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
-        review_text = " (with review required)" if form.instance.requires_review else ""
-        
-        messages.success(
-            self.request, 
-            f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}{review_text}.'
-        )
-        
-        return response
+        # Check if review is required
+        if form.instance.requires_review:
+            # Redirect to reviewer selection page (Step 2)
+            messages.info(
+                self.request,
+                'Issue assigned successfully. Now please select reviewers for this issue.'
+            )
+            return redirect('issue_management:space_admin:issue_select_reviewers', issue_slug=self.object.slug)
+        else:
+            # No review required, clear any existing reviewers and show success message
+            self.object.reviewers.clear()
+            
+            assigned_to_name = form.instance.assigned_to.get_full_name() or form.instance.assigned_to.email
+            
+            messages.success(
+                self.request, 
+                f'Issue "{form.instance.title}" has been assigned to {assigned_to_name}.'
+            )
+            
+            return response
     
     def get_success_url(self):
         return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
@@ -575,6 +699,54 @@ class IssueAssignmentView(SpaceAdminWithActiveSpaceMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['issue'] = self.issue
         return context
+
+
+class IssueReviewerSelectionView(SpaceAdminWithActiveSpaceMixin, View):
+    """Select reviewers for an issue that requires review (Step 2 after assignment)"""
+    template_name = "space_admin/issue_management/issue_reviewer_selection.html"
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        
+        # Redirect if issue doesn't require review
+        if not self.issue.requires_review:
+            messages.warning(request, 'This issue does not require review.')
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request, issue_slug):
+        from ..forms import IssueReviewerSelectionForm
+        form = IssueReviewerSelectionForm(issue=self.issue)
+        return render(request, self.template_name, {
+            'form': form,
+            'issue': self.issue
+        })
+    
+    def post(self, request, issue_slug):
+        from ..forms import IssueReviewerSelectionForm
+        form = IssueReviewerSelectionForm(request.POST, issue=self.issue)
+        
+        if form.is_valid():
+            # Save the selected reviewers
+            reviewers = form.cleaned_data['reviewers']
+            self.issue.reviewers.set(reviewers)
+            
+            # Create success message with reviewer names
+            reviewer_names = ", ".join([r.get_full_name() or r.email for r in reviewers])
+            assigned_to_name = self.issue.assigned_to.get_full_name() or self.issue.assigned_to.email
+            
+            messages.success(
+                request,
+                f'Issue "{self.issue.title}" has been assigned to {assigned_to_name} with review required by: {reviewer_names}.'
+            )
+            
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+        
+        return render(request, self.template_name, {
+            'form': form,
+            'issue': self.issue
+        })
 
 
 class IssueReopenView(SpaceAdminWithActiveSpaceMixin, View):
@@ -601,6 +773,9 @@ class IssueReopenView(SpaceAdminWithActiveSpaceMixin, View):
             
             # Clear resolution notes when reopening
             issue.resolution_notes = None
+            
+            # Delete all resolution images
+            issue.resolution_images.all().delete()
             
             # Clear review information when reopening
             issue.reviewed_by = None
@@ -649,3 +824,158 @@ class IssueStartWorkView(SpaceAdminWithActiveSpaceMixin, View):
         
         # Redirect back to the issue detail page
         return redirect('issue_management:space_admin:issue_detail', issue_slug=issue.slug)
+
+
+class SiteVisitCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
+    """Create a new site visit for an issue"""
+    template_name = "space_admin/issue_management/site_visit_create.html"
+    form_class = SiteVisitForm
+    model = SiteVisit
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the issue this site visit belongs to
+        self.issue = get_object_or_404(Issue, slug=kwargs['issue_slug'])
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        # Set the issue and created_by before saving
+        form.instance.issue = self.issue
+        form.instance.created_by = self.request.user
+        
+        # Save the site visit
+        response = super().form_valid(form)
+        
+        messages.success(self.request, f'Site visit "{form.instance.title}" created successfully!')
+        
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        return context
+
+
+class SiteVisitUpdateView(SpaceAdminWithActiveSpaceMixin, UpdateView):
+    """Update an existing site visit"""
+    template_name = "space_admin/issue_management/site_visit_update.html"
+    form_class = SiteVisitForm
+    model = SiteVisit
+    slug_field = 'slug'
+    slug_url_kwarg = 'site_visit_slug'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the site visit and its associated issue
+        self.site_visit = get_object_or_404(SiteVisit, slug=kwargs['site_visit_slug'])
+        self.issue = self.site_visit.issue
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['issue'] = self.issue
+        return kwargs
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Site visit "{form.instance.title}" updated successfully!')
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('issue_management:space_admin:issue_detail', kwargs={'issue_slug': self.issue.slug})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        context['site_visit'] = self.site_visit
+        return context
+
+
+class SiteVisitDeleteView(SpaceAdminWithActiveSpaceMixin, View):
+    """Delete a site visit"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(SiteVisit, slug=site_visit_slug)
+        issue_slug = site_visit.issue.slug
+        visit_title = site_visit.title
+        
+        # Delete all images associated with the site visit before deleting
+        for image in site_visit.images.all():
+            if image.image:
+                image.image.delete(save=False)
+            image.delete()
+        
+        site_visit.delete()
+        messages.success(request, f'Site visit "{visit_title}" has been deleted.')
+        
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)
+
+
+class SiteVisitListView(SpaceAdminWithActiveSpaceMixin, ListView):
+    """List all site visits for space admin"""
+    model = SiteVisit
+    template_name = "space_admin/issue_management/site_visit_list.html"
+    context_object_name = "site_visits"
+
+    def get_queryset(self):
+        # Get site visits for issues in the active space
+        queryset = SiteVisit.objects.all().select_related(
+            'issue', 'issue__org', 'issue__space', 'created_by', 'assigned_to'
+        ).prefetch_related('images')
+        
+        # Filter by active space
+        if self.request.user.active_space:
+            queryset = queryset.filter(issue__space=self.request.user.active_space)
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Order by status (scheduled first, then in_progress, completed last), then by scheduled date
+        return queryset.annotate(
+            status_order=Case(
+                When(status='scheduled', then=1),
+                When(status='in_progress', then=2),
+                When(status='completed', then=3),
+                When(status='cancelled', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', 'scheduled_date')
+
+
+class SiteVisitDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
+    """View details of a specific site visit"""
+    model = SiteVisit
+    template_name = "space_admin/issue_management/site_visit_detail.html"
+    context_object_name = "site_visit"
+    slug_field = 'slug'
+    slug_url_kwarg = 'site_visit_slug'
+    
+    def get_queryset(self):
+        queryset = SiteVisit.objects.select_related(
+            'issue',
+            'issue__org',
+            'issue__space',
+            'issue__reporter',
+            'created_by',
+            'assigned_to'
+        ).prefetch_related('images', 'issue__images')
+        
+        # Filter by active space
+        if self.request.user.active_space:
+            queryset = queryset.filter(issue__space=self.request.user.active_space)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.object.issue
+        return context

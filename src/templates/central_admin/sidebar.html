@@ -42,11 +42,18 @@
             <span class="menu-text">Purchases</span>
         </a> -->
 
-        <a class="navlink {% is_active 'issue_management:central_admin:*' %}" href="{% url 'issue_management:central_admin:issue_list' %}">
+        <a class="navlink {% is_active 'issue_management:central_admin:issue_list,issue_management:central_admin:issue_detail,issue_management:central_admin:issue_create,issue_management:central_admin:issue_update,issue_management:central_admin:issue_assign,issue_management:central_admin:issue_select_reviewers,issue_management:central_admin:issue_resolve,issue_management:central_admin:issue_reopen,issue_management:central_admin:issue_start_work,issue_management:central_admin:issue_delete,issue_management:central_admin:work_task_create,issue_management:central_admin:work_task_update,issue_management:central_admin:work_task_complete,issue_management:central_admin:work_task_toggle_complete,issue_management:central_admin:work_task_delete,issue_management:central_admin:image_delete,issue_management:central_admin:image_upload,issue_management:central_admin:voice_delete,issue_management:central_admin:voice_upload,issue_management:central_admin:resolution_image_delete' %}" href="{% url 'issue_management:central_admin:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
             <span class="menu-text">Issues</span>
+        </a>
+
+        <a class="navlink {% is_active 'issue_management:central_admin:site_visit_list,issue_management:central_admin:site_visit_detail,issue_management:central_admin:site_visit_create,issue_management:central_admin:site_visit_update,issue_management:central_admin:site_visit_delete' %}" href="{% url 'issue_management:central_admin:site_visit_list' %}">
+            <span class="material-symbols-outlined me-2">
+                location_on
+            </span>
+            <span class="menu-text">Site Visits</span>
         </a>
 
         <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">

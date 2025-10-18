@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password, check_password as django_check_password
 from django.core.validators import RegexValidator
 from config.utils import generate_unique_slug
 from django.utils.text import slugify
@@ -171,6 +171,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     
+    # 4-digit PIN for authentication (hashed, optional for general_user and superuser)
+    pin = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        help_text="Hashed 4-digit PIN for quick authentication (not available for general users and superusers)"
+    )
+    
     # Organization and space relationships
     organization = models.ForeignKey(
         'Organization', 
@@ -234,6 +242,43 @@ class User(AbstractBaseUser, PermissionsMixin):
             # For email users, don't automatically set unusable password
             pass
     
+    def set_pin(self, raw_pin):
+        """
+        Set the PIN for the user (hashes it before saving)
+        Only available for non-general users
+        Central admins who are superusers (created via createsuperuser) CAN have PINs
+        """
+        if self.user_type == 'general_user':
+            raise ValueError('General users cannot have a PIN')
+        
+        # Only block "pure" superusers without a role
+        if self.is_superuser and not self.is_central_admin:
+            raise ValueError('Superusers without a role cannot have a PIN')
+        
+        # Validate that PIN is exactly 4 digits
+        if not raw_pin or not raw_pin.isdigit() or len(raw_pin) != 4:
+            raise ValueError('PIN must be exactly 4 digits')
+        
+        # Hash the PIN using Django's password hasher
+        self.pin = make_password(raw_pin)
+    
+    def check_pin(self, raw_pin):
+        """
+        Check if the provided PIN matches the stored PIN
+        Returns False if user doesn't have a PIN set
+        """
+        if not self.pin:
+            return False
+        
+        # Use Django's password checker to compare
+        return django_check_password(raw_pin, self.pin)
+    
+    def has_pin(self):
+        """
+        Check if user has a PIN set
+        """
+        return bool(self.pin)
+    
     def clean(self):
         from django.core.exceptions import ValidationError
         
@@ -266,6 +311,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             if not self.email:
                 raise ValidationError('Email authentication users must have an email address')
             # Phone number is still required for email authentication users
+        
+        # PIN validation: only block general users and "pure" superusers without a role
+        # Central admins who are superusers (created via createsuperuser) CAN have PINs
+        if self.pin and self.user_type == 'general_user':
+            raise ValidationError('General users cannot have a PIN')
+        
+        if self.pin and self.is_superuser and not self.is_central_admin:
+            raise ValidationError('Superusers without a role cannot have a PIN')
     
     def save(self, *args, **kwargs):
         # Only run full_clean if not explicitly skipped

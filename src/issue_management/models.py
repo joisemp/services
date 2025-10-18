@@ -66,6 +66,12 @@ class Issue(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True, help_text="When the issue was reviewed")
     review_notes = models.TextField(blank=True, null=True, help_text="Notes from the review process")
+    reviewers = models.ManyToManyField(
+        'core.User',
+        related_name='issues_to_review',
+        blank=True,
+        help_text="Users assigned to review this issue when requires_review is checked"
+    )
     
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
@@ -139,6 +145,46 @@ class WorkTask(models.Model):
         
     def __str__(self):
         return self.title
+
+
+class WorkTaskResolutionImage(models.Model):
+    """Images attached to work task resolutions"""
+    work_task = models.ForeignKey(WorkTask, related_name='resolution_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/work_task_resolution_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.work_task.title}-resolution-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Resolution Image for Work Task: {self.work_task.title}"
+
+
+class IssueResolutionImage(models.Model):
+    """Images attached to issue resolutions"""
+    issue = models.ForeignKey(Issue, related_name='resolution_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/issue_resolution_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-resolution-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Resolution Image for Issue: {self.issue.title}"
 
 
 class WorkTaskShare(models.Model):
@@ -256,3 +302,313 @@ class WorkTaskShare(models.Model):
         return f"Share of '{self.work_task.title}' with {recipient}"
 
 
+class SiteVisit(models.Model):
+    """
+    Model for site visits where supervisors assign maintainers or other supervisors
+    to visit a site for an issue. Each issue can have multiple site visits.
+    """
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    issue = models.ForeignKey(Issue, related_name='site_visits', on_delete=models.CASCADE)
+    title = models.CharField(max_length=200, help_text="Brief description of the site visit purpose")
+    description = models.TextField(help_text="Detailed description of what needs to be done during the visit")
+    location = models.CharField(max_length=300, default='Location to be specified', help_text="Location/address where the site visit will take place")
+    
+    # Assignment fields
+    created_by = models.ForeignKey(
+        'core.User', 
+        related_name='created_site_visits', 
+        on_delete=models.CASCADE,
+        help_text="Supervisor who created this site visit"
+    )
+    assigned_to = models.ForeignKey(
+        'core.User',
+        related_name='assigned_site_visits',
+        on_delete=models.CASCADE,
+        help_text="Maintainer or supervisor assigned to perform the visit"
+    )
+    
+    # Scheduling
+    scheduled_date = models.DateTimeField(help_text="When the site visit is scheduled")
+    estimated_duration = models.DurationField(
+        null=True, 
+        blank=True,
+        help_text="Estimated duration of the site visit"
+    )
+    
+    # Status tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    started_at = models.DateTimeField(null=True, blank=True, help_text="When the visit actually started")
+    completed_at = models.DateTimeField(null=True, blank=True, help_text="When the visit was completed")
+    
+    # Visit details
+    findings = models.TextField(
+        blank=True, 
+        null=True,
+        help_text="Findings and observations from the site visit"
+    )
+    actions_taken = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Actions taken during the site visit"
+    )
+    recommendations = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Recommendations for follow-up actions"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Slug for URL
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-scheduled_date']
+        verbose_name = 'Site Visit'
+        verbose_name_plural = 'Site Visits'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-site-visit")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def mark_in_progress(self):
+        """Mark the site visit as in progress"""
+        if self.status == 'scheduled':
+            self.status = 'in_progress'
+            self.started_at = timezone.now()
+            self.save(update_fields=['status', 'started_at', 'updated_at'])
+    
+    def mark_completed(self):
+        """Mark the site visit as completed"""
+        if self.status in ['scheduled', 'in_progress']:
+            self.status = 'completed'
+            self.completed_at = timezone.now()
+            if not self.started_at:
+                self.started_at = self.completed_at
+            self.save(update_fields=['status', 'started_at', 'completed_at', 'updated_at'])
+    
+    def cancel(self):
+        """Cancel the site visit"""
+        if self.status in ['scheduled', 'in_progress']:
+            self.status = 'cancelled'
+            self.save(update_fields=['status', 'updated_at'])
+    
+    @property
+    def is_overdue(self):
+        """Check if the site visit is overdue"""
+        if self.status == 'scheduled' and self.scheduled_date:
+            return timezone.now() > self.scheduled_date
+        return False
+    
+    @property
+    def duration(self):
+        """Calculate actual duration of the visit if completed"""
+        if self.started_at and self.completed_at:
+            return self.completed_at - self.started_at
+        return None
+    
+    def __str__(self):
+        return f"Site Visit: {self.title} for {self.issue.title}"
+
+
+class SiteVisitImage(models.Model):
+    """Images captured during site visits"""
+    site_visit = models.ForeignKey(SiteVisit, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/site_visit_images/')
+    caption = models.CharField(max_length=200, blank=True, null=True, help_text="Optional caption for the image")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+        verbose_name = 'Site Visit Image'
+        verbose_name_plural = 'Site Visit Images'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.site_visit.title}-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Image for Site Visit: {self.site_visit.title}"
+
+
+# Signal to automatically delete image files when WorkTaskResolutionImage is deleted
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
+
+@receiver(pre_delete, sender=WorkTaskResolutionImage)
+def delete_resolution_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when a WorkTaskResolutionImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+@receiver(pre_delete, sender=IssueImage)
+def delete_issue_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when an IssueImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+@receiver(pre_delete, sender=IssueResolutionImage)
+def delete_issue_resolution_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when an IssueResolutionImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+@receiver(pre_delete, sender=SiteVisitImage)
+def delete_site_visit_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when a SiteVisitImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+class IssueReviewComment(models.Model):
+    """
+    Review comments for issues. These are different from regular comments
+    and are specifically for reviewers to provide feedback and review notes.
+    """
+    issue = models.ForeignKey(Issue, related_name='review_comments', on_delete=models.CASCADE)
+    user = models.ForeignKey('core.User', related_name='issue_review_comments', on_delete=models.CASCADE)
+    comment = models.TextField(help_text="Review comment or feedback")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Issue Review Comment'
+        verbose_name_plural = 'Issue Review Comments'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.title}-review-comment")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"Review Comment by {self.user.get_full_name() or self.user} on Issue: {self.issue.title}"
+
+
+class IssueReviewCommentImage(models.Model):
+    """Images attached to review comments"""
+    review_comment = models.ForeignKey(IssueReviewComment, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/review_comment_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['uploaded_at']
+        verbose_name = 'Review Comment Image'
+        verbose_name_plural = 'Review Comment Images'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.review_comment.issue.title}-review-comment-image")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Image for Review Comment on Issue: {self.review_comment.issue.title}"
+
+
+@receiver(pre_delete, sender=IssueReviewCommentImage)
+def delete_review_comment_image_file(sender, instance, **kwargs):
+    """
+    Delete the image file from storage when an IssueReviewCommentImage instance is deleted.
+    This ensures orphaned files don't accumulate in storage.
+    """
+    if instance.image:
+        # Delete the file from storage
+        instance.image.delete(save=False)
+
+
+class IssueActivity(models.Model):
+    """
+    Tracks all activities/changes made to an issue for audit and history purposes.
+    Excludes comments as they have their own display section.
+    """
+    ACTIVITY_TYPES = [
+        ('created', 'Issue Created'),
+        ('status_changed', 'Status Changed'),
+        ('priority_changed', 'Priority Changed'),
+        ('assigned', 'Issue Assigned'),
+        ('reassigned', 'Issue Reassigned'),
+        ('unassigned', 'Issue Unassigned'),
+        ('updated', 'Issue Updated'),
+        ('resolved', 'Issue Resolved'),
+        ('reopened', 'Issue Reopened'),
+        ('closed', 'Issue Closed'),
+        ('cancelled', 'Issue Cancelled'),
+        ('escalated', 'Issue Escalated'),
+        ('review_requested', 'Review Requested'),
+        ('reviewed', 'Issue Reviewed'),
+        ('work_task_created', 'Work Task Created'),
+        ('work_task_updated', 'Work Task Updated'),
+        ('work_task_completed', 'Work Task Completed'),
+        ('work_task_reopened', 'Work Task Reopened'),
+        ('work_task_deleted', 'Work Task Deleted'),
+        ('site_visit_created', 'Site Visit Created'),
+        ('site_visit_updated', 'Site Visit Updated'),
+        ('site_visit_completed', 'Site Visit Completed'),
+        ('site_visit_cancelled', 'Site Visit Cancelled'),
+        ('image_added', 'Image Added'),
+        ('image_deleted', 'Image Deleted'),
+        ('voice_added', 'Voice Recording Added'),
+        ('voice_deleted', 'Voice Recording Deleted'),
+    ]
+    
+    issue = models.ForeignKey(Issue, related_name='activities', on_delete=models.CASCADE)
+    activity_type = models.CharField(max_length=30, choices=ACTIVITY_TYPES)
+    user = models.ForeignKey('core.User', related_name='issue_activities', on_delete=models.SET_NULL, null=True, blank=True)
+    description = models.TextField(help_text="Detailed description of what changed")
+    old_value = models.TextField(blank=True, null=True, help_text="Previous value (if applicable)")
+    new_value = models.TextField(blank=True, null=True, help_text="New value (if applicable)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Issue Activity'
+        verbose_name_plural = 'Issue Activities'
+        indexes = [
+            models.Index(fields=['issue', '-created_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.issue.slug}-activity")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()} - {self.issue.title}"

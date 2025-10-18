@@ -38,8 +38,29 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% comment %}
+                    Show PIN setup for all users except:
+                    - general_user (uses phone-only login)
+                    - "pure" superusers without a role (central admins who are also superusers CAN use PIN)
+                    {% endcomment %}
+                    {% if not user.is_general_user %}
+                        {% if not user.is_superuser or user.is_central_admin %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item p-3" href="{% url 'core:set_pin' %}">
+                                <span class="material-symbols-outlined me-2" style="vertical-align: middle;">pin</span>
+                                {% if user.has_pin %}Change PIN{% else %}Set up PIN{% endif %}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item p-3 text-danger" href="{% url 'core:logout' %}">Logout</a></li>
+                    <li>
+                        <a class="dropdown-item p-3 text-danger d-flex align-items-center" href="{% url 'core:logout' %}">
+                            <span class="material-symbols-outlined me-2" style="vertical-align: middle;">logout</span>
+                            Logout
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>

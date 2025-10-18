@@ -1,0 +1,99 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Select Reviewers - {{ issue.title }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/forms/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+
+            <h3 class="mb-4">Select Reviewers</h3>
+
+            <!-- Issue Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    Issue Assignment Summary
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Issue:</strong> {{ issue.title }}</p>
+                    <p class="mb-2"><strong>Assigned to:</strong> {{ issue.assigned_to.get_full_name|default:issue.assigned_to.email }}</p>
+                    <p class="mb-0"><strong>Review Required:</strong> <span class="badge bg-warning text-dark">Yes</span></p>
+                </div>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <!-- Instructions -->
+                <div class="alert alert-secondary mb-4">
+                    <strong>Step 2 of 2:</strong> Select one or more reviewers who must approve this issue before it can be resolved.
+                </div>
+
+                <!-- Reviewers Selection -->
+                <div class="mb-4">
+                    <label class="form-label">{{ form.reviewers.label }} <span class="text-danger">*</span></label>
+                    {% if form.reviewers.help_text %}
+                    <small class="form-text text-muted d-block mb-3">{{ form.reviewers.help_text }}</small>
+                    {% endif %}
+
+                    {% if form.reviewers.field.queryset.exists %}
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for choice in form.reviewers %}
+                                <li class="list-group-item">
+                                    <div class="form-check">
+                                        {{ choice.tag }}
+                                        <label class="form-check-label ms-2" for="{{ choice.id_for_label }}">
+                                            {{ choice.choice_label }}
+                                        </label>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted mt-2 d-block">{{ form.reviewers.field.queryset.count }} reviewer{{ form.reviewers.field.queryset.count|pluralize }} available</small>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <strong>No reviewers available.</strong> Please add reviewers before enabling review requirement.
+                    </div>
+                    {% endif %}
+
+                    {% if form.reviewers.errors %}
+                    <div class="invalid-feedback d-block mt-2">{{ form.reviewers.errors }}</div>
+                    {% endif %}
+                    {% if form.non_field_errors %}
+                    <div class="invalid-feedback d-block mt-2">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex gap-2">
+                    <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" class="btn btn-outline-secondary">Back to Issue</a>
+                    {% if form.reviewers.field.queryset.exists %}
+                    <button type="submit" class="btn btn-primary">Confirm Reviewers</button>
+                    {% else %}
+                    <button type="button" class="btn btn-primary" disabled>Confirm Reviewers</button>
+                    {% endif %}
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

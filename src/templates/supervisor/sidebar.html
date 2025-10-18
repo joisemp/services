@@ -13,5 +13,11 @@
             </span>
             <span class="menu-text">Tasks</span>
         </a>
+        <a class="navlink {% is_active 'issue_management:supervisor:site_visit_list,issue_management:supervisor:site_visit_detail' %}" href="{% url 'issue_management:supervisor:site_visit_list' %}">
+            <span class="material-symbols-outlined me-2">
+                location_on
+            </span>
+            <span class="menu-text">Site Visits</span>
+        </a>
     </div>
 </section>

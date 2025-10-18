@@ -1,0 +1,126 @@
+@use '../../sidebar_base';
+
+#alert {
+  .alert {
+    margin-bottom: 15px;
+    border: 1px solid #0d6efd !important;
+    background-color: #e2eefd !important;
+  }
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+}
+
+#options-bar {
+  .container-nav {
+    background-color: #f1f7ff;
+    padding: 5px;
+    border-radius: 5px;
+    width: fit-content;
+
+    .nav {
+      .nav-item {
+        .nav-active {
+          background-color: #f9f9ff;
+          color: #060606 !important;
+        }
+        a {
+          text-decoration: none;
+          font-weight: 500;
+          color: #4e4e4e !important;
+          border-radius: 0px !important;
+
+          &:hover {
+            background-color: #f9f9ff;
+            color: #060606 !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+#site-visit-list {
+  @media (max-width: 575.98px) {
+    .card {
+      width: 100% !important;
+    }
+  }
+
+  .card-link-wrapper {
+    display: block;
+    color: inherit;
+  }
+
+  .card-link-wrapper:hover .card {
+    box-shadow: 0 0 0 0.2rem #0d6efd40;
+    border-color: #0d6efd;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .card-link-wrapper:focus {
+    outline: none;
+  }
+
+  .visit-completed {
+    opacity: 0.85;
+    background-color: #f8f9fa;
+  }
+
+  .visit-overdue {
+    border-left: 4px solid #dc3545;
+  }
+
+  .visit-description {
+    font-size: 0.9rem;
+    min-height: 3rem;
+  }
+
+  .visit-meta {
+    font-size: 0.875rem;
+
+    .icon-small {
+      font-size: 18px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+  }
+
+  .issue-info {
+    min-width: 0;
+  }
+
+  .empty-state {
+    .empty-icon {
+      font-size: 80px;
+      color: #6c757d;
+      opacity: 0.5;
+    }
+
+    h4 {
+      color: #495057;
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+@media (max-width: 767.98px) {
+  #alert .custom-alert {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left;
+  }
+  #alert .custom-alert .alert-buttons {
+    margin-left: 0 !important;
+    margin-top: 0.75rem;
+    width: 100% !important;
+  }
+  #alert .custom-alert .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
