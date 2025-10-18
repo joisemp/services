@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save, pre_save, post_delete, m2m_changed
+from django.db.models.signals import post_save, pre_save, post_delete, pre_delete, m2m_changed
 from django.dispatch import receiver
 from .models import Issue, WorkTask, IssueImage, SiteVisit, IssueActivity
 
@@ -288,15 +288,20 @@ def track_work_task_changes(sender, instance, created, **kwargs):
             del _work_task_pre_save_data[instance.pk]
 
 
-@receiver(post_delete, sender=WorkTask)
+@receiver(pre_delete, sender=WorkTask)
 def track_work_task_deletion(sender, instance, **kwargs):
     """Track when work tasks are deleted"""
-    IssueActivity.objects.create(
-        issue=instance.issue,
-        activity_type='work_task_deleted',
-        user=getattr(instance, '_deleted_by', None),
-        description=f'Work task "{instance.title}" deleted'
-    )
+    # Use pre_delete to ensure the issue still exists when creating activity
+    try:
+        IssueActivity.objects.create(
+            issue=instance.issue,
+            activity_type='work_task_deleted',
+            user=getattr(instance, '_deleted_by', None),
+            description=f'Work task "{instance.title}" deleted'
+        )
+    except Issue.DoesNotExist:
+        # Issue is being deleted too, so skip creating activity
+        pass
 
 
 @receiver(post_save, sender=IssueImage)
@@ -311,15 +316,20 @@ def track_image_addition(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_delete, sender=IssueImage)
+@receiver(pre_delete, sender=IssueImage)
 def track_image_deletion(sender, instance, **kwargs):
     """Track when images are deleted"""
-    IssueActivity.objects.create(
-        issue=instance.issue,
-        activity_type='image_deleted',
-        user=getattr(instance, '_deleted_by', None),
-        description='Image deleted from issue'
-    )
+    # Use pre_delete to ensure the issue still exists when creating activity
+    try:
+        IssueActivity.objects.create(
+            issue=instance.issue,
+            activity_type='image_deleted',
+            user=getattr(instance, '_deleted_by', None),
+            description='Image deleted from issue'
+        )
+    except Issue.DoesNotExist:
+        # Issue is being deleted too, so skip creating activity
+        pass
 
 
 @receiver(pre_save, sender=SiteVisit)

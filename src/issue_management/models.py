@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from config.utils import generate_unique_slug, generate_unique_code
+from config.utils import generate_unique_slug, generate_unique_code, compress_image
 from django.utils.text import slugify
 
 
@@ -96,6 +96,11 @@ class IssueImage(models.Model):
         if not self.slug:
             base_slug = slugify(self.image.name)
             self.slug = generate_unique_slug(self, base_slug)
+        
+        # Compress image if it's a new upload or has been changed
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -161,6 +166,11 @@ class WorkTaskResolutionImage(models.Model):
         if not self.slug:
             base_slug = slugify(f"{self.work_task.title}-resolution-image")
             self.slug = generate_unique_slug(self, base_slug)
+        
+        # Compress image if it's a new upload or has been changed
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -181,6 +191,11 @@ class IssueResolutionImage(models.Model):
         if not self.slug:
             base_slug = slugify(f"{self.issue.title}-resolution-image")
             self.slug = generate_unique_slug(self, base_slug)
+        
+        # Compress image if it's a new upload or has been changed
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -438,6 +453,11 @@ class SiteVisitImage(models.Model):
         if not self.slug:
             base_slug = slugify(f"{self.site_visit.title}-image")
             self.slug = generate_unique_slug(self, base_slug)
+        
+        # Compress image if it's a new upload or has been changed
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -535,6 +555,11 @@ class IssueReviewCommentImage(models.Model):
         if not self.slug:
             base_slug = slugify(f"{self.review_comment.issue.title}-review-comment-image")
             self.slug = generate_unique_slug(self, base_slug)
+        
+        # Compress image if it's a new upload or has been changed
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
