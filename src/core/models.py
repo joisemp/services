@@ -16,15 +16,15 @@ class UserManager(BaseUserManager):
     def create_user(self, phone_number=None, email=None, password=None, user_type='general_user', organization=None, **extra_fields):
         """
         Create and return a regular user with proper role-based authentication
-        Phone number is now REQUIRED for all user types
+        Phone number is required for all users EXCEPT superusers
         """
         # Only require organization for non-superusers
         if not organization and not extra_fields.get('is_superuser', False):
             raise ValueError('All users (except superusers) must be associated with an organization')
         
-        # Phone number is MANDATORY for all users
-        if not phone_number:
-            raise ValueError('Phone number is required for all users')
+        # Phone number is required for all users EXCEPT superusers
+        if not phone_number and not extra_fields.get('is_superuser', False):
+            raise ValueError('Phone number is required for all users except superusers')
         
         # Determine authentication method based on user type
         if user_type == 'general_user':
@@ -79,10 +79,10 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, email, password=None, organization=None, **extra_fields):
+    def create_superuser(self, email, password=None, phone_number=None, organization=None, **extra_fields):
         """
         Create and return a superuser with email and password
-        Superusers must use email authentication and don't require an organization
+        Superusers must use email authentication and don't require an organization or phone number
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -98,8 +98,9 @@ class UserManager(BaseUserManager):
         if not password:
             raise ValueError('Superuser must have a password.')
         
-        # Superusers don't need an organization - pass None or provided organization
+        # Superusers don't need an organization or phone number
         return self.create_user(
+            phone_number=phone_number,  # Optional for superusers
             email=email, 
             password=password, 
             organization=organization,  # Can be None for superusers
@@ -137,7 +138,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         validators=[phone_regex], 
         max_length=17, 
         unique=True,
-        help_text="Phone number is required for all users"
+        null=True,
+        blank=True,
+        help_text="Phone number is required for all users except superusers"
     )
     
     # Email field
@@ -286,9 +289,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not self.organization and not self.is_superuser:
             raise ValidationError('Every user (except superusers) must be associated with an organization')
         
-        # Phone number is MANDATORY for all users
-        if not self.phone_number:
-            raise ValidationError('Phone number is required for all users')
+        # Phone number is required for all users EXCEPT superusers
+        if not self.phone_number and not self.is_superuser:
+            raise ValidationError('Phone number is required for all users except superusers')
         
         # Only general users can use phone authentication
         if self.auth_method == 'phone' and self.user_type != 'general_user':
@@ -307,10 +310,10 @@ class User(AbstractBaseUser, PermissionsMixin):
             if self.email and not self.is_superuser:
                 self.email = None
         elif self.auth_method == 'email':
-            # Email authentication: requires both email and phone (password handled separately)
+            # Email authentication: requires email (password handled separately)
             if not self.email:
                 raise ValidationError('Email authentication users must have an email address')
-            # Phone number is still required for email authentication users
+            # Phone number is required for email authentication users (except superusers)
         
         # PIN validation: only block general users and "pure" superusers without a role
         # Central admins who are superusers (created via createsuperuser) CAN have PINs
