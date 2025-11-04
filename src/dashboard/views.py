@@ -168,13 +168,21 @@ class DashboardDataMixin:
             .values('month')
             .annotate(count=Count('id'))
         )
+        in_progress_counts = (
+            queryset.filter(status='in_progress', updated_at__gte=start_month)
+            .annotate(month=TruncMonth('updated_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+        )
 
         created_map = {entry['month'].date(): entry['count'] for entry in created_counts if entry['month']}
         resolved_map = {entry['month'].date(): entry['count'] for entry in resolved_counts if entry['month']}
+        in_progress_map = {entry['month'].date(): entry['count'] for entry in in_progress_counts if entry['month']}
 
         labels = []
         created_data = []
         resolved_data = []
+        in_progress_data = []
 
         current_month = start_month
         for _ in range(self.trend_months):
@@ -182,6 +190,7 @@ class DashboardDataMixin:
             labels.append(current_month.strftime('%b %Y'))
             created_data.append(created_map.get(month_point, 0))
             resolved_data.append(resolved_map.get(month_point, 0))
+            in_progress_data.append(in_progress_map.get(month_point, 0))
             current_month = self._add_month(current_month)
 
         return {
@@ -194,6 +203,14 @@ class DashboardDataMixin:
                         'data': created_data,
                         'borderColor': 'rgba(54, 162, 235, 1)',
                         'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                        'fill': True,
+                        'tension': 0.3,
+                    },
+                    {
+                        'label': 'In Progress',
+                        'data': in_progress_data,
+                        'borderColor': 'rgba(255, 159, 64, 1)',
+                        'backgroundColor': 'rgba(255, 159, 64, 0.2)',
                         'fill': True,
                         'tension': 0.3,
                     },
