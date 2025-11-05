@@ -94,12 +94,19 @@ class IssueImage(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.image.name)
-            self.slug = generate_unique_slug(self, base_slug)
+            # Generate slug using unique code instead of filename
+            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
         
-        # Compress image if it's a new upload or has been changed
+        # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
-            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+            self.image = compress_image(
+                self.image, 
+                max_width=1920, 
+                max_height=1920, 
+                quality=85, 
+                format='WEBP',
+                upload_path='public/issue_images/'
+            )
         
         super().save(*args, **kwargs)
     
@@ -164,12 +171,19 @@ class WorkTaskResolutionImage(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.work_task.title}-resolution-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            # Generate slug using unique code instead of filename
+            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
         
-        # Compress image if it's a new upload or has been changed
+        # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
-            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+            self.image = compress_image(
+                self.image, 
+                max_width=1920, 
+                max_height=1920, 
+                quality=85, 
+                format='WEBP',
+                upload_path='public/work_task_resolution_images/'
+            )
         
         super().save(*args, **kwargs)
     
@@ -189,12 +203,19 @@ class IssueResolutionImage(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.issue.title}-resolution-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            # Generate slug using unique code instead of filename
+            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
         
-        # Compress image if it's a new upload or has been changed
+        # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
-            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+            self.image = compress_image(
+                self.image, 
+                max_width=1920, 
+                max_height=1920, 
+                quality=85, 
+                format='WEBP',
+                upload_path='public/issue_resolution_images/'
+            )
         
         super().save(*args, **kwargs)
     
@@ -451,12 +472,19 @@ class SiteVisitImage(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.site_visit.title}-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            # Generate slug using unique code instead of filename
+            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
         
-        # Compress image if it's a new upload or has been changed
+        # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
-            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+            self.image = compress_image(
+                self.image, 
+                max_width=1920, 
+                max_height=1920, 
+                quality=85, 
+                format='WEBP',
+                upload_path='public/site_visit_images/'
+            )
         
         super().save(*args, **kwargs)
     
@@ -553,12 +581,19 @@ class IssueReviewCommentImage(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(f"{self.review_comment.issue.title}-review-comment-image")
-            self.slug = generate_unique_slug(self, base_slug)
+            # Generate slug using unique code instead of filename
+            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
         
-        # Compress image if it's a new upload or has been changed
+        # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
-            self.image = compress_image(self.image, max_width=1920, max_height=1920, quality=85)
+            self.image = compress_image(
+                self.image, 
+                max_width=1920, 
+                max_height=1920, 
+                quality=85, 
+                format='WEBP',
+                upload_path='public/review_comment_images/'
+            )
         
         super().save(*args, **kwargs)
     
