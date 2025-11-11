@@ -76,10 +76,11 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     context_object_name = 'users'
 
     def get_queryset(self):
-        # Filter users by the central admin's organization
+        # Filter users by the central admin's organization and only show active users
         admin_organization = self.request.user.organization
         return User.objects.filter(
-            organization=admin_organization
+            organization=admin_organization,
+            is_active=True
         ).select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
     
 
@@ -781,12 +782,12 @@ class GeneratePasswordView(CentralAdminOnlyAccessMixin, View):
 
 class DeleteUserView(CentralAdminOnlyAccessMixin, View):
     """
-    View to delete a user with proper validation and safety checks
+    View to deactivate a user (soft delete) with proper validation and safety checks
     """
     
     def post(self, request, *args, **kwargs):
         """
-        Handle POST request to delete a specific user
+        Handle POST request to deactivate a specific user
         """
         try:
             user_id = request.POST.get('user_id')
@@ -801,18 +802,25 @@ class DeleteUserView(CentralAdminOnlyAccessMixin, View):
             # Get the user
             user = get_object_or_404(User, id=user_id)
             
-            # Safety checks - prevent deletion of important users
+            # Safety checks - prevent deactivation of important users
             if user.is_superuser:
                 return JsonResponse({
                     'success': False, 
-                    'message': 'Cannot delete superuser accounts'
+                    'message': 'Cannot deactivate superuser accounts'
                 }, status=400)
             
-            # Prevent self-deletion if implemented in the future
+            # Prevent self-deactivation
             if hasattr(request, 'user') and request.user.id == user.id:
                 return JsonResponse({
                     'success': False, 
-                    'message': 'You cannot delete your own account'
+                    'message': 'You cannot deactivate your own account'
+                }, status=400)
+            
+            # Check if user is already inactive
+            if not user.is_active:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'This user is already deactivated'
                 }, status=400)
             
             # Require confirmation text to match user's name or email
@@ -823,31 +831,18 @@ class DeleteUserView(CentralAdminOnlyAccessMixin, View):
                     'message': f'Confirmation text must match exactly: "{expected_confirmation}"'
                 }, status=400)
             
-            # Check for related data that might prevent deletion
-            related_issues_count = 0
-            related_comments_count = 0
-            
-            # Check if user has reported issues
-            if hasattr(user, 'reported_issues'):
-                related_issues_count = user.reported_issues.count()
-            
-            # Check if user has comments (if comment model exists)
-            if hasattr(user, 'comments'):
-                related_comments_count = user.comments.count()
-            
-            # Store user info for success message before deletion
+            # Store user info for success message before deactivation
             user_name = user.get_full_name() or user.email or user.phone_number
             user_email = user.email
             user_org = user.organization.name if user.organization else "No organization"
             
-            # Perform the deletion
-            user.delete()
+            # Deactivate the user instead of deleting
+            user.is_active = False
+            user.save(update_fields=['is_active'])
             
             messages.success(
                 request, 
-                f'User "{user_name}" has been successfully deleted. '
-                f'Organization: {user_org}. '
-                f'Related data: {related_issues_count} issues, {related_comments_count} comments were also removed.'
+                f'User "{user_name}" has been successfully deleted.'
             )
             
             return JsonResponse({
@@ -862,10 +857,10 @@ class DeleteUserView(CentralAdminOnlyAccessMixin, View):
                 'message': 'User not found'
             }, status=404)
         except Exception as e:
-            messages.error(request, f'Error deleting user: {str(e)}')
+            messages.error(request, f'Error deactivating user: {str(e)}')
             return JsonResponse({
                 'success': False, 
-                'message': f'Error deleting user: {str(e)}'
+                'message': f'Error deactivating user: {str(e)}'
             }, status=500)
 
 
