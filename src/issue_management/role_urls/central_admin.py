@@ -7,6 +7,7 @@ urlpatterns = [
     path('', central_admin.IssueListView.as_view(), name='issue_list'),
     path('create/', central_admin.IssueCreateView.as_view(), name='issue_create'),
     path('site-visits/', central_admin.SiteVisitListView.as_view(), name='site_visit_list'),
+    path('performance-report/', central_admin.PerformanceReportView.as_view(), name='performance_report'),
     path('<slug:issue_slug>/edit/', central_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', central_admin.IssueDetailView.as_view(), name='issue_detail'),
     path('<slug:issue_slug>/assign/', central_admin.IssueAssignmentView.as_view(), name='issue_assign'),

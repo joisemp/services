@@ -1,67 +1,89 @@
 # Copilot Instructions for Services Project
 
 ## Project Overview
-This is a Django 5.2-based issue management system with role-based access control. The project features a custom user authentication system supporting both phone (passwordless) and email authentication, and is designed around organizations and spaces for multi-tenant issue tracking.
+Django 5.2 issue tracking system with dual authentication, role-based access control, and multi-tenant architecture. Production uses Docker (app on `:7000`, Postgres on `:5432`) with DigitalOcean Spaces for media storage.
 
-**Tech Stack**: Django 5.2, PostgreSQL, Docker, Bootstrap 5, HTMX, DigitalOcean Spaces (S3-compatible), WhiteNoise
+**Stack**: Django 5.2 • PostgreSQL • Docker • Bootstrap 5 • HTMX • WhiteNoise • DigitalOcean Spaces (S3-compatible)
 
-**Key Dependencies**: `django-environ` (environment management), `django-storages` (S3 integration), `psycopg2-binary` (PostgreSQL), `pillow` (image handling), `whitenoise` (static file serving), `boto3` (AWS SDK)
+**Core Dependencies**: `django-environ`, `django-storages`, `psycopg2-binary`, `pillow`, `whitenoise`, `boto3`
 
-## Architecture & Key Components
+## Architecture
 
-### Custom User Authentication (`core/models.py`, `core/backends.py`)
-- **Two-Tier Authentication System**:
-  - **General Users**: Phone-only authentication (passwordless) - just enter phone number to login
-  - **All Other Roles**: Email + password authentication required (`central_admin`, `space_admin`, `maintainer`, `supervisor`, `reviewer`)
-- **Role-based User Types**: `central_admin`, `space_admin`, `maintainer`, `supervisor`, `reviewer`, `general_user`
-- **Organization Hierarchy**: Every non-superuser must belong to an `Organization`; users can be associated with multiple `Space`s
-- **Custom UserManager**: Handles role-specific user creation with `auth_method` field determining passwordless vs password authentication
-- **DualAuthBackend**: Custom authentication backend supporting both phone (passwordless) and email+password authentication in single system
-  ```python
-  # Phone auth: authenticate(phone_number="+1234567890") 
-  # Email auth: authenticate(username="user@email.com", password="pass")
-  ```
+### 1. Dual Authentication System (`core/backends.py`, `core/models.py`)
+Two parallel authentication flows in `DualAuthBackend`:
+- **Passwordless (Phone)**: `general_user` only → `authenticate(phone_number="+1234567890")`
+- **Email + Password**: All other roles → `authenticate(username="email", password="pass")`
+- **Email + PIN**: Optional 4-digit PIN for quick auth (all roles except `general_user` and superusers)
 
-### Role-Based URL Structure (`issue_management/`)
-URLs are organized by user role with parallel structures:
+**User Model Enforcement**:
+- `auth_method` field auto-set based on `user_type` 
+- Organization required for all non-superusers
+- Phone required for all non-superusers
+- Custom `UserManager.create_user()` enforces rules; `User.clean()` validates on save
+
+### 2. Role-Based URL Architecture
+Parallel URL structures per role (`issue_management/`):
 ```
-/issues/central-admin/    → issue_management.role_urls.central_admin
-/issues/maintainer/       → issue_management.role_urls.maintainer
-/issues/reviewer/         → issue_management.role_urls.reviewer
-/issues/space-admin/      → issue_management.role_urls.space_admin
-/issues/supervisor/       → issue_management.role_urls.supervisor
+/issues/central-admin/ → role_urls/central_admin.py → views/central_admin.py → templates/central_admin/
+/issues/maintainer/    → role_urls/maintainer.py    → views/maintainer.py    → templates/maintainer/
+/issues/reviewer/      → role_urls/reviewer.py      → views/reviewer.py      → templates/reviewer/
+/issues/space-admin/   → role_urls/space_admin.py   → views/space_admin.py   → templates/space_admin/
+/issues/supervisor/    → role_urls/supervisor.py    → views/supervisor.py    → templates/supervisor/
 ```
-Each role has its own URL namespace and corresponding view modules in `views/`.
+Each role gets isolated URL namespace (`app_name = "{role}"`), view module, and template directory.
 
-### Common Shared Components (`issue_management/views/common.py`)
-Role-agnostic functionality accessible to all authenticated users:
-- **Issue Comments**: `IssueCommentListView` and `IssueCommentCreateView` handle comment viewing and creation
-- **HTMX Integration**: Common views use HTMX for dynamic updates without page reloads
-- **Shared URLs**: Comment endpoints at `/issues/<slug>/comments/` and `/issues/<slug>/comments/create/`
-- **Partial Templates**: Common components stored in `templates/common/issue_management/partials/` (e.g., `comment_list.html`, `comment_form.html`)
-- **Pattern**: Common views handle cross-role functionality; use `LoginRequiredMixin` for authentication and return partial templates for HTMX swaps
+### 3. Common Cross-Role Views (`issue_management/views/common.py`)
+Shared functionality outside role-based URLs:
+- **Purpose**: Features accessible to ALL authenticated users (comments, shared resources)
+- **URL Registration**: Directly in `issue_management/urls.py` (NOT in role_urls subdirectory)
+- **Authentication**: Use `LoginRequiredMixin` for auth
+- **HTMX Pattern**: Return partial templates from `templates/common/issue_management/partials/`
+- **Example**: `IssueCommentCreateView` at `/issues/<slug>/comments/create/` → returns `comment_list.html` partial
 
-### Issue Management System
-- **Models**: `Issue`, `IssueImage`, `IssueComment`, `WorkTask`, `WorkTaskShare` with automatic slug generation using `config.utils.generate_unique_slug()`
+### 4. Issue Management Domain (`issue_management/models.py`)
+**Core Models**: `Issue`, `IssueImage`, `IssueComment`, `WorkTask`, `WorkTaskShare`, `SiteVisit`, `IssueActivity`
+- **Slug Generation**: All models auto-generate slugs in `save()` using `generate_unique_slug()` with 4-char codes
 - **Status Flow**: `open` → `assigned` → `in_progress` → `resolved`/`escalated` → `closed`/`cancelled`
-- **Work Tasks**: Each issue can have multiple `WorkTask`s with assignees, due dates, completion status, and resolution notes
-- **External Task Sharing**: `WorkTaskShare` model enables sharing work tasks via secure tokens with external users (view-only, comment, or collaborate permissions)
-- **Media Handling**: Voice recordings and multiple image uploads per issue (up to 3 via form fields `image1`, `image2`, `image3`)
-- **Relationships**: Issues belong to Organizations, optionally to Spaces; reporter is required ForeignKey to User
+- **Image Handling**: Automatic WebP compression via `compress_image()` utility; unique alphanumeric filenames
+- **External Sharing**: `WorkTaskShare` creates secure 32-char tokens with expiration, permission levels, access tracking
+- **Activity Tracking**: `IssueActivity` logs all changes (excludes comments) for audit trail
 
 ## Development Conventions
 
 ### Model Patterns
-- **Auto-slug Generation**: All models use `config.utils.generate_unique_slug()` with 4-char random codes in `save()` method
-- **Consistent Relations**: Use descriptive `related_name` for reverse relationships (e.g., `'users'`, `'issues'`, `'reported_issues'`)
-- **Required Organization**: All entities (except superusers) must be associated with an Organization
+```python
+class MyModel(models.Model):
+    title = models.CharField(max_length=200)
+    org = models.ForeignKey('core.Organization', related_name='my_models', on_delete=models.CASCADE)
+    slug = models.SlugField(unique=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_slug(self, slugify(self.title))
+        super().save(*args, **kwargs)
+```
+- Use descriptive `related_name` for reverse queries
+- Organization required for all entities except superusers
 
 ### Form & View Patterns
-- **Bootstrap Integration**: All forms inherit from `BootstrapFormMixin` for automatic Bootstrap 5 styling with error handling
-- **CBVs with Prefetch**: Use `select_related()`/`prefetch_related()` in `get_queryset()` for performance optimization
-- **Role-Based Templates**: Template paths follow pattern `{role}/issue_management/{action}.html`
-- **Image Handling**: Forms include separate `image1`, `image2`, `image3` fields; views handle IssueImage creation in `form_valid()`
-- **Slug-based URLs**: DetailViews use `slug_field = 'slug'` and `slug_url_kwarg = '{model}_slug'` pattern
+```python
+# Form with Bootstrap styling
+class MyForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Issue
+        fields = ['title', 'description', 'image1', 'image2', 'image3']
+
+# View with optimization
+class MyDetailView(DetailView):
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('org', 'reporter').prefetch_related('images')
+```
+- `BootstrapFormMixin` auto-applies form-control classes and inline error display
+- Image uploads: Handle `image1`/`image2`/`image3` in `form_valid()`, create separate model instances
 
 ### Configuration & Environment
 - **Environment-based Settings**: Uses `django-environ` with `ENVIRONMENT` variable (`development`/`production`)
@@ -231,37 +253,7 @@ user = User.objects.create_user(
 )  # auth_method='email'
 ```
 
-### Working with Forms and Views
-```python
-# Form inheriting Bootstrap styling
-class MyForm(BootstrapFormMixin, forms.ModelForm):
-    class Meta:
-        model = MyModel
-        fields = '__all__'
 
-# View with slug handling and optimization
-class MyDetailView(DetailView):
-    model = MyModel
-    slug_field = 'slug'
-    slug_url_kwarg = 'my_model_slug'
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('org', 'space').prefetch_related('images')
-```
-
-### Model Creation Pattern
-```python
-class MyModel(models.Model):
-    title = models.CharField(max_length=200)
-    org = models.ForeignKey('core.Organization', related_name='my_models', on_delete=models.CASCADE)
-    slug = models.SlugField(unique=True)
-    
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.title)
-            self.slug = generate_unique_slug(self, base_slug)
-        super().save(*args, **kwargs)
-```
 
 ### Model Relationships & Validation
 - Organization → Users, Spaces, Issues (one-to-many)
