@@ -1,5 +1,5 @@
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.db.models import Case, When, IntegerField
 from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
+from ..forms_reports import PerformanceReportForm
+from ..utils.performance_report import PerformanceReportGenerator
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from core.models import Space
 
@@ -1002,3 +1004,67 @@ class SiteVisitDetailView(CentralAdminOnlyAccessMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['issue'] = self.object.issue
         return context
+
+
+class PerformanceReportView(CentralAdminOnlyAccessMixin, View):
+    """Generate and download PDF performance reports"""
+    template_name = "central_admin/issue_management/performance_report.html"
+    
+    def get(self, request):
+        """Display the report configuration form"""
+        form = PerformanceReportForm(organization=request.user.organization)
+        
+        context = {
+            'form': form,
+        }
+        return render(request, self.template_name, context)
+    
+    def post(self, request):
+        """Generate and return the PDF report"""
+        form = PerformanceReportForm(request.POST, organization=request.user.organization)
+        
+        if not form.is_valid():
+            context = {
+                'form': form,
+            }
+            return render(request, self.template_name, context)
+        
+        try:
+            # Get date range from form
+            start_date, end_date = form.get_date_range()
+            
+            # Get user filter (specific users or None for all)
+            user_ids = form.get_user_filter()
+            
+            # Get role filters
+            include_supervisors = form.cleaned_data.get('include_supervisors', True)
+            include_maintainers = form.cleaned_data.get('include_maintainers', True)
+            
+            # Generate the report
+            generator = PerformanceReportGenerator(
+                organization=request.user.organization,
+                start_date=start_date,
+                end_date=end_date,
+                user_ids=user_ids,
+                include_supervisors=include_supervisors,
+                include_maintainers=include_maintainers
+            )
+            
+            pdf_buffer = generator.generate_report()
+            
+            # Create HTTP response with PDF
+            response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+            
+            # Generate filename with timestamp
+            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"performance_report_{timestamp}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            messages.error(request, f'Failed to generate report: {str(e)}')
+            context = {
+                'form': form,
+            }
+            return render(request, self.template_name, context)

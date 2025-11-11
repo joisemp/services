@@ -24,9 +24,14 @@
             <h3 class="mb-1">People</h3>
             <span class="alert-text text-body-secondary">Manage all the people in your organisation</span>
         </div>
-        <div class="alert-buttons">
+        <div class="alert-buttons d-flex flex-column flex-sm-row gap-2">
+            <a href="{% url 'issue_management:central_admin:performance_report' %}"
+                class="btn btn-outline-primary d-flex align-items-center justify-content-center">
+                <span class="material-symbols-outlined">analytics</span>
+                <span class="ms-2">Performance Report</span>
+            </a>
             <a href="{% url 'core:people_create' %}"
-                class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto">
+                class="btn btn-primary d-flex align-items-center justify-content-center">
                 <span class="material-symbols-outlined">add</span>
                 <span class="ms-2">Add Person</span>
             </a>
