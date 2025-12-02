@@ -220,12 +220,24 @@ else:
 PASSWORD_RESET_TIMEOUT = 86400
 
 # Firebase Cloud Messaging Configuration
-FIREBASE_CREDENTIALS_PATH = env('FIREBASE_CREDENTIALS_PATH', default='')
+# Load from environment variables for both development and production
+FIREBASE_CREDENTIALS = {
+    'type': env('FIREBASE_TYPE', default='service_account'),
+    'project_id': env('FIREBASE_PROJECT_ID', default=''),
+    'private_key_id': env('FIREBASE_PRIVATE_KEY_ID', default=''),
+    'private_key': env('FIREBASE_PRIVATE_KEY', default='').replace('\\n', '\n'),
+    'client_email': env('FIREBASE_CLIENT_EMAIL', default=''),
+    'client_id': env('FIREBASE_CLIENT_ID', default=''),
+    'auth_uri': env('FIREBASE_AUTH_URI', default='https://accounts.google.com/o/oauth2/auth'),
+    'token_uri': env('FIREBASE_TOKEN_URI', default='https://oauth2.googleapis.com/token'),
+    'auth_provider_x509_cert_url': env('FIREBASE_AUTH_PROVIDER_CERT_URL', default='https://www.googleapis.com/oauth2/v1/certs'),
+    'client_x509_cert_url': env('FIREBASE_CLIENT_CERT_URL', default=''),
+    'universe_domain': env('FIREBASE_UNIVERSE_DOMAIN', default='googleapis.com')
+} if env('FIREBASE_PROJECT_ID', default='') else None
 
 # Firebase Web Configuration (for frontend)
 FIREBASE_API_KEY = env('FIREBASE_API_KEY', default='')
 FIREBASE_AUTH_DOMAIN = env('FIREBASE_AUTH_DOMAIN', default='')
-FIREBASE_PROJECT_ID = env('FIREBASE_PROJECT_ID', default='')
 FIREBASE_STORAGE_BUCKET = env('FIREBASE_STORAGE_BUCKET', default='')
 FIREBASE_MESSAGING_SENDER_ID = env('FIREBASE_MESSAGING_SENDER_ID', default='')
 FIREBASE_APP_ID = env('FIREBASE_APP_ID', default='')

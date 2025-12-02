@@ -152,8 +152,17 @@ docker exec -it sfs-services-dev-container python manage.py shell
   SECRET_KEY=your-secret-key-here
   ENVIRONMENT=development
   ALLOWED_HOSTS=localhost,127.0.0.1
+  
+  # Firebase credentials (required for push notifications)
+  FIREBASE_PROJECT_ID=your-project-id
+  FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+  FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@project.iam.gserviceaccount.com
+  # ... other Firebase env vars (see .env.example)
   ```
 - For production, add: `DATABASE_URL`, email settings (`EMAIL_HOST`, `EMAIL_HOST_USER`, etc.), and DigitalOcean Spaces config
+- **Firebase Configuration**: All environments use environment variables for Firebase credentials (no JSON file needed)
+  - Run `python convert_firebase_to_env.py` to convert `firebase-service-account.json` to env vars
+  - See `docs/FIREBASE_SECRET_MANAGEMENT.md` for complete setup guide
 - Environment detection: `ENVIRONMENT=development` enables debug mode, console email, local storage; `production` enables S3 storage, SMTP email
 
 ### Working with CSS/SCSS

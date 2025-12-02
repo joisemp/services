@@ -13,9 +13,9 @@ def initialize_firebase():
     """Initialize Firebase Admin SDK if not already initialized"""
     if not firebase_admin._apps:
         try:
-            # Check if Firebase credentials path is configured
-            if hasattr(settings, 'FIREBASE_CREDENTIALS_PATH') and settings.FIREBASE_CREDENTIALS_PATH:
-                cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+            # Check if Firebase credentials are configured
+            if hasattr(settings, 'FIREBASE_CREDENTIALS') and settings.FIREBASE_CREDENTIALS:
+                cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS)
                 firebase_admin.initialize_app(cred)
                 logger.info("Firebase Admin SDK initialized successfully")
             else:
