@@ -89,4 +89,14 @@ urlpatterns = [
     path('switch-space/', 
          views.SpaceSwitcherView.as_view(), 
          name='switch_space'),
+    
+    # FCM Token Registration API
+    path('api/register-fcm-token/', 
+         views.RegisterFCMTokenView.as_view(), 
+         name='register_fcm_token'),
+    
+    # Firebase Configuration API
+    path('api/firebase-config/', 
+         views.FirebaseConfigView.as_view(), 
+         name='firebase_config'),
 ]

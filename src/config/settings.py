@@ -219,6 +219,18 @@ else:
 # Password reset token validity (24 hours)
 PASSWORD_RESET_TIMEOUT = 86400
 
+# Firebase Cloud Messaging Configuration
+FIREBASE_CREDENTIALS_PATH = env('FIREBASE_CREDENTIALS_PATH', default='')
+
+# Firebase Web Configuration (for frontend)
+FIREBASE_API_KEY = env('FIREBASE_API_KEY', default='')
+FIREBASE_AUTH_DOMAIN = env('FIREBASE_AUTH_DOMAIN', default='')
+FIREBASE_PROJECT_ID = env('FIREBASE_PROJECT_ID', default='')
+FIREBASE_STORAGE_BUCKET = env('FIREBASE_STORAGE_BUCKET', default='')
+FIREBASE_MESSAGING_SENDER_ID = env('FIREBASE_MESSAGING_SENDER_ID', default='')
+FIREBASE_APP_ID = env('FIREBASE_APP_ID', default='')
+FIREBASE_VAPID_KEY = env('FIREBASE_VAPID_KEY', default='')
+
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
     url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')

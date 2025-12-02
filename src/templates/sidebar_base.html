@@ -44,6 +44,12 @@
         </section>
 
     </div>
+    
+    <!-- Firebase Cloud Messaging Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+    <script src="{% static 'js/fcm-token-manager.js' %}"></script>
+    
     {% block scripts %}{% endblock scripts %}
     <script src="{% static 'js/components/loading-progress.js' %}"></script>
     <script src="{% static 'js/form-submit-handler.js' %}"></script>

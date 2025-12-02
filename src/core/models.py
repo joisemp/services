@@ -206,6 +206,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Currently active space for space admins (used for context switching)"
     )
     
+    # Firebase Cloud Messaging token for push notifications
+    fcm_token = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Firebase Cloud Messaging token for push notifications"
+    )
+    
     objects = UserManager()
     
     # Set the field used for authentication - email for superusers and non-general users

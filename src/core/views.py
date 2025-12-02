@@ -936,3 +936,54 @@ class SpaceSwitcherView(FormView):
         context['current_space'] = self.request.user.active_space
         context['available_spaces'] = self.request.user.get_available_spaces()
         return context
+
+
+class RegisterFCMTokenView(View):
+    """
+    API endpoint to register FCM token for push notifications
+    """
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication required'}, status=401)
+        
+        import json
+        try:
+            data = json.loads(request.body)
+            fcm_token = data.get('fcm_token')
+            
+            if not fcm_token:
+                return JsonResponse({'error': 'FCM token is required'}, status=400)
+            
+            # Update user's FCM token
+            request.user.fcm_token = fcm_token
+            request.user.save(update_fields=['fcm_token'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'FCM token registered successfully'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class FirebaseConfigView(View):
+    """
+    API endpoint to serve Firebase configuration to frontend
+    """
+    def get(self, request):
+        from django.conf import settings
+        
+        config = {
+            'apiKey': settings.FIREBASE_API_KEY,
+            'authDomain': settings.FIREBASE_AUTH_DOMAIN,
+            'projectId': settings.FIREBASE_PROJECT_ID,
+            'storageBucket': settings.FIREBASE_STORAGE_BUCKET,
+            'messagingSenderId': settings.FIREBASE_MESSAGING_SENDER_ID,
+            'appId': settings.FIREBASE_APP_ID,
+            'vapidKey': settings.FIREBASE_VAPID_KEY
+        }
+        
+        return JsonResponse(config)

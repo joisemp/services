@@ -1,6 +1,8 @@
 from django.db.models.signals import post_save, pre_save, post_delete, pre_delete, m2m_changed
 from django.dispatch import receiver
 from .models import Issue, WorkTask, IssueImage, SiteVisit, IssueActivity
+from .utils.firebase_notifications import send_issue_created_notification
+from core.models import User
 
 
 # Dictionary to store old values of instances before saving
@@ -28,7 +30,7 @@ def store_issue_old_values(sender, instance, **kwargs):
             pass
 
 
-@receiver(post_save, sender=Issue)
+@receiver(post_save, sender=Issue, dispatch_uid="track_issue_creation_and_changes")
 def track_issue_creation_and_changes(sender, instance, created, **kwargs):
     """Track issue creation and various field changes"""
     
@@ -40,6 +42,16 @@ def track_issue_creation_and_changes(sender, instance, created, **kwargs):
             user=instance.reporter,
             description=f'Issue "{instance.title}" was created by {instance.reporter.get_full_name() or instance.reporter}'
         )
+        
+        # Send push notifications to central admins in the same organization
+        central_admins = User.objects.filter(
+            user_type='central_admin',
+            organization=instance.org,
+            is_active=True
+        )
+        
+        if central_admins.exists():
+            send_issue_created_notification(instance, central_admins)
     else:
         # Track changes to existing issue
         old_data = _issue_pre_save_data.get(instance.pk)
