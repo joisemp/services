@@ -8,6 +8,26 @@ let firebaseConfig = null;
 let vapidKey = null;
 let messaging = null;
 
+// Debug mode - set to false in production
+const DEBUG_MODE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Console log wrapper for debug mode
+function debugLog(...args) {
+    if (DEBUG_MODE) {
+        console.log(...args);
+    }
+}
+
+function debugError(...args) {
+    console.error(...args);
+}
+
+function debugWarn(...args) {
+    if (DEBUG_MODE) {
+        console.warn(...args);
+    }
+}
+
 /**
  * Fetch Firebase configuration from backend
  */
@@ -21,11 +41,11 @@ async function fetchFirebaseConfig() {
         
         const config = await response.json();
         
-        console.log('Fetched Firebase config:', config);
+        debugLog('Fetched Firebase config:', config);
         
         // Validate that we have all required fields
         if (!config.apiKey || !config.projectId || !config.appId) {
-            console.error('Firebase config is incomplete:', config);
+            debugError('Firebase config is incomplete:', config);
             throw new Error('Firebase configuration is missing required fields. Please check your .env file.');
         }
         
@@ -40,10 +60,10 @@ async function fetchFirebaseConfig() {
             appId: config.appId
         };
         
-        console.log('Firebase config loaded successfully');
+        debugLog('Firebase config loaded successfully');
         return true;
     } catch (error) {
-        console.error('Error fetching Firebase configuration:', error);
+        debugError('Error fetching Firebase configuration:', error);
         return false;
     }
 }
@@ -51,7 +71,7 @@ async function fetchFirebaseConfig() {
 function initializeFirebase() {
     try {
         if (!firebaseConfig) {
-            console.error('Firebase config not loaded');
+            debugError('Firebase config not loaded');
             return false;
         }
         
@@ -62,14 +82,14 @@ function initializeFirebase() {
         // Check if messaging is supported
         if (firebase.messaging.isSupported()) {
             messaging = firebase.messaging();
-            console.log('Firebase Messaging initialized successfully');
+            debugLog('Firebase Messaging initialized successfully');
             return true;
         } else {
-            console.warn('Firebase Messaging is not supported in this browser');
+            debugWarn('Firebase Messaging is not supported in this browser');
             return false;
         }
     } catch (error) {
-        console.error('Error initializing Firebase:', error);
+        debugError('Error initializing Firebase:', error);
         return false;
     }
 }
@@ -82,17 +102,17 @@ async function requestNotificationPermission() {
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
-            console.log('Notification permission granted');
+            debugLog('Notification permission granted');
             return true;
         } else if (permission === 'denied') {
-            console.log('Notification permission denied');
+            debugWarn('Notification permission denied');
             return false;
         } else {
-            console.log('Notification permission dismissed');
+            debugWarn('Notification permission dismissed');
             return false;
         }
     } catch (error) {
-        console.error('Error requesting notification permission:', error);
+        debugError('Error requesting notification permission:', error);
         return false;
     }
 }
@@ -101,31 +121,31 @@ async function requestNotificationPermission() {
  * Get FCM token and register it with the backend
  */
 async function getAndRegisterFCMToken() {
-    console.log('getAndRegisterFCMToken: Starting...');
+    debugLog('getAndRegisterFCMToken: Starting...');
     
     if (!messaging) {
-        console.warn('Firebase Messaging not initialized');
+        debugWarn('Firebase Messaging not initialized');
         return null;
     }
-    console.log('getAndRegisterFCMToken: Messaging initialized');
+    debugLog('getAndRegisterFCMToken: Messaging initialized');
     
     if (!vapidKey) {
-        console.error('VAPID key not loaded');
+        debugError('VAPID key not loaded');
         return null;
     }
-    console.log('getAndRegisterFCMToken: VAPID key loaded');
+    debugLog('getAndRegisterFCMToken: VAPID key loaded');
     
     try {
-        console.log('getAndRegisterFCMToken: Getting service worker registration...');
+        debugLog('getAndRegisterFCMToken: Getting service worker registration...');
         // Get the service worker registration from root scope
         const registration = await navigator.serviceWorker.getRegistration('/');
         
         if (!registration) {
-            console.error('Service worker registration not found');
+            debugError('Service worker registration not found');
             return null;
         }
         
-        console.log('getAndRegisterFCMToken: Got registration, requesting token from Firebase...');
+        debugLog('getAndRegisterFCMToken: Got registration, requesting token from Firebase...');
         
         // Get registration token with custom service worker
         const currentToken = await messaging.getToken({
@@ -134,20 +154,20 @@ async function getAndRegisterFCMToken() {
         });
         
         if (currentToken) {
-            console.log('FCM Token retrieved:', currentToken);
+            debugLog('FCM Token retrieved:', currentToken);
             
             // Send token to backend
-            console.log('getAndRegisterFCMToken: Sending token to backend...');
+            debugLog('getAndRegisterFCMToken: Sending token to backend...');
             await registerTokenWithBackend(currentToken);
             
             return currentToken;
         } else {
-            console.warn('No FCM token available. Request permission to generate one.');
+            debugWarn('No FCM token available. Request permission to generate one.');
             return null;
         }
     } catch (error) {
-        console.error('Error getting FCM token:', error);
-        console.error('Error details:', error.message, error.stack);
+        debugError('Error getting FCM token:', error);
+        debugError('Error details:', error.message, error.stack);
         return null;
     }
 }
@@ -169,7 +189,7 @@ async function registerTokenWithBackend(token) {
         }
         
         if (!csrfToken) {
-            console.error('CSRF token not found');
+            debugError('CSRF token not found');
             return false;
         }
         
@@ -185,15 +205,15 @@ async function registerTokenWithBackend(token) {
         });
         
         if (response.ok) {
-            console.log('FCM token registered successfully with backend');
+            debugLog('FCM token registered successfully with backend');
             return true;
         } else {
             const errorText = await response.text();
-            console.error('Failed to register FCM token with backend:', errorText);
+            debugError('Failed to register FCM token with backend:', errorText);
             return false;
         }
     } catch (error) {
-        console.error('Error registering FCM token with backend:', error);
+        debugError('Error registering FCM token with backend:', error);
         return false;
     }
 }
@@ -207,7 +227,7 @@ function setupForegroundMessageHandler() {
     }
     
     messaging.onMessage((payload) => {
-        console.log('Message received in foreground:', payload);
+        debugLog('Message received in foreground:', payload);
         
         const notificationTitle = payload.notification.title;
         const notificationOptions = {
@@ -244,15 +264,15 @@ async function registerServiceWorker() {
         try {
             // Register service worker from root path for proper scope
             const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('Service Worker registered successfully:', registration);
+            debugLog('Service Worker registered successfully:', registration);
             
             return registration;
         } catch (error) {
-            console.error('Service Worker registration failed:', error);
+            debugError('Service Worker registration failed:', error);
             return null;
         }
     } else {
-        console.warn('Service Worker is not supported in this browser');
+        debugWarn('Service Worker is not supported in this browser');
         return null;
     }
 }
@@ -263,14 +283,14 @@ async function registerServiceWorker() {
 async function initializeFCM() {
     // Check if browser supports notifications
     if (!('Notification' in window)) {
-        console.warn('This browser does not support notifications');
+        debugWarn('This browser does not support notifications');
         return;
     }
     
     // Fetch Firebase config from backend
     const configLoaded = await fetchFirebaseConfig();
     if (!configLoaded) {
-        console.error('Failed to load Firebase configuration');
+        debugError('Failed to load Firebase configuration');
         return;
     }
     
@@ -281,14 +301,14 @@ async function initializeFCM() {
     
     try {
         // Register service worker
-        console.log('Registering service worker...');
+        debugLog('Registering service worker...');
         const registration = await registerServiceWorker();
         if (!registration) {
-            console.error('Service worker registration failed');
+            debugError('Service worker registration failed');
             return;
         }
         
-        console.log('Service worker registered, waiting for it to be active...');
+        debugLog('Service worker registered, waiting for it to be active...');
         
         // Wait a bit for service worker to activate if needed
         if (!registration.active) {
@@ -298,7 +318,7 @@ async function initializeFCM() {
         // Send Firebase config to service worker
         const activeWorker = registration.active;
         if (activeWorker) {
-            console.log('Sending Firebase config to service worker');
+            debugLog('Sending Firebase config to service worker');
             activeWorker.postMessage({
                 type: 'FIREBASE_CONFIG',
                 config: firebaseConfig
@@ -306,23 +326,23 @@ async function initializeFCM() {
         }
         
         // Request permission
-        console.log('Requesting notification permission...');
+        debugLog('Requesting notification permission...');
         const permissionGranted = await requestNotificationPermission();
         
         if (permissionGranted) {
-            console.log('Permission granted, getting FCM token...');
+            debugLog('Permission granted, getting FCM token...');
             // Get and register FCM token
             await getAndRegisterFCMToken();
             
             // Setup foreground message handler
             setupForegroundMessageHandler();
             
-            console.log('FCM initialization complete!');
+            debugLog('FCM initialization complete!');
         } else {
-            console.warn('Notification permission not granted');
+            debugWarn('Notification permission not granted');
         }
     } catch (error) {
-        console.error('Error during FCM initialization:', error);
+        debugError('Error during FCM initialization:', error);
     }
 }
 

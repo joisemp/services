@@ -10,6 +10,15 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 // Firebase config will be set dynamically via message from main thread
 let messaging = null;
 
+// Debug mode - only log in development
+const DEBUG_MODE = false; // Set to true only for debugging service worker issues
+
+function debugLog(...args) {
+    if (DEBUG_MODE) {
+        console.log(...args);
+    }
+}
+
 // Listen for message from main thread with Firebase config
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'FIREBASE_CONFIG') {
@@ -21,7 +30,7 @@ self.addEventListener('message', (event) => {
             
             // Set up background message handler
             messaging.onBackgroundMessage((payload) => {
-                console.log('Received background message:', payload);
+                debugLog('Received background message:', payload);
                 
                 const notificationTitle = payload.notification.title;
                 const notificationOptions = {
@@ -39,7 +48,7 @@ self.addEventListener('message', (event) => {
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
-    console.log('Notification clicked:', event);
+    debugLog('Notification clicked:', event);
     event.notification.close();
     
     // Get the issue slug from notification data
