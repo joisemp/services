@@ -25,7 +25,7 @@ def initialize_firebase():
             logger.error(f"Failed to initialize Firebase Admin SDK: {e}")
 
 
-def send_push_notification(fcm_token, title, body, data=None, high_priority=False, ttl_hours=24):
+def send_push_notification(fcm_token, title, body, data=None, high_priority=False, ttl_hours=24, icon=None, image=None):
     """
     Send a push notification to a specific device
     
@@ -36,6 +36,8 @@ def send_push_notification(fcm_token, title, body, data=None, high_priority=Fals
         data (dict): Additional data to send with the notification
         high_priority (bool): Whether to send as high priority (default: False)
         ttl_hours (int): Time to live in hours (default: 24)
+        icon (str): URL to notification icon (Android only, defaults to logo-icon.svg)
+        image (str): URL to notification image (large image, both platforms)
     
     Returns:
         dict: {'success': bool, 'response': str or None, 'error': str or None}
@@ -51,36 +53,54 @@ def send_push_notification(fcm_token, title, body, data=None, high_priority=Fals
         return {'success': False, 'response': None, 'error': 'No FCM token provided'}
     
     # Validate payload size (rough estimate: 4KB limit)
-    estimated_size = len(title) + len(body) + len(str(data or {}))
+    estimated_size = len(title) + len(body) + len(str(data or {})) + len(icon or '') + len(image or '')
     if estimated_size > 3500:  # Leave buffer for headers
         logger.warning(f"Notification payload may be too large (~{estimated_size} bytes)")
     
+    # Use default notification icon if not provided
+    if icon is None and hasattr(settings, 'NOTIFICATION_ICON_URL'):
+        icon = settings.NOTIFICATION_ICON_URL
+    
     try:
         # Configure Android-specific options
+        android_notification = messaging.AndroidNotification(
+            sound='default',
+            priority='high' if high_priority else 'default',
+        )
+        
+        # Add icon and image if provided (Android only supports these)
+        if icon:
+            android_notification.icon = icon
+        if image:
+            android_notification.image = image
+        
         android_config = messaging.AndroidConfig(
             priority='high' if high_priority else 'normal',
             ttl=timedelta(hours=ttl_hours),
-            notification=messaging.AndroidNotification(
-                sound='default',
-                priority='high' if high_priority else 'default',
-            )
+            notification=android_notification
         )
         
-        # Configure iOS-specific options
+        # Configure iOS-specific options (iOS ignores icon, only supports image)
+        apns_payload = messaging.APNSPayload(
+            aps=messaging.Aps(
+                alert=messaging.ApsAlert(
+                    title=title,
+                    body=body,
+                ),
+                sound='default',
+                content_available=True,
+            ),
+        )
+        
+        # Add image URL to APNS payload if provided
+        if image:
+            apns_payload.aps.mutable_content = True
+        
         apns_config = messaging.APNSConfig(
             headers={
                 'apns-priority': '10' if high_priority else '5',
             },
-            payload=messaging.APNSPayload(
-                aps=messaging.Aps(
-                    alert=messaging.ApsAlert(
-                        title=title,
-                        body=body,
-                    ),
-                    sound='default',
-                    content_available=True,
-                ),
-            ),
+            payload=apns_payload,
         )
         
         # Construct the message
@@ -111,7 +131,7 @@ def send_push_notification(fcm_token, title, body, data=None, high_priority=Fals
         return {'success': False, 'response': None, 'error': str(e)}
 
 
-def send_push_notification_to_multiple(fcm_tokens, title, body, data=None, high_priority=False, ttl_hours=24):
+def send_push_notification_to_multiple(fcm_tokens, title, body, data=None, high_priority=False, ttl_hours=24, icon=None, image=None):
     """
     Send a push notification to multiple devices using batch API
     
@@ -122,6 +142,8 @@ def send_push_notification_to_multiple(fcm_tokens, title, body, data=None, high_
         data (dict): Additional data to send with the notification
         high_priority (bool): Whether to send as high priority (default: False)
         ttl_hours (int): Time to live in hours (default: 24)
+        icon (str): URL to notification icon (Android only, defaults to logo-icon.svg)
+        image (str): URL to notification image (large image, both platforms)
     
     Returns:
         dict: {
@@ -148,35 +170,53 @@ def send_push_notification_to_multiple(fcm_tokens, title, body, data=None, high_
         return {'success': 0, 'failure': 0, 'invalid_tokens': []}
     
     # Validate payload size
-    estimated_size = len(title) + len(body) + len(str(data or {}))
+    estimated_size = len(title) + len(body) + len(str(data or {})) + len(icon or '') + len(image or '')
     if estimated_size > 3500:
         logger.warning(f"Notification payload may be too large (~{estimated_size} bytes)")
     
+    # Use default notification icon if not provided
+    if icon is None and hasattr(settings, 'NOTIFICATION_ICON_URL'):
+        icon = settings.NOTIFICATION_ICON_URL
+    
     # Configure Android-specific options
+    android_notification = messaging.AndroidNotification(
+        sound='default',
+        priority='high' if high_priority else 'default',
+    )
+    
+    # Add icon and image if provided (Android only supports these)
+    if icon:
+        android_notification.icon = icon
+    if image:
+        android_notification.image = image
+    
     android_config = messaging.AndroidConfig(
         priority='high' if high_priority else 'normal',
         ttl=timedelta(hours=ttl_hours),
-        notification=messaging.AndroidNotification(
-            sound='default',
-            priority='high' if high_priority else 'default',
-        )
+        notification=android_notification
     )
     
-    # Configure iOS-specific options
+    # Configure iOS-specific options (iOS ignores icon, only supports image)
+    apns_payload = messaging.APNSPayload(
+        aps=messaging.Aps(
+            alert=messaging.ApsAlert(
+                title=title,
+                body=body,
+            ),
+            sound='default',
+            content_available=True,
+        ),
+    )
+    
+    # Add image URL to APNS payload if provided
+    if image:
+        apns_payload.aps.mutable_content = True
+    
     apns_config = messaging.APNSConfig(
         headers={
             'apns-priority': '10' if high_priority else '5',
         },
-        payload=messaging.APNSPayload(
-            aps=messaging.Aps(
-                alert=messaging.ApsAlert(
-                    title=title,
-                    body=body,
-                ),
-                sound='default',
-                content_available=True,
-            ),
-        ),
+        payload=apns_payload,
     )
     
     success_count = 0
@@ -275,14 +315,30 @@ def send_issue_created_notification(issue, central_admins):
     # Send high-priority notifications for critical issues
     is_high_priority = issue.priority in ['critical', 'high']
     
-    # Send notifications
+    # Get first issue image URL if available (for large notification image)
+    issue_image_url = None
+    if hasattr(issue, 'images') and issue.images.exists():
+        first_image = issue.images.first()
+        if first_image and first_image.image:
+            # Get absolute URL for the image
+            if hasattr(first_image.image, 'url'):
+                # In production, this will be the full CDN URL
+                # In development, we need to construct the full URL
+                if settings.ENVIRONMENT == 'development':
+                    site_url = getattr(settings, 'SITE_URL', 'http://localhost:7000')
+                    issue_image_url = f"{site_url}{first_image.image.url}"
+                else:
+                    issue_image_url = first_image.image.url
+    
+    # Send notifications (icon will default to logo-icon.svg from settings)
     result = send_push_notification_to_multiple(
         fcm_tokens, 
         title, 
         body, 
         data,
         high_priority=is_high_priority,
-        ttl_hours=48  # Keep for 48 hours
+        ttl_hours=48,  # Keep for 48 hours
+        image=issue_image_url  # Include first issue image if available
     )
     
     # Clean up invalid tokens from database

@@ -117,8 +117,8 @@ async function getAndRegisterFCMToken() {
     
     try {
         console.log('getAndRegisterFCMToken: Getting service worker registration...');
-        // Get the service worker registration
-        const registration = await navigator.serviceWorker.getRegistration('/static/js/');
+        // Get the service worker registration from root scope
+        const registration = await navigator.serviceWorker.getRegistration('/');
         
         if (!registration) {
             console.error('Service worker registration not found');
@@ -242,8 +242,8 @@ function setupForegroundMessageHandler() {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            // Register service worker - using the static file path
-            const registration = await navigator.serviceWorker.register('/static/js/firebase-messaging-sw.js');
+            // Register service worker from root path for proper scope
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
             console.log('Service Worker registered successfully:', registration);
             
             return registration;
