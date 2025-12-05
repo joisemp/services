@@ -430,4 +430,8 @@ pyrightconfig.json
 .history
 .ionide
 
+# Add to .gitignore if not already there
+firebase-service-account.json
+**/firebase-service-account.json
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode

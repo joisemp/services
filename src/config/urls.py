@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import HomePageView
+from .views import HomePageView, ServiceWorkerView
 
 urlpatterns = [
     # Admin interface
@@ -29,6 +29,9 @@ urlpatterns = [
     
     # Home page
     path('', HomePageView.as_view(), name='home'),
+    
+    # Firebase service worker (must be at root for proper scope)
+    path('firebase-messaging-sw.js', ServiceWorkerView.as_view(), name='firebase-sw'),
     
     # Core application URLs
     path('core/', include('core.urls')),

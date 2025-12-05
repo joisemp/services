@@ -219,6 +219,41 @@ else:
 # Password reset token validity (24 hours)
 PASSWORD_RESET_TIMEOUT = 86400
 
+# Firebase Cloud Messaging Configuration
+# Load from environment variables for both development and production
+FIREBASE_PROJECT_ID = env('FIREBASE_PROJECT_ID', default='')
+
+FIREBASE_CREDENTIALS = {
+    'type': env('FIREBASE_TYPE', default='service_account'),
+    'project_id': FIREBASE_PROJECT_ID,
+    'private_key_id': env('FIREBASE_PRIVATE_KEY_ID', default=''),
+    'private_key': env('FIREBASE_PRIVATE_KEY', default='').replace('\\n', '\n'),
+    'client_email': env('FIREBASE_CLIENT_EMAIL', default=''),
+    'client_id': env('FIREBASE_CLIENT_ID', default=''),
+    'auth_uri': env('FIREBASE_AUTH_URI', default='https://accounts.google.com/o/oauth2/auth'),
+    'token_uri': env('FIREBASE_TOKEN_URI', default='https://oauth2.googleapis.com/token'),
+    'auth_provider_x509_cert_url': env('FIREBASE_AUTH_PROVIDER_CERT_URL', default='https://www.googleapis.com/oauth2/v1/certs'),
+    'client_x509_cert_url': env('FIREBASE_CLIENT_CERT_URL', default=''),
+    'universe_domain': env('FIREBASE_UNIVERSE_DOMAIN', default='googleapis.com')
+} if FIREBASE_PROJECT_ID else None
+
+# Firebase Web Configuration (for frontend)
+FIREBASE_API_KEY = env('FIREBASE_API_KEY', default='')
+FIREBASE_AUTH_DOMAIN = env('FIREBASE_AUTH_DOMAIN', default='')
+FIREBASE_STORAGE_BUCKET = env('FIREBASE_STORAGE_BUCKET', default='')
+FIREBASE_MESSAGING_SENDER_ID = env('FIREBASE_MESSAGING_SENDER_ID', default='')
+FIREBASE_APP_ID = env('FIREBASE_APP_ID', default='')
+FIREBASE_VAPID_KEY = env('FIREBASE_VAPID_KEY', default='')
+
+# Push Notification Configuration
+# Notification icon URL (serves logo-icon.svg from static files)
+if ENVIRONMENT == 'development':
+    # In development, construct local URL
+    NOTIFICATION_ICON_URL = f"{env('SITE_URL', default='http://localhost:7000')}/static/images/logo-icon.svg"
+else:
+    # In production, use CDN URL from static files
+    NOTIFICATION_ICON_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/static/images/logo-icon.svg"
+
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
     url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
