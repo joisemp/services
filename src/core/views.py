@@ -368,7 +368,13 @@ class SpaceListView(CentralAdminOnlyAccessMixin, ListView):
     context_object_name = 'spaces'
 
     def get_queryset(self):
-        return Space.objects.select_related('org').prefetch_related('users').order_by('name')
+        queryset = Space.objects.select_related('org').prefetch_related('users').order_by('name')
+        
+        # Filter spaces by user's organization
+        if self.request.user.organization:
+            queryset = queryset.filter(org=self.request.user.organization)
+        
+        return queryset
 
 
 class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
