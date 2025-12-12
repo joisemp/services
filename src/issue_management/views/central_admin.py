@@ -83,6 +83,19 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
         kwargs['current_user'] = self.request.user
         return kwargs
     
+    def post(self, request, *args, **kwargs):
+        """Override post to prevent duplicate submissions"""
+        # Check if this form has already been submitted
+        form_token = request.POST.get('form_token', '')
+        if form_token:
+            # Check if token was already used
+            used_tokens = request.session.get('used_issue_create_tokens', [])
+            if form_token in used_tokens:
+                messages.warning(request, 'This issue has already been created. Please do not submit the form multiple times.')
+                return redirect(self.success_url)
+        
+        return super().post(request, *args, **kwargs)
+    
     def form_valid(self, form):
         # Set the reporter to the current user before saving
         form.instance.reporter = self.request.user
@@ -103,6 +116,15 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
                 issue_image._uploaded_by = self.request.user
                 issue_image.save()
         
+        # Mark this form as submitted to prevent duplicates
+        form_token = self.request.POST.get('form_token', '')
+        if form_token:
+            used_tokens = self.request.session.get('used_issue_create_tokens', [])
+            used_tokens.append(form_token)
+            # Keep only the last 10 tokens to prevent session bloat
+            self.request.session['used_issue_create_tokens'] = used_tokens[-10:]
+        
+        messages.success(self.request, f'Issue "{self.object.title}" created successfully!')
         return response
     
 
