@@ -67,8 +67,19 @@ class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     context_object_name = "issues"
 
     def get_queryset(self):
+        # Start with issues assigned to the supervisor
+        queryset = Issue.objects.filter(assigned_to=self.request.user)
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status')
+        if status_filter and status_filter in ['open', 'assigned', 'in_progress', 'critical']:
+            if status_filter == 'critical':
+                queryset = queryset.filter(priority='critical')
+            else:
+                queryset = queryset.filter(status=status_filter)
+        
         # Order by status (open/assigned/in_progress first), then priority (critical first, low last), then creation date
-        return Issue.objects.filter(assigned_to=self.request.user).annotate(
+        return queryset.annotate(
             status_order=Case(
                 When(status='open', then=1),
                 When(status='assigned', then=2),
@@ -89,6 +100,11 @@ class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
                 output_field=IntegerField(),
             )
         ).order_by('status_order', 'priority_order', '-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_filter'] = self.request.GET.get('status', 'all')
+        return context
     
     
 class IssueDetailView(SupervisorOnlyAccessMixin, DetailView):
