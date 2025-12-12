@@ -353,6 +353,8 @@ class SpaceCreateView(CentralAdminOnlyAccessMixin, CreateView):
     success_url = reverse_lazy('core:space_list')
 
     def form_valid(self, form):
+        # Automatically assign the user's organization to the space
+        form.instance.org = self.request.user.organization
         response = super().form_valid(form)
         from django.contrib import messages
         messages.success(self.request, f'Space {self.object.name} created successfully.')
