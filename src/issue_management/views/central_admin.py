@@ -83,6 +83,15 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
         kwargs['current_user'] = self.request.user
         return kwargs
     
+    def get_form(self, form_class=None):
+        """Filter spaces to only show those in the user's organization"""
+        form = super().get_form(form_class)
+        if self.request.user.organization:
+            form.fields['space'].queryset = Space.objects.filter(
+                org=self.request.user.organization
+            ).order_by('name')
+        return form
+    
     def post(self, request, *args, **kwargs):
         """Override post to prevent duplicate submissions"""
         # Check if this form has already been submitted
