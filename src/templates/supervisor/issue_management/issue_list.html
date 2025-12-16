@@ -31,21 +31,41 @@
   <div class="container-nav">
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}">All</a>
+        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}{% if space_filter %}?space={{ space_filter }}{% endif %}">All</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=open">Open</a>
+        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=open{% if space_filter %}&space={{ space_filter }}{% endif %}">Open</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=assigned">Assigned</a>
+        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=assigned{% if space_filter %}&space={{ space_filter }}{% endif %}">Assigned</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=in_progress">In progress</a>
+        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=in_progress{% if space_filter %}&space={{ space_filter }}{% endif %}">In progress</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=critical">Critical</a>
+        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'issue_management:supervisor:issue_list' %}?status=critical{% if space_filter %}&space={{ space_filter }}{% endif %}">Critical</a>
       </li>
     </ul>
+  </div>
+</section>
+<section id="filter-bar">
+  <div class="container-fluid mt-3">
+    <div class="row">
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="mb-3">
+          <label for="spaceFilter" class="form-label text-body-secondary">Filter by Space</label>
+          <select id="spaceFilter" class="form-select" onchange="filterBySpace(this.value)">
+            <option value="">All Spaces</option>
+            <option value="no_space" {% if space_filter == 'no_space' %}selected{% endif %}>No Space Assigned</option>
+            {% for space in spaces %}
+              <option value="{{ space.slug }}" {% if space_filter == space.slug %}selected{% endif %}>
+                {{ space.name }} ({{ space.org.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 <section id="issue-list">
@@ -80,4 +100,23 @@
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function filterBySpace(spaceSlug) {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (spaceSlug) {
+    urlParams.set('space', spaceSlug);
+  } else {
+    urlParams.delete('space');
+  }
+  
+  // Construct the new URL with updated parameters
+  const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+  window.location.href = newUrl;
+}
+</script>
 {% endblock %}

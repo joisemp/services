@@ -8,6 +8,7 @@ from django.contrib import messages
 from .. models import Issue, WorkTask, SiteVisit, SiteVisitImage
 from django.shortcuts import redirect
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
+from core.models import Space
 
 
 class WorkTaskListView(SupervisorOnlyAccessMixin, ListView):
@@ -78,6 +79,16 @@ class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
             else:
                 queryset = queryset.filter(status=status_filter)
         
+        # Filter by space if provided
+        space_filter = self.request.GET.get('space')
+        if space_filter:
+            if space_filter == 'no_space':
+                # Filter issues with no space assigned
+                queryset = queryset.filter(space__isnull=True)
+            else:
+                # Filter by specific space slug
+                queryset = queryset.filter(space__slug=space_filter)
+        
         # Order by status (open/assigned/in_progress first), then priority (critical first, low last), then creation date
         return queryset.annotate(
             status_order=Case(
@@ -104,6 +115,14 @@ class SupervisorIssueListView(SupervisorOnlyAccessMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_filter'] = self.request.GET.get('status', 'all')
+        context['space_filter'] = self.request.GET.get('space', '')
+        # Get all spaces in the supervisor's organization
+        if self.request.user.organization:
+            context['spaces'] = Space.objects.filter(
+                org=self.request.user.organization
+            ).select_related('org').order_by('name')
+        else:
+            context['spaces'] = Space.objects.none()
         return context
     
     
