@@ -641,6 +641,10 @@ class IssueActivity(models.Model):
         ('site_visit_updated', 'Site Visit Updated'),
         ('site_visit_completed', 'Site Visit Completed'),
         ('site_visit_cancelled', 'Site Visit Cancelled'),
+        ('purchase_request_created', 'Purchase Request Created'),
+        ('purchase_request_approved', 'Purchase Request Approved'),
+        ('purchase_request_rejected', 'Purchase Request Rejected'),
+        ('purchase_request_deleted', 'Purchase Request Deleted'),
         ('image_added', 'Image Added'),
         ('image_deleted', 'Image Deleted'),
         ('voice_added', 'Voice Recording Added'),
@@ -672,3 +676,55 @@ class IssueActivity(models.Model):
     
     def __str__(self):
         return f"{self.get_activity_type_display()} - {self.issue.title}"
+
+
+class PurchaseRequest(models.Model):
+    """
+    Purchase requests created by space admins for issue-related expenses.
+    Central admins can approve/reject these requests.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    issue = models.ForeignKey(Issue, related_name='purchase_requests', on_delete=models.CASCADE)
+    org = models.ForeignKey('core.Organization', related_name='purchase_requests', on_delete=models.CASCADE)
+    space = models.ForeignKey('core.Space', related_name='purchase_requests', on_delete=models.CASCADE, null=True, blank=True)
+    
+    item = models.CharField(max_length=300, help_text="Name/description of the item to purchase")
+    quantity = models.PositiveIntegerField(help_text="Number of units needed")
+    description = models.TextField(blank=True, null=True, help_text="Additional notes or details about the purchase request")
+    estimated_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Estimated cost in currency (optional)")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Request tracking
+    requested_by = models.ForeignKey('core.User', related_name='purchase_requests_created', on_delete=models.CASCADE)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    
+    # Approval tracking
+    reviewed_by = models.ForeignKey('core.User', related_name='purchase_requests_reviewed', on_delete=models.SET_NULL, null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True, null=True, help_text="Notes from central admin when approving/rejecting")
+    
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = 'Purchase Request'
+        verbose_name_plural = 'Purchase Requests'
+        indexes = [
+            models.Index(fields=['issue', '-requested_at']),
+            models.Index(fields=['status', '-requested_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.item}")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.item} (x{self.quantity}) - {self.get_status_display()}"

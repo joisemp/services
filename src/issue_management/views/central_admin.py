@@ -1,11 +1,11 @@
-from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
+﻿from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Case, When, IntegerField
-from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage
+from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage, PurchaseRequest, IssueActivity
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from ..forms_reports import PerformanceReportForm
 from ..utils.performance_report import PerformanceReportGenerator
@@ -40,7 +40,7 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
                 queryset = queryset.filter(space__slug=space_filter)
         
         # Order by status (open/assigned/in_progress first, then resolved/escalated, then closed/cancelled)
-        # Then by priority (critical→high→medium→low), then by creation date
+        # Then by priority (criticalâ†’highâ†’mediumâ†’low), then by creation date
         return queryset.annotate(
             status_order=Case(
                 When(status='open', then=1),
@@ -177,6 +177,9 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
         # Add site visits to context
         site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
         context['site_visits'] = site_visits
+        # Add purchase requests to context
+        purchase_requests = self.object.purchase_requests.select_related('requested_by', 'reviewed_by').all()
+        context['purchase_requests'] = purchase_requests
         # Add activity history to context
         activities = self.object.activities.select_related('user').all()
         context['activities'] = activities
@@ -1099,3 +1102,160 @@ class PerformanceReportView(CentralAdminOnlyAccessMixin, View):
                 'form': form,
             }
             return render(request, self.template_name, context)
+
+
+class PurchaseRequestListView(CentralAdminOnlyAccessMixin, ListView):
+    """List all purchase requests for central admin"""
+    model = PurchaseRequest
+    template_name = "central_admin/issue_management/purchase_request_list.html"
+    context_object_name = "purchase_requests"
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = PurchaseRequest.objects.select_related(
+            'issue', 'issue__space', 'org', 'space', 'requested_by', 'reviewed_by'
+        ).all()
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status')
+        if status_filter and status_filter in ['pending', 'approved', 'rejected']:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by space if provided
+        space_filter = self.request.GET.get('space')
+        if space_filter:
+            queryset = queryset.filter(space__slug=space_filter)
+        
+        # Order by status (pending first), then by request date
+        return queryset.annotate(
+            status_order=Case(
+                When(status='pending', then=1),
+                When(status='approved', then=2),
+                When(status='rejected', then=3),
+                default=4,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', '-requested_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get all spaces for filter dropdown
+        context['spaces'] = Space.objects.filter(org=self.request.user.organization).order_by('name')
+        
+        # Get filter values
+        context['current_status_filter'] = self.request.GET.get('status', '')
+        context['current_space_filter'] = self.request.GET.get('space', '')
+        
+        # Get counts by status for display
+        all_requests = PurchaseRequest.objects.filter(org=self.request.user.organization)
+        context['pending_count'] = all_requests.filter(status='pending').count()
+        context['approved_count'] = all_requests.filter(status='approved').count()
+        context['rejected_count'] = all_requests.filter(status='rejected').count()
+        
+        return context
+
+
+class PurchaseRequestDetailView(CentralAdminOnlyAccessMixin, DetailView):
+    """View details of a specific purchase request"""
+    model = PurchaseRequest
+    template_name = "central_admin/issue_management/purchase_request_detail.html"
+    context_object_name = "purchase_request"
+    slug_field = 'slug'
+    slug_url_kwarg = 'purchase_request_slug'
+    
+    def get_queryset(self):
+        return PurchaseRequest.objects.select_related(
+            'issue', 'issue__space', 'issue__reporter', 'org', 'space', 'requested_by', 'reviewed_by'
+        ).prefetch_related('issue__images')
+
+
+class PurchaseRequestApproveView(CentralAdminOnlyAccessMixin, View):
+    """Approve a purchase request"""
+    
+    def post(self, request, purchase_request_slug):
+        purchase_request = get_object_or_404(PurchaseRequest, slug=purchase_request_slug)
+        
+        # Get review notes from form
+        review_notes = request.POST.get('review_notes', '')
+        
+        # Update purchase request
+        purchase_request.status = 'approved'
+        purchase_request.reviewed_by = request.user
+        purchase_request.reviewed_at = timezone.now()
+        purchase_request.review_notes = review_notes
+        purchase_request.save()
+        
+        # Track activity
+        IssueActivity.objects.create(
+            issue=purchase_request.issue,
+            activity_type='purchase_request_approved',
+            user=request.user,
+            description=f'Purchase request for "{purchase_request.item}" (Qty: {purchase_request.quantity}) approved{f" - ${purchase_request.estimated_amount}" if purchase_request.estimated_amount else ""}'
+        )
+        
+        messages.success(request, f"Purchase request for '{purchase_request.item}' has been approved.")
+        return redirect('issue_management:central_admin:purchase_request_detail', purchase_request_slug=purchase_request.slug)
+
+
+class PurchaseRequestRejectView(CentralAdminOnlyAccessMixin, View):
+    """Reject a purchase request"""
+    
+    def post(self, request, purchase_request_slug):
+        purchase_request = get_object_or_404(PurchaseRequest, slug=purchase_request_slug)
+        
+        # Get review notes from form (required for rejection)
+        review_notes = request.POST.get('review_notes', '')
+        
+        if not review_notes:
+            messages.error(request, "Please provide a reason for rejecting this purchase request.")
+            return redirect('issue_management:central_admin:purchase_request_detail', purchase_request_slug=purchase_request.slug)
+        
+        # Update purchase request
+        purchase_request.status = 'rejected'
+        purchase_request.reviewed_by = request.user
+        purchase_request.reviewed_at = timezone.now()
+        purchase_request.review_notes = review_notes
+        purchase_request.save()
+        
+        # Track activity
+        IssueActivity.objects.create(
+            issue=purchase_request.issue,
+            activity_type='purchase_request_rejected',
+            user=request.user,
+            description=f'Purchase request for "{purchase_request.item}" (Qty: {purchase_request.quantity}) rejected - Reason: {review_notes[:100]}'
+        )
+        
+        messages.success(request, f"Purchase request for '{purchase_request.item}' has been rejected.")
+        return redirect('issue_management:central_admin:purchase_request_detail', purchase_request_slug=purchase_request.slug)
+
+
+class PurchaseRequestDeleteView(CentralAdminOnlyAccessMixin, View):
+    """Delete a pending purchase request"""
+    
+    def post(self, request, purchase_request_slug):
+        purchase_request = get_object_or_404(PurchaseRequest, slug=purchase_request_slug)
+        
+        # Only allow deletion if status is pending
+        if purchase_request.status != 'pending':
+            messages.error(request, "Only pending purchase requests can be deleted.")
+            return redirect('issue_management:central_admin:purchase_request_detail', purchase_request_slug=purchase_request.slug)
+        
+        item_name = purchase_request.item
+        issue_slug = purchase_request.issue.slug
+        issue = purchase_request.issue
+        
+        # Track activity before deletion
+        IssueActivity.objects.create(
+            issue=issue,
+            activity_type='purchase_request_deleted',
+            user=request.user,
+            description=f'Purchase request for "{item_name}" was deleted'
+        )
+        
+        # Delete the purchase request
+        purchase_request.delete()
+        
+        messages.success(request, f"Purchase request for '{item_name}' has been deleted.")
+        return redirect('issue_management:central_admin:issue_detail', issue_slug=issue_slug)
+

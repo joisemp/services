@@ -39,4 +39,8 @@ urlpatterns = [
     path('site-visits/<slug:site_visit_slug>/', space_admin.SiteVisitDetailView.as_view(), name='site_visit_detail'),
     path('site-visits/<slug:site_visit_slug>/edit/', space_admin.SiteVisitUpdateView.as_view(), name='site_visit_update'),
     path('site-visits/<slug:site_visit_slug>/delete/', space_admin.SiteVisitDeleteView.as_view(), name='site_visit_delete'),
+    
+    # Purchase Request URLs
+    path('<slug:issue_slug>/purchase-requests/create/', space_admin.PurchaseRequestCreateView.as_view(), name='purchase_request_create'),
+    path('purchase-requests/<slug:purchase_request_slug>/delete/', space_admin.PurchaseRequestDeleteView.as_view(), name='purchase_request_delete'),
 ]

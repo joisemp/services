@@ -5,8 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Case, When, IntegerField
-from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage
-from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
+from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteVisitImage, PurchaseRequest, IssueActivity
+from ..forms import IssueForm, SpaceAdminIssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm, PurchaseRequestForm
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 class IssueListView(SpaceAdminWithActiveSpaceMixin, ListView):
@@ -170,6 +170,11 @@ class IssueDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
         # Add site visits to context
         site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
         context['site_visits'] = site_visits
+        # Add purchase requests to context
+        purchase_requests = self.object.purchase_requests.select_related('requested_by', 'reviewed_by').all()
+        context['purchase_requests'] = purchase_requests
+        # Add purchase request form to context
+        context['purchase_request_form'] = PurchaseRequestForm()
         return context
 
 
@@ -996,8 +1001,84 @@ class SiteVisitDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
             queryset = queryset.filter(issue__space=self.request.user.active_space)
         
         return queryset
+
+
+class PurchaseRequestCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
+    """Create a purchase request for an issue"""
+    model = PurchaseRequest
+    form_class = PurchaseRequestForm
+    template_name = "space_admin/issue_management/purchase_request_create.html"
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the issue
+        self.issue = get_object_or_404(Issue, slug=self.kwargs['issue_slug'])
+        
+        # Ensure issue belongs to space admin's active space
+        if request.user.active_space and self.issue.space != request.user.active_space:
+            messages.error(request, "You don't have permission to create purchase requests for this issue.")
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        purchase_request = form.save(commit=False)
+        purchase_request.issue = self.issue
+        purchase_request.org = self.request.user.organization
+        purchase_request.space = self.request.user.active_space
+        purchase_request.requested_by = self.request.user
+        purchase_request.save()
+        
+        # Track activity
+        IssueActivity.objects.create(
+            issue=self.issue,
+            activity_type='purchase_request_created',
+            user=self.request.user,
+            description=f'Purchase request for "{purchase_request.item}" (Qty: {purchase_request.quantity}) created{f" - Estimated: ${purchase_request.estimated_amount}" if purchase_request.estimated_amount else ""}'
+        )
+        
+        messages.success(self.request, f"Purchase request for '{purchase_request.item}' has been created successfully.")
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=self.issue.slug)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.issue
+        return context
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['issue'] = self.object.issue
         return context
+
+class PurchaseRequestDeleteView(SpaceAdminWithActiveSpaceMixin, View):
+    """Delete a pending purchase request"""
+    
+    def post(self, request, purchase_request_slug):
+        purchase_request = get_object_or_404(PurchaseRequest, slug=purchase_request_slug)
+        
+        # Ensure purchase request belongs to space admin's active space
+        if request.user.active_space and purchase_request.space != request.user.active_space:
+            messages.error(request, "You don't have permission to delete this purchase request.")
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=purchase_request.issue.slug)
+        
+        # Only allow deletion if status is pending
+        if purchase_request.status != 'pending':
+            messages.error(request, "Only pending purchase requests can be deleted.")
+            return redirect('issue_management:space_admin:issue_detail', issue_slug=purchase_request.issue.slug)
+        
+        item_name = purchase_request.item
+        issue_slug = purchase_request.issue.slug
+        issue = purchase_request.issue
+        
+        # Track activity before deletion
+        IssueActivity.objects.create(
+            issue=issue,
+            activity_type='purchase_request_deleted',
+            user=request.user,
+            description=f'Purchase request for "{item_name}" was deleted'
+        )
+        
+        # Delete the purchase request
+        purchase_request.delete()
+        
+        messages.success(request, f"Purchase request for '{item_name}' has been deleted.")
+        return redirect('issue_management:space_admin:issue_detail', issue_slug=issue_slug)

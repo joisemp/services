@@ -8,6 +8,14 @@ urlpatterns = [
     path('create/', central_admin.IssueCreateView.as_view(), name='issue_create'),
     path('site-visits/', central_admin.SiteVisitListView.as_view(), name='site_visit_list'),
     path('performance-report/', central_admin.PerformanceReportView.as_view(), name='performance_report'),
+    
+    # Purchase Request URLs (must be before issue_slug patterns)
+    path('purchase-requests/', central_admin.PurchaseRequestListView.as_view(), name='purchase_request_list'),
+    path('purchase-requests/<slug:purchase_request_slug>/', central_admin.PurchaseRequestDetailView.as_view(), name='purchase_request_detail'),
+    path('purchase-requests/<slug:purchase_request_slug>/approve/', central_admin.PurchaseRequestApproveView.as_view(), name='purchase_request_approve'),
+    path('purchase-requests/<slug:purchase_request_slug>/reject/', central_admin.PurchaseRequestRejectView.as_view(), name='purchase_request_reject'),
+    path('purchase-requests/<slug:purchase_request_slug>/delete/', central_admin.PurchaseRequestDeleteView.as_view(), name='purchase_request_delete'),
+    
     path('<slug:issue_slug>/edit/', central_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', central_admin.IssueDetailView.as_view(), name='issue_detail'),
     path('<slug:issue_slug>/assign/', central_admin.IssueAssignmentView.as_view(), name='issue_assign'),

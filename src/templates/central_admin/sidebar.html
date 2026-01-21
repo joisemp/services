@@ -56,6 +56,13 @@
             <span class="menu-text">Site Visits</span>
         </a>
 
+        <a class="navlink {% is_active 'issue_management:central_admin:purchase_request_list,issue_management:central_admin:purchase_request_detail,issue_management:central_admin:purchase_request_approve,issue_management:central_admin:purchase_request_reject' %}" href="{% url 'issue_management:central_admin:purchase_request_list' %}">
+            <span class="material-symbols-outlined me-2">
+                shopping_cart
+            </span>
+            <span class="menu-text">Purchases</span>
+        </a>
+
         <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">
             <span class="material-symbols-outlined">
                 apartment
