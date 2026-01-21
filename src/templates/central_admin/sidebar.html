@@ -63,6 +63,13 @@
             <span class="menu-text">Purchases</span>
         </a>
 
+        <a class="navlink {% is_active 'issue_management:central_admin:shopping_list_list,issue_management:central_admin:shopping_list_detail' %}" href="{% url 'issue_management:central_admin:shopping_list_list' %}">
+            <span class="material-symbols-outlined me-2">
+                receipt_long
+            </span>
+            <span class="menu-text">Shopping Lists</span>
+        </a>
+
         <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">
             <span class="material-symbols-outlined">
                 apartment

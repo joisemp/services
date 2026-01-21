@@ -5,7 +5,7 @@
 {% block title %}Purchase Requests - Issue Management{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/issue_management/purchase_request_list/style.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -74,10 +74,10 @@
       <!-- Action Buttons -->
       <div class="mb-3 d-flex justify-content-between align-items-center">
         <div>
-          <button type="button" id="select-all-btn" class="btn btn-sm btn-outline-secondary">
+          <button type="button" id="select-all-btn" class="btn btn-sm btn-outline-dark mb-3 mb-md-auto">
             <i class="fas fa-check-square me-1"></i>Select All Approved
           </button>
-          <button type="button" id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">
+          <button type="button" id="deselect-all-btn" class="btn btn-sm btn-outline-dark mb-3 mb-md-auto">
             <i class="fas fa-square me-1"></i>Deselect All
           </button>
         </div>
@@ -87,6 +87,7 @@
         </button>
       </div>
       
+      <!-- Desktop Table View -->
       <div class="card border-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
@@ -115,7 +116,14 @@
                   {% endif %}
                 </td>
                 <td>
-                <div class="fw-semibold">{{ pr.item }}</div>
+                <div class="fw-semibold">
+                  {{ pr.item }}
+                  {% if pr.shopping_list_items.exists %}
+                  <span class="badge bg-info text-dark ms-2" title="Included in {{ pr.shopping_list_items.count }} shopping list(s)">
+                    <i class="fas fa-shopping-cart"></i> In List
+                  </span>
+                  {% endif %}
+                </div>
                 <small class="text-muted">Qty: {{ pr.quantity }}</small>
                 {% if pr.description %}
                 <div><small class="text-muted">{{ pr.description|truncatewords:10 }}</small></div>
@@ -136,7 +144,7 @@
               </td>
               <td>
                 {% if pr.estimated_amount %}
-                  <span class="fw-semibold">${{ pr.estimated_amount }}</span>
+                  <span class="fw-semibold">₹{{ pr.estimated_amount }}</span>
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
@@ -180,6 +188,104 @@
           </tbody>
         </table>
       </div>
+    </div>
+    
+    <!-- Mobile Card View -->
+    <div class="mobile-cards-container">
+      {% for pr in purchase_requests %}
+      <div class="mobile-card">
+        <div class="mobile-card-header">
+          {% if pr.status == 'approved' %}
+          <input type="checkbox" name="selected_requests" value="{{ pr.slug }}" 
+                 class="form-check-input purchase-checkbox mobile-card-checkbox">
+          {% endif %}
+          <div class="mobile-card-title">
+            {{ pr.item }}
+            {% if pr.shopping_list_items.exists %}
+            <span class="badge bg-info text-dark ms-2">
+              <i class="fas fa-shopping-cart"></i> In List
+            </span>
+            {% endif %}
+          </div>
+          <span class="badge rounded-pill ms-2
+                       {% if pr.status == 'pending' %}bg-warning text-dark
+                       {% elif pr.status == 'approved' %}bg-success
+                       {% elif pr.status == 'rejected' %}bg-danger
+                       {% endif %}">
+            {{ pr.get_status_display }}
+          </span>
+        </div>
+        
+        <div class="mobile-card-body">
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Quantity:</span>
+            <span class="mobile-card-value">{{ pr.quantity }}</span>
+          </div>
+          
+          {% if pr.description %}
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Description:</span>
+            <span class="mobile-card-value">{{ pr.description|truncatewords:8 }}</span>
+          </div>
+          {% endif %}
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Issue:</span>
+            <span class="mobile-card-value">
+              <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
+                 class="text-decoration-none">
+                {{ pr.issue.title|truncatewords:4 }}
+              </a>
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Space:</span>
+            <span class="mobile-card-value">
+              {% if pr.space %}{{ pr.space.name }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Amount:</span>
+            <span class="mobile-card-value">
+              {% if pr.estimated_amount %}
+                <strong>₹{{ pr.estimated_amount }}</strong>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Requested By:</span>
+            <span class="mobile-card-value">{{ pr.requested_by.get_full_name }}</span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Date:</span>
+            <span class="mobile-card-value">{{ pr.requested_at|date:"M d, Y" }}</span>
+          </div>
+        </div>
+        
+        <div class="mobile-card-actions">
+          <a href="{% url 'issue_management:central_admin:purchase_request_detail' purchase_request_slug=pr.slug %}" 
+             class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-eye me-1"></i>View
+          </a>
+          {% if pr.status == 'pending' %}
+          <form method="post" action="{% url 'issue_management:central_admin:purchase_request_delete' purchase_request_slug=pr.slug %}" 
+                onsubmit="return confirm('Are you sure you want to delete this purchase request?');"
+                style="flex: 1;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+              <i class="fas fa-trash me-1"></i>Delete
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
     </form>
 
@@ -233,14 +339,11 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Shopping list script loaded');
-    
     const form = document.getElementById('shopping-list-form');
     if (!form) {
         console.error('Form not found!');
         return;
     }
-    console.log('Form found:', form);
     
     const checkboxes = document.querySelectorAll('.purchase-checkbox');
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
@@ -249,18 +352,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateBtn = document.getElementById('generate-list-btn');
     const selectedCount = document.getElementById('selected-count');
     
-    console.log('Found', checkboxes.length, 'checkboxes');
-    
     // Exit if no checkboxes exist
     if (checkboxes.length === 0) {
-        console.log('No checkboxes found, disabling generate button');
         if (generateBtn) generateBtn.disabled = true;
         return;
     }
     
     function updateCount() {
         const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
-        console.log('Selected count:', checked);
         if (selectedCount) selectedCount.textContent = checked;
         if (generateBtn) generateBtn.disabled = checked === 0;
     }
@@ -268,7 +367,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Individual checkbox change
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            console.log('Checkbox changed:', this.value, this.checked);
             updateCount();
             // Update select all checkbox state
             if (selectAllCheckbox) {
@@ -283,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Select all checkbox
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
-            console.log('Select all checkbox changed:', this.checked);
             checkboxes.forEach(checkbox => {
                 checkbox.checked = this.checked;
             });
@@ -294,7 +391,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Select all button
     if (selectAllBtn) {
         selectAllBtn.addEventListener('click', function() {
-            console.log('Select all button clicked');
             checkboxes.forEach(checkbox => {
                 checkbox.checked = true;
             });
@@ -306,7 +402,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Deselect all button
     if (deselectAllBtn) {
         deselectAllBtn.addEventListener('click', function() {
-            console.log('Deselect all button clicked');
             checkboxes.forEach(checkbox => {
                 checkbox.checked = false;
             });
@@ -317,20 +412,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submit
     form.addEventListener('submit', function(e) {
-        console.log('Form submitted');
         const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
         if (checked === 0) {
             e.preventDefault();
             alert('Please select at least one approved purchase request.');
-            console.log('Form submission prevented - no items selected');
-        } else {
-            console.log('Submitting form with', checked, 'selected items');
         }
     });
     
     // Initial count
     updateCount();
-    console.log('Script initialization complete');
 });
 </script>
 {% endblock %}

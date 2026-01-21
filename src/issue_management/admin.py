@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, 
     WorkTaskShare, SiteVisit, SiteVisitImage, IssueReviewComment, IssueReviewCommentImage,
-    IssueActivity, PurchaseRequest
+    IssueActivity, PurchaseRequest, ShoppingList, ShoppingListItem
 )
 
 
@@ -639,3 +639,66 @@ class PurchaseRequestAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('issue', 'org', 'space', 'requested_by', 'reviewed_by')
+
+
+class ShoppingListItemInline(admin.TabularInline):
+    model = ShoppingListItem
+    extra = 0
+    fields = ['purchase_request', 'item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name']
+    readonly_fields = ['item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'issue_title']
+    can_delete = False
+
+
+@admin.register(ShoppingList)
+class ShoppingListAdmin(admin.ModelAdmin):
+    list_display = ['title', 'org', 'generated_by', 'generated_at', 'item_count', 'total_amount']
+    list_filter = ['org', 'generated_at']
+    search_fields = ['title', 'org__name', 'generated_by__email']
+    readonly_fields = ['slug', 'generated_at']
+    autocomplete_fields = ['org', 'generated_by']
+    date_hierarchy = 'generated_at'
+    ordering = ['-generated_at']
+    inlines = [ShoppingListItemInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'org', 'slug')
+        }),
+        ('Generation Details', {
+            'fields': ('generated_by', 'generated_at')
+        }),
+        ('Summary', {
+            'fields': ('item_count', 'total_amount')
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('org', 'generated_by')
+
+
+@admin.register(ShoppingListItem)
+class ShoppingListItemAdmin(admin.ModelAdmin):
+    list_display = ['shopping_list', 'item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'added_at']
+    list_filter = ['shopping_list', 'space_name', 'added_at']
+    search_fields = ['item_snapshot', 'issue_title', 'space_name']
+    readonly_fields = ['added_at']
+    autocomplete_fields = ['shopping_list', 'purchase_request']
+    date_hierarchy = 'added_at'
+    ordering = ['-added_at']
+    
+    fieldsets = (
+        ('Shopping List', {
+            'fields': ('shopping_list', 'purchase_request')
+        }),
+        ('Snapshot Data', {
+            'fields': ('item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'issue_title')
+        }),
+        ('Metadata', {
+            'fields': ('added_at',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('shopping_list', 'purchase_request')

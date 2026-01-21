@@ -728,3 +728,68 @@ class PurchaseRequest(models.Model):
     
     def __str__(self):
         return f"{self.item} (x{self.quantity}) - {self.get_status_display()}"
+
+
+class ShoppingList(models.Model):
+    """
+    Shopping lists generated from approved purchase requests.
+    Allows central admins to save and reference shopping lists.
+    """
+    title = models.CharField(max_length=200, help_text="Title/name for this shopping list")
+    org = models.ForeignKey('core.Organization', related_name='shopping_lists', on_delete=models.CASCADE)
+    
+    # Generation tracking
+    generated_by = models.ForeignKey('core.User', related_name='shopping_lists_created', on_delete=models.CASCADE)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    
+    # Summary fields
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Total estimated amount for all items")
+    item_count = models.PositiveIntegerField(default=0, help_text="Total number of purchase requests in this list")
+    
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-generated_at']
+        verbose_name = 'Shopping List'
+        verbose_name_plural = 'Shopping Lists'
+        indexes = [
+            models.Index(fields=['org', '-generated_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.title}")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.title} - {self.generated_at.strftime('%Y-%m-%d')}"
+
+
+class ShoppingListItem(models.Model):
+    """
+    Individual purchase requests included in a shopping list.
+    Links shopping lists to their constituent purchase requests.
+    """
+    shopping_list = models.ForeignKey(ShoppingList, related_name='items', on_delete=models.CASCADE)
+    purchase_request = models.ForeignKey(PurchaseRequest, related_name='shopping_list_items', on_delete=models.CASCADE)
+    
+    # Store snapshot of values at time of list generation
+    item_snapshot = models.CharField(max_length=300, help_text="Item name at time of list generation")
+    quantity_snapshot = models.PositiveIntegerField(help_text="Quantity at time of list generation")
+    amount_snapshot = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Amount at time of list generation")
+    space_name = models.CharField(max_length=200, help_text="Space name at time of list generation")
+    issue_title = models.CharField(max_length=200, help_text="Issue title at time of list generation")
+    
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['space_name', 'item_snapshot']
+        verbose_name = 'Shopping List Item'
+        verbose_name_plural = 'Shopping List Items'
+        indexes = [
+            models.Index(fields=['shopping_list', 'space_name']),
+        ]
+    
+    def __str__(self):
+        return f"{self.item_snapshot} in {self.shopping_list.title}"

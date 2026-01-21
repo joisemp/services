@@ -1,0 +1,77 @@
+@use '../../sidebar_base';
+
+// Mobile card styles
+.mobile-card {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .table-responsive {
+    display: none !important;
+  }
+  
+  .mobile-card {
+    display: block;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #dee2e6;
+  }
+  
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px;
+  }
+  
+  .mobile-card-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    flex: 1;
+  }
+  
+  .mobile-card-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+  }
+  
+  .mobile-card-body {
+    display: grid;
+    gap: 8px;
+  }
+  
+  .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    font-size: 13px;
+  }
+  
+  .mobile-card-label {
+    font-weight: 500;
+    color: #666;
+    min-width: 90px;
+  }
+  
+  .mobile-card-value {
+    flex: 1;
+    text-align: right;
+    color: #333;
+  }
+  
+  .mobile-card-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 8px;
+
+    .btn {
+      flex: 1;
+    }
+  }
+}

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping List - Purchase Requests</title>
+    <title>{{ shopping_list.title }} - Shopping List</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         @media print {
@@ -200,15 +200,10 @@
             border: none;
             padding: 10px 20px;
             font-size: 14px;
+            width: 100%;
         }
         .btn-print:hover {
             background: #555;
-        }
-        .btn-success.btn-print {
-            background: #198754;
-        }
-        .btn-success.btn-print:hover {
-            background: #157347;
         }
         .mobile-item-card {
             display: none;
@@ -295,84 +290,51 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="no-print" style="max-width: 210mm; margin: 0 auto;">
-        <a href="{% url 'issue_management:central_admin:purchase_request_list' %}" class="btn btn-sm btn-outline-secondary mb-2">
-            ← Back to Purchase Requests
+        <a href="{% url 'issue_management:central_admin:shopping_list_list' %}" class="btn btn-sm btn-outline-secondary mb-2">
+            ← Back to Shopping Lists
         </a>
+        <form method="post" action="{% url 'issue_management:central_admin:shopping_list_delete' shopping_list_slug=shopping_list.slug %}" 
+              onsubmit="return confirm('Are you sure you want to delete this shopping list? This action cannot be undone.');" 
+              style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger mb-2 ms-2">
+                <i class="fas fa-trash me-1"></i>Delete
+            </button>
+        </form>
     </div>
 
-    <div class="no-print" style="max-width: 210mm; margin: 0 auto; display: flex; gap: 10px;">
-        <button onclick="window.print()" class="btn btn-dark btn-print" style="flex: 1;">
-            <i class="fas fa-print me-2"></i>Print Shopping List
+    <div class="no-print" style="max-width: 210mm; margin: 0 auto;">
+        <button onclick="window.print()" class="btn btn-dark btn-print">
+            Print Shopping List
         </button>
-        <button type="button" class="btn btn-success btn-print" style="flex: 1;" data-bs-toggle="modal" data-bs-target="#saveModal">
-            <i class="fas fa-save me-2"></i>Save Shopping List
-        </button>
-    </div>
-
-    <!-- Save Modal -->
-    <div class="modal fade no-print" id="saveModal" tabindex="-1" aria-labelledby="saveModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="post" action="{% url 'issue_management:central_admin:save_shopping_list' %}">
-                    {% csrf_token %}
-                    {% for slug in selected_slugs %}
-                    <input type="hidden" name="selected_requests" value="{{ slug }}">
-                    {% endfor %}
-                    
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="saveModalLabel">Save Shopping List</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="title" class="form-label">List Title <span class="text-muted">(optional)</span></label>
-                            <input type="text" class="form-control" id="title" name="title" 
-                                   placeholder="Shopping List - {{ generated_at|date:'F d, Y' }}">
-                            <div class="form-text">Leave blank to use default title with current date</div>
-                        </div>
-                        <div class="alert alert-info mb-0">
-                            <strong>Summary:</strong> {{ purchase_requests.count }} items, 
-                            {% if total_amount %}₹{{ total_amount|floatformat:2 }}{% else %}amount not specified{% endif %}
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-2"></i>Save List
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 
     <div class="shopping-list-container">
         <!-- Header -->
         <div class="header">
-            <h1>SHOPPING LIST</h1>
+            <h1>{{ shopping_list.title|upper }}</h1>
             <div class="header-info">
-                <div><strong>Date:</strong> {{ generated_at|date:"F d, Y" }}</div>
-                <div><strong>Generated by:</strong> {{ generated_by.get_full_name }}</div>
+                <div><strong>Date:</strong> {{ shopping_list.generated_at|date:"F d, Y" }}</div>
+                <div><strong>Generated by:</strong> {{ shopping_list.generated_by.get_full_name }}</div>
             </div>
         </div>
 
         <!-- Summary -->
         <div class="summary-box">
-            <strong>Total Items:</strong> {{ purchase_requests.count }} | 
-            <strong>Spaces:</strong> {{ grouped_requests|length }} | 
+            <strong>Total Items:</strong> {{ shopping_list.item_count }} | 
+            <strong>Spaces:</strong> {{ grouped_items|length }} | 
             <strong>Estimated Total:</strong> 
-            {% if total_amount %}₹{{ total_amount|floatformat:2 }}{% else %}Not specified{% endif %}
+            {% if shopping_list.total_amount %}₹{{ shopping_list.total_amount|floatformat:2 }}{% else %}Not specified{% endif %}
         </div>
 
         <!-- Items by Space -->
-        {% for space, requests in grouped_requests.items %}
+        {% for space_name, items in grouped_items.items %}
         <div class="space-section">
             <div class="space-header">
-                {% if space %}{{ space.name }}{% else %}No Space Assigned{% endif %}
+                {{ space_name }}
             </div>
             
             <!-- Desktop Table View -->
@@ -387,29 +349,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for pr in requests %}
+                    {% for item in items %}
                     <tr>
                         <td class="checkbox-col">
                             <input type="checkbox">
                         </td>
                         <td>
-                            <div style="font-weight: 500;">{{ pr.item }}</div>
-                            {% if pr.description %}
-                            <div style="font-size: 11px; color: #666; margin-top: 2px;">{{ pr.description }}</div>
-                            {% endif %}
+                            <div style="font-weight: 500;">{{ item.item_snapshot }}</div>
                         </td>
                         <td>
-                            <span class="qty-badge">{{ pr.quantity }}</span>
+                            <span class="qty-badge">{{ item.quantity_snapshot }}</span>
                         </td>
                         <td>
-                            {% if pr.estimated_amount %}
-                                <strong>₹{{ pr.estimated_amount }}</strong>
+                            {% if item.amount_snapshot %}
+                                <strong>₹{{ item.amount_snapshot }}</strong>
                             {% else %}
                                 <span style="color: #999;">—</span>
                             {% endif %}
                         </td>
                         <td style="font-size: 11px; color: #666;">
-                            {{ pr.issue.title|truncatewords:4 }}
+                            {{ item.issue_title|truncatewords:4 }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -417,29 +376,26 @@
             </table>
 
             <!-- Mobile Card View -->
-            {% for pr in requests %}
+            {% for item in items %}
             <div class="mobile-item-card">
                 <div style="display: flex;" class="align-items-start">
                     <input type="checkbox" class="checkbox-mobile">
                     <div style="flex: 1;">
-                        <div class="item-name">{{ pr.item }}</div>
-                        {% if pr.description %}
-                        <div class="item-description">{{ pr.description }}</div>
-                        {% endif %}
+                        <div class="item-name">{{ item.item_snapshot }}</div>
                         <div class="item-details">
                             <div class="item-qty">
-                                <span class="qty-badge">Qty: {{ pr.quantity }}</span>
+                                <span class="qty-badge">Qty: {{ item.quantity_snapshot }}</span>
                             </div>
                             <div class="item-amount">
-                                {% if pr.estimated_amount %}
-                                    ₹{{ pr.estimated_amount }}
+                                {% if item.amount_snapshot %}
+                                    ₹{{ item.amount_snapshot }}
                                 {% else %}
                                     <span style="color: #999;">—</span>
                                 {% endif %}
                             </div>
                         </div>
                         <div class="item-issue">
-                            Issue: {{ pr.issue.title|truncatewords:5 }}
+                            Issue: {{ item.issue_title|truncatewords:5 }}
                         </div>
                     </div>
                 </div>
@@ -453,8 +409,8 @@
             <div class="total-row">
                 <span>ESTIMATED TOTAL:</span>
                 <span>
-                    {% if total_amount %}
-                        ₹{{ total_amount|floatformat:2 }}
+                    {% if shopping_list.total_amount %}
+                        ₹{{ shopping_list.total_amount|floatformat:2 }}
                     {% else %}
                         <span style="color: #999;">Not specified</span>
                     {% endif %}
@@ -468,7 +424,7 @@
                 <div class="signature-box">
                     <div class="signature-label">PREPARED BY</div>
                     <div class="signature-line"></div>
-                    <div class="signature-value">{{ generated_by.get_full_name }}</div>
+                    <div class="signature-value">{{ shopping_list.generated_by.get_full_name }}</div>
                 </div>
                 <div class="signature-box">
                     <div class="signature-label">APPROVED BY</div>
@@ -480,7 +436,7 @@
                 <div class="signature-box">
                     <div class="signature-label">DATE</div>
                     <div class="signature-line"></div>
-                    <div class="signature-value">{{ generated_at|date:"F d, Y" }}</div>
+                    <div class="signature-value">{{ shopping_list.generated_at|date:"F d, Y" }}</div>
                 </div>
                 <div class="signature-box">
                     <div class="signature-label">SIGNATURE</div>

@@ -1114,7 +1114,7 @@ class PurchaseRequestListView(CentralAdminOnlyAccessMixin, ListView):
     def get_queryset(self):
         queryset = PurchaseRequest.objects.select_related(
             'issue', 'issue__space', 'org', 'space', 'requested_by', 'reviewed_by'
-        ).all()
+        ).prefetch_related('shopping_list_items__shopping_list').all()
         
         # Filter by status if provided
         status_filter = self.request.GET.get('status')
@@ -1261,7 +1261,7 @@ class PurchaseRequestDeleteView(CentralAdminOnlyAccessMixin, View):
 
 
 class GenerateShoppingListView(CentralAdminOnlyAccessMixin, View):
-    """Generate a shopping list from selected approved purchase requests"""
+    """Generate and display a shopping list from selected approved purchase requests"""
     
     def post(self, request):
         selected_slugs = request.POST.getlist('selected_requests')
@@ -1295,6 +1295,128 @@ class GenerateShoppingListView(CentralAdminOnlyAccessMixin, View):
             'total_amount': total_amount,
             'generated_by': request.user,
             'generated_at': timezone.now(),
+            'selected_slugs': selected_slugs,  # Pass for saving later
         }
         
         return render(request, 'central_admin/issue_management/shopping_list.html', context)
+
+
+class SaveShoppingListView(CentralAdminOnlyAccessMixin, View):
+    """Save a generated shopping list to database"""
+    
+    def post(self, request):
+        selected_slugs = request.POST.getlist('selected_requests')
+        custom_title = request.POST.get('title', '').strip()
+        
+        if not selected_slugs:
+            messages.error(request, "No purchase requests to save.")
+            return redirect('issue_management:central_admin:purchase_request_list')
+        
+        # Get selected purchase requests
+        purchase_requests = PurchaseRequest.objects.filter(
+            slug__in=selected_slugs,
+            status='approved'
+        ).select_related('issue', 'space', 'requested_by', 'reviewed_by').order_by('space__name', 'item')
+        
+        if not purchase_requests.exists():
+            messages.error(request, "No approved purchase requests found.")
+            return redirect('issue_management:central_admin:purchase_request_list')
+        
+        # Calculate total
+        total_amount = sum(pr.estimated_amount for pr in purchase_requests if pr.estimated_amount)
+        
+        # Create shopping list in database
+        from issue_management.models import ShoppingList, ShoppingListItem
+        
+        # Use custom title if provided, otherwise use default
+        if custom_title:
+            title = custom_title
+        else:
+            title = f"Shopping List - {timezone.now().strftime('%B %d, %Y')}"
+        
+        shopping_list = ShoppingList.objects.create(
+            title=title,
+            org=request.user.organization,
+            generated_by=request.user,
+            total_amount=total_amount if total_amount else None,
+            item_count=purchase_requests.count()
+        )
+        
+        # Create shopping list items
+        for pr in purchase_requests:
+            ShoppingListItem.objects.create(
+                shopping_list=shopping_list,
+                purchase_request=pr,
+                item_snapshot=pr.item,
+                quantity_snapshot=pr.quantity,
+                amount_snapshot=pr.estimated_amount,
+                space_name=pr.space.name if pr.space else "No Space",
+                issue_title=pr.issue.title
+            )
+        
+        messages.success(request, f"Shopping list '{title}' saved successfully with {purchase_requests.count()} items.")
+        
+        # Redirect to the saved shopping list detail view
+        return redirect('issue_management:central_admin:shopping_list_detail', shopping_list_slug=shopping_list.slug)
+
+
+class ShoppingListListView(CentralAdminOnlyAccessMixin, ListView):
+    """List all shopping lists for the organization"""
+    model = None  # Will use get_queryset
+    template_name = 'central_admin/issue_management/shopping_list_list.html'
+    context_object_name = 'shopping_lists'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        from issue_management.models import ShoppingList
+        return ShoppingList.objects.filter(
+            org=self.request.user.organization
+        ).select_related('generated_by').prefetch_related('items').order_by('-generated_at')
+
+
+class ShoppingListDetailView(CentralAdminOnlyAccessMixin, View):
+    """Display a saved shopping list"""
+    
+    def get(self, request, shopping_list_slug):
+        from issue_management.models import ShoppingList
+        shopping_list = get_object_or_404(
+            ShoppingList.objects.select_related('generated_by').prefetch_related(
+                'items__purchase_request__issue',
+                'items__purchase_request__space'
+            ),
+            slug=shopping_list_slug,
+            org=request.user.organization
+        )
+        
+        # Group items by space
+        from itertools import groupby
+        items = shopping_list.items.all().order_by('space_name', 'item_snapshot')
+        grouped_items = {}
+        for space_name, space_items in groupby(items, key=lambda x: x.space_name):
+            grouped_items[space_name] = list(space_items)
+        
+        context = {
+            'shopping_list': shopping_list,
+            'grouped_items': grouped_items,
+        }
+        
+        return render(request, 'central_admin/issue_management/shopping_list_detail.html', context)
+
+
+class ShoppingListDeleteView(CentralAdminOnlyAccessMixin, View):
+    """Delete a shopping list"""
+    
+    def post(self, request, shopping_list_slug):
+        from issue_management.models import ShoppingList
+        shopping_list = get_object_or_404(
+            ShoppingList,
+            slug=shopping_list_slug,
+            org=request.user.organization
+        )
+        
+        title = shopping_list.title
+        shopping_list.delete()
+        
+        messages.success(request, f"Shopping list '{title}' deleted successfully.")
+        return redirect('issue_management:central_admin:shopping_list_list')
+

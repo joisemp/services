@@ -12,10 +12,16 @@ urlpatterns = [
     # Purchase Request URLs (must be before issue_slug patterns)
     path('purchase-requests/', central_admin.PurchaseRequestListView.as_view(), name='purchase_request_list'),
     path('purchase-requests/generate-shopping-list/', central_admin.GenerateShoppingListView.as_view(), name='generate_shopping_list'),
+    path('purchase-requests/save-shopping-list/', central_admin.SaveShoppingListView.as_view(), name='save_shopping_list'),
     path('purchase-requests/<slug:purchase_request_slug>/', central_admin.PurchaseRequestDetailView.as_view(), name='purchase_request_detail'),
     path('purchase-requests/<slug:purchase_request_slug>/approve/', central_admin.PurchaseRequestApproveView.as_view(), name='purchase_request_approve'),
     path('purchase-requests/<slug:purchase_request_slug>/reject/', central_admin.PurchaseRequestRejectView.as_view(), name='purchase_request_reject'),
     path('purchase-requests/<slug:purchase_request_slug>/delete/', central_admin.PurchaseRequestDeleteView.as_view(), name='purchase_request_delete'),
+    
+    # Shopping List URLs
+    path('shopping-lists/', central_admin.ShoppingListListView.as_view(), name='shopping_list_list'),
+    path('shopping-lists/<slug:shopping_list_slug>/', central_admin.ShoppingListDetailView.as_view(), name='shopping_list_detail'),
+    path('shopping-lists/<slug:shopping_list_slug>/delete/', central_admin.ShoppingListDeleteView.as_view(), name='shopping_list_delete'),
     
     path('<slug:issue_slug>/edit/', central_admin.IssueUpdateView.as_view(), name='issue_update'),
     path('<slug:issue_slug>/', central_admin.IssueDetailView.as_view(), name='issue_detail'),
