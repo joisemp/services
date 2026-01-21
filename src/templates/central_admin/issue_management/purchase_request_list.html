@@ -68,25 +68,53 @@
 <!-- Purchase Requests List -->
 <section id="purchase-requests-list">
   {% if purchase_requests %}
-    <div class="card border-0">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead>
-            <tr>
-              <th class="border-0 py-3">Item</th>
-              <th class="border-0 py-3">Issue</th>
-              <th class="border-0 py-3">Space</th>
-              <th class="border-0 py-3">Amount</th>
-              <th class="border-0 py-3">Requested By</th>
-              <th class="border-0 py-3">Date</th>
-              <th class="border-0 py-3">Status</th>
-              <th class="border-0 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for pr in purchase_requests %}
-            <tr class="bg-light">
-              <td>
+    <form id="shopping-list-form" method="post" action="{% url 'issue_management:central_admin:generate_shopping_list' %}">
+      {% csrf_token %}
+      
+      <!-- Action Buttons -->
+      <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+          <button type="button" id="select-all-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-check-square me-1"></i>Select All Approved
+          </button>
+          <button type="button" id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-square me-1"></i>Deselect All
+          </button>
+        </div>
+        <button type="submit" id="generate-list-btn" class="btn btn-primary" disabled>
+          <i class="fas fa-file-download me-2"></i>Generate Shopping List
+          (<span id="selected-count">0</span>)
+        </button>
+      </div>
+      
+      <div class="card border-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="border-0 py-3" style="width: 40px;">
+                  <input type="checkbox" id="select-all-checkbox" class="form-check-input">
+                </th>
+                <th class="border-0 py-3">Item</th>
+                <th class="border-0 py-3">Issue</th>
+                <th class="border-0 py-3">Space</th>
+                <th class="border-0 py-3">Amount</th>
+                <th class="border-0 py-3">Requested By</th>
+                <th class="border-0 py-3">Date</th>
+                <th class="border-0 py-3">Status</th>
+                <th class="border-0 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in purchase_requests %}
+              <tr class="bg-light">
+                <td>
+                  {% if pr.status == 'approved' %}
+                  <input type="checkbox" name="selected_requests" value="{{ pr.slug }}" 
+                         class="form-check-input purchase-checkbox">
+                  {% endif %}
+                </td>
+                <td>
                 <div class="fw-semibold">{{ pr.item }}</div>
                 <small class="text-muted">Qty: {{ pr.quantity }}</small>
                 {% if pr.description %}
@@ -153,6 +181,7 @@
         </table>
       </div>
     </div>
+    </form>
 
     <!-- Pagination -->
     {% if is_paginated %}
@@ -199,4 +228,109 @@
   {% endif %}
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Shopping list script loaded');
+    
+    const form = document.getElementById('shopping-list-form');
+    if (!form) {
+        console.error('Form not found!');
+        return;
+    }
+    console.log('Form found:', form);
+    
+    const checkboxes = document.querySelectorAll('.purchase-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
+    const generateBtn = document.getElementById('generate-list-btn');
+    const selectedCount = document.getElementById('selected-count');
+    
+    console.log('Found', checkboxes.length, 'checkboxes');
+    
+    // Exit if no checkboxes exist
+    if (checkboxes.length === 0) {
+        console.log('No checkboxes found, disabling generate button');
+        if (generateBtn) generateBtn.disabled = true;
+        return;
+    }
+    
+    function updateCount() {
+        const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
+        console.log('Selected count:', checked);
+        if (selectedCount) selectedCount.textContent = checked;
+        if (generateBtn) generateBtn.disabled = checked === 0;
+    }
+    
+    // Individual checkbox change
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            console.log('Checkbox changed:', this.value, this.checked);
+            updateCount();
+            // Update select all checkbox state
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+    
+    // Select all checkbox
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            console.log('Select all checkbox changed:', this.checked);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateCount();
+        });
+    }
+    
+    // Select all button
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            console.log('Select all button clicked');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            if (selectAllCheckbox) selectAllCheckbox.checked = true;
+            updateCount();
+        });
+    }
+    
+    // Deselect all button
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function() {
+            console.log('Deselect all button clicked');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            updateCount();
+        });
+    }
+    
+    // Form submit
+    form.addEventListener('submit', function(e) {
+        console.log('Form submitted');
+        const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
+        if (checked === 0) {
+            e.preventDefault();
+            alert('Please select at least one approved purchase request.');
+            console.log('Form submission prevented - no items selected');
+        } else {
+            console.log('Submitting form with', checked, 'selected items');
+        }
+    });
+    
+    // Initial count
+    updateCount();
+    console.log('Script initialization complete');
+});
+</script>
 {% endblock %}

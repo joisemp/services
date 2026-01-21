@@ -11,6 +11,7 @@ urlpatterns = [
     
     # Purchase Request URLs (must be before issue_slug patterns)
     path('purchase-requests/', central_admin.PurchaseRequestListView.as_view(), name='purchase_request_list'),
+    path('purchase-requests/generate-shopping-list/', central_admin.GenerateShoppingListView.as_view(), name='generate_shopping_list'),
     path('purchase-requests/<slug:purchase_request_slug>/', central_admin.PurchaseRequestDetailView.as_view(), name='purchase_request_detail'),
     path('purchase-requests/<slug:purchase_request_slug>/approve/', central_admin.PurchaseRequestApproveView.as_view(), name='purchase_request_approve'),
     path('purchase-requests/<slug:purchase_request_slug>/reject/', central_admin.PurchaseRequestRejectView.as_view(), name='purchase_request_reject'),

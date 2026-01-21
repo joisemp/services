@@ -1259,3 +1259,42 @@ class PurchaseRequestDeleteView(CentralAdminOnlyAccessMixin, View):
         messages.success(request, f"Purchase request for '{item_name}' has been deleted.")
         return redirect('issue_management:central_admin:issue_detail', issue_slug=issue_slug)
 
+
+class GenerateShoppingListView(CentralAdminOnlyAccessMixin, View):
+    """Generate a shopping list from selected approved purchase requests"""
+    
+    def post(self, request):
+        selected_slugs = request.POST.getlist('selected_requests')
+        
+        if not selected_slugs:
+            messages.error(request, "Please select at least one purchase request.")
+            return redirect('issue_management:central_admin:purchase_request_list')
+        
+        # Get selected purchase requests
+        purchase_requests = PurchaseRequest.objects.filter(
+            slug__in=selected_slugs,
+            status='approved'
+        ).select_related('issue', 'space', 'requested_by', 'reviewed_by').order_by('space__name', 'item')
+        
+        if not purchase_requests.exists():
+            messages.error(request, "No approved purchase requests found.")
+            return redirect('issue_management:central_admin:purchase_request_list')
+        
+        # Calculate total
+        total_amount = sum(pr.estimated_amount for pr in purchase_requests if pr.estimated_amount)
+        
+        # Group by space
+        from itertools import groupby
+        grouped_requests = {}
+        for space, items in groupby(purchase_requests, key=lambda x: x.space):
+            grouped_requests[space] = list(items)
+        
+        context = {
+            'purchase_requests': purchase_requests,
+            'grouped_requests': grouped_requests,
+            'total_amount': total_amount,
+            'generated_by': request.user,
+            'generated_at': timezone.now(),
+        }
+        
+        return render(request, 'central_admin/issue_management/shopping_list.html', context)

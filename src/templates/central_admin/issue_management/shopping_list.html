@@ -1,0 +1,394 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping List - Purchase Requests</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .shopping-list-container {
+                padding: 20px;
+            }
+            .items-table {
+                display: table !important;
+            }
+            .mobile-item-card {
+                display: none !important;
+            }
+        }
+        body {
+            background: #f5f5f5;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .shopping-list-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+        }
+        .header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .header-info {
+            font-size: 11px;
+            color: #666;
+        }
+        .summary-box {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .space-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .space-header {
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            margin-bottom: 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .items-table thead {
+            background: #f8f9fa;
+        }
+        .items-table th {
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .items-table td {
+            padding: 10px 10px;
+            font-size: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .items-table tbody tr:last-child td {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .checkbox-col {
+            width: 30px;
+            text-align: center;
+        }
+        .checkbox-col input {
+            width: 16px;
+            height: 16px;
+        }
+        .qty-badge {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .total-section {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #333;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .signature-section {
+            margin-top: 60px;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            display: inline-block;
+            width: 45%;
+            margin-right: 8%;
+        }
+        .signature-box:last-child {
+            margin-right: 0;
+        }
+        .signature-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .signature-line {
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            font-size: 12px;
+            min-height: 30px;
+        }
+        .btn-print {
+            margin-bottom: 20px;
+            background: #333;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            width: 100%;
+        }
+        .btn-print:hover {
+            background: #555;
+        }
+        .mobile-item-card {
+            display: none;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .shopping-list-container {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+            .summary-box {
+                font-size: 11px;
+                padding: 10px;
+            }
+            .space-header {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            /* Hide table on mobile */
+            .items-table {
+                display: none;
+            }
+            /* Show card layout on mobile */
+            .mobile-item-card {
+                display: block;
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 4px;
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            .mobile-item-card .item-name {
+                font-weight: 600;
+                font-size: 14px;
+                margin-bottom: 8px;
+                color: #333;
+            }
+            .mobile-item-card .item-description {
+                font-size: 12px;
+                color: #666;
+                margin-bottom: 8px;
+            }
+            .mobile-item-card .item-details {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px solid #f0f0f0;
+            }
+            .mobile-item-card .item-qty {
+                font-size: 12px;
+            }
+            .mobile-item-card .item-amount {
+                font-weight: 600;
+                font-size: 13px;
+            }
+            .mobile-item-card .item-issue {
+                font-size: 11px;
+                color: #666;
+                margin-top: 5px;
+            }
+            .mobile-item-card .checkbox-mobile {
+                width: 18px;
+                height: 18px;
+                margin-right: 10px;
+            }
+            .total-row {
+                font-size: 14px;
+            }
+            .signature-section {
+                margin-top: 40px;
+            }
+            .signature-box {
+                display: block;
+                width: 100%;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="max-width: 210mm; margin: 0 auto;">
+        <a href="{% url 'issue_management:central_admin:purchase_request_list' %}" class="btn btn-sm btn-outline-secondary mb-2">
+            ← Back to List
+        </a>
+    </div>
+
+    <div class="no-print" style="max-width: 210mm; margin: 0 auto;">
+        <button onclick="window.print()" class="btn btn-dark btn-print">
+            Print Shopping List
+        </button>
+    </div>
+
+    <div class="shopping-list-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>SHOPPING LIST</h1>
+            <div class="header-info">
+                <div><strong>Date:</strong> {{ generated_at|date:"F d, Y" }}</div>
+                <div><strong>Generated by:</strong> {{ generated_by.get_full_name }}</div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-box">
+            <strong>Total Items:</strong> {{ purchase_requests.count }} | 
+            <strong>Spaces:</strong> {{ grouped_requests|length }} | 
+            <strong>Estimated Total:</strong> 
+            {% if total_amount %}₹{{ total_amount|floatformat:2 }}{% else %}Not specified{% endif %}
+        </div>
+
+        <!-- Items by Space -->
+        {% for space, requests in grouped_requests.items %}
+        <div class="space-section">
+            <div class="space-header">
+                {% if space %}{{ space.name }}{% else %}No Space Assigned{% endif %}
+            </div>
+            
+            <!-- Desktop Table View -->
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th class="checkbox-col">✓</th>
+                        <th>Item</th>
+                        <th style="width: 80px;">Quantity</th>
+                        <th style="width: 100px;">Amount</th>
+                        <th style="width: 150px;">Issue Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pr in requests %}
+                    <tr>
+                        <td class="checkbox-col">
+                            <input type="checkbox">
+                        </td>
+                        <td>
+                            <div style="font-weight: 500;">{{ pr.item }}</div>
+                            {% if pr.description %}
+                            <div style="font-size: 11px; color: #666; margin-top: 2px;">{{ pr.description }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="qty-badge">{{ pr.quantity }}</span>
+                        </td>
+                        <td>
+                            {% if pr.estimated_amount %}
+                                <strong>₹{{ pr.estimated_amount }}</strong>
+                            {% else %}
+                                <span style="color: #999;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 11px; color: #666;">
+                            {{ pr.issue.title|truncatewords:4 }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Mobile Card View -->
+            {% for pr in requests %}
+            <div class="mobile-item-card">
+                <div style="display: flex;" class="align-items-start">
+                    <input type="checkbox" class="checkbox-mobile">
+                    <div style="flex: 1;">
+                        <div class="item-name">{{ pr.item }}</div>
+                        {% if pr.description %}
+                        <div class="item-description">{{ pr.description }}</div>
+                        {% endif %}
+                        <div class="item-details">
+                            <div class="item-qty">
+                                <span class="qty-badge">Qty: {{ pr.quantity }}</span>
+                            </div>
+                            <div class="item-amount">
+                                {% if pr.estimated_amount %}
+                                    ₹{{ pr.estimated_amount }}
+                                {% else %}
+                                    <span style="color: #999;">—</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="item-issue">
+                            Issue: {{ pr.issue.title|truncatewords:5 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <!-- Total -->
+        <div class="total-section">
+            <div class="total-row">
+                <span>ESTIMATED TOTAL:</span>
+                <span>
+                    {% if total_amount %}
+                        ₹{{ total_amount|floatformat:2 }}
+                    {% else %}
+                        <span style="color: #999;">Not specified</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-label">PREPARED BY</div>
+                <div class="signature-line">{{ generated_by.get_full_name }}</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-label">APPROVED BY</div>
+                <div class="signature-line">&nbsp;</div>
+            </div>
+            <div style="margin-top: 30px;">
+                <div class="signature-box">
+                    <div class="signature-label">DATE</div>
+                    <div class="signature-line">{{ generated_at|date:"F d, Y" }}</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-label">SIGNATURE</div>
+                    <div class="signature-line">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
