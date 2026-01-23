@@ -75,9 +75,14 @@ class Issue(models.Model):
     
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
+    issue_id = models.CharField(max_length=20, unique=True, help_text="Unique identifier for the issue")
     slug = models.SlugField(unique=True)
      
     def save(self, *args, **kwargs):
+        if not self.issue_id:
+            # Generate unique issue_id using org prefix and unique code
+            org_prefix = self.org.name[:3].upper() if self.org else 'ISS'
+            self.issue_id = f"{org_prefix}-{generate_unique_code(Issue, 'issue_id', length=6)}"
         if not self.slug:
             base_slug = slugify(self.title)
             self.slug = generate_unique_slug(self, base_slug)
