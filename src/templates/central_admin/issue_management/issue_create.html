@@ -24,6 +24,7 @@
   <h3>Create Issue</h3>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    <input type="hidden" name="form_token" value="{{ request.session.session_key }}-{{ request.user.id }}-{% now 'U' %}">
     <div class="mb-3">
       <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
       {{ form.title }}
@@ -72,7 +73,7 @@
       {{ form.voice }}
     </div>
     <div class="d-flex">
-      <button type="submit" class="btn btn-primary">Create Issue</button>
+      <button type="submit" class="btn btn-primary" data-loading-text="Creating Issue...">Create Issue</button>
       <a href="{% url 'issue_management:central_admin:issue_list' %}" class="btn btn-secondary ms-2">Cancel</a>
     </div>
   </form>

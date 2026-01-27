@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     Issue, IssueImage, IssueComment, WorkTask, WorkTaskResolutionImage, 
     WorkTaskShare, SiteVisit, SiteVisitImage, IssueReviewComment, IssueReviewCommentImage,
-    IssueActivity
+    IssueActivity, PurchaseRequest, ShoppingList, ShoppingListItem
 )
 
 
@@ -593,3 +593,112 @@ class IssueActivityAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('issue', 'user', 'issue__org')
+
+
+@admin.register(PurchaseRequest)
+class PurchaseRequestAdmin(admin.ModelAdmin):
+    list_display = ['item', 'quantity', 'issue_title', 'estimated_amount', 'status', 'requested_by_name', 'requested_at', 'space_name']
+    list_filter = ['status', 'org', 'space', 'requested_at']
+    search_fields = ['item', 'description', 'issue__title', 'requested_by__email', 'requested_by__first_name', 'requested_by__last_name']
+    readonly_fields = ['slug', 'requested_at', 'reviewed_at']
+    date_hierarchy = 'requested_at'
+    ordering = ['-requested_at']
+    
+    fieldsets = (
+        ('Purchase Information', {
+            'fields': ('item', 'quantity', 'description', 'estimated_amount')
+        }),
+        ('Issue & Location', {
+            'fields': ('issue', 'org', 'space')
+        }),
+        ('Request Details', {
+            'fields': ('requested_by', 'requested_at', 'status')
+        }),
+        ('Review Details', {
+            'fields': ('reviewed_by', 'reviewed_at', 'review_notes')
+        }),
+        ('System', {
+            'fields': ('slug',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def issue_title(self, obj):
+        url = reverse('admin:issue_management_issue_change', args=[obj.issue.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.issue.title)
+    issue_title.short_description = 'Issue'
+    
+    def requested_by_name(self, obj):
+        return obj.requested_by.get_full_name() or obj.requested_by.email or obj.requested_by.phone_number
+    requested_by_name.short_description = 'Requested By'
+    
+    def space_name(self, obj):
+        return obj.space.name if obj.space else 'N/A'
+    space_name.short_description = 'Space'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('issue', 'org', 'space', 'requested_by', 'reviewed_by')
+
+
+class ShoppingListItemInline(admin.TabularInline):
+    model = ShoppingListItem
+    extra = 0
+    fields = ['purchase_request', 'item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name']
+    readonly_fields = ['item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'issue_title']
+    can_delete = False
+
+
+@admin.register(ShoppingList)
+class ShoppingListAdmin(admin.ModelAdmin):
+    list_display = ['title', 'org', 'generated_by', 'generated_at', 'item_count', 'total_amount']
+    list_filter = ['org', 'generated_at']
+    search_fields = ['title', 'org__name', 'generated_by__email']
+    readonly_fields = ['slug', 'generated_at']
+    autocomplete_fields = ['org', 'generated_by']
+    date_hierarchy = 'generated_at'
+    ordering = ['-generated_at']
+    inlines = [ShoppingListItemInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'org', 'slug')
+        }),
+        ('Generation Details', {
+            'fields': ('generated_by', 'generated_at')
+        }),
+        ('Summary', {
+            'fields': ('item_count', 'total_amount')
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('org', 'generated_by')
+
+
+@admin.register(ShoppingListItem)
+class ShoppingListItemAdmin(admin.ModelAdmin):
+    list_display = ['shopping_list', 'item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'added_at']
+    list_filter = ['shopping_list', 'space_name', 'added_at']
+    search_fields = ['item_snapshot', 'issue_title', 'space_name']
+    readonly_fields = ['added_at']
+    autocomplete_fields = ['shopping_list', 'purchase_request']
+    date_hierarchy = 'added_at'
+    ordering = ['-added_at']
+    
+    fieldsets = (
+        ('Shopping List', {
+            'fields': ('shopping_list', 'purchase_request')
+        }),
+        ('Snapshot Data', {
+            'fields': ('item_snapshot', 'quantity_snapshot', 'amount_snapshot', 'space_name', 'issue_title')
+        }),
+        ('Metadata', {
+            'fields': ('added_at',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('shopping_list', 'purchase_request')

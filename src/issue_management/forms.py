@@ -1,6 +1,6 @@
 from config.mixins.form_mixin import BootstrapFormMixin
 from django import forms
-from .models import Issue, WorkTask, IssueComment, SiteVisit, IssueReviewComment
+from .models import Issue, WorkTask, IssueComment, SiteVisit, IssueReviewComment, PurchaseRequest
 
 class IssueForm(BootstrapFormMixin, forms.ModelForm):
     # Add image fields for up to 3 images
@@ -770,3 +770,38 @@ class IssueReviewCommentForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['comment'].label = 'Review Comment'
         self.fields['comment'].help_text = 'Provide your feedback or review notes for this issue'
         self.fields['comment'].required = True
+
+
+class PurchaseRequestForm(BootstrapFormMixin, forms.ModelForm):
+    """Form for space admins to create purchase requests for issues"""
+    
+    class Meta:
+        model = PurchaseRequest
+        fields = ['item', 'quantity', 'description', 'estimated_amount']
+        widgets = {
+            'item': forms.TextInput(attrs={
+                'placeholder': 'e.g., PVC pipes, Light bulbs, Paint cans...'
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'min': '1',
+                'placeholder': '1'
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Add any additional notes or specifications (optional)...'
+            }),
+            'estimated_amount': forms.NumberInput(attrs={
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00 (optional)'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['item'].help_text = 'Specific item name or description'
+        self.fields['quantity'].help_text = 'How many units are needed'
+        self.fields['description'].help_text = 'Additional details or specifications (optional)'
+        self.fields['description'].required = False
+        self.fields['estimated_amount'].help_text = 'Estimated total cost (optional)'
+        self.fields['estimated_amount'].required = False

@@ -588,14 +588,7 @@ class SpaceCreateForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = Space
-        fields = ['name', 'label', 'description', 'org']
-        
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Map the org field to organization for clarity in the form
-        self.fields['org'].label = "Organization"
-        self.fields['org'].help_text = "Select the organization this space belongs to"
-        self.fields['org'].empty_label = "Select an organization"
+        fields = ['name', 'label', 'description']
 
     def clean_name(self):
         name = self.cleaned_data['name']

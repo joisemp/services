@@ -353,6 +353,8 @@ class SpaceCreateView(CentralAdminOnlyAccessMixin, CreateView):
     success_url = reverse_lazy('core:space_list')
 
     def form_valid(self, form):
+        # Automatically assign the user's organization to the space
+        form.instance.org = self.request.user.organization
         response = super().form_valid(form)
         from django.contrib import messages
         messages.success(self.request, f'Space {self.object.name} created successfully.')
@@ -368,7 +370,13 @@ class SpaceListView(CentralAdminOnlyAccessMixin, ListView):
     context_object_name = 'spaces'
 
     def get_queryset(self):
-        return Space.objects.select_related('org').prefetch_related('users').order_by('name')
+        queryset = Space.objects.select_related('org').prefetch_related('users').order_by('name')
+        
+        # Filter spaces by user's organization
+        if self.request.user.organization:
+            queryset = queryset.filter(org=self.request.user.organization)
+        
+        return queryset
 
 
 class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):

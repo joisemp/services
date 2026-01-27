@@ -75,9 +75,14 @@ class Issue(models.Model):
     
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
+    issue_id = models.CharField(max_length=20, unique=True, help_text="Unique identifier for the issue")
     slug = models.SlugField(unique=True)
      
     def save(self, *args, **kwargs):
+        if not self.issue_id:
+            # Generate unique issue_id using org prefix and unique code
+            org_prefix = self.org.name[:3].upper() if self.org else 'ISS'
+            self.issue_id = f"{org_prefix}-{generate_unique_code(Issue, 'issue_id', length=6)}"
         if not self.slug:
             base_slug = slugify(self.title)
             self.slug = generate_unique_slug(self, base_slug)
@@ -641,6 +646,10 @@ class IssueActivity(models.Model):
         ('site_visit_updated', 'Site Visit Updated'),
         ('site_visit_completed', 'Site Visit Completed'),
         ('site_visit_cancelled', 'Site Visit Cancelled'),
+        ('purchase_request_created', 'Purchase Request Created'),
+        ('purchase_request_approved', 'Purchase Request Approved'),
+        ('purchase_request_rejected', 'Purchase Request Rejected'),
+        ('purchase_request_deleted', 'Purchase Request Deleted'),
         ('image_added', 'Image Added'),
         ('image_deleted', 'Image Deleted'),
         ('voice_added', 'Voice Recording Added'),
@@ -672,3 +681,120 @@ class IssueActivity(models.Model):
     
     def __str__(self):
         return f"{self.get_activity_type_display()} - {self.issue.title}"
+
+
+class PurchaseRequest(models.Model):
+    """
+    Purchase requests created by space admins for issue-related expenses.
+    Central admins can approve/reject these requests.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    issue = models.ForeignKey(Issue, related_name='purchase_requests', on_delete=models.CASCADE)
+    org = models.ForeignKey('core.Organization', related_name='purchase_requests', on_delete=models.CASCADE)
+    space = models.ForeignKey('core.Space', related_name='purchase_requests', on_delete=models.CASCADE, null=True, blank=True)
+    
+    item = models.CharField(max_length=300, help_text="Name/description of the item to purchase")
+    quantity = models.PositiveIntegerField(help_text="Number of units needed")
+    description = models.TextField(blank=True, null=True, help_text="Additional notes or details about the purchase request")
+    estimated_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Estimated cost in currency (optional)")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Request tracking
+    requested_by = models.ForeignKey('core.User', related_name='purchase_requests_created', on_delete=models.CASCADE)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    
+    # Approval tracking
+    reviewed_by = models.ForeignKey('core.User', related_name='purchase_requests_reviewed', on_delete=models.SET_NULL, null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True, null=True, help_text="Notes from central admin when approving/rejecting")
+    
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = 'Purchase Request'
+        verbose_name_plural = 'Purchase Requests'
+        indexes = [
+            models.Index(fields=['issue', '-requested_at']),
+            models.Index(fields=['status', '-requested_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.item}")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.item} (x{self.quantity}) - {self.get_status_display()}"
+
+
+class ShoppingList(models.Model):
+    """
+    Shopping lists generated from approved purchase requests.
+    Allows central admins to save and reference shopping lists.
+    """
+    title = models.CharField(max_length=200, help_text="Title/name for this shopping list")
+    org = models.ForeignKey('core.Organization', related_name='shopping_lists', on_delete=models.CASCADE)
+    
+    # Generation tracking
+    generated_by = models.ForeignKey('core.User', related_name='shopping_lists_created', on_delete=models.CASCADE)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    
+    # Summary fields
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Total estimated amount for all items")
+    item_count = models.PositiveIntegerField(default=0, help_text="Total number of purchase requests in this list")
+    
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['-generated_at']
+        verbose_name = 'Shopping List'
+        verbose_name_plural = 'Shopping Lists'
+        indexes = [
+            models.Index(fields=['org', '-generated_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.title}")
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.title} - {self.generated_at.strftime('%Y-%m-%d')}"
+
+
+class ShoppingListItem(models.Model):
+    """
+    Individual purchase requests included in a shopping list.
+    Links shopping lists to their constituent purchase requests.
+    """
+    shopping_list = models.ForeignKey(ShoppingList, related_name='items', on_delete=models.CASCADE)
+    purchase_request = models.ForeignKey(PurchaseRequest, related_name='shopping_list_items', on_delete=models.CASCADE)
+    
+    # Store snapshot of values at time of list generation
+    item_snapshot = models.CharField(max_length=300, help_text="Item name at time of list generation")
+    quantity_snapshot = models.PositiveIntegerField(help_text="Quantity at time of list generation")
+    amount_snapshot = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Amount at time of list generation")
+    space_name = models.CharField(max_length=200, help_text="Space name at time of list generation")
+    issue_title = models.CharField(max_length=200, help_text="Issue title at time of list generation")
+    
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['space_name', 'item_snapshot']
+        verbose_name = 'Shopping List Item'
+        verbose_name_plural = 'Shopping List Items'
+        indexes = [
+            models.Index(fields=['shopping_list', 'space_name']),
+        ]
+    
+    def __str__(self):
+        return f"{self.item_snapshot} in {self.shopping_list.title}"

@@ -1,0 +1,426 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Purchase Requests - Issue Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/issue_management/purchase_request_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<section id="alert">
+  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
+    <div class="message flex-grow-1 mb-2 mb-md-0">
+      <h3 class="mb-1">Purchase Requests</h3>
+      <span class="alert-text text-body-secondary">Review and manage purchase requests from space admins.</span>
+    </div>
+    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto d-flex gap-2">
+      <span class="badge rounded-pill bg-warning text-dark">{{ pending_count }} Pending</span>
+      <span class="badge rounded-pill bg-success">{{ approved_count }} Approved</span>
+      <span class="badge rounded-pill bg-danger">{{ rejected_count }} Rejected</span>
+    </div>
+  </div>
+</section>
+
+<!-- Filters -->
+<section id="filters" class="mb-4">
+  <div class="card bg-light border-0">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label for="status" class="form-label small text-muted mb-1">Status</label>
+          <select name="status" id="status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="pending" {% if current_status_filter == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if current_status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if current_status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="space" class="form-label small text-muted mb-1">Space</label>
+          <select name="space" id="space" class="form-select">
+            <option value="">All Spaces</option>
+            {% for space in spaces %}
+            <option value="{{ space.slug }}" {% if current_space_filter == space.slug %}selected{% endif %}>
+              {{ space.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <button type="submit" class="btn btn-primary">Apply</button>
+          <a href="{% url 'issue_management:central_admin:purchase_request_list' %}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- Purchase Requests List -->
+<section id="purchase-requests-list">
+  {% if purchase_requests %}
+    <form id="shopping-list-form" method="post" action="{% url 'issue_management:central_admin:generate_shopping_list' %}">
+      {% csrf_token %}
+      
+      <!-- Action Buttons -->
+      <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+          <button type="button" id="select-all-btn" class="btn btn-sm btn-outline-dark mb-3 mb-md-auto">
+            <i class="fas fa-check-square me-1"></i>Select All Approved
+          </button>
+          <button type="button" id="deselect-all-btn" class="btn btn-sm btn-outline-dark mb-3 mb-md-auto">
+            <i class="fas fa-square me-1"></i>Deselect All
+          </button>
+        </div>
+        <button type="submit" id="generate-list-btn" class="btn btn-primary" disabled>
+          <i class="fas fa-file-download me-2"></i>Generate Shopping List
+          (<span id="selected-count">0</span>)
+        </button>
+      </div>
+      
+      <!-- Desktop Table View -->
+      <div class="card border-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="border-0 py-3" style="width: 40px;">
+                  <input type="checkbox" id="select-all-checkbox" class="form-check-input">
+                </th>
+                <th class="border-0 py-3">Item</th>
+                <th class="border-0 py-3">Issue</th>
+                <th class="border-0 py-3">Space</th>
+                <th class="border-0 py-3">Amount</th>
+                <th class="border-0 py-3">Requested By</th>
+                <th class="border-0 py-3">Date</th>
+                <th class="border-0 py-3">Status</th>
+                <th class="border-0 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in purchase_requests %}
+              <tr class="bg-light">
+                <td>
+                  {% if pr.status == 'approved' %}
+                  <input type="checkbox" name="selected_requests" value="{{ pr.slug }}" 
+                         class="form-check-input purchase-checkbox">
+                  {% endif %}
+                </td>
+                <td>
+                <div class="fw-semibold">
+                  {{ pr.item }}
+                  {% if pr.shopping_list_items.exists %}
+                  <span class="badge bg-info text-dark ms-2" title="Included in {{ pr.shopping_list_items.count }} shopping list(s)">
+                    <i class="fas fa-shopping-cart"></i> In List
+                  </span>
+                  {% endif %}
+                </div>
+                <small class="text-muted">Qty: {{ pr.quantity }}</small>
+                {% if pr.description %}
+                <div><small class="text-muted">{{ pr.description|truncatewords:10 }}</small></div>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
+                   class="badge rounded-pill border border-dark text-dark text-decoration-none">
+                  {{ pr.issue.issue_id }}
+                </a>
+              </td>
+              <td>
+                {% if pr.space %}
+                  {{ pr.space.name }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if pr.estimated_amount %}
+                  <span class="fw-semibold">₹{{ pr.estimated_amount }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <div>{{ pr.requested_by.get_full_name }}</div>
+                <small class="text-muted">{{ pr.requested_by.email }}</small>
+              </td>
+              <td>
+                <div>{{ pr.requested_at|date:"M d, Y" }}</div>
+                <small class="text-muted">{{ pr.requested_at|time:"g:i A" }}</small>
+              </td>
+              <td>
+                <span class="badge rounded-pill
+                             {% if pr.status == 'pending' %}bg-warning text-dark
+                             {% elif pr.status == 'approved' %}bg-success
+                             {% elif pr.status == 'rejected' %}bg-danger
+                             {% endif %}">
+                  {{ pr.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex gap-2">
+                  <a href="{% url 'issue_management:central_admin:purchase_request_detail' purchase_request_slug=pr.slug %}" 
+                     class="btn btn-sm btn-outline-primary">
+                    View
+                  </a>
+                  {% if pr.status == 'pending' %}
+                  <form method="post" action="{% url 'issue_management:central_admin:purchase_request_delete' purchase_request_slug=pr.slug %}" 
+                        onsubmit="return confirm('Are you sure you want to delete this purchase request?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Mobile Card View -->
+    <div class="mobile-cards-container">
+      {% for pr in purchase_requests %}
+      <div class="mobile-card">
+        <div class="mobile-card-header">
+          {% if pr.status == 'approved' %}
+          <input type="checkbox" name="selected_requests" value="{{ pr.slug }}" 
+                 class="form-check-input purchase-checkbox mobile-card-checkbox">
+          {% endif %}
+          <div class="mobile-card-title">
+            {{ pr.item }}
+            {% if pr.shopping_list_items.exists %}
+            <span class="badge bg-info text-dark ms-2">
+              <i class="fas fa-shopping-cart"></i> In List
+            </span>
+            {% endif %}
+          </div>
+          <span class="badge rounded-pill ms-2
+                       {% if pr.status == 'pending' %}bg-warning text-dark
+                       {% elif pr.status == 'approved' %}bg-success
+                       {% elif pr.status == 'rejected' %}bg-danger
+                       {% endif %}">
+            {{ pr.get_status_display }}
+          </span>
+        </div>
+        
+        <div class="mobile-card-body">
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Quantity:</span>
+            <span class="mobile-card-value">{{ pr.quantity }}</span>
+          </div>
+          
+          {% if pr.description %}
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Description:</span>
+            <span class="mobile-card-value">{{ pr.description|truncatewords:8 }}</span>
+          </div>
+          {% endif %}
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Issue:</span>
+            <span class="mobile-card-value">
+              <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
+                 class="badge rounded-pill border border-dark text-dark text-decoration-none">
+                {{ pr.issue.issue_id }}
+              </a>
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Space:</span>
+            <span class="mobile-card-value">
+              {% if pr.space %}{{ pr.space.name }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Amount:</span>
+            <span class="mobile-card-value">
+              {% if pr.estimated_amount %}
+                <strong>₹{{ pr.estimated_amount }}</strong>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Requested By:</span>
+            <span class="mobile-card-value">{{ pr.requested_by.get_full_name }}</span>
+          </div>
+          
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Date:</span>
+            <span class="mobile-card-value">{{ pr.requested_at|date:"M d, Y" }}</span>
+          </div>
+        </div>
+        
+        <div class="mobile-card-actions">
+          <a href="{% url 'issue_management:central_admin:purchase_request_detail' purchase_request_slug=pr.slug %}" 
+             class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-eye me-1"></i>View
+          </a>
+          {% if pr.status == 'pending' %}
+          <form method="post" action="{% url 'issue_management:central_admin:purchase_request_delete' purchase_request_slug=pr.slug %}" 
+                onsubmit="return confirm('Are you sure you want to delete this purchase request?');"
+                style="flex: 1;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+              <i class="fas fa-trash me-1"></i>Delete
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    </form>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_space_filter %}&space={{ current_space_filter }}{% endif %}">Previous</a>
+          </li>
+        {% endif %}
+
+        <li class="page-item active">
+          <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_space_filter %}&space={{ current_space_filter }}{% endif %}">Next</a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+
+  {% else %}
+    <div class="card bg-light border-0">
+      <div class="card-body text-center py-5">
+        <div class="text-muted mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-basket" viewBox="0 0 16 16">
+            <path d="M5.757 1.071a.5.5 0 0 1 .172.686L3.383 6h9.234L10.07 1.757a.5.5 0 1 1 .858-.514L13.783 6H15a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1v4.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 13.5V9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1.217L5.07 1.243a.5.5 0 0 1 .686-.172zM2 9v4.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V9H2zM1 7v1h14V7H1zm3 3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 4 10zm2 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 6 10zm2 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 8 10zm2 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 1 .5-.5zm2 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 1 .5-.5z"/>
+          </svg>
+        </div>
+        <h5 class="text-muted mb-2">No Purchase Requests</h5>
+        <p class="text-muted mb-0">
+          {% if current_status_filter or current_space_filter %}
+            No purchase requests match your filters.
+            <a href="{% url 'issue_management:central_admin:purchase_request_list' %}" class="text-decoration-none">Clear filters</a>
+          {% else %}
+            Space admins can create purchase requests from issue detail pages.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('shopping-list-form');
+    if (!form) {
+        console.error('Form not found!');
+        return;
+    }
+    
+    const checkboxes = document.querySelectorAll('.purchase-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
+    const generateBtn = document.getElementById('generate-list-btn');
+    const selectedCount = document.getElementById('selected-count');
+    
+    // Exit if no checkboxes exist
+    if (checkboxes.length === 0) {
+        if (generateBtn) generateBtn.disabled = true;
+        return;
+    }
+    
+    function updateCount() {
+        const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
+        if (selectedCount) selectedCount.textContent = checked;
+        if (generateBtn) generateBtn.disabled = checked === 0;
+    }
+    
+    // Individual checkbox change
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateCount();
+            // Update select all checkbox state
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+    
+    // Select all checkbox
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateCount();
+        });
+    }
+    
+    // Select all button
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            if (selectAllCheckbox) selectAllCheckbox.checked = true;
+            updateCount();
+        });
+    }
+    
+    // Deselect all button
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            updateCount();
+        });
+    }
+    
+    // Form submit
+    form.addEventListener('submit', function(e) {
+        const checked = document.querySelectorAll('.purchase-checkbox:checked').length;
+        if (checked === 0) {
+            e.preventDefault();
+            alert('Please select at least one approved purchase request.');
+        }
+    });
+    
+    // Initial count
+    updateCount();
+});
+</script>
+{% endblock %}
