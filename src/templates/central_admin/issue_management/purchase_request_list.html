@@ -131,8 +131,8 @@
               </td>
               <td>
                 <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
-                   class="text-decoration-none text-dark">
-                  {{ pr.issue.title|truncatewords:5 }}
+                   class="badge rounded-pill border border-dark text-dark text-decoration-none">
+                  {{ pr.issue.issue_id }}
                 </a>
               </td>
               <td>
@@ -233,8 +233,8 @@
             <span class="mobile-card-label">Issue:</span>
             <span class="mobile-card-value">
               <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
-                 class="text-decoration-none">
-                {{ pr.issue.title|truncatewords:4 }}
+                 class="badge rounded-pill border border-dark text-dark text-decoration-none">
+                {{ pr.issue.issue_id }}
               </a>
             </span>
           </div>

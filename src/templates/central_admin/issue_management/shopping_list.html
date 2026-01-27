@@ -409,7 +409,11 @@
                             {% endif %}
                         </td>
                         <td style="font-size: 11px; color: #666;">
-                            {{ pr.issue.title|truncatewords:4 }}
+                            <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
+                               class="badge rounded-pill border border-dark text-dark text-decoration-none" 
+                               style="font-size: 10px;">
+                                {{ pr.issue.issue_id }}
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -439,7 +443,11 @@
                             </div>
                         </div>
                         <div class="item-issue">
-                            Issue: {{ pr.issue.title|truncatewords:5 }}
+                            <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=pr.issue.slug %}" 
+                               class="badge rounded-pill border border-dark text-dark text-decoration-none" 
+                               style="font-size: 9px;">
+                                {{ pr.issue.issue_id }}
+                            </a>
                         </div>
                     </div>
                 </div>

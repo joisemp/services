@@ -23,6 +23,7 @@
 <a href="{% url 'issue_management:space_admin:issue_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Go back</a>
 
 <section id="breadcrumb" class="mb-3">
+  <span class="badge rounded-pill border border-dark text-dark">{{ issue.issue_id }}</span>
   <span class="badge badge-{{ issue.status }} rounded-pill ms-2">{{ issue.get_status_display }}</span>
   <span class="badge badge-{{ issue.priority }} rounded-pill ms-2">{{ issue.get_priority_display }}</span>
   <span class="badge rounded-pill text-bg-dark ms-2">{{ issue.created_at|date:"M d, Y" }}</span>
