@@ -76,12 +76,20 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
     context_object_name = 'users'
 
     def get_queryset(self):
+        from django.db.models import Count, Q
         # Filter users by the central admin's organization and only show active users
         admin_organization = self.request.user.organization
         return User.objects.filter(
             organization=admin_organization,
             is_active=True
-        ).select_related('organization').prefetch_related('spaces').order_by('first_name', 'last_name')
+        ).select_related('organization').prefetch_related('spaces').annotate(
+            total_reported_issues=Count('reported_issues', distinct=True),
+            total_assigned_issues=Count('assigned_issues', distinct=True),
+            open_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='open'), distinct=True),
+            in_progress_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='in_progress'), distinct=True),
+            resolved_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='resolved'), distinct=True),
+            closed_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='closed'), distinct=True),
+        ).order_by('first_name', 'last_name')
     
 
 class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):

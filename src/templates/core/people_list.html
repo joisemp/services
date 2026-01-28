@@ -86,7 +86,13 @@
                      data-user-phone="{{ user.phone_number|default:'' }}"
                      data-user-type="{{ user.get_user_type_display }}"
                      data-user-auth-method="{{ user.auth_method }}"
-                     data-user-organization="{{ user.organization.name|default:'' }}">
+                     data-user-organization="{{ user.organization.name|default:'' }}"
+                     data-total-reported="{{ user.total_reported_issues }}"
+                     data-total-assigned="{{ user.total_assigned_issues }}"
+                     data-open-issues="{{ user.open_issues_count }}"
+                     data-in-progress-issues="{{ user.in_progress_issues_count }}"
+                     data-resolved-issues="{{ user.resolved_issues_count }}"
+                     data-closed-issues="{{ user.closed_issues_count }}">
                     <div class="card-body">
                         <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
                             <div class="profile-pic flex-shrink-0">
@@ -182,6 +188,134 @@
                         <div class="row mt-2" id="modal-org-row">
                             <div class="col-sm-4"><strong>Organization:</strong></div>
                             <div class="col-sm-8" id="modal-user-organization">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Statistics -->
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Statistics
+                    </h6>
+                    
+                    <!-- General stats for all users -->
+                    <div id="general-stats" class="row g-2 mb-3">
+                        <!-- Reported Issues -->
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                    <h4 class="mb-1" id="modal-total-reported">0</h4>
+                                    <small class="text-muted">Reported Issues</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total Assigned Issues -->
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-tasks text-info mb-2" style="font-size: 1.5rem;"></i>
+                                    <h4 class="mb-1" id="modal-total-assigned">0</h4>
+                                    <small class="text-muted">Total Assigned</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Breakdown for Supervisor/Maintainer roles -->
+                    <div id="assigned-breakdown" class="d-none">
+                        <h6 class="text-muted mb-2 small">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            Assigned Issues Breakdown
+                        </h6>
+                        <div class="row g-2">
+                            <!-- Open Assigned -->
+                            <div class="col-6">
+                                <div class="border border-warning rounded p-3 text-center h-100 bg-light">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-folder-open text-warning mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-warning" id="modal-open-issues">0</h5>
+                                        <small class="text-muted">Open</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- In Progress Assigned -->
+                            <div class="col-6">
+                                <div class="border border-primary rounded p-3 text-center h-100 bg-light">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-primary" id="modal-in-progress-issues">0</h5>
+                                        <small class="text-muted">In Progress</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Resolved Assigned -->
+                            <div class="col-6">
+                                <div class="border border-success rounded p-3 text-center h-100 bg-light">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-success" id="modal-resolved-issues">0</h5>
+                                        <small class="text-muted">Resolved</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Closed Assigned -->
+                            <div class="col-6">
+                                <div class="border border-secondary rounded p-3 text-center h-100 bg-light">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-archive text-secondary mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-secondary" id="modal-closed-issues">0</h5>
+                                        <small class="text-muted">Closed</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alternate layout for non-supervisor/maintainer roles -->
+                    <div id="other-stats" class="d-none">
+                        <div class="row g-2">
+                            <!-- Open Issues -->
+                            <div class="col-6">
+                                <div class="border rounded p-3 text-center h-100">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-folder-open text-warning mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1 alt-open-issues">0</h4>
+                                        <small class="text-muted">Open</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- In Progress Issues -->
+                            <div class="col-6">
+                                <div class="border rounded p-3 text-center h-100">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1 alt-in-progress-issues">0</h4>
+                                        <small class="text-muted">In Progress</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Resolved Issues -->
+                            <div class="col-6">
+                                <div class="border rounded p-3 text-center h-100">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1 alt-resolved-issues">0</h4>
+                                        <small class="text-muted">Resolved</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Closed Issues -->
+                            <div class="col-6">
+                                <div class="border rounded p-3 text-center h-100">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-archive text-secondary mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1 alt-closed-issues">0</h4>
+                                        <small class="text-muted">Closed</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -403,6 +537,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const userPhone = card.getAttribute('data-user-phone');
             const userOrganization = card.getAttribute('data-user-organization');
             
+            // Extract statistics from data-* attributes
+            const totalReported = card.getAttribute('data-total-reported') || '0';
+            const totalAssigned = card.getAttribute('data-total-assigned') || '0';
+            const openIssues = card.getAttribute('data-open-issues') || '0';
+            const inProgressIssues = card.getAttribute('data-in-progress-issues') || '0';
+            const resolvedIssues = card.getAttribute('data-resolved-issues') || '0';
+            const closedIssues = card.getAttribute('data-closed-issues') || '0';
+            
             // Store user data for delete confirmation
             selectedUserData = {
                 id: selectedUserId,
@@ -420,6 +562,34 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-user-phone').textContent = userPhone || 'N/A';
             document.getElementById('modal-user-type').textContent = selectedUserType || 'N/A';
             document.getElementById('modal-user-organization').textContent = userOrganization || 'N/A';
+            
+            // Update statistics
+            document.getElementById('modal-total-reported').textContent = totalReported;
+            document.getElementById('modal-total-assigned').textContent = totalAssigned;
+            document.getElementById('modal-open-issues').textContent = openIssues;
+            document.getElementById('modal-in-progress-issues').textContent = inProgressIssues;
+            document.getElementById('modal-resolved-issues').textContent = resolvedIssues;
+            document.getElementById('modal-closed-issues').textContent = closedIssues;
+            
+            // Show role-specific stats layout
+            const assignedBreakdown = document.getElementById('assigned-breakdown');
+            const otherStats = document.getElementById('other-stats');
+            
+            // Check if user is Supervisor or Maintainer - show assigned issues breakdown
+            if (selectedUserType === 'Supervisor' || selectedUserType === 'Maintainer') {
+                assignedBreakdown.classList.remove('d-none');
+                otherStats.classList.add('d-none');
+            } else {
+                // For other roles, show standard stats
+                assignedBreakdown.classList.add('d-none');
+                otherStats.classList.remove('d-none');
+                
+                // Update alternate stats fields
+                document.querySelector('.alt-open-issues').textContent = openIssues;
+                document.querySelector('.alt-in-progress-issues').textContent = inProgressIssues;
+                document.querySelector('.alt-resolved-issues').textContent = resolvedIssues;
+                document.querySelector('.alt-closed-issues').textContent = closedIssues;
+            }
             
             // Show/hide email and phone rows based on availability
             const emailRow = document.getElementById('modal-email-row');
