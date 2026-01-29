@@ -100,7 +100,7 @@ class IssueImage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # Generate slug using unique code instead of filename
-            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
+            self.slug = generate_unique_code(IssueImage, no_of_char=12, unique_field='slug')
         
         # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
@@ -177,7 +177,7 @@ class WorkTaskResolutionImage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # Generate slug using unique code instead of filename
-            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
+            self.slug = generate_unique_code(WorkTaskResolutionImage, no_of_char=12, unique_field='slug')
         
         # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
@@ -209,7 +209,7 @@ class IssueResolutionImage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # Generate slug using unique code instead of filename
-            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
+            self.slug = generate_unique_code(IssueResolutionImage, no_of_char=12, unique_field='slug')
         
         # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
@@ -274,7 +274,7 @@ class WorkTaskShare(models.Model):
     def save(self, *args, **kwargs):
         if not self.share_token:
             # Generate a unique 32-character token
-            self.share_token = generate_unique_code(self, no_of_char=32, unique_field='share_token')
+            self.share_token = generate_unique_code(WorkTaskShare, no_of_char=32, unique_field='share_token')
         
         # Set default expiration if not provided (7 days from creation)
         if not self.expires_at:
@@ -478,7 +478,7 @@ class SiteVisitImage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # Generate slug using unique code instead of filename
-            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
+            self.slug = generate_unique_code(SiteVisitImage, no_of_char=12, unique_field='slug')
         
         # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
@@ -587,7 +587,7 @@ class IssueReviewCommentImage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # Generate slug using unique code instead of filename
-            self.slug = generate_unique_code(self, no_of_char=12, unique_field='slug')
+            self.slug = generate_unique_code(IssueReviewCommentImage, no_of_char=12, unique_field='slug')
         
         # Compress and convert image to WebP with unique alphanumeric name if it's a new upload or has been changed
         if self.image and (not self.pk or self._state.adding):
