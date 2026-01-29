@@ -200,7 +200,7 @@ def generate_unique_code(model, no_of_char=6, unique_field='id'):
     """
     Generates a unique alphanumeric code for a given model by checking for uniqueness in the specified field.
     Args:
-        model: An instance of the Django model for which the unique code is to be generated.
+        model: A Django model class (not instance) for which the unique code is to be generated.
         no_of_char (int, optional): The length of the generated code. Defaults to 6.
         unique_field (str, optional): The name of the model field that should be unique. Defaults to 'id'.
     Returns:
@@ -215,7 +215,6 @@ def generate_unique_code(model, no_of_char=6, unique_field='id'):
     
     code = generate_code()
     filter_kwargs = {unique_field: code}
-    model_class = model.__class__
-    while model_class.objects.filter(**filter_kwargs).exists():
+    while model.objects.filter(**filter_kwargs).exists():
         code = generate_code()
     return code
