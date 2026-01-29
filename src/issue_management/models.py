@@ -82,7 +82,7 @@ class Issue(models.Model):
         if not self.issue_id:
             # Generate unique issue_id using org prefix and unique code
             org_prefix = self.org.name[:3].upper() if self.org else 'ISS'
-            self.issue_id = f"{org_prefix}-{generate_unique_code(Issue, 'issue_id', length=6)}"
+            self.issue_id = f"{org_prefix}-{generate_unique_code(Issue, no_of_char=6, unique_field='issue_id')}"
         if not self.slug:
             base_slug = slugify(self.title)
             self.slug = generate_unique_slug(self, base_slug)
