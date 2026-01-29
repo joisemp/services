@@ -85,6 +85,7 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
         ).select_related('organization').prefetch_related('spaces').annotate(
             total_reported_issues=Count('reported_issues', distinct=True),
             total_assigned_issues=Count('assigned_issues', distinct=True),
+            resolved_reported_issues_count=Count('reported_issues', filter=Q(reported_issues__status='resolved'), distinct=True),
             open_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='open'), distinct=True),
             in_progress_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='in_progress'), distinct=True),
             resolved_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='resolved'), distinct=True),

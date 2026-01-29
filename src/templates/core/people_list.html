@@ -89,6 +89,7 @@
                      data-user-organization="{{ user.organization.name|default:'' }}"
                      data-total-reported="{{ user.total_reported_issues }}"
                      data-total-assigned="{{ user.total_assigned_issues }}"
+                     data-resolved-reported-issues="{{ user.resolved_reported_issues_count }}"
                      data-open-issues="{{ user.open_issues_count }}"
                      data-in-progress-issues="{{ user.in_progress_issues_count }}"
                      data-resolved-issues="{{ user.resolved_issues_count }}"
@@ -223,50 +224,50 @@
                         </div>
                     </div>
                     
-                    <!-- Breakdown for Supervisor/Maintainer roles -->
+                    <!-- Detailed breakdown for Supervisor/Maintainer roles -->
                     <div id="assigned-breakdown" class="d-none">
                         <h6 class="text-muted mb-2 small">
                             <i class="fas fa-clipboard-list me-2"></i>
                             Assigned Issues Breakdown
                         </h6>
                         <div class="row g-2">
-                            <!-- Open Assigned -->
-                            <div class="col-6">
-                                <div class="border border-warning rounded p-3 text-center h-100 bg-light">
+                            <!-- Total Assigned -->
+                            <div class="col-12">
+                                <div class="border border-info rounded p-3 text-center h-100 bg-light">
                                     <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-folder-open text-warning mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-warning" id="modal-open-issues">0</h5>
-                                        <small class="text-muted">Open</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- In Progress Assigned -->
-                            <div class="col-6">
-                                <div class="border border-primary rounded p-3 text-center h-100 bg-light">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-primary" id="modal-in-progress-issues">0</h5>
-                                        <small class="text-muted">In Progress</small>
+                                        <i class="fas fa-tasks text-info mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-info" id="modal-assigned-count">0</h5>
+                                        <small class="text-muted">Total Assigned</small>
                                     </div>
                                 </div>
                             </div>
                             <!-- Resolved Assigned -->
-                            <div class="col-6">
+                            <div class="col-4">
                                 <div class="border border-success rounded p-3 text-center h-100 bg-light">
                                     <div class="d-flex flex-column align-items-center">
                                         <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-success" id="modal-resolved-issues">0</h5>
+                                        <h5 class="mb-1 fw-bold text-success" id="modal-assigned-resolved">0</h5>
                                         <small class="text-muted">Resolved</small>
                                     </div>
                                 </div>
                             </div>
-                            <!-- Closed Assigned -->
-                            <div class="col-6">
-                                <div class="border border-secondary rounded p-3 text-center h-100 bg-light">
+                            <!-- In Progress -->
+                            <div class="col-4">
+                                <div class="border border-primary rounded p-3 text-center h-100 bg-light">
                                     <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-archive text-secondary mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-secondary" id="modal-closed-issues">0</h5>
-                                        <small class="text-muted">Closed</small>
+                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-primary" id="modal-assigned-in-progress">0</h5>
+                                        <small class="text-muted">In Progress</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Remaining (Not Resolved) -->
+                            <div class="col-4">
+                                <div class="border border-warning rounded p-3 text-center h-100 bg-light">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-hourglass-half text-warning mb-2" style="font-size: 1.3rem;"></i>
+                                        <h5 class="mb-1 fw-bold text-warning" id="modal-assigned-remaining">0</h5>
+                                        <small class="text-muted">Remaining</small>
                                     </div>
                                 </div>
                             </div>
@@ -276,43 +277,13 @@
                     <!-- Alternate layout for non-supervisor/maintainer roles -->
                     <div id="other-stats" class="d-none">
                         <div class="row g-2">
-                            <!-- Open Issues -->
-                            <div class="col-6">
-                                <div class="border rounded p-3 text-center h-100">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-folder-open text-warning mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1 alt-open-issues">0</h4>
-                                        <small class="text-muted">Open</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- In Progress Issues -->
-                            <div class="col-6">
-                                <div class="border rounded p-3 text-center h-100">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1 alt-in-progress-issues">0</h4>
-                                        <small class="text-muted">In Progress</small>
-                                    </div>
-                                </div>
-                            </div>
                             <!-- Resolved Issues -->
                             <div class="col-6">
                                 <div class="border rounded p-3 text-center h-100">
                                     <div class="d-flex flex-column align-items-center">
                                         <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1 alt-resolved-issues">0</h4>
+                                        <h4 class="mb-1" id="modal-resolved-reported">0</h4>
                                         <small class="text-muted">Resolved</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Closed Issues -->
-                            <div class="col-6">
-                                <div class="border rounded p-3 text-center h-100">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-archive text-secondary mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1 alt-closed-issues">0</h4>
-                                        <small class="text-muted">Closed</small>
                                     </div>
                                 </div>
                             </div>
@@ -540,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Extract statistics from data-* attributes
             const totalReported = card.getAttribute('data-total-reported') || '0';
             const totalAssigned = card.getAttribute('data-total-assigned') || '0';
+            const resolvedReportedIssues = card.getAttribute('data-resolved-reported-issues') || '0';
             const openIssues = card.getAttribute('data-open-issues') || '0';
             const inProgressIssues = card.getAttribute('data-in-progress-issues') || '0';
             const resolvedIssues = card.getAttribute('data-resolved-issues') || '0';
@@ -566,10 +538,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update statistics
             document.getElementById('modal-total-reported').textContent = totalReported;
             document.getElementById('modal-total-assigned').textContent = totalAssigned;
-            document.getElementById('modal-open-issues').textContent = openIssues;
-            document.getElementById('modal-in-progress-issues').textContent = inProgressIssues;
-            document.getElementById('modal-resolved-issues').textContent = resolvedIssues;
-            document.getElementById('modal-closed-issues').textContent = closedIssues;
             
             // Show role-specific stats layout
             const assignedBreakdown = document.getElementById('assigned-breakdown');
@@ -579,16 +547,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedUserType === 'Supervisor' || selectedUserType === 'Maintainer') {
                 assignedBreakdown.classList.remove('d-none');
                 otherStats.classList.add('d-none');
+                
+                // Update assigned issues breakdown for maintainers/supervisors
+                const totalAssignedNum = parseInt(totalAssigned) || 0;
+                const resolvedAssignedNum = parseInt(resolvedIssues) || 0;
+                const inProgressNum = parseInt(inProgressIssues) || 0;
+                const remainingNum = totalAssignedNum - resolvedAssignedNum;
+                
+                document.getElementById('modal-assigned-count').textContent = totalAssigned;
+                document.getElementById('modal-assigned-resolved').textContent = resolvedIssues;
+                document.getElementById('modal-assigned-in-progress').textContent = inProgressIssues;
+                document.getElementById('modal-assigned-remaining').textContent = remainingNum;
             } else {
-                // For other roles, show standard stats
+                // For other roles (space admin, central admin, reviewer, etc.), show reported and resolved
                 assignedBreakdown.classList.add('d-none');
                 otherStats.classList.remove('d-none');
                 
-                // Update alternate stats fields
-                document.querySelector('.alt-open-issues').textContent = openIssues;
-                document.querySelector('.alt-in-progress-issues').textContent = inProgressIssues;
-                document.querySelector('.alt-resolved-issues').textContent = resolvedIssues;
-                document.querySelector('.alt-closed-issues').textContent = closedIssues;
+                // Update resolved reported issues count
+                document.getElementById('modal-resolved-reported').textContent = resolvedReportedIssues;
             }
             
             // Show/hide email and phone rows based on availability
