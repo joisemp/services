@@ -212,8 +212,8 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Total Assigned Issues -->
-                        <div class="col-6">
+                        <!-- Total Assigned Issues - Only for Maintainer/Supervisor -->
+                        <div class="col-6" id="total-assigned-column">
                             <div class="border rounded p-3 text-center h-100">
                                 <div class="d-flex flex-column align-items-center">
                                     <i class="fas fa-tasks text-info mb-2" style="font-size: 1.5rem;"></i>
@@ -277,6 +277,16 @@
                     <!-- Alternate layout for non-supervisor/maintainer roles -->
                     <div id="other-stats" class="d-none">
                         <div class="row g-2">
+                            <!-- Reported Issues (moved from general stats) -->
+                            <div class="col-6" id="other-stats-reported">
+                                <div class="border rounded p-3 text-center h-100">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1" id="modal-reported-other">0</h4>
+                                        <small class="text-muted">Reported Issues</small>
+                                    </div>
+                                </div>
+                            </div>
                             <!-- Resolved Issues -->
                             <div class="col-6">
                                 <div class="border rounded p-3 text-center h-100">
@@ -539,12 +549,18 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-total-reported').textContent = totalReported;
             document.getElementById('modal-total-assigned').textContent = totalAssigned;
             
+            // Show/hide general stats and Total Assigned column based on user type
+            const generalStats = document.getElementById('general-stats');
+            const totalAssignedColumn = document.getElementById('total-assigned-column');
+            
             // Show role-specific stats layout
             const assignedBreakdown = document.getElementById('assigned-breakdown');
             const otherStats = document.getElementById('other-stats');
             
             // Check if user is Supervisor or Maintainer - show assigned issues breakdown
             if (selectedUserType === 'Supervisor' || selectedUserType === 'Maintainer') {
+                totalAssignedColumn.classList.remove('d-none');
+                generalStats.classList.remove('d-none');
                 assignedBreakdown.classList.remove('d-none');
                 otherStats.classList.add('d-none');
                 
@@ -559,11 +575,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('modal-assigned-in-progress').textContent = inProgressIssues;
                 document.getElementById('modal-assigned-remaining').textContent = remainingNum;
             } else {
-                // For other roles (space admin, central admin, reviewer, etc.), show reported and resolved
+                // For other roles (space admin, central admin, reviewer, etc.)
+                totalAssignedColumn.classList.add('d-none');
+                generalStats.classList.add('d-none');
                 assignedBreakdown.classList.add('d-none');
                 otherStats.classList.remove('d-none');
                 
-                // Update resolved reported issues count
+                // Update reported and resolved in other-stats section
+                document.getElementById('modal-reported-other').textContent = totalReported;
                 document.getElementById('modal-resolved-reported').textContent = resolvedReportedIssues;
             }
             
