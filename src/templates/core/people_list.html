@@ -4,6 +4,17 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/core/people_list/style.css' %}">
+<style>
+    .hover-card {
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+    .hover-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        background-color: #f8f9fa !important;
+    }
+</style>
 {% endblock %}
 
 {% block navbar %}
@@ -81,6 +92,7 @@
                      data-bs-toggle="modal" 
                      data-bs-target="#userOptionsModal"
                      data-user-id="{{ user.id }}"
+                     data-user-slug="{{ user.slug }}"
                      data-user-name="{{ user.get_full_name|default:user.get_short_name|default:'No Name' }}"
                      data-user-email="{{ user.email|default:'' }}"
                      data-user-phone="{{ user.phone_number|default:'' }}"
@@ -204,23 +216,27 @@
                     <div id="general-stats" class="row g-2 mb-3">
                         <!-- Reported Issues -->
                         <div class="col-6">
-                            <div class="border rounded p-3 text-center h-100">
-                                <div class="d-flex flex-column align-items-center">
-                                    <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
-                                    <h4 class="mb-1" id="modal-total-reported">0</h4>
-                                    <small class="text-muted">Reported Issues</small>
+                            <a href="#" id="reported-issues-link" class="text-decoration-none" style="color: inherit;">
+                                <div class="border rounded p-3 text-center h-100 hover-card">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1" id="modal-total-reported">0</h4>
+                                        <small class="text-muted">Reported Issues</small>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                         <!-- Total Assigned Issues - Only for Maintainer/Supervisor -->
                         <div class="col-6" id="total-assigned-column">
-                            <div class="border rounded p-3 text-center h-100">
-                                <div class="d-flex flex-column align-items-center">
-                                    <i class="fas fa-tasks text-info mb-2" style="font-size: 1.5rem;"></i>
-                                    <h4 class="mb-1" id="modal-total-assigned">0</h4>
-                                    <small class="text-muted">Total Assigned</small>
+                            <a href="#" id="total-assigned-link" class="text-decoration-none" style="color: inherit;">
+                                <div class="border rounded p-3 text-center h-100 hover-card">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-tasks text-info mb-2" style="font-size: 1.5rem;"></i>
+                                        <h4 class="mb-1" id="modal-total-assigned">0</h4>
+                                        <small class="text-muted">Total Assigned</small>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                     </div>
                     
@@ -233,43 +249,51 @@
                         <div class="row g-2">
                             <!-- Total Assigned -->
                             <div class="col-12">
-                                <div class="border border-info rounded p-3 text-center h-100 bg-light">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-tasks text-info mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-info" id="modal-assigned-count">0</h5>
-                                        <small class="text-muted">Total Assigned</small>
+                                <a href="#" id="assigned-total-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border border-info rounded p-3 text-center h-100 bg-light hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-tasks text-info mb-2" style="font-size: 1.3rem;"></i>
+                                            <h5 class="mb-1 fw-bold text-info" id="modal-assigned-count">0</h5>
+                                            <small class="text-muted">Total Assigned</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             <!-- Resolved Assigned -->
                             <div class="col-4">
-                                <div class="border border-success rounded p-3 text-center h-100 bg-light">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-success" id="modal-assigned-resolved">0</h5>
-                                        <small class="text-muted">Resolved</small>
+                                <a href="#" id="assigned-resolved-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border border-success rounded p-3 text-center h-100 bg-light hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.3rem;"></i>
+                                            <h5 class="mb-1 fw-bold text-success" id="modal-assigned-resolved">0</h5>
+                                            <small class="text-muted">Resolved</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             <!-- In Progress -->
                             <div class="col-4">
-                                <div class="border border-primary rounded p-3 text-center h-100 bg-light">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-primary" id="modal-assigned-in-progress">0</h5>
-                                        <small class="text-muted">In Progress</small>
+                                <a href="#" id="assigned-in-progress-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border border-primary rounded p-3 text-center h-100 bg-light hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-spinner text-primary mb-2" style="font-size: 1.3rem;"></i>
+                                            <h5 class="mb-1 fw-bold text-primary" id="modal-assigned-in-progress">0</h5>
+                                            <small class="text-muted">In Progress</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             <!-- Remaining (Not Resolved) -->
                             <div class="col-4">
-                                <div class="border border-warning rounded p-3 text-center h-100 bg-light">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-hourglass-half text-warning mb-2" style="font-size: 1.3rem;"></i>
-                                        <h5 class="mb-1 fw-bold text-warning" id="modal-assigned-remaining">0</h5>
-                                        <small class="text-muted">Remaining</small>
+                                <a href="#" id="assigned-remaining-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border border-warning rounded p-3 text-center h-100 bg-light hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-hourglass-half text-warning mb-2" style="font-size: 1.3rem;"></i>
+                                            <h5 class="mb-1 fw-bold text-warning" id="modal-assigned-remaining">0</h5>
+                                            <small class="text-muted">Remaining</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -279,23 +303,27 @@
                         <div class="row g-2">
                             <!-- Reported Issues (moved from general stats) -->
                             <div class="col-6" id="other-stats-reported">
-                                <div class="border rounded p-3 text-center h-100">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1" id="modal-reported-other">0</h4>
-                                        <small class="text-muted">Reported Issues</small>
+                                <a href="#" id="other-reported-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border rounded p-3 text-center h-100 hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                            <h4 class="mb-1" id="modal-reported-other">0</h4>
+                                            <small class="text-muted">Reported Issues</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             <!-- Resolved Issues -->
                             <div class="col-6">
-                                <div class="border rounded p-3 text-center h-100">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.5rem;"></i>
-                                        <h4 class="mb-1" id="modal-resolved-reported">0</h4>
-                                        <small class="text-muted">Resolved</small>
+                                <a href="#" id="other-resolved-link" class="text-decoration-none" style="color: inherit;">
+                                    <div class="border rounded p-3 text-center h-100 hover-card">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-check-circle text-success mb-2" style="font-size: 1.5rem;"></i>
+                                            <h4 class="mb-1" id="modal-resolved-reported">0</h4>
+                                            <small class="text-muted">Resolved</small>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -500,6 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     const deleteConfirmInput = document.getElementById('deleteConfirmInput');
     let selectedUserId = null;
+    let selectedUserSlug = null;
     let selectedUserAuthMethod = null;
     let selectedUserType = null;
     let selectedUserData = null;
@@ -511,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Extract info from data-* attributes
             selectedUserId = card.getAttribute('data-user-id');
+            selectedUserSlug = card.getAttribute('data-user-slug');
             selectedUserAuthMethod = card.getAttribute('data-user-auth-method');
             selectedUserType = card.getAttribute('data-user-type');
             const userName = card.getAttribute('data-user-name');
@@ -549,6 +579,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-total-reported').textContent = totalReported;
             document.getElementById('modal-total-assigned').textContent = totalAssigned;
             
+            // Base URL for all issue list links
+            const baseUrl = '{% url "issue_management:central_admin:issue_list" %}';
+            
             // Show/hide general stats and Total Assigned column based on user type
             const generalStats = document.getElementById('general-stats');
             const totalAssignedColumn = document.getElementById('total-assigned-column');
@@ -574,6 +607,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('modal-assigned-resolved').textContent = resolvedIssues;
                 document.getElementById('modal-assigned-in-progress').textContent = inProgressIssues;
                 document.getElementById('modal-assigned-remaining').textContent = remainingNum;
+                
+                // Set up links to central admin issue list with filters (use slug if available)
+                const userParam = selectedUserSlug || selectedUserId;
+                document.getElementById('reported-issues-link').href = `${baseUrl}?reporter=${userParam}`;
+                document.getElementById('total-assigned-link').href = `${baseUrl}?assignee=${userParam}`;
+                document.getElementById('assigned-total-link').href = `${baseUrl}?assignee=${userParam}`;
+                document.getElementById('assigned-resolved-link').href = `${baseUrl}?assignee=${userParam}&status=resolved`;
+                document.getElementById('assigned-in-progress-link').href = `${baseUrl}?assignee=${userParam}&status=in_progress`;
+                document.getElementById('assigned-remaining-link').href = `${baseUrl}?assignee=${userParam}&status=not_resolved`;
             } else {
                 // For other roles (space admin, central admin, reviewer, etc.)
                 totalAssignedColumn.classList.add('d-none');
@@ -584,6 +626,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update reported and resolved in other-stats section
                 document.getElementById('modal-reported-other').textContent = totalReported;
                 document.getElementById('modal-resolved-reported').textContent = resolvedReportedIssues;
+                
+                // Set up links to central admin issue list with filters (use slug if available)
+                const userParam = selectedUserSlug || selectedUserId;
+                document.getElementById('other-reported-link').href = `${baseUrl}?reporter=${userParam}`;
+                document.getElementById('other-resolved-link').href = `${baseUrl}?reporter=${userParam}&status=resolved`;
             }
             
             // Show/hide email and phone rows based on availability
