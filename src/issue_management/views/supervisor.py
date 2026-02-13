@@ -3,9 +3,9 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, V
 from django.urls import reverse_lazy
 from django.db.models import Case, When, IntegerField
 from django.utils import timezone
-from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, SiteVisitForm, SiteVisitCompleteForm
+from .. forms import IssueCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, SiteVisitForm, SiteVisitCompleteForm, IssueForm
 from django.contrib import messages
-from .. models import Issue, WorkTask, SiteVisit, SiteVisitImage
+from .. models import Issue, WorkTask, SiteVisit, SiteVisitImage, IssueImage
 from django.shortcuts import redirect
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 from core.models import Space
@@ -165,6 +165,72 @@ class IssueDetailView(SupervisorOnlyAccessMixin, DetailView):
         site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
         context['site_visits'] = site_visits
         return context
+
+
+class IssueCreateView(SupervisorOnlyAccessMixin, CreateView):
+    """Create a new issue as supervisor"""
+    template_name = "supervisor/issue_management/issue_create.html"
+    form_class = IssueForm
+    success_url = reverse_lazy('issue_management:supervisor:issue_list')
+    
+    def get_form_kwargs(self):
+        """Pass current_user to form"""
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+    
+    def get_form(self, form_class=None):
+        """Filter spaces to only show those in the user's organization"""
+        form = super().get_form(form_class)
+        if self.request.user.organization:
+            form.fields['space'].queryset = Space.objects.filter(
+                org=self.request.user.organization
+            ).order_by('name')
+        return form
+    
+    def post(self, request, *args, **kwargs):
+        """Override post to prevent duplicate submissions"""
+        # Check if this form has already been submitted
+        form_token = request.POST.get('form_token', '')
+        if form_token:
+            # Check if token was already used
+            used_tokens = request.session.get('used_issue_create_tokens', [])
+            if form_token in used_tokens:
+                messages.warning(request, 'This issue has already been created. Please do not submit the form multiple times.')
+                return redirect(self.success_url)
+        
+        return super().post(request, *args, **kwargs)
+    
+    def form_valid(self, form):
+        # Set the reporter to the current user before saving
+        form.instance.reporter = self.request.user
+        
+        # Save the issue first
+        response = super().form_valid(form)
+        
+        # Handle image uploads
+        image_fields = ['image1', 'image2', 'image3']
+        for field_name in image_fields:
+            image_file = form.cleaned_data.get(field_name)
+            if image_file:
+                issue_image = IssueImage(
+                    issue=self.object,
+                    image=image_file
+                )
+                # Set the user who uploaded the image for activity tracking
+                issue_image._uploaded_by = self.request.user
+                issue_image.save()
+        
+        # Mark this form as submitted to prevent duplicates
+        form_token = self.request.POST.get('form_token', '')
+        if form_token:
+            used_tokens = self.request.session.get('used_issue_create_tokens', [])
+            used_tokens.append(form_token)
+            # Keep only the last 10 tokens to prevent session bloat
+            self.request.session['used_issue_create_tokens'] = used_tokens[-10:]
+        
+        messages.success(self.request, f'Issue "{self.object.title}" created successfully!')
+        return response
     
 
 class IssueResolveView(SupervisorOnlyAccessMixin, View):
