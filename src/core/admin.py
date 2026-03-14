@@ -12,13 +12,20 @@ from .forms import OrganizationWithAdminForm
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'address_line_one', 'address_line_two']
+    list_display = ['name', 'code', 'slug', 'address_line_one', 'address_line_two']
     list_filter = ['name']
-    search_fields = ['name', 'description', 'address_line_one', 'address_line_two']
+    search_fields = ['name', 'description', 'address_line_one', 'address_line_two', 'code']
     prepopulated_fields = {'slug': ('name',)}
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'description', 'slug')
+        }),
+        ('SSO / Shared Identity', {
+            'fields': ('code', 'org_uuid'),
+            'description': (
+                'Fields used for cross-service identity and future SSO integration. '
+                '"code" is a human-managed short identifier; "org_uuid" is the canonical UUID.'
+            ),
         }),
         ('Address Information', {
             'fields': ('address_line_one', 'address_line_two'),
@@ -83,9 +90,9 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Space)
 class SpaceAdmin(admin.ModelAdmin):
-    list_display = ['name', 'org', 'slug', 'description_preview']
+    list_display = ['name', 'code', 'org', 'slug', 'description_preview']
     list_filter = ['org', 'name']
-    search_fields = ['name', 'description', 'org__name']
+    search_fields = ['name', 'description', 'org__name', 'code']
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['org']
     fieldsets = (
@@ -94,6 +101,13 @@ class SpaceAdmin(admin.ModelAdmin):
         }),
         ('Organization', {
             'fields': ('org',)
+        }),
+        ('SSO / Shared Identity', {
+            'fields': ('code', 'space_uuid'),
+            'description': (
+                'Fields used for cross-service identity and future SSO integration. '
+                '"code" is a human-managed short identifier; "space_uuid" is the canonical UUID.'
+            ),
         }),
     )
     

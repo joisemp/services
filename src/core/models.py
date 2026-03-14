@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.auth.hashers import make_password, check_password as django_check_password
@@ -212,6 +213,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         help_text="Firebase Cloud Messaging token for push notifications"
     )
+
+    # SSO / Auth service stable link
+    auth_sub = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Stable subject identifier from the external Auth/SSO service (e.g. Auth0 sub claim)"
+    )
     
     objects = UserManager()
     
@@ -413,6 +423,21 @@ class Organization(models.Model):
     address_line_two = models.CharField(max_length=255, blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True)
 
+    # SSO / shared-identity fields (nullable; unique constraint added after backfill)
+    code = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Globally unique, human-managed short code for this organisation (e.g. 'ACME'). "
+                  "Unique constraint will be enforced after initial backfill."
+    )
+    org_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Canonical UUID for this organisation, used for cross-service identity."
+    )
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.name)
@@ -429,6 +454,21 @@ class Space(models.Model):
     description = models.TextField(blank=True, null=True)
     org = models.ForeignKey(Organization, related_name='spaces', on_delete=models.CASCADE)
     slug = models.SlugField(unique=True, blank=True)
+
+    # SSO / shared-identity fields (nullable; unique constraint added after backfill)
+    code = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Globally unique, human-managed short code for this space (e.g. 'ACME-HQ'). "
+                  "Unique constraint will be enforced after initial backfill."
+    )
+    space_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Canonical UUID for this space, used for cross-service identity."
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:
