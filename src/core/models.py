@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.auth.hashers import make_password, check_password as django_check_password
@@ -204,6 +205,31 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         related_name='active_users',
         help_text="Currently active space for space admins (used for context switching)"
+    )
+
+    # SSO identity fields — populated once SSO/Auth integration is active.
+    # auth_sub: the canonical user identifier issued by the Auth service (UUID or opaque string).
+    # active_space_uuid: UUID of the user's currently active space; mirrors active_space FK
+    #   and will eventually be the primary scoping key once SSO is enforced.
+    auth_sub = models.UUIDField(
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=(
+            "SSO identity subject — the canonical user UUID issued by the Auth service. "
+            "Null until SSO is enabled. Will become required for SSO login."
+        )
+    )
+    active_space_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=(
+            "UUID of the currently active space (mirrors active_space FK). "
+            "Populated from Space.space_uuid once UUIDs are backfilled. "
+            "Will replace the active_space FK as the primary context key when SSO is enforced."
+        )
     )
     
     # Firebase Cloud Messaging token for push notifications
@@ -413,6 +439,36 @@ class Organization(models.Model):
     address_line_two = models.CharField(max_length=255, blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True)
 
+    # SSO identity fields — used as the stable business key for cross-system linking.
+    # code: globally unique, human-managed identifier (e.g. "SFS-HYD").
+    #   Must be set before exporting to Auth.  Backfill with: manage.py backfill_codes --model org
+    # org_uuid: canonical UUID assigned by the Auth service after import.
+    #   Populated by: manage.py import_org_space_map  (or manually after Auth backfill).
+    #   TODO(SSO): once Auth is live, enforce non-null and use org_uuid as the primary FK
+    #   for all cross-app references instead of the integer id.
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text=(
+            "Globally unique, human-managed identifier for this organisation "
+            "(e.g. 'SFS-HYD'). Required before exporting to the Auth service. "
+            "Run 'manage.py backfill_codes --model org' to auto-populate from slug."
+        )
+    )
+    org_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=(
+            "Canonical UUID assigned by the Auth service. "
+            "Null until the Auth service is live and UUIDs have been backfilled. "
+            "Run 'manage.py import_org_space_map' to populate from an Auth export."
+        )
+    )
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.name)
@@ -429,6 +485,36 @@ class Space(models.Model):
     description = models.TextField(blank=True, null=True)
     org = models.ForeignKey(Organization, related_name='spaces', on_delete=models.CASCADE)
     slug = models.SlugField(unique=True, blank=True)
+
+    # SSO identity fields — see Organisation notes above for the full workflow.
+    # code: globally unique, human-managed identifier (e.g. "SFS-HYD-MAIN").
+    #   Must be set before exporting to Auth.  Backfill with: manage.py backfill_codes --model space
+    # space_uuid: canonical UUID assigned by the Auth service after import.
+    #   Populated by: manage.py import_org_space_map  (or manually after Auth backfill).
+    #   TODO(SSO): once Auth is live, enforce non-null and use space_uuid as the primary
+    #   scoping key for all issue/work-task queries instead of the integer space FK.
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text=(
+            "Globally unique, human-managed identifier for this space "
+            "(e.g. 'SFS-HYD-MAIN'). Required before exporting to the Auth service. "
+            "Run 'manage.py backfill_codes --model space' to auto-populate from slug."
+        )
+    )
+    space_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=(
+            "Canonical UUID assigned by the Auth service. "
+            "Null until the Auth service is live and UUIDs have been backfilled. "
+            "Run 'manage.py import_org_space_map' to populate from an Auth export."
+        )
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django import forms
+from django.core.exceptions import ValidationError
 from django.urls import path, reverse
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -10,11 +11,84 @@ from .models import Organization, Space, User, Update
 from .forms import OrganizationWithAdminForm
 
 
+class OrganizationAdminForm(forms.ModelForm):
+    """Admin form for Organisation with SSO-identity validation."""
+
+    class Meta:
+        model = Organization
+        fields = '__all__'
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if not code:
+            return code
+        qs = Organization.objects.filter(code=code)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f'An organisation with code "{code}" already exists. '
+                'Codes must be globally unique.'
+            )
+        return code
+
+    def clean_org_uuid(self):
+        org_uuid = self.cleaned_data.get('org_uuid')
+        if not org_uuid:
+            return org_uuid
+        qs = Organization.objects.filter(org_uuid=org_uuid)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f'An organisation with UUID "{org_uuid}" already exists. '
+                'UUIDs must be globally unique.'
+            )
+        return org_uuid
+
+
+class SpaceAdminForm(forms.ModelForm):
+    """Admin form for Space with SSO-identity validation."""
+
+    class Meta:
+        model = Space
+        fields = '__all__'
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if not code:
+            return code
+        qs = Space.objects.filter(code=code)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f'A space with code "{code}" already exists. '
+                'Codes must be globally unique across all spaces.'
+            )
+        return code
+
+    def clean_space_uuid(self):
+        space_uuid = self.cleaned_data.get('space_uuid')
+        if not space_uuid:
+            return space_uuid
+        qs = Space.objects.filter(space_uuid=space_uuid)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f'A space with UUID "{space_uuid}" already exists. '
+                'UUIDs must be globally unique.'
+            )
+        return space_uuid
+
+
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'address_line_one', 'address_line_two']
+    form = OrganizationAdminForm
+    list_display = ['name', 'code', 'org_uuid', 'slug', 'address_line_one', 'address_line_two']
     list_filter = ['name']
-    search_fields = ['name', 'description', 'address_line_one', 'address_line_two']
+    search_fields = ['name', 'description', 'address_line_one', 'address_line_two', 'code']
     prepopulated_fields = {'slug': ('name',)}
     fieldsets = (
         ('Basic Information', {
@@ -24,12 +98,22 @@ class OrganizationAdmin(admin.ModelAdmin):
             'fields': ('address_line_one', 'address_line_two'),
             'classes': ('collapse',)
         }),
+        ('SSO Identity (cross-system linking)', {
+            'fields': ('code', 'org_uuid'),
+            'description': (
+                'These fields are used for SSO/Auth service integration. '
+                '<strong>code</strong> must be set manually before exporting to the Auth service. '
+                'Run <code>manage.py backfill_codes --model org</code> to auto-populate from slugs. '
+                '<strong>org_uuid</strong> is assigned by the Auth service — do not edit unless '
+                'you are importing from an Auth export.'
+            ),
+        }),
     )
-    
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('spaces')
-    
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -40,7 +124,7 @@ class OrganizationAdmin(admin.ModelAdmin):
             ),
         ]
         return custom_urls + urls
-    
+
     def register_organization_with_admin(self, request):
         """
         Custom admin view for registering organization with central admin
@@ -83,26 +167,38 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Space)
 class SpaceAdmin(admin.ModelAdmin):
-    list_display = ['name', 'org', 'slug', 'description_preview']
+    form = SpaceAdminForm
+    list_display = ['name', 'code', 'space_uuid', 'org', 'slug', 'description_preview']
     list_filter = ['org', 'name']
-    search_fields = ['name', 'description', 'org__name']
+    search_fields = ['name', 'description', 'org__name', 'code']
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['org']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'slug')
+            'fields': ('name', 'label', 'description', 'slug')
         }),
         ('Organization', {
             'fields': ('org',)
         }),
+        ('SSO Identity (cross-system linking)', {
+            'fields': ('code', 'space_uuid'),
+            'description': (
+                'These fields are used for SSO/Auth service integration. '
+                '<strong>code</strong> must be globally unique and set manually before '
+                'exporting to the Auth service. '
+                'Run <code>manage.py backfill_codes --model space</code> to auto-populate from slugs. '
+                '<strong>space_uuid</strong> is assigned by the Auth service — do not edit unless '
+                'you are importing from an Auth export.'
+            ),
+        }),
     )
-    
+
     def description_preview(self, obj):
         if obj.description:
             return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
         return 'No description'
     description_preview.short_description = 'Description Preview'
-    
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('org').prefetch_related('issues')
