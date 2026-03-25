@@ -281,6 +281,8 @@ class SetPinView(FormView):
             return 'issue_management:maintainer:work_task_list'
         elif user.is_reviewer:
             return 'issue_management:reviewer:issue_list'
+        elif user.is_driver:
+            return 'home'
         else:
             return 'home'
     

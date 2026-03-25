@@ -120,6 +120,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('maintainer', 'Maintainer'),
         ('supervisor', 'Supervisor'),
         ('reviewer', 'Reviewer'),
+        ('driver', 'Driver'),
         ('general_user', 'General User'),
     ]
     
@@ -395,6 +396,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_reviewer(self):
         return self.user_type == 'reviewer'
+
+    @property
+    def is_driver(self):
+        return self.user_type == 'driver'
 
     @property
     def is_general_user(self):
