@@ -428,7 +428,7 @@ class GeneralUserCreateForm(BootstrapFormMixin, forms.ModelForm):
 class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
     """
     Form for creating users with email + auto-generated password authentication
-    (central_admin, space_admin, maintainer, supervisor, reviewer, driver)
+    (central_admin, space_admin, maintainer, supervisor, reviewer, driver, transport_incharge)
     Phone number is now required for all user types
     """
     USER_TYPE_CHOICES = [
@@ -438,6 +438,7 @@ class OtherRoleUserCreateForm(BootstrapFormMixin, forms.ModelForm):
         ('supervisor', 'Supervisor'),
         ('reviewer', 'Reviewer'),
         ('driver', 'Driver'),
+        ('transport_incharge', 'Transport Incharge'),
     ]
 
     phone_number = forms.CharField(

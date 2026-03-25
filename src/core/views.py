@@ -283,6 +283,8 @@ class SetPinView(FormView):
             return 'issue_management:reviewer:issue_list'
         elif user.is_driver:
             return 'home'
+        elif user.is_transport_incharge:
+            return 'home'
         else:
             return 'home'
     

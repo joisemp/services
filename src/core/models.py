@@ -121,6 +121,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('supervisor', 'Supervisor'),
         ('reviewer', 'Reviewer'),
         ('driver', 'Driver'),
+        ('transport_incharge', 'Transport Incharge'),
         ('general_user', 'General User'),
     ]
     
@@ -400,6 +401,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_driver(self):
         return self.user_type == 'driver'
+
+    @property
+    def is_transport_incharge(self):
+        return self.user_type == 'transport_incharge'
 
     @property
     def is_general_user(self):

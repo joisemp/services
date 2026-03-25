@@ -23,6 +23,7 @@ class RedirectLoggedinUsers(AccessMixin):
         "is_maintainer": "issue_management:maintainer:work_task_list",
         "is_reviewer": "issue_management:reviewer:issue_list",
         "is_driver": "home",
+        "is_transport_incharge": "home",
     }
 
     default_redirect = "home"
