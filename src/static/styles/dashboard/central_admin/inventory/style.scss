@@ -1,6 +1,20 @@
 @use '../../../colors' as colors;
 @use '../../../sidebar_base';
 
+// Button styling with icons
+.btn {
+  .material-symbols-outlined {
+    font-size: 1.25rem;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+  }
+
+  &.btn-sm .material-symbols-outlined {
+    font-size: 1rem;
+    margin-right: 0.25rem;
+  }
+}
+
 // Inventory dashboard tabs
 #inventory-tabs {
   .nav-tabs {
@@ -76,36 +90,39 @@
     margin: 1rem 0;
     opacity: 0.3;
   }
+}
 
-  .btn {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.75rem;
-    
-    &:hover {
-      transition: all 0.2s ease-in-out;
-    }
+// Table action buttons styling
+.btn-group-sm .btn .material-symbols-outlined {
+  font-size: 1rem;
+  margin-right: 0;
+}
+
+// Empty state styling for all inventory sections (warehouse, categories, brands)
+.empty-state {
+  background-color: #f8f9fa;
+  border: 1px dashed colors.$base-border;
+  border-radius: 0.5rem;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+
+  .material-symbols-outlined {
+    font-size: 4rem;
+    color: #d0d5dd;
   }
 
-  .empty-state {
-    background-color: #f8f9fa;
-    border: 1px dashed colors.$base-border;
-    border-radius: 0.5rem;
-    padding-top: 3rem;
-    padding-bottom: 3rem;
+  h5 {
+    font-weight: 600;
+    color: #495057;
+  }
 
-    h5 {
-      font-weight: 600;
-      color: #495057;
-    }
+  p {
+    font-size: 0.95rem;
+    color: #6c757d;
+  }
 
-    p {
-      font-size: 0.95rem;
-      color: #6c757d;
-    }
-
-    .btn {
-      padding: 0.5rem 1rem;
-    }
+  .btn {
+    padding: 0.5rem 1rem;
   }
 }
 

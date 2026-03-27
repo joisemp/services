@@ -176,6 +176,16 @@ tr {
   background-color: #dc3545;
 }
 
+.btn .material-symbols-outlined {
+  font-size: 1.25rem;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+.btn.btn-sm .material-symbols-outlined {
+  font-size: 1rem;
+  margin-right: 0.25rem;
+}
+
 #inventory-tabs .nav-tabs {
   border-bottom: 1px solid #e5e5e5;
   gap: 0.5rem;
@@ -234,29 +244,32 @@ tr {
   margin: 1rem 0;
   opacity: 0.3;
 }
-#warehouse-content .btn {
-  font-size: 0.9rem;
-  padding: 0.4rem 0.75rem;
+
+.btn-group-sm .btn .material-symbols-outlined {
+  font-size: 1rem;
+  margin-right: 0;
 }
-#warehouse-content .btn:hover {
-  transition: all 0.2s ease-in-out;
-}
-#warehouse-content .empty-state {
+
+.empty-state {
   background-color: #f8f9fa;
   border: 1px dashed #e5e5e5;
   border-radius: 0.5rem;
   padding-top: 3rem;
   padding-bottom: 3rem;
 }
-#warehouse-content .empty-state h5 {
+.empty-state .material-symbols-outlined {
+  font-size: 4rem;
+  color: #d0d5dd;
+}
+.empty-state h5 {
   font-weight: 600;
   color: #495057;
 }
-#warehouse-content .empty-state p {
+.empty-state p {
   font-size: 0.95rem;
   color: #6c757d;
 }
-#warehouse-content .empty-state .btn {
+.empty-state .btn {
   padding: 0.5rem 1rem;
 }
 
