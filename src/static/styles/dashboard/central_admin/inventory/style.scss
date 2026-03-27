@@ -66,29 +66,20 @@
 }
 
 #warehouse-content {
-  .card {
-    border: 1px solid colors.$base-border;
-    transition: all 0.2s ease-in-out;
-    
-    &:hover {
-      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-      border-color: colors.$primary;
-    }
+  .warehouse-card {
+    border-radius: 0.5rem;
   }
 
   .card-title {
     font-weight: 600;
+    font-size: 1rem;
     color: #212529;
+    margin-bottom: 0.25rem;
   }
 
   .badge {
     font-size: 0.75rem;
     padding: 0.35rem 0.65rem;
-  }
-
-  hr {
-    margin: 1rem 0;
-    opacity: 0.3;
   }
 }
 
