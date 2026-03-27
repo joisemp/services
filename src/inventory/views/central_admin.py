@@ -108,3 +108,58 @@ class CentralAdminCategoryListView(CentralAdminOnlyAccessMixin, ListView):
 			}
 		)
 		return context
+
+
+class CentralAdminBrandListView(CentralAdminOnlyAccessMixin, ListView):
+	model = Brand
+	template_name = 'central_admin/inventory/brand_list.html'
+	context_object_name = 'brands'
+	paginate_by = 20
+
+	def get_org_filter(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if user.is_superuser and not org:
+			return {}
+
+		if org:
+			return {'org': org}
+
+		return {'pk__in': []}
+
+	def get_queryset(self):
+		org_filter = self.get_org_filter()
+		return Brand.objects.filter(**org_filter)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		org_filter = self.get_org_filter()
+
+		products = Product.objects.filter(**org_filter).select_related(
+			'category',
+			'brand',
+			'warehouse',
+		)
+		categories = Category.objects.filter(**org_filter)
+		brands = Brand.objects.filter(**org_filter)
+		warehouses = Warehouse.objects.filter(**org_filter)
+
+		low_stock_count = products.filter(universal_available_quantity__lte=10).count()
+		out_of_stock_count = products.filter(universal_available_quantity__lte=0).count()
+
+		summary_cards = [
+			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
+			{'label': 'Categories', 'value': categories.count(), 'variant': 'info', 'icon': 'category'},
+			{'label': 'Warehouses', 'value': warehouses.count(), 'variant': 'success', 'icon': 'warehouse'},
+			{'label': 'Low Stock Items', 'value': low_stock_count, 'variant': 'warning', 'icon': 'warning'},
+			{'label': 'Out of Stock', 'value': out_of_stock_count, 'variant': 'danger', 'icon': 'error'},
+			{'label': 'Brands', 'value': brands.count(), 'variant': 'secondary', 'icon': 'branding_watermark'},
+		]
+
+		context.update(
+			{
+				'summary_cards': summary_cards,
+			}
+		)
+		return context
