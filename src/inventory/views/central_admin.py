@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from inventory.models import Brand, Category, Product, Warehouse
-from inventory.forms import WarehouseForm
+from inventory.forms import WarehouseForm, CategoryForm
 
 
 class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateView):
@@ -184,4 +184,23 @@ class CentralAdminCreateWarehouseView(CentralAdminOnlyAccessMixin, CreateView):
 			warehouse.org = org
 		
 		warehouse.save()
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminCreateCategoryView(CentralAdminOnlyAccessMixin, CreateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'central_admin/inventory/create_category.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:central_admin:category_list')
+
+	def form_valid(self, form):
+		category = form.save(commit=False)
+		org = self.request.user.organization if hasattr(self.request.user, 'organization') else None
+		
+		if org:
+			category.org = org
+		
+		category.save()
 		return HttpResponseRedirect(self.get_success_url())
