@@ -11,6 +11,7 @@ urlpatterns = [
     path('warehouses/<slug:slug>/edit/', central_admin.CentralAdminEditWarehouseView.as_view(), name='edit_warehouse'),
     path('warehouses/<slug:slug>/add-user/', central_admin.CentralAdminWarehouseUserAddView.as_view(), name='warehouse_add_user'),
     path('warehouses/<slug:slug>/remove-user/', central_admin.CentralAdminWarehouseUserRemoveView.as_view(), name='warehouse_remove_user'),
+    path('warehouses/<slug:slug>/create-room/', central_admin.CentralAdminCreateRoomView.as_view(), name='create_room'),
     path('categories/', central_admin.CentralAdminCategoryListView.as_view(), name='category_list'),
     path('categories/create/', central_admin.CentralAdminCreateCategoryView.as_view(), name='create_category'),
     path('categories/<slug:slug>/edit/', central_admin.CentralAdminEditCategoryView.as_view(), name='edit_category'),

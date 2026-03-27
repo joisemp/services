@@ -120,33 +120,41 @@
 
     <!-- Warehouse Info Section -->
     <div class="col-lg-4">
-      <!-- Warehouse Information Card -->
+      <!-- Rooms Card -->
       <div class="card mb-3">
-        <div class="card-header bg-white">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">info</span>
-            Warehouse Information
+            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">door_open</span>
+            Rooms ({{ rooms_count }})
           </h5>
+          <a href="{% url 'inventory:central_admin:create_room' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary" title="Create a new room">
+            <span class="material-symbols-outlined me-1" style="font-size: 14px;">add</span>
+            Add Room
+          </a>
         </div>
         <div class="card-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="small text-muted d-block mb-1">Name</label>
-              <p class="mb-0">{{ warehouse.name }}</p>
+          {% if rooms %}
+            <div class="list-group list-group-flush">
+              {% for room in rooms %}
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 small">{{ room.name }}</h6>
+                      <small class="text-muted d-block">
+                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">inbox</span>
+                        {{ room.buckets.count }} bucket{{ room.buckets.count|pluralize }}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
-            <div class="col-12">
-              <label class="small text-muted d-block mb-1">Location</label>
-              <p class="mb-0">{{ warehouse.location }}</p>
+          {% else %}
+            <div class="text-center py-3">
+              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">door_open</span>
+              <p class="text-muted mb-0 small">No rooms in this warehouse yet.</p>
             </div>
-            <div class="col-12">
-              <label class="small text-muted d-block mb-1">Total Rooms</label>
-              <p class="mb-0">{{ warehouse.rooms.count }}</p>
-            </div>
-            <div class="col-12">
-              <label class="small text-muted d-block mb-1">Total Products</label>
-              <p class="mb-0">{{ warehouse_products_count }}</p>
-            </div>
-          </div>
+          {% endif %}
         </div>
       </div>
 

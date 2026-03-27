@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category, Brand
+from .models import Warehouse, Category, Brand, Room
 from core.models import User
 
 
@@ -113,3 +113,13 @@ class WarehouseUserRemoveForm(BootstrapFormMixin, forms.Form):
 			raise forms.ValidationError("User not found.")
 
 
+class RoomForm(BootstrapFormMixin, forms.ModelForm):
+	"""
+	Form for creating or updating a room in a warehouse
+	"""
+	class Meta:
+		model = Room
+		fields = ['name']
+		labels = {
+			'name': 'Room Name',
+		}

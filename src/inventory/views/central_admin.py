@@ -5,8 +5,8 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse
-from inventory.forms import WarehouseForm, CategoryForm, BrandForm, WarehouseUserAddForm, WarehouseUserRemoveForm
+from inventory.models import Brand, Category, Product, Warehouse, Room
+from inventory.forms import WarehouseForm, CategoryForm, BrandForm, WarehouseUserAddForm, WarehouseUserRemoveForm, RoomForm
 
 
 class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateView):
@@ -352,6 +352,9 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 
 		# Get users associated with this warehouse
 		users = self.object.users.all().order_by('first_name', 'last_name')
+
+		# Get rooms in this warehouse
+		rooms = self.object.rooms.all().prefetch_related('buckets')
 		
 		context.update({
 			'summary_cards': summary_cards,
@@ -360,6 +363,8 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 			'users': users,
 			'users_count': users.count(),
 			'user_add_form': WarehouseUserAddForm(warehouse=self.object),
+			'rooms': rooms,
+			'rooms_count': rooms.count(),
 		})
 		return context
 
@@ -428,3 +433,31 @@ class CentralAdminWarehouseUserRemoveView(CentralAdminOnlyAccessMixin, FormView)
 	def form_invalid(self, form):
 		messages.error(self.request, "Error removing user from warehouse. Please try again.")
 		return redirect('inventory:central_admin:warehouse_detail', slug=self.kwargs['slug'])
+
+
+class CentralAdminCreateRoomView(CentralAdminOnlyAccessMixin, CreateView):
+	"""
+	View to create a new room in a warehouse
+	"""
+	model = Room
+	form_class = RoomForm
+	template_name = 'central_admin/inventory/create_room.html'
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		context['warehouse'] = warehouse
+		return context
+
+	def form_valid(self, form):
+		room = form.save(commit=False)
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		room.warehouse = warehouse
+		room.save()
+		
+		messages.success(self.request, f"Successfully created room '{room.name}' in {warehouse.name}")
+		return redirect('inventory:central_admin:warehouse_detail', slug=warehouse.slug)
+
+	def get_success_url(self):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		return reverse_lazy('inventory:central_admin:warehouse_detail', kwargs={'slug': warehouse.slug})
