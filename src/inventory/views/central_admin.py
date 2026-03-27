@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, ListView, CreateView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 
@@ -223,3 +223,80 @@ class CentralAdminCreateBrandView(CentralAdminOnlyAccessMixin, CreateView):
 		
 		brand.save()
 		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminEditWarehouseView(CentralAdminOnlyAccessMixin, UpdateView):
+	model = Warehouse
+	form_class = WarehouseForm
+	template_name = 'central_admin/inventory/edit_warehouse.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:central_admin:inventory_dashboard')
+
+	def get_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		if user.is_superuser and not org:
+			return Warehouse.objects.all()
+		
+		if org:
+			return Warehouse.objects.filter(org=org)
+		
+		return Warehouse.objects.none()
+
+	def form_valid(self, form):
+		warehouse = form.save()
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminEditCategoryView(CentralAdminOnlyAccessMixin, UpdateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'central_admin/inventory/edit_category.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:central_admin:category_list')
+
+	def get_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		if user.is_superuser and not org:
+			return Category.objects.all()
+		
+		if org:
+			return Category.objects.filter(org=org)
+		
+		return Category.objects.none()
+
+	def form_valid(self, form):
+		category = form.save()
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminEditBrandView(CentralAdminOnlyAccessMixin, UpdateView):
+	model = Brand
+	form_class = BrandForm
+	template_name = 'central_admin/inventory/edit_brand.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:central_admin:brand_list')
+
+	def get_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		if user.is_superuser and not org:
+			return Brand.objects.all()
+		
+		if org:
+			return Brand.objects.filter(org=org)
+		
+		return Brand.objects.none()
