@@ -44,12 +44,10 @@ class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateVi
 			{'label': 'Brands', 'value': brands.count(), 'variant': 'secondary', 'icon': 'branding_watermark'},
 		]
 
-		recent_products = products.order_by('-id')[:6]
-
 		context.update(
 			{
 				'summary_cards': summary_cards,
-				'recent_products': recent_products,
+				'warehouses': warehouses,
 				'low_stock_count': low_stock_count,
 				'out_of_stock_count': out_of_stock_count,
 			}

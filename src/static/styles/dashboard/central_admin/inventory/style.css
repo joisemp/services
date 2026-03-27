@@ -176,55 +176,99 @@ tr {
   background-color: #dc3545;
 }
 
-#header .alert-notification {
-  border-left: 4px solid #0d6efd;
+#inventory-tabs .nav-tabs {
+  border-bottom: 1px solid #e5e5e5;
+  gap: 0.5rem;
 }
-#header .alert-notification h5 {
-  color: #0d6efd;
+#inventory-tabs .nav-tabs .nav-link {
+  color: #666;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease-in-out;
+  font-weight: 500;
+}
+#inventory-tabs .nav-tabs .nav-link:hover {
+  color: #2563EB;
+  border-bottom-color: #2563EB;
+}
+#inventory-tabs .nav-tabs .nav-link.active {
+  color: #2563EB;
+  border-bottom-color: #2563EB;
+  background-color: transparent;
+}
+#inventory-tabs .tab-content .tab-pane {
+  animation: fadeIn 0.3s ease-in;
 }
 
-#summary .card {
-  transition: box-shadow 0.2s, transform 0.2s;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-#summary .card:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
 #inventory-health .badge {
   font-size: 0.875rem;
   padding: 0.5rem 0.75rem;
 }
 
-#recent-products .card {
-  transition: box-shadow 0.2s, border-color 0.2s;
-  border: 1px solid #dee2e6;
+#warehouse-content .card {
+  border: 1px solid #e5e5e5;
+  transition: all 0.2s ease-in-out;
 }
-#recent-products .card:hover {
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-  border-color: #0d6efd;
+#warehouse-content .card:hover {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-color: #2563EB;
 }
-#recent-products .card-title {
+#warehouse-content .card-title {
   font-weight: 600;
   color: #212529;
 }
-#recent-products .badge {
+#warehouse-content .badge {
   font-size: 0.75rem;
   padding: 0.35rem 0.65rem;
 }
-#recent-products hr {
+#warehouse-content hr {
   margin: 1rem 0;
-  opacity: 0.5;
+  opacity: 0.3;
+}
+#warehouse-content .btn {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+}
+#warehouse-content .btn:hover {
+  transition: all 0.2s ease-in-out;
+}
+#warehouse-content .empty-state {
+  background-color: #f8f9fa;
+  border: 1px dashed #e5e5e5;
+  border-radius: 0.5rem;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+#warehouse-content .empty-state h5 {
+  font-weight: 600;
+  color: #495057;
+}
+#warehouse-content .empty-state p {
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+#warehouse-content .empty-state .btn {
+  padding: 0.5rem 1rem;
 }
 
 @media (max-width: 575.98px) {
-  #recent-products .card {
+  #inventory-tabs .nav-tabs {
+    gap: 0;
+  }
+  #inventory-tabs .nav-tabs .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+  #products-content .card {
     width: 100% !important;
-  }
-  #header .alert-notification h5 {
-    font-size: 1.1rem;
-  }
-  #header .alert-notification p {
-    font-size: 0.9rem;
   }
 }/*# sourceMappingURL=style.css.map */

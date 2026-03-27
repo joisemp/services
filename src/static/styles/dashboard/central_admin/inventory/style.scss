@@ -1,25 +1,46 @@
+@use '../../../colors' as colors;
 @use '../../../sidebar_base';
 
-// Inventory dashboard specific styles
+// Inventory dashboard tabs
+#inventory-tabs {
+  .nav-tabs {
+    border-bottom: 1px solid colors.$base-border;
+    gap: 0.5rem;
 
-#header {
-  .alert-notification {
-    border-left: 4px solid #0d6efd;
-    
-    h5 {
-      color: #0d6efd;
+    .nav-link {
+      color: #666;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.75rem 1.5rem;
+      transition: all 0.2s ease-in-out;
+      font-weight: 500;
+
+      &:hover {
+        color: colors.$primary;
+        border-bottom-color: colors.$primary;
+      }
+
+      &.active {
+        color: colors.$primary;
+        border-bottom-color: colors.$primary;
+        background-color: transparent;
+      }
+    }
+  }
+
+  .tab-content {
+    .tab-pane {
+      animation: fadeIn 0.3s ease-in;
     }
   }
 }
 
-#summary {
-  .card {
-    transition: box-shadow 0.2s, transform 0.2s;
-    
-    &:hover {
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-      transform: translateY(-2px);
-    }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -30,14 +51,14 @@
   }
 }
 
-#recent-products {
+#warehouse-content {
   .card {
-    transition: box-shadow 0.2s, border-color 0.2s;
-    border: 1px solid #dee2e6;
+    border: 1px solid colors.$base-border;
+    transition: all 0.2s ease-in-out;
     
     &:hover {
-      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-      border-color: #0d6efd;
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+      border-color: colors.$primary;
     }
   }
 
@@ -53,26 +74,56 @@
 
   hr {
     margin: 1rem 0;
-    opacity: 0.5;
+    opacity: 0.3;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.75rem;
+    
+    &:hover {
+      transition: all 0.2s ease-in-out;
+    }
+  }
+
+  .empty-state {
+    background-color: #f8f9fa;
+    border: 1px dashed colors.$base-border;
+    border-radius: 0.5rem;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+
+    h5 {
+      font-weight: 600;
+      color: #495057;
+    }
+
+    p {
+      font-size: 0.95rem;
+      color: #6c757d;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+    }
   }
 }
 
 @media (max-width: 575.98px) {
-  #recent-products {
-    .card {
-      width: 100% !important;
+  #inventory-tabs {
+    .nav-tabs {
+      gap: 0;
+
+      .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+      }
     }
   }
 
-  #header {
-    .alert-notification {
-      h5 {
-        font-size: 1.1rem;
-      }
-
-      p {
-        font-size: 0.9rem;
-      }
+  #products-content {
+    .card {
+      width: 100% !important;
     }
   }
 }

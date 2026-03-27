@@ -6,6 +6,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/inventory/style.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -42,66 +43,80 @@
   </div>
 </section>
 
-<section id="inventory-health" class="mt-4">
-  <div class="card border-0">
-    <div class="card-body">
-      <h5 class="mb-3">Stock Health</h5>
-      <div class="d-flex flex-wrap gap-2">
-        <span class="badge text-bg-warning rounded-pill">Low stock items: {{ low_stock_count }}</span>
-        <span class="badge text-bg-danger rounded-pill">Out of stock: {{ out_of_stock_count }}</span>
+<section id="inventory-tabs" class="mt-4">
+  <ul class="nav nav-tabs" id="inventoryTabsNav" role="tablist">
+    <li class="nav-item" role="presentation">
+      <a class="nav-link active" href="{% url 'inventory:central_admin:inventory_dashboard' %}">Warehouse</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="#">Categories</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="#">Brands</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="#">Settings</a>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="inventoryTabsContent">
+    <!-- Warehouse Tab -->
+    <div class="tab-pane fade show active" id="warehouse-content" role="tabpanel" aria-labelledby="warehouse-tab">
+      <div class="mt-4">
+        <div class="title-recent-issues d-flex justify-content-between align-items-center">
+          <h3 class="mb-1">Warehouses</h3>
+        </div>
+
+        <div class="container-fluid px-0 mt-3">
+          {% if warehouses %}
+            <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+              {% for warehouse in warehouses %}
+                <div class="col">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title mb-0">{{ warehouse.name }}</h5>
+                        <span class="badge text-bg-primary rounded-pill">Warehouse</span>
+                      </div>
+                      <hr>
+                      <div class="d-flex justify-content-between text-muted small mb-2">
+                        <span>Location</span>
+                        <span>{{ warehouse.location }}</span>
+                      </div>
+                      <div class="d-flex justify-content-between text-muted small mb-3">
+                        <span>Rooms</span>
+                        <span class="badge text-bg-light text-dark">{{ warehouse.rooms.count }}</span>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-sm btn-outline-primary flex-grow-1">
+                          <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                          View
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">
+                          <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state text-center py-5">
+              <div class="mb-4">
+                <span class="material-symbols-outlined" style="font-size: 4rem; color: #d0d5dd;">warehouse</span>
+              </div>
+              <h5 class="text-muted mb-2">No Warehouses</h5>
+              <p class="text-muted mb-4">Start by creating a warehouse to organize your inventory.</p>
+              <a href="#" class="btn btn-primary btn-sm">
+                <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle; margin-right: 0.5rem;">add</span>
+                Create Warehouse
+              </a>
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
-  </div>
-</section>
-
-<section id="recent-products" class="mt-4">
-  <div class="title-recent-issues d-flex justify-content-between align-items-center">
-    <h3 class="mb-1">Recent Products</h3>
-  </div>
-
-  <div class="container-fluid px-0 mt-3">
-    {% if recent_products %}
-      <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
-        {% for product in recent_products %}
-          <div class="col">
-            <div class="card h-100">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                  <h5 class="card-title mb-0">{{ product.name }}</h5>
-                  <span class="badge text-bg-secondary rounded-pill text-uppercase">{{ product.unit }}</span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between text-muted small mb-2">
-                  <span>Code</span>
-                  <span>{{ product.product_code }}</span>
-                </div>
-                <div class="d-flex justify-content-between text-muted small mb-2">
-                  <span>Warehouse</span>
-                  <span>{{ product.warehouse.name }}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                  <div>
-                    <p class="mb-1 text-muted small">Available Quantity</p>
-                    <p class="mb-0 fw-semibold">{{ product.universal_available_quantity }}</p>
-                  </div>
-                  {% if product.universal_available_quantity <= 0 %}
-                    <span class="badge text-bg-danger rounded-pill">Out of stock</span>
-                  {% elif product.universal_available_quantity <= 10 %}
-                    <span class="badge text-bg-warning rounded-pill">Low stock</span>
-                  {% else %}
-                    <span class="badge text-bg-success rounded-pill">In stock</span>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="alert alert-light border mt-3" role="alert">
-        No products available yet.
-      </div>
-    {% endif %}
   </div>
 </section>
 {% endblock %}
