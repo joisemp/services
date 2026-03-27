@@ -1,10 +1,12 @@
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, FormView
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from inventory.models import Brand, Category, Product, Warehouse
-from inventory.forms import WarehouseForm, CategoryForm, BrandForm
+from inventory.forms import WarehouseForm, CategoryForm, BrandForm, WarehouseUserAddForm, WarehouseUserRemoveForm
 
 
 class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateView):
@@ -347,11 +349,17 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		]
 		
 		warehouse_products = self.object.products.all().prefetch_related('category', 'brand')
+
+		# Get users associated with this warehouse
+		users = self.object.users.all().order_by('first_name', 'last_name')
 		
 		context.update({
 			'summary_cards': summary_cards,
 			'warehouse_products': warehouse_products,
 			'warehouse_products_count': warehouse_products.count(),
+			'users': users,
+			'users_count': users.count(),
+			'user_add_form': WarehouseUserAddForm(warehouse=self.object),
 		})
 		return context
 
@@ -366,3 +374,57 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 			return {'org': org}
 
 		return {'pk__in': []}
+
+
+class CentralAdminWarehouseUserAddView(CentralAdminOnlyAccessMixin, FormView):
+	"""
+	View to handle adding users to a warehouse
+	"""
+	form_class = WarehouseUserAddForm
+	
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		# Get warehouse instance for the form
+		self.warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		kwargs['warehouse'] = self.warehouse
+		return kwargs
+	
+	def form_valid(self, form):
+		# Add selected users to warehouse
+		users = form.cleaned_data['users']
+		self.warehouse.users.add(*users)
+		
+		# Add success message
+		messages.success(self.request, f"Successfully added {len(users)} user(s) to {self.warehouse.name}")
+		return redirect('inventory:central_admin:warehouse_detail', slug=self.warehouse.slug)
+
+	def form_invalid(self, form):
+		messages.error(self.request, "Error adding users to warehouse. Please try again.")
+		return redirect('inventory:central_admin:warehouse_detail', slug=self.kwargs['slug'])
+
+
+class CentralAdminWarehouseUserRemoveView(CentralAdminOnlyAccessMixin, FormView):
+	"""
+	View to handle removing users from a warehouse
+	"""
+	form_class = WarehouseUserRemoveForm
+	
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		# Get warehouse instance for the form
+		self.warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		kwargs['warehouse'] = self.warehouse
+		return kwargs
+	
+	def form_valid(self, form):
+		# Remove the user from warehouse
+		user = form.cleaned_data['user_id']
+		self.warehouse.users.remove(user)
+		
+		# Add success message
+		messages.success(self.request, f"Successfully removed {user.get_full_name() or user.get_short_name()} from {self.warehouse.name}")
+		return redirect('inventory:central_admin:warehouse_detail', slug=self.warehouse.slug)
+
+	def form_invalid(self, form):
+		messages.error(self.request, "Error removing user from warehouse. Please try again.")
+		return redirect('inventory:central_admin:warehouse_detail', slug=self.kwargs['slug'])

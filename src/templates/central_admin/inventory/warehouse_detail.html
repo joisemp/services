@@ -120,7 +120,8 @@
 
     <!-- Warehouse Info Section -->
     <div class="col-lg-4">
-      <div class="card">
+      <!-- Warehouse Information Card -->
+      <div class="card mb-3">
         <div class="card-header bg-white">
           <h5 class="mb-0">
             <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">info</span>
@@ -145,6 +146,112 @@
               <label class="small text-muted d-block mb-1">Total Products</label>
               <p class="mb-0">{{ warehouse_products_count }}</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Card -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">people</span>
+            Users ({{ users_count }})
+          </h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+            <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
+            Add User
+          </button>
+        </div>
+        <div class="card-body">
+          {% if users %}
+            <div class="list-group list-group-flush">
+              {% for user in users %}
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex align-items-center">
+                    <div class="user-avatar me-3">
+                      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <span class="small fw-bold">
+                          {% if user.first_name %}{{ user.first_name|first|upper }}{% else %}{{ user.get_short_name|first|upper }}{% endif %}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="user-info flex-grow-1">
+                      <h6 class="mb-0 small">{{ user.get_full_name|default:user.get_short_name }}</h6>
+                      <small class="text-muted">{{ user.get_user_type_display }}</small>
+                      {% if user.email %}
+                        <br><small class="text-muted">{{ user.email }}</small>
+                      {% endif %}
+                    </div>
+                    <div class="user-actions">
+                      <form method="post" action="{% url 'inventory:central_admin:warehouse_remove_user' slug=warehouse.slug %}" 
+                            onsubmit="return confirm('Are you sure you want to remove {{ user.get_full_name|default:user.get_short_name }} from this warehouse?')" 
+                            style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove user from warehouse">
+                          <span class="material-symbols-outlined" style="font-size: 14px;">person_remove</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-3">
+              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">people</span>
+              <p class="text-muted mb-0 small">No users assigned to this warehouse.</p>
+              <button type="button" class="btn btn-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+                <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
+                Add First User
+              </button>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Add Users Modal -->
+      <div class="modal fade" id="addUsersModal" tabindex="-1" aria-labelledby="addUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'inventory:central_admin:warehouse_add_user' slug=warehouse.slug %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title" id="addUsersModalLabel">
+                  <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">person_add</span>
+                  Add Users to Warehouse
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                {{ user_add_form.non_field_errors }}
+                <div class="form-group">
+                  <label class="form-label">{{ user_add_form.users.label }}</label>
+                  <p class="text-muted small mb-3">{{ user_add_form.users.help_text }}</p>
+                  <div class="user-checkbox-list">
+                    {% for checkbox in user_add_form.users %}
+                    <div class="user-checkbox-item mb-2 border rounded p-2">
+                      <div class="form-check d-flex align-items-center">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label flex-grow-1 ms-3" for="{{ checkbox.id_for_label }}">
+                          {{ checkbox.choice_label }}
+                        </label>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% if user_add_form.users.errors %}
+                    <div class="alert alert-danger mt-2 mb-0">
+                      {{ user_add_form.users.errors }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add User(s)</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

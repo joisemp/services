@@ -208,7 +208,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Currently active space for space admins (used for context switching)"
     )
     
-    warehouse = models.ManyToManyField(
+    warehouses = models.ManyToManyField(
         'inventory.Warehouse',
         blank=True,
         related_name='users',
