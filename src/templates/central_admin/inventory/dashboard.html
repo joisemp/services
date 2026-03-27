@@ -1,0 +1,107 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Central Admin Inventory{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<section id="header" class="mt-2">
+  <div class="alert alert-notification alert-primary" role="alert">
+    <h5 class="mb-1">Inventory Overview</h5>
+    <p class="mb-0">Track stock health, products, and warehouse coverage across your organization.</p>
+  </div>
+</section>
+
+<section id="summary" class="mt-4">
+  <div class="row g-3">
+    {% for card in summary_cards %}
+      <div class="col-6 col-lg-4 col-xxl-3">
+        <div class="card h-100 border-0">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-muted small mb-1">{{ card.label }}</p>
+              <h4 class="fw-semibold mb-0">{{ card.value }}</h4>
+            </div>
+            <span class="material-symbols-outlined fs-2 text-{{ card.variant }}">{{ card.icon }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="inventory-health" class="mt-4">
+  <div class="card border-0">
+    <div class="card-body">
+      <h5 class="mb-3">Stock Health</h5>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="badge text-bg-warning rounded-pill">Low stock items: {{ low_stock_count }}</span>
+        <span class="badge text-bg-danger rounded-pill">Out of stock: {{ out_of_stock_count }}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="recent-products" class="mt-4">
+  <div class="title-recent-issues d-flex justify-content-between align-items-center">
+    <h3 class="mb-1">Recent Products</h3>
+  </div>
+
+  <div class="container-fluid px-0 mt-3">
+    {% if recent_products %}
+      <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+        {% for product in recent_products %}
+          <div class="col">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <h5 class="card-title mb-0">{{ product.name }}</h5>
+                  <span class="badge text-bg-secondary rounded-pill text-uppercase">{{ product.unit }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between text-muted small mb-2">
+                  <span>Code</span>
+                  <span>{{ product.product_code }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted small mb-2">
+                  <span>Warehouse</span>
+                  <span>{{ product.warehouse.name }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <div>
+                    <p class="mb-1 text-muted small">Available Quantity</p>
+                    <p class="mb-0 fw-semibold">{{ product.universal_available_quantity }}</p>
+                  </div>
+                  {% if product.universal_available_quantity <= 0 %}
+                    <span class="badge text-bg-danger rounded-pill">Out of stock</span>
+                  {% elif product.universal_available_quantity <= 10 %}
+                    <span class="badge text-bg-warning rounded-pill">Low stock</span>
+                  {% else %}
+                    <span class="badge text-bg-success rounded-pill">In stock</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-light border mt-3" role="alert">
+        No products available yet.
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

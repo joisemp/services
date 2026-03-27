@@ -1,0 +1,78 @@
+@use '../../../sidebar_base';
+
+// Inventory dashboard specific styles
+
+#header {
+  .alert-notification {
+    border-left: 4px solid #0d6efd;
+    
+    h5 {
+      color: #0d6efd;
+    }
+  }
+}
+
+#summary {
+  .card {
+    transition: box-shadow 0.2s, transform 0.2s;
+    
+    &:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+#inventory-health {
+  .badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+#recent-products {
+  .card {
+    transition: box-shadow 0.2s, border-color 0.2s;
+    border: 1px solid #dee2e6;
+    
+    &:hover {
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+      border-color: #0d6efd;
+    }
+  }
+
+  .card-title {
+    font-weight: 600;
+    color: #212529;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+  }
+
+  hr {
+    margin: 1rem 0;
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #recent-products {
+    .card {
+      width: 100% !important;
+    }
+  }
+
+  #header {
+    .alert-notification {
+      h5 {
+        font-size: 1.1rem;
+      }
+
+      p {
+        font-size: 0.9rem;
+      }
+    }
+  }
+}

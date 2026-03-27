@@ -258,8 +258,7 @@ tr {
   line-height: 1.5;
   color: #6c757d;
   word-break: break-word;
-  -webkit-hyphens: auto;
-          hyphens: auto;
+  hyphens: auto;
 }
 
 .comment-form {
