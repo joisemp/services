@@ -208,6 +208,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Currently active space for space admins (used for context switching)"
     )
     
+    warehouse = models.ManyToManyField(
+        'inventory.Warehouse',
+        blank=True,
+        related_name='users',
+        help_text="Warehouses this user has access to (optional)"
+    )
+    
     # Firebase Cloud Messaging token for push notifications
     fcm_token = models.TextField(
         blank=True,
