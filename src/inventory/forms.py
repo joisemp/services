@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category
+from .models import Warehouse, Category, Brand
 
 
 class WarehouseForm(BootstrapFormMixin, forms.ModelForm):
@@ -19,6 +19,19 @@ class CategoryForm(BootstrapFormMixin, forms.ModelForm):
 		fields = ['name', 'description']
 		labels = {
 			'name': 'Category Name',
+			'description': 'Description',
+		}
+		widgets = {
+			'description': forms.Textarea(attrs={'rows': 4}),
+		}
+
+
+class BrandForm(BootstrapFormMixin, forms.ModelForm):
+	class Meta:
+		model = Brand
+		fields = ['name', 'description']
+		labels = {
+			'name': 'Brand Name',
 			'description': 'Description',
 		}
 		widgets = {

@@ -10,4 +10,5 @@ urlpatterns = [
     path('categories/', central_admin.CentralAdminCategoryListView.as_view(), name='category_list'),
     path('categories/create/', central_admin.CentralAdminCreateCategoryView.as_view(), name='create_category'),
     path('brands/', central_admin.CentralAdminBrandListView.as_view(), name='brand_list'),
+    path('brands/create/', central_admin.CentralAdminCreateBrandView.as_view(), name='create_brand'),
 ]
