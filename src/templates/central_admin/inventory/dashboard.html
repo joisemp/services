@@ -89,7 +89,7 @@
                           <span class="badge bg-light text-dark">{{ warehouse.rooms.count }}</span>
                         </div>
                         <div class="d-flex gap-2">
-                          <a href="#" class="btn btn-sm btn-primary flex-grow-1">View</a>
+                          <a href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}" class="btn btn-sm btn-primary flex-grow-1">View</a>
                           <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-sm btn-outline-secondary">
                             <span class="material-symbols-outlined">edit</span>
                           </a>

@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 
@@ -300,3 +300,69 @@ class CentralAdminEditBrandView(CentralAdminOnlyAccessMixin, UpdateView):
 			return Brand.objects.filter(org=org)
 		
 		return Brand.objects.none()
+
+
+class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
+	model = Warehouse
+	template_name = 'central_admin/inventory/warehouse_detail.html'
+	context_object_name = 'warehouse'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		if user.is_superuser and not org:
+			return Warehouse.objects.all()
+		
+		if org:
+			return Warehouse.objects.filter(org=org)
+		
+		return Warehouse.objects.none()
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		org_filter = self.get_org_filter()
+
+		products = Product.objects.filter(**org_filter).select_related(
+			'category',
+			'brand',
+			'warehouse',
+		)
+		categories = Category.objects.filter(**org_filter)
+		brands = Brand.objects.filter(**org_filter)
+		warehouses_count = Warehouse.objects.filter(**org_filter).count()
+
+		low_stock_count = products.filter(universal_available_quantity__lte=10).count()
+		out_of_stock_count = products.filter(universal_available_quantity__lte=0).count()
+
+		summary_cards = [
+			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
+			{'label': 'Categories', 'value': categories.count(), 'variant': 'info', 'icon': 'category'},
+			{'label': 'Warehouses', 'value': warehouses_count, 'variant': 'success', 'icon': 'warehouse'},
+			{'label': 'Low Stock Items', 'value': low_stock_count, 'variant': 'warning', 'icon': 'warning'},
+			{'label': 'Out of Stock', 'value': out_of_stock_count, 'variant': 'danger', 'icon': 'error'},
+			{'label': 'Brands', 'value': brands.count(), 'variant': 'secondary', 'icon': 'branding_watermark'},
+		]
+		
+		warehouse_products = self.object.products.all().prefetch_related('category', 'brand')
+		
+		context.update({
+			'summary_cards': summary_cards,
+			'warehouse_products': warehouse_products,
+			'warehouse_products_count': warehouse_products.count(),
+		})
+		return context
+
+	def get_org_filter(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if user.is_superuser and not org:
+			return {}
+
+		if org:
+			return {'org': org}
+
+		return {'pk__in': []}
