@@ -1,7 +1,10 @@
-from django.views.generic import TemplateView, ListView
+from django.views.generic import TemplateView, ListView, CreateView
+from django.http import HttpResponseRedirect
+from django.urls import reverse_lazy
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from inventory.models import Brand, Category, Product, Warehouse
+from inventory.forms import WarehouseForm
 
 
 class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateView):
@@ -163,3 +166,22 @@ class CentralAdminBrandListView(CentralAdminOnlyAccessMixin, ListView):
 			}
 		)
 		return context
+
+
+class CentralAdminCreateWarehouseView(CentralAdminOnlyAccessMixin, CreateView):
+	model = Warehouse
+	form_class = WarehouseForm
+	template_name = 'central_admin/inventory/create_warehouse.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:central_admin:inventory_dashboard')
+
+	def form_valid(self, form):
+		warehouse = form.save(commit=False)
+		org = self.request.user.organization if hasattr(self.request.user, 'organization') else None
+		
+		if org:
+			warehouse.org = org
+		
+		warehouse.save()
+		return HttpResponseRedirect(self.get_success_url())
