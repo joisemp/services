@@ -461,3 +461,42 @@ class CentralAdminCreateRoomView(CentralAdminOnlyAccessMixin, CreateView):
 	def get_success_url(self):
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		return reverse_lazy('inventory:central_admin:warehouse_detail', kwargs={'slug': warehouse.slug})
+
+
+class CentralAdminEditRoomView(CentralAdminOnlyAccessMixin, UpdateView):
+	"""
+	View to edit an existing room
+	"""
+	model = Room
+	form_class = RoomForm
+	template_name = 'central_admin/inventory/edit_room.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'room_slug'
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = self.object.warehouse
+		context['warehouse'] = warehouse
+		return context
+
+	def get_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		if user.is_superuser and not org:
+			return Room.objects.all()
+		
+		if org:
+			# Only allow editing rooms in warehouses owned by this org
+			return Room.objects.filter(warehouse__org=org)
+		
+		return Room.objects.none()
+
+	def form_valid(self, form):
+		room = form.save()
+		messages.success(self.request, f"Successfully updated room '{room.name}'")
+		return redirect('inventory:central_admin:warehouse_detail', slug=room.warehouse.slug)
+
+	def get_success_url(self):
+		warehouse = self.object.warehouse
+		return reverse_lazy('inventory:central_admin:warehouse_detail', kwargs={'slug': warehouse.slug})

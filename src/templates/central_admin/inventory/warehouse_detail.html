@@ -137,13 +137,18 @@
             <div class="list-group list-group-flush">
               {% for room in rooms %}
                 <div class="list-group-item border-0 px-0 py-2">
-                  <div class="d-flex justify-content-between align-items-start">
+                  <div class="d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1">
                       <h6 class="mb-1 small">{{ room.name }}</h6>
                       <small class="text-muted d-block">
                         <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">inbox</span>
                         {{ room.buckets.count }} bucket{{ room.buckets.count|pluralize }}
                       </small>
+                    </div>
+                    <div class="room-actions">
+                      <a href="{% url 'inventory:central_admin:edit_room' room_slug=room.slug %}" class="btn btn-sm btn-outline-primary" title="Edit room">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                      </a>
                     </div>
                   </div>
                 </div>

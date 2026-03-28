@@ -107,8 +107,8 @@ class Product(models.Model):
     product_code = models.CharField(max_length=20, unique=True, blank=True)
     org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='products')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='products')
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
-    bucket = models.ForeignKey(Bucket, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
+    bucket = models.ForeignKey(Bucket, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     
