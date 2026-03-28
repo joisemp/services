@@ -122,6 +122,10 @@
       <span class="material-symbols-outlined me-2 fs-5">inventory_2</span>
       Recent Items
     </h5>
+    <a href="{% url 'inventory:supervisor:warehouse_products' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">visibility</span>
+      View All
+    </a>
   </div>
 
   {% if warehouse_products %}

@@ -427,6 +427,9 @@ class SupervisorInventoryDashboardTests(TestCase):
 	def _warehouse_detail_url(self, warehouse):
 		return reverse('inventory:supervisor:warehouse_detail', kwargs={'slug': warehouse.slug})
 
+	def _warehouse_products_url(self, warehouse):
+		return reverse('inventory:supervisor:warehouse_products', kwargs={'slug': warehouse.slug})
+
 	def _create_room_url(self, warehouse):
 		return reverse('inventory:supervisor:create_room', kwargs={'slug': warehouse.slug})
 
@@ -486,4 +489,14 @@ class SupervisorInventoryDashboardTests(TestCase):
 
 		self.assertRedirects(response, self._warehouse_detail_url(self.assigned_warehouse))
 		self.assertTrue(Bucket.objects.filter(room=room, name='Bucket 1').exists())
+
+	def test_supervisor_can_view_all_products_page_for_assigned_warehouse(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._warehouse_products_url(self.assigned_warehouse))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'All Products in')
+		self.assertContains(response, 'Assigned Product 1')
+		self.assertContains(response, 'Assigned Product 2')
+		self.assertNotContains(response, 'Unassigned Product')
 

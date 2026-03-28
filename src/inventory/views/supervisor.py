@@ -79,6 +79,25 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 		return context
 
 
+class InventoryWarehouseProductListView(SupervisorOnlyAccessMixin, ListView):
+	model = Warehouse
+	template_name = 'supervisor/inventory/warehouse_product_list.html'
+	context_object_name = 'products'
+	paginate_by = 20
+
+	def get_warehouse(self):
+		return get_object_or_404(_get_supervisor_warehouse_queryset(self.request.user), slug=self.kwargs['slug'])
+
+	def get_queryset(self):
+		warehouse = self.get_warehouse()
+		return warehouse.products.select_related('category', 'brand', 'room').order_by('-updated_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		return context
+
+
 class SupervisorCreateRoomView(SupervisorOnlyAccessMixin, View):
 	def post(self, request, *args, **kwargs):
 		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(request.user), slug=kwargs['slug'])
