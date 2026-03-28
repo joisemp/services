@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Size, Variant
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -18,6 +18,10 @@ from inventory.forms import (
 	ProductCreateStepTwoForm,
 	ProductCreateSingleVariantForm,
 	ProductVariantForm,
+	ProductAssignRoomForm,
+	ProductAssignBucketForm,
+	ProductAssignCategoryForm,
+	ProductAssignBrandForm,
 )
 from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities
 
@@ -795,6 +799,20 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context['variants'] = self.object.variants.select_related('brand', 'size').all()
 		context['brands'] = Brand.objects.filter(org=self.object.org).order_by('name')
 		context['unit_choices'] = Product._meta.get_field('unit').choices
+		context['room_assign_form'] = ProductAssignRoomForm(warehouse=warehouse, initial={'room': self.object.room})
+		context['bucket_assign_form'] = ProductAssignBucketForm(
+			warehouse=warehouse,
+			room=self.object.room,
+			initial={'bucket': self.object.bucket},
+		)
+		context['category_assign_form'] = ProductAssignCategoryForm(
+			org=self.object.org,
+			initial={'category': self.object.category},
+		)
+		context['brand_assign_form'] = ProductAssignBrandForm(
+			org=self.object.org,
+			initial={'brand': self.object.brand},
+		)
 
 		if self.object.type == 'MULTI_VARIANT':
 			org = getattr(self.request.user, 'organization', None)
@@ -839,6 +857,124 @@ class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
 			slug=self.kwargs['slug'],
 			product_slug=self.kwargs['product_slug'],
 		)
+
+
+class CentralAdminProductAssignRoomView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductAssignRoomForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		product = self.get_product()
+		kwargs['warehouse'] = product.warehouse
+		return kwargs
+
+	def form_valid(self, form):
+		product = self.get_product()
+		room = form.cleaned_data.get('room')
+
+		product.room = room
+		if product.bucket and (not room or product.bucket.room != room):
+			product.bucket = None
+			product.save(update_fields=['room', 'bucket'])
+		else:
+			product.save(update_fields=['room'])
+
+		messages.success(self.request, 'Product room updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductAssignBucketView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductAssignBucketForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		product = self.get_product()
+		kwargs['warehouse'] = product.warehouse
+		kwargs['room'] = product.room
+		return kwargs
+
+	def form_valid(self, form):
+		product = self.get_product()
+		bucket = form.cleaned_data.get('bucket')
+
+		product.bucket = bucket
+		if bucket and product.room != bucket.room:
+			product.room = bucket.room
+			product.save(update_fields=['bucket', 'room'])
+		else:
+			product.save(update_fields=['bucket'])
+
+		messages.success(self.request, 'Product bucket updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductAssignCategoryView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductAssignCategoryForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		product = self.get_product()
+		kwargs['org'] = product.org
+		return kwargs
+
+	def form_valid(self, form):
+		product = self.get_product()
+		product.category = form.cleaned_data.get('category')
+		product.save(update_fields=['category'])
+
+		messages.success(self.request, 'Product category updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductAssignBrandView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductAssignBrandForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		product = self.get_product()
+		kwargs['org'] = product.org
+		return kwargs
+
+	def form_valid(self, form):
+		product = self.get_product()
+
+		if product.type != 'SINGLE_VARIANT':
+			messages.warning(self.request, 'Brand can only be assigned at product level for single-variant products.')
+			return self.get_success_redirect()
+
+		product.brand = form.cleaned_data.get('brand')
+		product.save(update_fields=['brand'])
+
+		messages.success(self.request, 'Product brand updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
 
 
 class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, FormView):

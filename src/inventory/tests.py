@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Organization, User
-from inventory.models import Warehouse, Category, Brand, Product, Size, Variant
+from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant
 
 
 class CentralAdminProductCreateFlowTests(TestCase):
@@ -134,6 +134,10 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.client.force_login(self.user)
 
 		self.warehouse = Warehouse.objects.create(name='Detail Warehouse', location='HQ', org=self.org)
+		self.room_one = Room.objects.create(name='Room A', warehouse=self.warehouse)
+		self.room_two = Room.objects.create(name='Room B', warehouse=self.warehouse)
+		self.bucket_one = Bucket.objects.create(name='Bucket A1', room=self.room_one)
+		self.bucket_two = Bucket.objects.create(name='Bucket B1', room=self.room_two)
 		self.category = Category.objects.create(name='Hardware', org=self.org)
 		self.brand = Brand.objects.create(name='Brand X', org=self.org)
 
@@ -178,6 +182,18 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 			'inventory:central_admin:product_variant_delete',
 			kwargs={'slug': self.warehouse.slug, 'product_slug': self.multi_product.slug, 'variant_slug': variant.slug},
 		)
+
+	def _assign_room_url(self, product):
+		return reverse('inventory:central_admin:product_assign_room', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _assign_bucket_url(self, product):
+		return reverse('inventory:central_admin:product_assign_bucket', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _assign_category_url(self, product):
+		return reverse('inventory:central_admin:product_assign_category', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _assign_brand_url(self, product):
+		return reverse('inventory:central_admin:product_assign_brand', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
 	def test_single_variant_detail_page_shows_product_tracking_message(self):
 		response = self.client.get(self._detail_url(self.single_product))
@@ -256,4 +272,55 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertEqual(self.multi_product.total_incoming_quantity, 0)
 		self.assertEqual(self.multi_product.total_used_quantity, 0)
 		self.assertEqual(self.multi_product.universal_available_quantity, 0)
+
+	def test_assign_room_updates_product_room(self):
+		response = self.client.post(self._assign_room_url(self.single_product), {'room': self.room_one.id})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.room, self.room_one)
+
+	def test_assign_room_clears_bucket_if_bucket_not_in_room(self):
+		self.single_product.room = self.room_one
+		self.single_product.bucket = self.bucket_one
+		self.single_product.save(update_fields=['room', 'bucket'])
+
+		response = self.client.post(self._assign_room_url(self.single_product), {'room': self.room_two.id})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.room, self.room_two)
+		self.assertIsNone(self.single_product.bucket)
+
+	def test_assign_bucket_updates_product_bucket_and_room(self):
+		response = self.client.post(self._assign_bucket_url(self.single_product), {'bucket': self.bucket_two.id})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.bucket, self.bucket_two)
+		self.assertEqual(self.single_product.room, self.room_two)
+
+	def test_assign_category_updates_product_category(self):
+		new_category = Category.objects.create(name='Electrical', org=self.org)
+
+		response = self.client.post(self._assign_category_url(self.single_product), {'category': new_category.id})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.category, new_category)
+
+	def test_assign_brand_updates_single_variant_product_brand(self):
+		new_brand = Brand.objects.create(name='Brand Y', org=self.org)
+
+		response = self.client.post(self._assign_brand_url(self.single_product), {'brand': new_brand.id})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.brand, new_brand)
+
+	def test_assign_brand_does_not_update_multi_variant_product_brand(self):
+		new_brand = Brand.objects.create(name='Brand Z', org=self.org)
+
+		response = self.client.post(self._assign_brand_url(self.multi_product), {'brand': new_brand.id})
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+
+		self.multi_product.refresh_from_db()
+		self.assertIsNone(self.multi_product.brand)
 

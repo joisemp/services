@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category, Brand, Room, Product, Variant
+from .models import Warehouse, Category, Brand, Room, Bucket, Product, Variant
 from core.models import User
 
 
@@ -189,3 +189,58 @@ class ProductVariantForm(BootstrapFormMixin, forms.Form):
 			raise forms.ValidationError('Total used quantity cannot be greater than total incoming quantity.')
 
 		return cleaned_data
+
+
+class ProductAssignRoomForm(BootstrapFormMixin, forms.Form):
+	room = forms.ModelChoiceField(queryset=Room.objects.none(), required=False, empty_label='Unassign room')
+
+	def __init__(self, *args, **kwargs):
+		warehouse = kwargs.pop('warehouse', None)
+		super().__init__(*args, **kwargs)
+
+		if warehouse:
+			self.fields['room'].queryset = Room.objects.filter(warehouse=warehouse).order_by('name')
+		else:
+			self.fields['room'].queryset = Room.objects.none()
+
+
+class ProductAssignBucketForm(BootstrapFormMixin, forms.Form):
+	bucket = forms.ModelChoiceField(queryset=Bucket.objects.none(), required=False, empty_label='Unassign bucket')
+
+	def __init__(self, *args, **kwargs):
+		warehouse = kwargs.pop('warehouse', None)
+		room = kwargs.pop('room', None)
+		super().__init__(*args, **kwargs)
+
+		if room:
+			self.fields['bucket'].queryset = Bucket.objects.filter(room=room).order_by('name')
+		elif warehouse:
+			self.fields['bucket'].queryset = Bucket.objects.filter(room__warehouse=warehouse).order_by('room__name', 'name')
+		else:
+			self.fields['bucket'].queryset = Bucket.objects.none()
+
+
+class ProductAssignCategoryForm(BootstrapFormMixin, forms.Form):
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='Unassign category')
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['category'].queryset = Category.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['category'].queryset = Category.objects.none()
+
+
+class ProductAssignBrandForm(BootstrapFormMixin, forms.Form):
+	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=False, empty_label='Unassign brand')
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['brand'].queryset = Brand.objects.none()
