@@ -348,7 +348,10 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 			{'label': 'Brands', 'value': brands.count(), 'variant': 'secondary', 'icon': 'branding_watermark'},
 		]
 		
-		warehouse_products = self.object.products.all().prefetch_related('category', 'brand')
+		warehouse_products = self.object.products.all().select_related(
+			'category',
+			'brand',
+		).order_by('-updated_at')[:10]
 
 		# Get users associated with this warehouse
 		users = self.object.users.all().order_by('first_name', 'last_name')
@@ -359,7 +362,7 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context.update({
 			'summary_cards': summary_cards,
 			'warehouse_products': warehouse_products,
-			'warehouse_products_count': warehouse_products.count(),
+			'warehouse_products_count': self.object.products.count(),
 			'users': users,
 			'users_count': users.count(),
 			'user_add_form': WarehouseUserAddForm(warehouse=self.object),

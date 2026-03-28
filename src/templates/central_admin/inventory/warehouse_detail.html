@@ -68,10 +68,12 @@
     <div class="col-lg-8">
       <div class="card">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">inventory_2</span>
-            Products in Warehouse ({{ warehouse_products_count }})
-          </h5>
+          <div>
+            <h5 class="mb-0">
+              <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">inventory_2</span>
+              Recently Updated Products
+            </h5>
+          </div>
         </div>
         <div class="card-body p-0">
           {% if warehouse_products %}
@@ -83,10 +85,11 @@
                     <th>Category</th>
                     <th>Brand</th>
                     <th>Stock</th>
+                    <th>Updated</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for product in warehouse_products|slice:":10" %}
+                  {% for product in warehouse_products %}
                     <tr>
                       <td>
                         <h6 class="mb-0">{{ product.name }}</h6>
@@ -97,6 +100,9 @@
                         <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
                           {{ product.universal_available_quantity }}
                         </span>
+                      </td>
+                      <td>
+                        <small class="text-muted">{{ product.updated_at|timesince }} ago</small>
                       </td>
                     </tr>
                   {% endfor %}

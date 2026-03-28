@@ -111,6 +111,8 @@ class Product(models.Model):
     bucket = models.ForeignKey(Bucket, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def save(self, *args, **kwargs):
         if not self.product_code:
