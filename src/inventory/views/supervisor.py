@@ -34,3 +34,43 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 			queryset = queryset.filter(org=user.organization)
 
 		return queryset
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		products = self.object.products.select_related('category', 'brand', 'room').order_by('-updated_at')
+
+		summary_cards = [
+			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
+			{
+				'label': 'Categories',
+				'value': products.exclude(category__isnull=True).values('category').distinct().count(),
+				'variant': 'info',
+				'icon': 'category',
+			},
+			{'label': 'Rooms', 'value': self.object.rooms.count(), 'variant': 'success', 'icon': 'door_open'},
+			{
+				'label': 'Low Stock Items',
+				'value': products.filter(universal_available_quantity__lte=10).count(),
+				'variant': 'warning',
+				'icon': 'warning',
+			},
+			{
+				'label': 'Out of Stock',
+				'value': products.filter(universal_available_quantity__lte=0).count(),
+				'variant': 'danger',
+				'icon': 'error',
+			},
+			{
+				'label': 'Brands',
+				'value': products.exclude(brand__isnull=True).values('brand').distinct().count(),
+				'variant': 'secondary',
+				'icon': 'branding_watermark',
+			},
+		]
+
+		context.update({
+			'summary_cards': summary_cards,
+			'warehouse_products': products[:10],
+			'warehouse_products_count': products.count(),
+		})
+		return context

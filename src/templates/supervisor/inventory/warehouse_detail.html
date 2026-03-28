@@ -23,7 +23,7 @@
     Back to Warehouses
   </a>
 
-  <div class="card border rounded-3">
+  <div class="card border rounded-3 mb-4">
     <div class="card-body p-3 p-md-4">
       <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
         <h4 class="mb-0">{{ warehouse.name }}</h4>
@@ -32,5 +32,71 @@
       <p class="text-muted mb-0">{{ warehouse.location }}</p>
     </div>
   </div>
+
+  <div class="row row-cols-2 row-cols-md-3 g-3 mb-4">
+    {% for card in summary_cards %}
+      <div class="col">
+        <div class="card h-100 border rounded-3">
+          <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <div>
+              <p class="text-muted small mb-1">{{ card.label }}</p>
+              <h5 class="fw-semibold mb-0">{{ card.value }}</h5>
+            </div>
+            <span class="material-symbols-outlined fs-4 text-{{ card.variant }}">{{ card.icon }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center py-2 py-md-3 mb-2">
+    <h5 class="mb-0 d-inline-flex align-items-center">
+      <span class="material-symbols-outlined me-2 fs-5">inventory_2</span>
+      Recent Items
+    </h5>
+  </div>
+
+  {% if warehouse_products %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+      {% for product in warehouse_products %}
+        <div class="col">
+          <div class="card h-100 border rounded-3">
+            <div class="card-body p-3 p-md-4 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <h6 class="mb-0 text-truncate">{{ product.name }}</h6>
+                <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} ms-2">
+                  {{ product.universal_available_quantity }}
+                </span>
+              </div>
+
+              <ul class="list-group list-group-flush small mb-3">
+                <li class="list-group-item d-flex justify-content-between px-0">
+                  <span class="text-muted">Category</span>
+                  <span class="text-end ms-2">{{ product.category.name|default:'-' }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between px-0">
+                  <span class="text-muted">Brand</span>
+                  <span class="text-end ms-2">{{ product.brand.name|default:'-' }}</span>
+                </li>
+              </ul>
+
+              <small class="text-muted mt-auto">Updated {{ product.updated_at|timesince }} ago</small>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if warehouse_products_count > 10 %}
+      <div class="pt-3">
+        <small class="text-muted">Showing 10 of {{ warehouse_products_count }} items</small>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="text-center py-5">
+      <span class="material-symbols-outlined mb-2 text-muted display-6">inventory_2</span>
+      <p class="text-muted mb-0">No items in this warehouse yet.</p>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

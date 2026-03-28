@@ -382,8 +382,50 @@ class SupervisorInventoryDashboardTests(TestCase):
 
 		self.supervisor_user.warehouses.add(self.assigned_warehouse)
 
+		self.category = Category.objects.create(name='Sup Category', org=self.org)
+		self.brand = Brand.objects.create(name='Sup Brand', org=self.org)
+		Product.objects.create(
+			name='Assigned Product 1',
+			description='A',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			category=self.category,
+			brand=self.brand,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+		Product.objects.create(
+			name='Assigned Product 2',
+			description='B',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			category=self.category,
+			total_incoming_quantity=5,
+			total_used_quantity=5,
+			universal_available_quantity=0,
+		)
+		Product.objects.create(
+			name='Unassigned Product',
+			description='C',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.unassigned_warehouse,
+			total_incoming_quantity=20,
+			total_used_quantity=3,
+			universal_available_quantity=17,
+		)
+
 	def _dashboard_url(self):
 		return reverse('inventory:supervisor:inventory_dashboard')
+
+	def _warehouse_detail_url(self, warehouse):
+		return reverse('inventory:supervisor:warehouse_detail', kwargs={'slug': warehouse.slug})
 
 	def test_supervisor_inventory_dashboard_lists_only_assigned_warehouses(self):
 		self.client.force_login(self.supervisor_user)
@@ -399,4 +441,21 @@ class SupervisorInventoryDashboardTests(TestCase):
 		response = self.client.get(self._dashboard_url())
 
 		self.assertRedirects(response, reverse('core:login'))
+
+	def test_supervisor_warehouse_detail_shows_stats_and_recent_items(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._warehouse_detail_url(self.assigned_warehouse))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Recent Items')
+		self.assertContains(response, 'Total Products')
+		self.assertContains(response, 'Assigned Product 1')
+		self.assertContains(response, 'Assigned Product 2')
+		self.assertNotContains(response, 'Unassigned Product')
+
+	def test_supervisor_cannot_access_unassigned_warehouse_detail(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._warehouse_detail_url(self.unassigned_warehouse))
+
+		self.assertEqual(response.status_code, 404)
 
