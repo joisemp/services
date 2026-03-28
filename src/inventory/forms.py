@@ -125,6 +125,18 @@ class RoomForm(BootstrapFormMixin, forms.ModelForm):
 		}
 
 
+class BucketForm(BootstrapFormMixin, forms.ModelForm):
+	"""
+	Form for creating or updating a bucket in a room
+	"""
+	class Meta:
+		model = Bucket
+		fields = ['name']
+		labels = {
+			'name': 'Bucket Name',
+		}
+
+
 class ProductCreateStepOneForm(BootstrapFormMixin, forms.Form):
 	name = forms.CharField(max_length=255, label='Product Name')
 	description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Description')

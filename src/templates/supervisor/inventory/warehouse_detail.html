@@ -51,6 +51,74 @@
 
   <div class="d-flex justify-content-between align-items-center py-2 py-md-3 mb-2">
     <h5 class="mb-0 d-inline-flex align-items-center">
+      <span class="material-symbols-outlined me-2 fs-5">door_open</span>
+      Rooms & Buckets
+    </h5>
+    <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+      <span class="material-symbols-outlined fs-6">add</span>
+      Add Room
+    </button>
+  </div>
+
+  {% if rooms %}
+    <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+      {% for room in rooms %}
+        <div class="col">
+          <div class="card h-100 border rounded-3">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <h6 class="mb-0">{{ room.name }}</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addBucketModal-{{ room.id }}">
+                  <span class="material-symbols-outlined fs-6">add</span>
+                  Add Bucket
+                </button>
+              </div>
+
+              {% if room.buckets.all %}
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  {% for bucket in room.buckets.all %}
+                    <span class="badge rounded-pill bg-light text-dark border">{{ bucket.name }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted small mb-0">No buckets in this room yet.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="modal fade" id="addBucketModal-{{ room.id }}" tabindex="-1" aria-labelledby="addBucketModalLabel-{{ room.id }}" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addBucketModalLabel-{{ room.id }}">Add Bucket to {{ room.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <form method="post" action="{% url 'inventory:supervisor:create_bucket' slug=warehouse.slug room_slug=room.slug %}">
+                <div class="modal-body">
+                  {% csrf_token %}
+                  <label class="form-label" for="bucket-name-{{ room.id }}">Bucket Name</label>
+                  <input id="bucket-name-{{ room.id }}" type="text" name="name" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Create Bucket</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-4 mb-4">
+      <span class="material-symbols-outlined mb-2 text-muted fs-2">door_open</span>
+      <p class="text-muted mb-0">No rooms created yet.</p>
+    </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center py-2 py-md-3 mb-2">
+    <h5 class="mb-0 d-inline-flex align-items-center">
       <span class="material-symbols-outlined me-2 fs-5">inventory_2</span>
       Recent Items
     </h5>
@@ -98,5 +166,27 @@
       <p class="text-muted mb-0">No items in this warehouse yet.</p>
     </div>
   {% endif %}
+</div>
+
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addRoomModalLabel">Add Room</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'inventory:supervisor:create_room' slug=warehouse.slug %}">
+        <div class="modal-body">
+          {% csrf_token %}
+          <label class="form-label" for="room-name">Room Name</label>
+          <input id="room-name" type="text" name="name" class="form-control" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

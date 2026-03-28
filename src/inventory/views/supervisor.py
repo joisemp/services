@@ -1,7 +1,19 @@
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, View
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
 
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
-from inventory.models import Warehouse
+from inventory.models import Warehouse, Room
+from inventory.forms import RoomForm, BucketForm
+
+
+def _get_supervisor_warehouse_queryset(user):
+	queryset = user.warehouses.select_related('org').all()
+
+	if not user.is_superuser and user.organization:
+		queryset = queryset.filter(org=user.organization)
+
+	return queryset
 
 
 class InventoryDashboardView(SupervisorOnlyAccessMixin, ListView):
@@ -10,13 +22,7 @@ class InventoryDashboardView(SupervisorOnlyAccessMixin, ListView):
 	context_object_name = 'warehouses'
 
 	def get_queryset(self):
-		user = self.request.user
-		queryset = user.warehouses.select_related('org').all()
-
-		if not user.is_superuser and user.organization:
-			queryset = queryset.filter(org=user.organization)
-
-		return queryset.order_by('name')
+		return _get_supervisor_warehouse_queryset(self.request.user).order_by('name')
 
 
 class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
@@ -27,13 +33,7 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 	slug_url_kwarg = 'slug'
 
 	def get_queryset(self):
-		user = self.request.user
-		queryset = user.warehouses.select_related('org').all()
-
-		if not user.is_superuser and user.organization:
-			queryset = queryset.filter(org=user.organization)
-
-		return queryset
+		return _get_supervisor_warehouse_queryset(self.request.user)
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
@@ -70,7 +70,43 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 
 		context.update({
 			'summary_cards': summary_cards,
+			'rooms': self.object.rooms.prefetch_related('buckets').order_by('name'),
+			'room_form': RoomForm(),
+			'bucket_form': BucketForm(),
 			'warehouse_products': products[:10],
 			'warehouse_products_count': products.count(),
 		})
 		return context
+
+
+class SupervisorCreateRoomView(SupervisorOnlyAccessMixin, View):
+	def post(self, request, *args, **kwargs):
+		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(request.user), slug=kwargs['slug'])
+		form = RoomForm(request.POST)
+
+		if form.is_valid():
+			room = form.save(commit=False)
+			room.warehouse = warehouse
+			room.save()
+			messages.success(request, f"Room '{room.name}' created successfully.")
+		else:
+			messages.error(request, form.errors.get('name', ['Unable to create room.'])[0])
+
+		return redirect('inventory:supervisor:warehouse_detail', slug=warehouse.slug)
+
+
+class SupervisorCreateBucketView(SupervisorOnlyAccessMixin, View):
+	def post(self, request, *args, **kwargs):
+		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(request.user), slug=kwargs['slug'])
+		room = get_object_or_404(Room.objects.filter(warehouse=warehouse), slug=kwargs['room_slug'])
+		form = BucketForm(request.POST)
+
+		if form.is_valid():
+			bucket = form.save(commit=False)
+			bucket.room = room
+			bucket.save()
+			messages.success(request, f"Bucket '{bucket.name}' created in room '{room.name}'.")
+		else:
+			messages.error(request, form.errors.get('name', ['Unable to create bucket.'])[0])
+
+		return redirect('inventory:supervisor:warehouse_detail', slug=warehouse.slug)

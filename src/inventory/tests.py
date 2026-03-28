@@ -427,6 +427,12 @@ class SupervisorInventoryDashboardTests(TestCase):
 	def _warehouse_detail_url(self, warehouse):
 		return reverse('inventory:supervisor:warehouse_detail', kwargs={'slug': warehouse.slug})
 
+	def _create_room_url(self, warehouse):
+		return reverse('inventory:supervisor:create_room', kwargs={'slug': warehouse.slug})
+
+	def _create_bucket_url(self, warehouse, room):
+		return reverse('inventory:supervisor:create_bucket', kwargs={'slug': warehouse.slug, 'room_slug': room.slug})
+
 	def test_supervisor_inventory_dashboard_lists_only_assigned_warehouses(self):
 		self.client.force_login(self.supervisor_user)
 		response = self.client.get(self._dashboard_url())
@@ -458,4 +464,26 @@ class SupervisorInventoryDashboardTests(TestCase):
 		response = self.client.get(self._warehouse_detail_url(self.unassigned_warehouse))
 
 		self.assertEqual(response.status_code, 404)
+
+	def test_supervisor_can_create_room_in_assigned_warehouse(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.post(self._create_room_url(self.assigned_warehouse), {'name': 'New Room'})
+
+		self.assertRedirects(response, self._warehouse_detail_url(self.assigned_warehouse))
+		self.assertTrue(Room.objects.filter(warehouse=self.assigned_warehouse, name='New Room').exists())
+
+	def test_supervisor_cannot_create_room_in_unassigned_warehouse(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.post(self._create_room_url(self.unassigned_warehouse), {'name': 'Blocked Room'})
+
+		self.assertEqual(response.status_code, 404)
+		self.assertFalse(Room.objects.filter(warehouse=self.unassigned_warehouse, name='Blocked Room').exists())
+
+	def test_supervisor_can_create_bucket_in_room_of_assigned_warehouse(self):
+		room = Room.objects.create(name='Supervisor Room', warehouse=self.assigned_warehouse)
+		self.client.force_login(self.supervisor_user)
+		response = self.client.post(self._create_bucket_url(self.assigned_warehouse, room), {'name': 'Bucket 1'})
+
+		self.assertRedirects(response, self._warehouse_detail_url(self.assigned_warehouse))
+		self.assertTrue(Bucket.objects.filter(room=room, name='Bucket 1').exists())
 
