@@ -7,7 +7,7 @@
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/style.css' %}">
 <link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/inventory/style.css' %}">
-<link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/inventory/warehouse.css' %}">
+<link rel="stylesheet" href="{% static 'inventory/product_list/style.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -19,14 +19,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid warehouse-product-list">
 
-  <a class="btn btn-sm btn-dark mb-3 d-inline-flex align-items-center" href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}">
+  <a class="btn btn-sm btn-dark mb-3 d-inline-flex align-items-center back-link" href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}">
     <span class="material-symbols-outlined me-1" style="font-size: 16px;">arrow_back</span>
     Go back to {{ warehouse.name }}
   </a>
 
-  <div class="card">
+  <div class="card product-list-card">
     <div class="card-header bg-white py-3">
       <h4 class="mb-0">
         <span class="material-symbols-outlined me-2" style="font-size: 24px; vertical-align: middle;">inventory_2</span>
@@ -35,8 +35,8 @@
     </div>
     <div class="card-body p-0">
       {% if products %}
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
+        <div class="table-responsive product-table-wrapper">
+          <table class="table table-hover mb-0 products-table">
             <thead class="table-light">
               <tr>
                 <th>Name</th>
@@ -51,19 +51,19 @@
             <tbody>
               {% for product in products %}
                 <tr>
-                  <td>
+                  <td data-label="Name">
                     <h6 class="mb-0 small">{{ product.name }}</h6>
                   </td>
-                  <td class="text-muted small">{{ product.product_code }}</td>
-                  <td class="text-muted small">{{ product.category.name|default:"-" }}</td>
-                  <td class="text-muted small">{{ product.brand.name|default:"-" }}</td>
-                  <td class="text-muted small">{{ product.room.name|default:"-" }}</td>
-                  <td>
+                  <td class="text-muted small" data-label="Product Code">{{ product.product_code }}</td>
+                  <td class="text-muted small" data-label="Category">{{ product.category.name|default:"-" }}</td>
+                  <td class="text-muted small" data-label="Brand">{{ product.brand.name|default:"-" }}</td>
+                  <td class="text-muted small" data-label="Room">{{ product.room.name|default:"-" }}</td>
+                  <td data-label="Stock">
                     <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
                       {{ product.universal_available_quantity }}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Updated">
                     <small class="text-muted">{{ product.updated_at|timesince }} ago</small>
                   </td>
                 </tr>
