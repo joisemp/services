@@ -1,0 +1,36 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}{{ warehouse.name }} - Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 py-md-3">
+  <a class="btn btn-sm btn-dark mb-4 d-inline-flex align-items-center" href="{% url 'inventory:supervisor:inventory_dashboard' %}">
+    <span class="material-symbols-outlined me-1 fs-6">arrow_back</span>
+    Back to Warehouses
+  </a>
+
+  <div class="card border rounded-3">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <h4 class="mb-0">{{ warehouse.name }}</h4>
+        <span class="badge rounded-pill bg-light text-dark border">Warehouse</span>
+      </div>
+      <p class="text-muted mb-0">{{ warehouse.location }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
