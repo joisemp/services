@@ -500,3 +500,226 @@ class SupervisorInventoryDashboardTests(TestCase):
 		self.assertContains(response, 'Assigned Product 2')
 		self.assertNotContains(response, 'Unassigned Product')
 
+
+class SupervisorProductParityTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Supervisor Product Org')
+		self.supervisor_user = User.objects.create_user(
+			email='supervisor-product@example.com',
+			password='password123',
+			phone_number='+15555550127',
+			user_type='supervisor',
+			organization=self.org,
+		)
+
+		self.assigned_warehouse = Warehouse.objects.create(name='Assigned Product Warehouse', location='HQ', org=self.org)
+		self.unassigned_warehouse = Warehouse.objects.create(name='Unassigned Product Warehouse', location='HQ 2', org=self.org)
+		self.supervisor_user.warehouses.add(self.assigned_warehouse)
+
+		self.category = Category.objects.create(name='Supervisor Category', org=self.org)
+		self.brand = Brand.objects.create(name='Supervisor Brand', org=self.org)
+		self.room_a = Room.objects.create(name='Room A', warehouse=self.assigned_warehouse)
+		self.room_b = Room.objects.create(name='Room B', warehouse=self.assigned_warehouse)
+		self.bucket_a = Bucket.objects.create(name='Bucket A', room=self.room_a)
+		self.bucket_b = Bucket.objects.create(name='Bucket B', room=self.room_b)
+
+		self.multi_product = Product.objects.create(
+			name='Supervisor Multi Product',
+			description='Multi',
+			type='MULTI_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			category=self.category,
+		)
+		self.single_product = Product.objects.create(
+			name='Supervisor Single Product',
+			description='Single',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			category=self.category,
+			brand=self.brand,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+
+		self.client.force_login(self.supervisor_user)
+
+	def _step1_url(self, warehouse):
+		return reverse('inventory:supervisor:product_create_step1', kwargs={'slug': warehouse.slug})
+
+	def _step2_url(self, warehouse):
+		return reverse('inventory:supervisor:product_create_step2', kwargs={'slug': warehouse.slug})
+
+	def _step3_url(self, warehouse):
+		return reverse('inventory:supervisor:product_create_step3_single', kwargs={'slug': warehouse.slug})
+
+	def _products_url(self, warehouse):
+		return reverse('inventory:supervisor:warehouse_products', kwargs={'slug': warehouse.slug})
+
+	def _detail_url(self, product):
+		return reverse('inventory:supervisor:product_detail', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _create_variant_url(self):
+		return reverse(
+			'inventory:supervisor:product_variant_create',
+			kwargs={'slug': self.assigned_warehouse.slug, 'product_slug': self.multi_product.slug},
+		)
+
+	def _assign_room_url(self, product):
+		return reverse('inventory:supervisor:product_assign_room', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _assign_bucket_url(self, product):
+		return reverse('inventory:supervisor:product_assign_bucket', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _assign_brand_url(self, product):
+		return reverse('inventory:supervisor:product_assign_brand', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def test_supervisor_multi_variant_creates_product_after_step2(self):
+		response_step1 = self.client.post(
+			self._step1_url(self.assigned_warehouse),
+			{
+				'name': 'Supervisor Paint',
+				'description': 'Wall paint',
+				'category': self.category.id,
+				'unit': 'BOTTLES',
+			},
+		)
+		self.assertRedirects(response_step1, self._step2_url(self.assigned_warehouse))
+
+		response_step2 = self.client.post(self._step2_url(self.assigned_warehouse), {'type': 'MULTI_VARIANT'})
+		self.assertRedirects(response_step2, self._products_url(self.assigned_warehouse))
+
+		product = Product.objects.get(name='Supervisor Paint')
+		self.assertEqual(product.type, 'MULTI_VARIANT')
+		self.assertEqual(product.warehouse, self.assigned_warehouse)
+		self.assertEqual(product.org, self.org)
+
+	def test_supervisor_single_variant_creates_product_and_size(self):
+		self.client.post(
+			self._step1_url(self.assigned_warehouse),
+			{
+				'name': 'Supervisor Cement',
+				'description': 'Cement product',
+				'category': self.category.id,
+				'unit': 'BAGS',
+			},
+		)
+		self.client.post(self._step2_url(self.assigned_warehouse), {'type': 'SINGLE_VARIANT'})
+
+		response_step3 = self.client.post(
+			self._step3_url(self.assigned_warehouse),
+			{
+				'total_quantity': 25,
+				'size_name': '50kg',
+				'brand': self.brand.id,
+			},
+		)
+		self.assertRedirects(response_step3, self._products_url(self.assigned_warehouse))
+
+		product = Product.objects.get(name='Supervisor Cement')
+		self.assertEqual(product.type, 'SINGLE_VARIANT')
+		self.assertEqual(product.total_incoming_quantity, 25)
+		self.assertEqual(product.universal_available_quantity, 25)
+
+		size = Size.objects.get(product=product, org=self.org, name='50kg')
+		self.assertIsNone(size.variant)
+
+	def test_supervisor_cannot_access_product_create_for_unassigned_warehouse(self):
+		response = self.client.get(self._step1_url(self.unassigned_warehouse))
+		self.assertEqual(response.status_code, 404)
+
+	def test_supervisor_product_detail_only_for_assigned_warehouse(self):
+		response_assigned = self.client.get(self._detail_url(self.single_product))
+		self.assertEqual(response_assigned.status_code, 200)
+
+		unassigned_product = Product.objects.create(
+			name='Unassigned Product Hidden',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.unassigned_warehouse,
+		)
+		response_unassigned = self.client.get(
+			reverse(
+				'inventory:supervisor:product_detail',
+				kwargs={'slug': self.unassigned_warehouse.slug, 'product_slug': unassigned_product.slug},
+			)
+		)
+		self.assertEqual(response_unassigned.status_code, 404)
+
+	def test_supervisor_create_variant_updates_multi_product_totals(self):
+		response = self.client.post(
+			self._create_variant_url(),
+			{
+				'name': 'Variant A',
+				'brand': self.brand.id,
+				'size_name': 'Large',
+				'total_incoming_quantity': 100,
+				'total_used_quantity': 30,
+			},
+		)
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+
+		self.multi_product.refresh_from_db()
+		variant = Variant.objects.get(product=self.multi_product, name='Variant A')
+		self.assertEqual(variant.universal_available_quantity, 70)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 100)
+		self.assertEqual(self.multi_product.total_used_quantity, 30)
+		self.assertEqual(self.multi_product.universal_available_quantity, 70)
+
+	def test_supervisor_assign_room_and_bucket_updates_product(self):
+		response_room = self.client.post(self._assign_room_url(self.single_product), {'room': self.room_a.id})
+		self.assertRedirects(response_room, self._detail_url(self.single_product))
+
+		response_bucket = self.client.post(self._assign_bucket_url(self.single_product), {'bucket': self.bucket_a.id})
+		self.assertRedirects(response_bucket, self._detail_url(self.single_product))
+
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.bucket, self.bucket_a)
+		self.assertEqual(self.single_product.room, self.room_a)
+
+	def test_supervisor_assign_brand_only_updates_single_variant_product(self):
+		new_brand = Brand.objects.create(name='Supervisor New Brand', org=self.org)
+
+		single_response = self.client.post(self._assign_brand_url(self.single_product), {'brand': new_brand.id})
+		self.assertRedirects(single_response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.brand, new_brand)
+
+		multi_response = self.client.post(self._assign_brand_url(self.multi_product), {'brand': new_brand.id})
+		self.assertRedirects(multi_response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertIsNone(self.multi_product.brand)
+
+	def test_supervisor_product_list_shows_variant_brands_and_add_product_action(self):
+		second_brand = Brand.objects.create(name='Supervisor Second Brand', org=self.org)
+		Variant.objects.create(
+			name='Variant Brand One',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+		Variant.objects.create(
+			name='Variant Brand Two',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=second_brand,
+			total_incoming_quantity=8,
+			total_used_quantity=1,
+			universal_available_quantity=7,
+		)
+
+		response = self.client.get(self._products_url(self.assigned_warehouse))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Add Product')
+		self.assertContains(response, 'Supervisor Brand')
+		self.assertContains(response, 'Supervisor Second Brand')
+
