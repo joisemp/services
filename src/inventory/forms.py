@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category, Brand, Room, Product
+from .models import Warehouse, Category, Brand, Room, Product, Variant
 from core.models import User
 
 
@@ -162,3 +162,30 @@ class ProductCreateSingleVariantForm(BootstrapFormMixin, forms.Form):
 			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
 		else:
 			self.fields['brand'].queryset = Brand.objects.none()
+
+
+class ProductVariantForm(BootstrapFormMixin, forms.Form):
+	name = forms.CharField(max_length=255, label='Variant Name', required=True)
+	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=False, empty_label='Select Brand')
+	size_name = forms.CharField(max_length=50, label='Size', required=False)
+	total_incoming_quantity = forms.IntegerField(min_value=0, label='Total Incoming Quantity', initial=0)
+	total_used_quantity = forms.IntegerField(min_value=0, label='Total Used Quantity', initial=0)
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['brand'].queryset = Brand.objects.none()
+
+	def clean(self):
+		cleaned_data = super().clean()
+		total_incoming = cleaned_data.get('total_incoming_quantity')
+		total_used = cleaned_data.get('total_used_quantity')
+
+		if total_incoming is not None and total_used is not None and total_used > total_incoming:
+			raise forms.ValidationError('Total used quantity cannot be greater than total incoming quantity.')
+
+		return cleaned_data

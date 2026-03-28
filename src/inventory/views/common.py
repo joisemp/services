@@ -1,3 +1,8 @@
+from django.db.models import Sum
+
+from inventory.models import Variant
+
+
 class ProductCreateWizardSessionMixin:
 	wizard_session_key = 'inventory_product_create_wizard'
 
@@ -29,3 +34,22 @@ class ProductCreateWizardSessionMixin:
 			del store[wizard_id]
 			self.request.session[self.wizard_session_key] = store
 			self.request.session.modified = True
+
+
+def recompute_product_quantities(product):
+	if product.type == 'MULTI_VARIANT':
+		aggregate = Variant.objects.filter(product=product).aggregate(
+			total_incoming=Sum('total_incoming_quantity'),
+			total_used=Sum('total_used_quantity'),
+		)
+		total_incoming = aggregate['total_incoming'] or 0
+		total_used = aggregate['total_used'] or 0
+		product.total_incoming_quantity = total_incoming
+		product.total_used_quantity = total_used
+		product.universal_available_quantity = total_incoming - total_used
+		product.save(update_fields=['total_incoming_quantity', 'total_used_quantity', 'universal_available_quantity'])
+	else:
+		product.universal_available_quantity = product.total_incoming_quantity - product.total_used_quantity
+		product.save(update_fields=['universal_available_quantity'])
+
+	return product

@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, FormView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, FormView, View
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Size
+from inventory.models import Brand, Category, Product, Warehouse, Room, Size, Variant
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -17,8 +17,9 @@ from inventory.forms import (
 	ProductCreateStepOneForm,
 	ProductCreateStepTwoForm,
 	ProductCreateSingleVariantForm,
+	ProductVariantForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin
+from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities
 
 
 class CentralAdminWarehouseScopedMixin(CentralAdminOnlyAccessMixin):
@@ -758,3 +759,214 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		context['warehouse'] = warehouse
 		return context
+
+
+class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
+	model = Product
+	template_name = 'central_admin/inventory/product_detail.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'product_slug'
+	context_object_name = 'product'
+
+	def get_queryset(self):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if not user.is_superuser and (not org or warehouse.org != org):
+			return Product.objects.none()
+
+		return warehouse.products.select_related(
+			'category',
+			'brand',
+			'warehouse',
+			'room',
+			'bucket',
+		).prefetch_related(
+			'variants__brand',
+			'variants__size',
+			'sizes',
+		)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		context['warehouse'] = warehouse
+		context['variants'] = self.object.variants.select_related('brand', 'size').all()
+		context['brands'] = Brand.objects.filter(org=self.object.org).order_by('name')
+		context['unit_choices'] = Product._meta.get_field('unit').choices
+
+		if self.object.type == 'MULTI_VARIANT':
+			org = getattr(self.request.user, 'organization', None)
+			context['variant_form'] = ProductVariantForm(org=org)
+
+		return context
+
+
+class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
+	def get_warehouse_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if user.is_superuser and not org:
+			return Warehouse.objects.all()
+
+		if org:
+			return Warehouse.objects.filter(org=org)
+
+		return Warehouse.objects.none()
+
+	def get_product(self):
+		warehouse = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		return get_object_or_404(
+			warehouse.products.select_related(
+				'category',
+				'brand',
+				'warehouse',
+				'room',
+				'bucket',
+			).prefetch_related(
+				'variants__brand',
+				'variants__size',
+				'sizes',
+			),
+			slug=self.kwargs['product_slug'],
+		)
+
+	def get_success_redirect(self):
+		return redirect(
+			'inventory:central_admin:product_detail',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+		)
+
+
+class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductVariantForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = getattr(self.request.user, 'organization', None)
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(self.request, 'Variants can only be managed for multi-variant products.')
+			return self.get_success_redirect()
+
+		total_incoming_quantity = form.cleaned_data['total_incoming_quantity']
+		total_used_quantity = form.cleaned_data['total_used_quantity']
+		universal_available_quantity = total_incoming_quantity - total_used_quantity
+
+		size = None
+		size_name = form.cleaned_data.get('size_name', '').strip()
+		if size_name:
+			size, _ = Size.objects.get_or_create(
+				org=product.org,
+				product=product,
+				name=size_name,
+				defaults={'description': '', 'variant': None},
+			)
+
+		Variant.objects.create(
+			name=form.cleaned_data['name'],
+			unit=product.unit,
+			product=product,
+			brand=form.cleaned_data.get('brand'),
+			size=size,
+			total_incoming_quantity=total_incoming_quantity,
+			total_used_quantity=total_used_quantity,
+			universal_available_quantity=universal_available_quantity,
+		)
+
+		recompute_product_quantities(product)
+		messages.success(self.request, 'Variant created successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductVariantUpdateView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductVariantForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = getattr(self.request.user, 'organization', None)
+		return kwargs
+
+	def get_initial(self):
+		variant = self.get_variant()
+		return {
+			'name': variant.name,
+			'brand': variant.brand,
+			'size_name': variant.size.name if variant.size else '',
+			'total_incoming_quantity': variant.total_incoming_quantity,
+			'total_used_quantity': variant.total_used_quantity,
+		}
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(self.request, 'Variants can only be managed for multi-variant products.')
+			return self.get_success_redirect()
+
+		variant = self.get_variant()
+		size = None
+		size_name = form.cleaned_data.get('size_name', '').strip()
+		if size_name:
+			size, _ = Size.objects.get_or_create(
+				org=product.org,
+				product=product,
+				name=size_name,
+				defaults={'description': '', 'variant': None},
+			)
+
+		variant.name = form.cleaned_data['name']
+		variant.unit = product.unit
+		variant.brand = form.cleaned_data.get('brand')
+		variant.size = size
+		variant.total_incoming_quantity = form.cleaned_data['total_incoming_quantity']
+		variant.total_used_quantity = form.cleaned_data['total_used_quantity']
+		variant.universal_available_quantity = variant.total_incoming_quantity - variant.total_used_quantity
+		variant.save()
+
+		recompute_product_quantities(product)
+		messages.success(self.request, 'Variant updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductVariantDeleteView(CentralAdminProductVariantBaseMixin, View):
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(request, 'Variants can only be managed for multi-variant products.')
+			return self.get_success_redirect()
+
+		variant = get_object_or_404(product.variants.all(), slug=self.kwargs['variant_slug'])
+		variant.delete()
+		recompute_product_quantities(product)
+		messages.success(request, 'Variant deleted successfully.')
+		return self.get_success_redirect()
