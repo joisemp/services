@@ -58,7 +58,17 @@
                 </li>
                 <li class="list-group-item d-flex justify-content-between px-0">
                   <span class="text-muted">Brand</span>
-                  <span class="text-end ms-2">{{ product.brand.name|default:"-" }}</span>
+                  {% if product.type == 'MULTI_VARIANT' %}
+                    <span class="text-end ms-2">
+                      {% if product.variant_brand_names %}
+                        {{ product.variant_brand_names|join:", " }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </span>
+                  {% else %}
+                    <span class="text-end ms-2">{{ product.brand.name|default:"-" }}</span>
+                  {% endif %}
                 </li>
                 <li class="list-group-item d-flex justify-content-between px-0">
                   <span class="text-muted">Room</span>

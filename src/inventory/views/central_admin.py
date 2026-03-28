@@ -756,11 +756,20 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 			'category',
 			'brand',
 			'room',
+		).prefetch_related(
+			'variants__brand',
 		).order_by('-updated_at')
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		for product in context.get('products', []):
+			if product.type == 'MULTI_VARIANT':
+				product.variant_brand_names = sorted(
+					{variant.brand.name for variant in product.variants.all() if variant.brand}
+				)
+			else:
+				product.variant_brand_names = []
 		context['warehouse'] = warehouse
 		return context
 

@@ -195,6 +195,9 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 	def _assign_brand_url(self, product):
 		return reverse('inventory:central_admin:product_assign_brand', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
+	def _product_list_url(self):
+		return reverse('inventory:central_admin:warehouse_products', kwargs={'slug': self.warehouse.slug})
+
 	def test_single_variant_detail_page_shows_product_tracking_message(self):
 		response = self.client.get(self._detail_url(self.single_product))
 		self.assertEqual(response.status_code, 200)
@@ -323,4 +326,31 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 
 		self.multi_product.refresh_from_db()
 		self.assertIsNone(self.multi_product.brand)
+
+	def test_product_list_shows_multi_variant_brands_from_variants(self):
+		brand_two = Brand.objects.create(name='Brand Two', org=self.org)
+		Variant.objects.create(
+			name='Variant 1',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+		Variant.objects.create(
+			name='Variant 2',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=brand_two,
+			total_incoming_quantity=8,
+			total_used_quantity=1,
+			universal_available_quantity=7,
+		)
+
+		response = self.client.get(self._product_list_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Brand X')
+		self.assertContains(response, 'Brand Two')
 
