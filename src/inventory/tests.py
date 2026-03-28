@@ -354,3 +354,49 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertContains(response, 'Brand X')
 		self.assertContains(response, 'Brand Two')
 
+
+class SupervisorInventoryDashboardTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Supervisor Org')
+		self.other_org = Organization.objects.create(name='Other Org')
+
+		self.supervisor_user = User.objects.create_user(
+			email='supervisor@example.com',
+			password='password123',
+			phone_number='+15555550125',
+			user_type='supervisor',
+			organization=self.org,
+		)
+
+		self.central_admin_user = User.objects.create_user(
+			email='admin2@example.com',
+			password='password123',
+			phone_number='+15555550126',
+			user_type='central_admin',
+			organization=self.org,
+		)
+
+		self.assigned_warehouse = Warehouse.objects.create(name='Assigned Warehouse', location='HQ A', org=self.org)
+		self.unassigned_warehouse = Warehouse.objects.create(name='Unassigned Warehouse', location='HQ B', org=self.org)
+		self.cross_org_warehouse = Warehouse.objects.create(name='Cross Org Warehouse', location='HQ C', org=self.other_org)
+
+		self.supervisor_user.warehouses.add(self.assigned_warehouse)
+
+	def _dashboard_url(self):
+		return reverse('inventory:supervisor:inventory_dashboard')
+
+	def test_supervisor_inventory_dashboard_lists_only_assigned_warehouses(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._dashboard_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, self.assigned_warehouse.name)
+		self.assertNotContains(response, self.unassigned_warehouse.name)
+		self.assertNotContains(response, self.cross_org_warehouse.name)
+
+	def test_non_supervisor_cannot_access_supervisor_inventory_dashboard(self):
+		self.client.force_login(self.central_admin_user)
+		response = self.client.get(self._dashboard_url())
+
+		self.assertRedirects(response, reverse('core:login'))
+
