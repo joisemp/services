@@ -17,27 +17,27 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-2 py-md-3">
 
-  <a class="btn btn-sm btn-dark mb-3 d-inline-flex align-items-center" href="{% url 'inventory:central_admin:inventory_dashboard' %}">
-    <span class="material-symbols-outlined me-1" style="font-size: 16px;">arrow_back</span>
+  <a class="btn btn-sm btn-dark mb-4 d-inline-flex align-items-center" href="{% url 'inventory:central_admin:inventory_dashboard' %}">
+    <span class="material-symbols-outlined me-1 fs-6">arrow_back</span>
     Go back
   </a>
 
   <!-- Alert and Actions -->
-  <section id="alert-details" class="mb-3">
-    <div class="alert alert-notification alert-primary d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3" role="alert">
+  <section id="alert-details" class="mb-4">
+    <div class="alert alert-notification alert-primary d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 border-0 rounded-3" role="alert">
       <div class="message flex-grow-1">
         <h3 class="mb-1">{{ warehouse.name }}</h3>
         <span class="alert-text text-body-secondary">{{ warehouse.location }}</span>
       </div>
       <div class="d-flex flex-column flex-sm-row gap-2">
-        <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center">
-          <span class="material-symbols-outlined me-2" style="font-size: 18px;">edit</span>
+        <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
+          <span class="material-symbols-outlined fs-6">edit</span>
           <span>Edit Warehouse</span>
         </a>
-        <a href="#" class="btn btn-danger d-inline-flex align-items-center justify-content-center">
-          <span class="material-symbols-outlined me-2" style="font-size: 18px;">delete</span>
+        <a href="#" class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
+          <span class="material-symbols-outlined fs-6">delete</span>
           <span>Delete Warehouse</span>
         </a>
       </div>
@@ -48,10 +48,10 @@
   <div class="row row-cols-2 row-cols-md-4 g-3 stats-cards mb-4">
     {% for card in summary_cards %}
       <div class="col">
-        <div class="card border-0">
-          <div class="card-body text-center">
+        <div class="card h-100 border rounded-3">
+          <div class="card-body text-center p-3">
             <div class="d-flex align-items-center justify-content-center mb-2">
-              <span class="material-symbols-outlined text-{{ card.variant }} me-2" style="font-size: 24px;">{{ card.icon }}</span>
+              <span class="material-symbols-outlined text-{{ card.variant }} me-2 fs-4">{{ card.icon }}</span>
               <h5 class="mb-0">{{ card.value }}</h5>
             </div>
             <p class="text-muted mb-0 small">{{ card.label }}</p>
@@ -62,18 +62,18 @@
   </div>
 
   <!-- Main Content -->
-  <div class="row">
+  <div class="row gy-3 gy-lg-0">
     <!-- Products Section -->
     <div class="col-lg-8">
-      <div class="d-flex justify-content-between align-items-center py-3 mb-1">
+      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center py-2 py-md-3 mb-2 gap-2">
         <div>
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">inventory_2</span>
+          <h5 class="mb-0 d-inline-flex align-items-center">
+            <span class="material-symbols-outlined me-2 fs-5">inventory_2</span>
             Recently Updated Products
           </h5>
         </div>
-        <a href="{% url 'inventory:central_admin:warehouse_products' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary">
-          <span class="material-symbols-outlined me-1" style="font-size: 14px;">visibility</span>
+        <a href="{% url 'inventory:central_admin:warehouse_products' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 text-nowrap flex-shrink-0">
+          <span class="material-symbols-outlined fs-6">visibility</span>
           View All
         </a>
       </div>
@@ -82,8 +82,8 @@
           <div class="row row-cols-1 row-cols-md-2 g-3">
             {% for product in warehouse_products %}
               <div class="col">
-                <div class="card h-100 border-0 shadow-sm">
-                  <div class="card-body d-flex flex-column">
+                <div class="card h-100 border rounded-3">
+                  <div class="card-body p-3 p-md-4 d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                       <h6 class="mb-0 text-truncate">{{ product.name }}</h6>
                       <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} ms-2">
@@ -125,14 +125,14 @@
     <!-- Warehouse Info Section -->
     <div class="col-lg-4">
       <!-- Rooms Card -->
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">door_open</span>
+      <div class="card border rounded-3 mb-3">
+        <div class="card-header bg-white d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+          <h5 class="mb-0 d-inline-flex align-items-center">
+            <span class="material-symbols-outlined me-2 fs-5">door_open</span>
             Rooms ({{ rooms_count }})
           </h5>
-          <a href="{% url 'inventory:central_admin:create_room' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary" title="Create a new room">
-            <span class="material-symbols-outlined me-1" style="font-size: 14px;">add</span>
+          <a href="{% url 'inventory:central_admin:create_room' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 text-nowrap" title="Create a new room">
+            <span class="material-symbols-outlined fs-6">add</span>
             Add Room
           </a>
         </div>
@@ -145,13 +145,13 @@
                     <div class="flex-grow-1">
                       <h6 class="mb-1 small">{{ room.name }}</h6>
                       <small class="text-muted d-block">
-                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">inbox</span>
+                        <span class="material-symbols-outlined fs-6 align-middle">inbox</span>
                         {{ room.buckets.count }} bucket{{ room.buckets.count|pluralize }}
                       </small>
                     </div>
                     <div class="room-actions">
                       <a href="{% url 'inventory:central_admin:edit_room' room_slug=room.slug %}" class="btn btn-sm btn-outline-primary" title="Edit room">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                        <span class="material-symbols-outlined fs-6">edit</span>
                       </a>
                     </div>
                   </div>
@@ -160,7 +160,7 @@
             </div>
           {% else %}
             <div class="text-center py-3">
-              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">door_open</span>
+              <span class="material-symbols-outlined mb-2 text-muted fs-2">door_open</span>
               <p class="text-muted mb-0 small">No rooms in this warehouse yet.</p>
             </div>
           {% endif %}
@@ -168,14 +168,14 @@
       </div>
 
       <!-- Users Card -->
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">people</span>
+      <div class="card border rounded-3">
+        <div class="card-header bg-white d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+          <h5 class="mb-0 d-inline-flex align-items-center">
+            <span class="material-symbols-outlined me-2 fs-5">people</span>
             Users ({{ users_count }})
           </h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUsersModal">
-            <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
+          <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 text-nowrap" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+            <span class="material-symbols-outlined fs-6">person_add</span>
             Add User
           </button>
         </div>
@@ -206,7 +206,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="user_id" value="{{ user.id }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove user from warehouse">
-                          <span class="material-symbols-outlined" style="font-size: 14px;">person_remove</span>
+                          <span class="material-symbols-outlined fs-6">person_remove</span>
                         </button>
                       </form>
                     </div>
@@ -216,10 +216,10 @@
             </div>
           {% else %}
             <div class="text-center py-3">
-              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">people</span>
+              <span class="material-symbols-outlined mb-2 text-muted fs-2">people</span>
               <p class="text-muted mb-0 small">No users assigned to this warehouse.</p>
-              <button type="button" class="btn btn-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#addUsersModal">
-                <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
+              <button type="button" class="btn btn-primary btn-sm mt-2 d-inline-flex align-items-center gap-1 px-3" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+                <span class="material-symbols-outlined fs-6">person_add</span>
                 Add First User
               </button>
             </div>
@@ -235,7 +235,7 @@
               {% csrf_token %}
               <div class="modal-header">
                 <h5 class="modal-title" id="addUsersModalLabel">
-                  <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">person_add</span>
+                  <span class="material-symbols-outlined me-2 fs-5 align-middle">person_add</span>
                   Add Users to Warehouse
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
