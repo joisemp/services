@@ -1,0 +1,130 @@
+.warehouse-detail .room-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.warehouse-detail .room-actions .btn-sm {
+  padding: 0.375rem 0.5rem;
+}
+.warehouse-detail .list-group-item {
+  transition: background-color 0.2s ease;
+}
+.warehouse-detail .list-group-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+.warehouse-detail .modal-body .user-checkbox-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.warehouse-detail .modal-body .user-checkbox-list .user-checkbox-item {
+  transition: background-color 0.2s ease;
+}
+.warehouse-detail .modal-body .user-checkbox-list .user-checkbox-item:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.warehouse-product-list .table tbody tr {
+  transition: background-color 0.2s ease;
+}
+.warehouse-product-list .table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+.warehouse-product-list .pagination {
+  margin-bottom: 0;
+}
+.warehouse-product-list .pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.room-form .card,
+.warehouse-form .card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.room-form .card .card-header,
+.warehouse-form .card .card-header {
+  border-bottom: 1px solid #dee2e6;
+}
+.room-form .card .form-group,
+.warehouse-form .card .form-group {
+  margin-bottom: 1.5rem;
+}
+.room-form .card .form-group:last-child,
+.warehouse-form .card .form-group:last-child {
+  margin-bottom: 0;
+}
+.room-form .card .btn-group,
+.warehouse-form .card .btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+.room-form .card .btn-group .btn,
+.warehouse-form .card .btn-group .btn {
+  flex: 1;
+}
+@media (max-width: 576px) {
+  .room-form .card .btn-group .btn,
+  .warehouse-form .card .btn-group .btn {
+    flex: none;
+  }
+}
+
+.card {
+  border: 1px solid #dee2e6;
+  margin-bottom: 1.5rem;
+}
+.card .card-header {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+.card .card-header h5, .card .card-header h4 {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+.card .card-body {
+  padding: 1rem;
+}
+.card .card-body.p-0 {
+  padding: 0;
+}
+.card .card-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 0.75rem 1rem;
+}
+
+.badge {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.badge.bg-success {
+  background-color: #198754 !important;
+}
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+.user-avatar .avatar-circle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 992px) {
+  .warehouse-detail .row {
+    flex-direction: column;
+  }
+}/*# sourceMappingURL=warehouse.css.map */
