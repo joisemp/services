@@ -503,3 +503,34 @@ class CentralAdminEditRoomView(CentralAdminOnlyAccessMixin, UpdateView):
 	def get_success_url(self):
 		warehouse = self.object.warehouse
 		return reverse_lazy('inventory:central_admin:warehouse_detail', kwargs={'slug': warehouse.slug})
+
+
+class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView):
+	"""
+	View to list all products in a warehouse
+	"""
+	model = Product
+	template_name = 'central_admin/inventory/warehouse_product_list.html'
+	context_object_name = 'products'
+	paginate_by = 20
+
+	def get_queryset(self):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		
+		# Check org access
+		if not user.is_superuser and (not org or warehouse.org != org):
+			return Product.objects.none()
+		
+		return warehouse.products.select_related(
+			'category',
+			'brand',
+			'room',
+		).order_by('-updated_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		context['warehouse'] = warehouse
+		return context

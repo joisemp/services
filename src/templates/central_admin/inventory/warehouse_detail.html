@@ -74,6 +74,10 @@
               Recently Updated Products
             </h5>
           </div>
+          <a href="{% url 'inventory:central_admin:warehouse_products' slug=warehouse.slug %}" class="btn btn-sm btn-outline-primary">
+            <span class="material-symbols-outlined me-1" style="font-size: 14px;">visibility</span>
+            View All
+          </a>
         </div>
         <div class="card-body p-0">
           {% if warehouse_products %}

@@ -8,6 +8,7 @@ urlpatterns = [
     path('', central_admin.CentralAdminInventoryDashboardView.as_view(), name='inventory_dashboard'),
     path('warehouses/create/', central_admin.CentralAdminCreateWarehouseView.as_view(), name='create_warehouse'),
     path('warehouses/<slug:slug>/', central_admin.CentralAdminWarehouseDetailView.as_view(), name='warehouse_detail'),
+    path('warehouses/<slug:slug>/products/', central_admin.CentralAdminWarehouseProductListView.as_view(), name='warehouse_products'),
     path('warehouses/<slug:slug>/edit/', central_admin.CentralAdminEditWarehouseView.as_view(), name='edit_warehouse'),
     path('warehouses/<slug:slug>/add-user/', central_admin.CentralAdminWarehouseUserAddView.as_view(), name='warehouse_add_user'),
     path('warehouses/<slug:slug>/remove-user/', central_admin.CentralAdminWarehouseUserRemoveView.as_view(), name='warehouse_remove_user'),
