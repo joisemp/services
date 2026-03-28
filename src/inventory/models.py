@@ -39,6 +39,9 @@ class Category(models.Model):
             base_slug = slugify(self.name)
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
         
 
 class Brand(models.Model):
@@ -53,6 +56,9 @@ class Brand(models.Model):
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.name
+
 
 class Warehouse(models.Model):
     name = models.CharField(max_length=255)
@@ -65,6 +71,9 @@ class Warehouse(models.Model):
             base_slug = slugify(self.name)
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
         
 
 class Room(models.Model):
@@ -78,6 +87,9 @@ class Room(models.Model):
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.warehouse.name} - {self.name}"
+
 
 class Bucket(models.Model):
     name = models.CharField(max_length=255)
@@ -89,6 +101,9 @@ class Bucket(models.Model):
             base_slug = slugify(self.name)
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.room.name} - {self.name}"
 
 
 class Product(models.Model):
@@ -161,5 +176,8 @@ class Size(models.Model):
             base_slug = slugify(self.name)
             self.slug = generate_unique_slug(self, base_slug)
         super().save(*args, **kwargs)    
+
+    def __str__(self):
+        return f"{self.product.name} - {self.name}"
         
     
