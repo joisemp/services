@@ -1,0 +1,117 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Brands - Central Admin Inventory{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<section id="header" class="mt-2">
+  <div class="alert alert-notification alert-primary" role="alert">
+    <h5 class="mb-1">Inventory Overview</h5>
+    <p class="mb-0">Track stock health, products, and warehouse coverage across your organization.</p>
+  </div>
+</section>
+
+<section id="summary" class="mt-4">
+  <div class="row g-3">
+    {% for card in summary_cards %}
+      <div class="col-6 col-lg-4 col-xxl-3">
+        <div class="card h-100 border-0">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-muted small mb-1">{{ card.label }}</p>
+              <h4 class="fw-semibold mb-0">{{ card.value }}</h4>
+            </div>
+            <span class="material-symbols-outlined fs-2 text-{{ card.variant }}">{{ card.icon }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="inventory-tabs" class="mt-4">
+  <ul class="nav nav-tabs" id="inventoryTabsNav" role="tablist">
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="{% url 'inventory:central_admin:inventory_dashboard' %}">Warehouse</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="{% url 'inventory:central_admin:category_list' %}">Categories</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link active" href="{% url 'inventory:central_admin:brand_list' %}">Brands</a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link" href="#">Settings</a>
+    </li>
+  </ul>
+
+  <div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="mb-0">Brands</h3>
+      <a href="{% url 'inventory:central_admin:create_brand' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
+        <span class="material-symbols-outlined fs-6">add</span>
+        Create Brand
+      </a>
+    </div>
+
+    <div class="container-fluid px-0 mt-3">
+      {% if brands %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-3 g-3">
+          {% for brand in brands %}
+            <div class="col">
+              <div class="card h-100 border rounded-3">
+                <div class="card-body p-3 p-md-4 d-flex flex-column">
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                      <h5 class="card-title mb-1">{{ brand.name }}</h5>
+                      <p class="small text-muted mb-0">Brand</p>
+                    </div>
+                    <span class="badge rounded-pill bg-light text-dark border">Brand</span>
+                  </div>
+
+                  <p class="text-muted small mb-0">{{ brand.description|default:'No description provided.'|truncatewords:18 }}</p>
+
+                  <div class="mt-auto pt-3 border-top d-flex gap-2">
+                    <a href="{% url 'inventory:central_admin:edit_brand' slug=brand.slug %}" class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1">
+                      <span class="material-symbols-outlined fs-6">edit</span>
+                      Edit
+                    </a>
+                    <a href="#" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center" title="Delete Brand" aria-label="Delete Brand">
+                      <span class="material-symbols-outlined fs-6">delete</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state text-center py-5">
+          <div class="mb-4">
+            <span class="material-symbols-outlined">branding_watermark</span>
+          </div>
+          <h5 class="text-muted mb-2">No Brands</h5>
+          <p class="text-muted mb-4">Start by creating a brand to organize your products.</p>
+          <a href="{% url 'inventory:central_admin:create_brand' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
+            <span class="material-symbols-outlined fs-6">add</span>
+            Create Brand
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

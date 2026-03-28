@@ -1,0 +1,68 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Create Product - Step 2{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<section id="header" class="mt-2">
+  <div class="alert alert-notification alert-primary" role="alert">
+    <h5 class="mb-1">Create Product (Step 2 of 3)</h5>
+    <p class="mb-0">Choose whether this is a single-variant or multi-variant product.</p>
+  </div>
+</section>
+
+<section id="create-product-step2" class="mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card border-0">
+        <div class="card-body p-5">
+          <h4 class="card-title mb-1">Product Type</h4>
+          <p class="text-muted small mb-4">Single variant proceeds to one more step. Multi variant creates the product now.</p>
+
+          <form method="post" class="form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {% for error in form.non_field_errors %}
+                  <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endif %}
+
+            <div class="mb-4">
+              <label for="{{ form.type.id_for_label }}" class="form-label">{{ form.type.label }}</label>
+              {{ form.type }}
+              {% if form.type.help_text %}
+                <small class="text-muted d-block mt-2">{{ form.type.help_text }}</small>
+              {% endif %}
+              {% if form.type.errors %}
+                <small class="text-danger d-block mt-2">{{ form.type.errors.0 }}</small>
+              {% endif %}
+            </div>
+
+            <div class="d-flex gap-2 pt-3">
+              <button type="submit" class="btn btn-primary flex-grow-1">Continue</button>
+              <a href="{% url 'inventory:supervisor:product_create_step1' slug=warehouse.slug %}" class="btn btn-light">Back</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

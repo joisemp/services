@@ -1,7 +1,7 @@
 {% load core_tags %}
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-        <a class="navlink {% is_active 'issue_management:supervisor:issue_list,issue_management:supervisor:issue_detail' %}" href="{% url 'issue_management:supervisor:issue_list' %}">
+        <a class="navlink {% is_active 'issue_management:supervisor:issue_list,issue_management:supervisor:issue_detail,issue_management:supervisor:issue_create' %}" href="{% url 'issue_management:supervisor:issue_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
@@ -18,6 +18,12 @@
                 location_on
             </span>
             <span class="menu-text">Site Visits</span>
+        </a>
+        <a class="navlink {% is_active 'inventory:supervisor:inventory_dashboard' %}" href="{% url 'inventory:supervisor:inventory_dashboard' %}">
+            <span class="material-symbols-outlined me-2">
+                inventory_2
+            </span>
+            <span class="menu-text">Inventory</span>
         </a>
     </div>
 </section>

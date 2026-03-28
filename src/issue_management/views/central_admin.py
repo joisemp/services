@@ -19,14 +19,35 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     model = Issue
     
     def get_queryset(self):
-        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
+        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to').all()
+        
+        # Filter by reporter if provided (slug or ID)
+        reporter_filter = self.request.GET.get('reporter')
+        if reporter_filter:
+            # Try slug first, fallback to ID
+            if reporter_filter.isdigit():
+                queryset = queryset.filter(reporter_id=reporter_filter)
+            else:
+                queryset = queryset.filter(reporter__slug=reporter_filter)
+        
+        # Filter by assignee if provided (slug or ID)
+        assignee_filter = self.request.GET.get('assignee')
+        if assignee_filter:
+            # Try slug first, fallback to ID
+            if assignee_filter.isdigit():
+                queryset = queryset.filter(assigned_to_id=assignee_filter)
+            else:
+                queryset = queryset.filter(assigned_to__slug=assignee_filter)
         
         # Filter by status if provided
         status_filter = self.request.GET.get('status')
-        if status_filter and status_filter in ['open', 'assigned', 'in_progress', 'critical']:
-            if status_filter == 'critical':
+        if status_filter:
+            if status_filter == 'not_resolved':
+                # Filter for issues that are not resolved (open, assigned, in_progress, escalated)
+                queryset = queryset.exclude(status='resolved')
+            elif status_filter == 'critical':
                 queryset = queryset.filter(priority='critical')
-            else:
+            elif status_filter in ['open', 'assigned', 'in_progress', 'resolved', 'escalated', 'closed', 'cancelled']:
                 queryset = queryset.filter(status=status_filter)
         
         # Filter by space if provided

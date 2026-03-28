@@ -1,0 +1,34 @@
+from django.urls import path
+
+from ..views import central_admin
+
+app_name = 'central_admin'
+
+urlpatterns = [
+    path('', central_admin.CentralAdminInventoryDashboardView.as_view(), name='inventory_dashboard'),
+    path('warehouses/create/', central_admin.CentralAdminCreateWarehouseView.as_view(), name='create_warehouse'),
+    path('warehouses/<slug:slug>/', central_admin.CentralAdminWarehouseDetailView.as_view(), name='warehouse_detail'),
+    path('warehouses/<slug:slug>/products/', central_admin.CentralAdminWarehouseProductListView.as_view(), name='warehouse_products'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/', central_admin.CentralAdminProductDetailView.as_view(), name='product_detail'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/assign-room/', central_admin.CentralAdminProductAssignRoomView.as_view(), name='product_assign_room'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/assign-bucket/', central_admin.CentralAdminProductAssignBucketView.as_view(), name='product_assign_bucket'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/assign-category/', central_admin.CentralAdminProductAssignCategoryView.as_view(), name='product_assign_category'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/assign-brand/', central_admin.CentralAdminProductAssignBrandView.as_view(), name='product_assign_brand'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/variants/create/', central_admin.CentralAdminProductVariantCreateView.as_view(), name='product_variant_create'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/variants/<slug:variant_slug>/update/', central_admin.CentralAdminProductVariantUpdateView.as_view(), name='product_variant_update'),
+    path('warehouses/<slug:slug>/products/<slug:product_slug>/variants/<slug:variant_slug>/delete/', central_admin.CentralAdminProductVariantDeleteView.as_view(), name='product_variant_delete'),
+    path('warehouses/<slug:slug>/products/create/step-1/', central_admin.CentralAdminProductCreateStepOneView.as_view(), name='product_create_step1'),
+    path('warehouses/<slug:slug>/products/create/step-2/', central_admin.CentralAdminProductCreateStepTwoView.as_view(), name='product_create_step2'),
+    path('warehouses/<slug:slug>/products/create/step-3/single-variant/', central_admin.CentralAdminProductCreateSingleVariantStepView.as_view(), name='product_create_step3_single'),
+    path('warehouses/<slug:slug>/edit/', central_admin.CentralAdminEditWarehouseView.as_view(), name='edit_warehouse'),
+    path('warehouses/<slug:slug>/add-user/', central_admin.CentralAdminWarehouseUserAddView.as_view(), name='warehouse_add_user'),
+    path('warehouses/<slug:slug>/remove-user/', central_admin.CentralAdminWarehouseUserRemoveView.as_view(), name='warehouse_remove_user'),
+    path('warehouses/<slug:slug>/create-room/', central_admin.CentralAdminCreateRoomView.as_view(), name='create_room'),
+    path('rooms/<slug:room_slug>/edit/', central_admin.CentralAdminEditRoomView.as_view(), name='edit_room'),
+    path('categories/', central_admin.CentralAdminCategoryListView.as_view(), name='category_list'),
+    path('categories/create/', central_admin.CentralAdminCreateCategoryView.as_view(), name='create_category'),
+    path('categories/<slug:slug>/edit/', central_admin.CentralAdminEditCategoryView.as_view(), name='edit_category'),
+    path('brands/', central_admin.CentralAdminBrandListView.as_view(), name='brand_list'),
+    path('brands/create/', central_admin.CentralAdminCreateBrandView.as_view(), name='create_brand'),
+    path('brands/<slug:slug>/edit/', central_admin.CentralAdminEditBrandView.as_view(), name='edit_brand'),
+]

@@ -1,0 +1,75 @@
+{% extends "sidebar_base.html" %}
+
+{% load static %}
+
+{% block title %}Edit Room - {{ room.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <a class="btn btn-sm btn-dark mb-3 d-inline-flex align-items-center" href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}">
+    <span class="material-symbols-outlined me-1" style="font-size: 16px;">arrow_back</span>
+    Go back to {{ warehouse.name }}
+  </a>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-white py-3">
+          <h4 class="mb-0">
+            <span class="material-symbols-outlined me-2" style="font-size: 24px; vertical-align: middle;">door_open</span>
+            Edit Room
+          </h4>
+          <small class="text-muted">Editing <strong>{{ room.name }}</strong> in <strong>{{ warehouse.name }}</strong></small>
+        </div>
+        <div class="card-body">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            
+            {% for field in form %}
+              <div class="mb-3">
+                {% if field.errors %}
+                  <div class="alert alert-danger" role="alert">
+                    {{ field.errors }}
+                  </div>
+                {% endif %}
+                {{ field }}
+              </div>
+            {% endfor %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-symbols-outlined me-2" style="font-size: 18px; vertical-align: middle;">check</span>
+                Save Changes
+              </button>
+              <a href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}" class="btn btn-secondary">
+                <span class="material-symbols-outlined me-2" style="font-size: 18px; vertical-align: middle;">close</span>
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

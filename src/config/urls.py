@@ -38,6 +38,9 @@ urlpatterns = [
     
     # Issue management application URLs
     path('issues/', include('issue_management.urls')),
+
+    # Inventory application URLs
+    path('inventory/', include('inventory.urls')),
     
     # Dashboard application URLs
     path('dashboard/', include('dashboard.urls')),

@@ -120,6 +120,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('maintainer', 'Maintainer'),
         ('supervisor', 'Supervisor'),
         ('reviewer', 'Reviewer'),
+        ('driver', 'Driver'),
+        ('transport_incharge', 'Transport Incharge'),
         ('general_user', 'General User'),
     ]
     
@@ -206,12 +208,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Currently active space for space admins (used for context switching)"
     )
     
+    warehouses = models.ManyToManyField(
+        'inventory.Warehouse',
+        blank=True,
+        related_name='users',
+        help_text="Warehouses this user has access to (optional)"
+    )
+    
     # Firebase Cloud Messaging token for push notifications
     fcm_token = models.TextField(
         blank=True,
         null=True,
         help_text="Firebase Cloud Messaging token for push notifications"
     )
+    
+    # Slug field for URL-friendly user identification
+    slug = models.SlugField(unique=True, blank=True, null=True)
     
     objects = UserManager()
     
@@ -271,6 +283,19 @@ class User(AbstractBaseUser, PermissionsMixin):
         
         # Hash the PIN using Django's password hasher
         self.pin = make_password(raw_pin)
+    
+    def save(self, *args, **kwargs):
+        """Generate slug on save if not present"""
+        if not self.slug:
+            # Use email or phone number as base for slug
+            if self.email:
+                base_slug = slugify(self.email.split('@')[0])
+            elif self.phone_number:
+                base_slug = slugify(self.phone_number.replace('+', '').replace('-', ''))
+            else:
+                base_slug = f"user-{self.id or 'new'}"
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
     
     def check_pin(self, raw_pin):
         """
@@ -379,6 +404,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_reviewer(self):
         return self.user_type == 'reviewer'
+
+    @property
+    def is_driver(self):
+        return self.user_type == 'driver'
+
+    @property
+    def is_transport_incharge(self):
+        return self.user_type == 'transport_incharge'
 
     @property
     def is_general_user(self):
