@@ -23,10 +23,16 @@
     Go back to {{ warehouse.name }}
   </a>
 
-  <h4 class="mb-4 d-flex align-items-center">
-    <span class="material-symbols-outlined me-2 fs-4">inventory_2</span>
-    All Products in {{ warehouse.name }}
-  </h4>
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-4">
+    <h4 class="mb-0 d-flex align-items-center">
+      <span class="material-symbols-outlined me-2 fs-4">inventory_2</span>
+      All Products in {{ warehouse.name }}
+    </h4>
+    <a class="btn btn-sm btn-primary d-inline-flex align-items-center" href="{% url 'inventory:central_admin:product_create_step1' slug=warehouse.slug %}">
+      <span class="material-symbols-outlined me-1 fs-6">add</span>
+      Add Product
+    </a>
+  </div>
 
   {% if products %}
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">

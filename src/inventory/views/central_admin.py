@@ -3,10 +3,234 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room
-from inventory.forms import WarehouseForm, CategoryForm, BrandForm, WarehouseUserAddForm, WarehouseUserRemoveForm, RoomForm
+from inventory.models import Brand, Category, Product, Warehouse, Room, Size
+from inventory.forms import (
+	WarehouseForm,
+	CategoryForm,
+	BrandForm,
+	WarehouseUserAddForm,
+	WarehouseUserRemoveForm,
+	RoomForm,
+	ProductCreateStepOneForm,
+	ProductCreateStepTwoForm,
+	ProductCreateSingleVariantForm,
+)
+from inventory.views.common import ProductCreateWizardSessionMixin
+
+
+class CentralAdminWarehouseScopedMixin(CentralAdminOnlyAccessMixin):
+	def get_warehouse(self):
+		return get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+
+	def get_warehouse_queryset(self):
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if user.is_superuser and not org:
+			return Warehouse.objects.all()
+
+		if org:
+			return Warehouse.objects.filter(org=org)
+
+		return Warehouse.objects.none()
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+
+class CentralAdminProductCreateStepOneView(CentralAdminWarehouseScopedMixin, ProductCreateWizardSessionMixin, FormView):
+	form_class = ProductCreateStepOneForm
+	template_name = 'central_admin/inventory/product_create_step1.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_user_org()
+		return kwargs
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['step'] = 1
+		return context
+
+	def get_initial(self):
+		initial = super().get_initial()
+		wizard_data = self.get_wizard_data()
+		step_one_data = wizard_data.get('step1', {})
+		if step_one_data:
+			initial.update(step_one_data)
+		return initial
+
+	def form_valid(self, form):
+		step_data = {
+			'name': form.cleaned_data['name'],
+			'description': form.cleaned_data['description'],
+			'category_id': form.cleaned_data['category'].id if form.cleaned_data.get('category') else None,
+			'unit': form.cleaned_data['unit'],
+		}
+		self.set_wizard_step_data('step1', step_data)
+		return redirect('inventory:central_admin:product_create_step2', slug=self.kwargs['slug'])
+
+
+class CentralAdminProductCreateStepTwoView(CentralAdminWarehouseScopedMixin, ProductCreateWizardSessionMixin, FormView):
+	form_class = ProductCreateStepTwoForm
+	template_name = 'central_admin/inventory/product_create_step2.html'
+
+	def dispatch(self, request, *args, **kwargs):
+		if 'step1' not in self.get_wizard_data():
+			messages.warning(request, 'Please complete Step 1 first.')
+			return redirect('inventory:central_admin:product_create_step1', slug=self.kwargs['slug'])
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_initial(self):
+		initial = super().get_initial()
+		wizard_data = self.get_wizard_data()
+		step_two_data = wizard_data.get('step2', {})
+		if step_two_data:
+			initial.update(step_two_data)
+		return initial
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['step'] = 2
+		return context
+
+	def form_valid(self, form):
+		product_type = form.cleaned_data['type']
+		self.set_wizard_step_data('step2', {'type': product_type})
+
+		if product_type == 'SINGLE_VARIANT':
+			return redirect('inventory:central_admin:product_create_step3_single', slug=self.kwargs['slug'])
+
+		created_product = self.create_product(product_type)
+		self.clear_wizard_data()
+		messages.success(self.request, f'Product "{created_product.name}" created successfully.')
+		return redirect('inventory:central_admin:warehouse_products', slug=self.kwargs['slug'])
+
+	@transaction.atomic
+	def create_product(self, product_type):
+		warehouse = self.get_warehouse()
+		org = warehouse.org
+		wizard_data = self.get_wizard_data()
+		step_one_data = wizard_data['step1']
+
+		category = None
+		category_id = step_one_data.get('category_id')
+		if category_id:
+			category = Category.objects.filter(id=category_id, org=org).first()
+
+		product = Product.objects.create(
+			name=step_one_data['name'],
+			description=step_one_data['description'],
+			type=product_type,
+			unit=step_one_data['unit'],
+			org=org,
+			warehouse=warehouse,
+			category=category,
+			universal_available_quantity=0,
+			total_incoming_quantity=0,
+			total_used_quantity=0,
+		)
+
+		return product
+
+
+class CentralAdminProductCreateSingleVariantStepView(CentralAdminWarehouseScopedMixin, ProductCreateWizardSessionMixin, FormView):
+	form_class = ProductCreateSingleVariantForm
+	template_name = 'central_admin/inventory/product_create_step3_single_variant.html'
+
+	def dispatch(self, request, *args, **kwargs):
+		wizard_data = self.get_wizard_data()
+		if 'step1' not in wizard_data:
+			messages.warning(request, 'Please complete Step 1 first.')
+			return redirect('inventory:central_admin:product_create_step1', slug=self.kwargs['slug'])
+		if 'step2' not in wizard_data:
+			messages.warning(request, 'Please complete Step 2 first.')
+			return redirect('inventory:central_admin:product_create_step2', slug=self.kwargs['slug'])
+		if wizard_data.get('step2', {}).get('type') != 'SINGLE_VARIANT':
+			messages.warning(request, 'Selected product type is not single variant.')
+			return redirect('inventory:central_admin:product_create_step2', slug=self.kwargs['slug'])
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_user_org()
+		return kwargs
+
+	def get_initial(self):
+		initial = super().get_initial()
+		wizard_data = self.get_wizard_data()
+		step_three_data = wizard_data.get('step3', {})
+		if step_three_data:
+			initial.update(step_three_data)
+		return initial
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['step'] = 3
+		return context
+
+	def form_valid(self, form):
+		step_data = {
+			'total_quantity': form.cleaned_data['total_quantity'],
+			'size_name': form.cleaned_data['size_name'],
+			'brand_id': form.cleaned_data['brand'].id,
+		}
+		self.set_wizard_step_data('step3', step_data)
+
+		created_product = self.create_single_variant_product()
+		self.clear_wizard_data()
+		messages.success(self.request, f'Product "{created_product.name}" created successfully.')
+		return redirect('inventory:central_admin:warehouse_products', slug=self.kwargs['slug'])
+
+	@transaction.atomic
+	def create_single_variant_product(self):
+		warehouse = self.get_warehouse()
+		org = warehouse.org
+		wizard_data = self.get_wizard_data()
+		step_one_data = wizard_data['step1']
+		step_three_data = wizard_data['step3']
+
+		category = None
+		category_id = step_one_data.get('category_id')
+		if category_id:
+			category = Category.objects.filter(id=category_id, org=org).first()
+
+		brand = Brand.objects.filter(id=step_three_data['brand_id'], org=org).first()
+
+		total_incoming_quantity = step_three_data['total_quantity']
+		total_used_quantity = 0
+		universal_available_quantity = total_incoming_quantity - total_used_quantity
+
+		product = Product.objects.create(
+			name=step_one_data['name'],
+			description=step_one_data['description'],
+			type='SINGLE_VARIANT',
+			unit=step_one_data['unit'],
+			org=org,
+			warehouse=warehouse,
+			category=category,
+			brand=brand,
+			total_incoming_quantity=total_incoming_quantity,
+			total_used_quantity=total_used_quantity,
+			universal_available_quantity=universal_available_quantity,
+		)
+
+		size_name = step_three_data['size_name'].strip()
+		if size_name:
+			Size.objects.get_or_create(
+				org=org,
+				product=product,
+				name=size_name,
+				defaults={'description': '', 'variant': None},
+			)
+
+		return product
 
 
 class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateView):

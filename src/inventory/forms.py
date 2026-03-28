@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category, Brand, Room
+from .models import Warehouse, Category, Brand, Room, Product
 from core.models import User
 
 
@@ -123,3 +123,42 @@ class RoomForm(BootstrapFormMixin, forms.ModelForm):
 		labels = {
 			'name': 'Room Name',
 		}
+
+
+class ProductCreateStepOneForm(BootstrapFormMixin, forms.Form):
+	name = forms.CharField(max_length=255, label='Product Name')
+	description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Description')
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='Select Category')
+	unit = forms.ChoiceField(choices=Product._meta.get_field('unit').choices, label='Unit')
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['category'].queryset = Category.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['category'].queryset = Category.objects.none()
+
+
+class ProductCreateStepTwoForm(BootstrapFormMixin, forms.Form):
+	type = forms.ChoiceField(
+		choices=Product.TYPE_CHOICES,
+		label='Product Type',
+		help_text='Choose single variant for one stock line, or multi variant to create product first and variants later.'
+	)
+
+
+class ProductCreateSingleVariantForm(BootstrapFormMixin, forms.Form):
+	total_quantity = forms.IntegerField(min_value=0, label='Total Quantity')
+	size_name = forms.CharField(max_length=50, label='Size')
+	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=True, empty_label='Select Brand')
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['brand'].queryset = Brand.objects.none()
