@@ -256,3 +256,73 @@ class ProductAssignBrandForm(BootstrapFormMixin, forms.Form):
 			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
 		else:
 			self.fields['brand'].queryset = Brand.objects.none()
+
+
+class StockMovementRecordForm(BootstrapFormMixin, forms.Form):
+	reference_code = forms.CharField(
+		max_length=32,
+		required=False,
+		label='Reference Code (Optional)',
+		help_text='Leave blank to auto-generate a unique reference code.',
+	)
+	movement_type = forms.ChoiceField(
+		choices=[('INCOMING', 'Incoming'), ('OUTGOING', 'Outgoing')],
+	)
+	quantity = forms.IntegerField(min_value=1)
+	variant = forms.ModelChoiceField(
+		queryset=Variant.objects.none(),
+		required=False,
+		empty_label='Select variant',
+	)
+	notes = forms.CharField(
+		required=False,
+		widget=forms.Textarea(attrs={'rows': 2}),
+		label='Notes',
+	)
+
+	def __init__(self, *args, **kwargs):
+		product = kwargs.pop('product', None)
+		org = kwargs.pop('org', None)
+		warehouse = kwargs.pop('warehouse', None)
+		force_movement_type = kwargs.pop('force_movement_type', None)
+		super().__init__(*args, **kwargs)
+
+		variants = Variant.objects.none()
+		self.product = product
+		self.force_movement_type = force_movement_type if force_movement_type in {'INCOMING', 'OUTGOING'} else None
+
+		if product:
+			variants = product.variants.all().order_by('name')
+		elif org and warehouse:
+			variants = Variant.objects.filter(product__org=org, product__warehouse=warehouse).select_related('product').order_by('product__name', 'name')
+
+		self.fields['variant'].queryset = variants
+
+		if product and product.type == 'SINGLE_VARIANT':
+			self.fields['variant'].widget = forms.HiddenInput()
+
+		if self.force_movement_type:
+			self.fields['movement_type'].initial = self.force_movement_type
+			self.fields['movement_type'].widget = forms.HiddenInput()
+
+	def clean(self):
+		cleaned_data = super().clean()
+		product = self.product
+		variant = cleaned_data.get('variant')
+
+		if not product:
+			raise forms.ValidationError('Product is required.')
+
+		if product.type == 'MULTI_VARIANT' and not variant:
+			raise forms.ValidationError('Multi-variant products require selecting a variant for stock movement.')
+
+		if product.type == 'SINGLE_VARIANT' and variant:
+			raise forms.ValidationError('Single-variant products only support product-level movement.')
+
+		if variant and variant.product_id != product.id:
+			raise forms.ValidationError('Selected variant does not belong to the selected product.')
+
+		if self.force_movement_type and cleaned_data.get('movement_type') != self.force_movement_type:
+			cleaned_data['movement_type'] = self.force_movement_type
+
+		return cleaned_data

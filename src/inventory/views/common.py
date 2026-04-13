@@ -1,6 +1,7 @@
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-from inventory.models import Variant
+from inventory.models import Variant, StockMovementLine
 
 
 class ProductCreateWizardSessionMixin:
@@ -53,3 +54,55 @@ def recompute_product_quantities(product):
 		product.save(update_fields=['universal_available_quantity'])
 
 	return product
+
+
+def apply_stock_movement_line(*, batch, product, variant, movement_type, quantity, notes, actor):
+	target = variant if variant else product
+	target_type = 'VARIANT' if variant else 'PRODUCT'
+
+	old_total_incoming = target.total_incoming_quantity
+	old_total_used = target.total_used_quantity
+	old_available = target.universal_available_quantity
+
+	new_total_incoming = old_total_incoming
+	new_total_used = old_total_used
+
+	if movement_type == 'INCOMING':
+		new_total_incoming += quantity
+	elif movement_type == 'OUTGOING':
+		if old_available < quantity:
+			raise ValidationError(
+				f'Outgoing quantity ({quantity}) exceeds available quantity ({old_available}) for {target}.',
+			)
+		new_total_used += quantity
+	else:
+		raise ValidationError('Invalid movement type.')
+
+	new_available = new_total_incoming - new_total_used
+
+	target.total_incoming_quantity = new_total_incoming
+	target.total_used_quantity = new_total_used
+	target.universal_available_quantity = new_available
+	target.save(update_fields=['total_incoming_quantity', 'total_used_quantity', 'universal_available_quantity'])
+
+	if variant and product.type == 'MULTI_VARIANT':
+		recompute_product_quantities(product)
+
+	return StockMovementLine.objects.create(
+		batch=batch,
+		org=product.org,
+		warehouse=product.warehouse,
+		product=product,
+		variant=variant,
+		target_type=target_type,
+		movement_type=movement_type,
+		quantity=quantity,
+		notes=notes,
+		old_total_incoming_quantity=old_total_incoming,
+		old_total_used_quantity=old_total_used,
+		old_available_quantity=old_available,
+		new_total_incoming_quantity=new_total_incoming,
+		new_total_used_quantity=new_total_used,
+		new_available_quantity=new_available,
+		recorded_by=actor,
+	)

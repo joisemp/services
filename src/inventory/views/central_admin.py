@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -1115,3 +1115,42 @@ class CentralAdminProductVariantDeleteView(CentralAdminProductVariantBaseMixin, 
 		recompute_product_quantities(product)
 		messages.success(request, 'Variant deleted successfully.')
 		return self.get_success_redirect()
+
+
+class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, ListView):
+	model = StockMovementLine
+	template_name = 'central_admin/inventory/stock_movement_history.html'
+	context_object_name = 'movements'
+	paginate_by = 30
+
+	def get_queryset(self):
+		warehouse = self.get_warehouse()
+		queryset = StockMovementLine.objects.filter(
+			org=warehouse.org,
+			warehouse=warehouse,
+		).select_related('batch', 'product', 'variant', 'recorded_by').order_by('-created_at')
+
+		product_slug = self.request.GET.get('product')
+		movement_type = self.request.GET.get('movement_type')
+		reference_code = self.request.GET.get('reference_code')
+
+		if product_slug:
+			queryset = queryset.filter(product__slug=product_slug)
+
+		if movement_type in {'INCOMING', 'OUTGOING'}:
+			queryset = queryset.filter(movement_type=movement_type)
+
+		if reference_code:
+			queryset = queryset.filter(batch__reference_code__icontains=reference_code.strip())
+
+		return queryset
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = self.get_warehouse()
+		context['warehouse'] = warehouse
+		context['products'] = Product.objects.filter(org=warehouse.org, warehouse=warehouse).order_by('name')
+		context['selected_product'] = self.request.GET.get('product', '')
+		context['selected_movement_type'] = self.request.GET.get('movement_type', '')
+		context['reference_code'] = self.request.GET.get('reference_code', '')
+		return context

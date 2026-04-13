@@ -1,0 +1,128 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Stock Movement Change Log - {{ warehouse.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 py-md-3">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+    <div>
+      <h4 class="mb-1">Stock Movement Change Log</h4>
+      <p class="text-muted mb-0">Warehouse: {{ warehouse.name }}</p>
+    </div>
+    <a href="{% url 'inventory:central_admin:warehouse_detail' slug=warehouse.slug %}" class="btn btn-sm btn-outline-secondary">Back to Warehouse</a>
+  </div>
+
+  <form method="get" class="card border rounded-3 mb-3">
+    <div class="card-body p-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small mb-1">Product</label>
+          <select name="product" class="form-select form-select-sm">
+            <option value="">All products</option>
+            {% for product in products %}
+              <option value="{{ product.slug }}" {% if selected_product == product.slug %}selected{% endif %}>{{ product.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label small mb-1">Movement Type</label>
+          <select name="movement_type" class="form-select form-select-sm">
+            <option value="">All types</option>
+            <option value="INCOMING" {% if selected_movement_type == 'INCOMING' %}selected{% endif %}>Incoming</option>
+            <option value="OUTGOING" {% if selected_movement_type == 'OUTGOING' %}selected{% endif %}>Outgoing</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label small mb-1">Reference Code</label>
+          <input type="text" name="reference_code" value="{{ reference_code }}" class="form-control form-control-sm" placeholder="Search reference">
+        </div>
+        <div class="col-12 col-md-2 d-grid">
+          <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card border rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Reference</th>
+              <th>Item</th>
+              <th>Type</th>
+              <th>Qty</th>
+              <th>Old Avail</th>
+              <th>New Avail</th>
+              <th>Recorded By</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for movement in movements %}
+              <tr>
+                <td>{{ movement.created_at|date:'Y-m-d H:i' }}</td>
+                <td>{{ movement.batch.reference_code }}</td>
+                <td>
+                  {{ movement.product.name }}
+                  {% if movement.variant %}<div class="small text-muted">Variant: {{ movement.variant.name }}</div>{% endif %}
+                </td>
+                <td>
+                  <span class="badge {% if movement.movement_type == 'INCOMING' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                    {{ movement.get_movement_type_display }}
+                  </span>
+                </td>
+                <td>{{ movement.quantity }}</td>
+                <td>{{ movement.old_available_quantity }}</td>
+                <td>{{ movement.new_available_quantity }}</td>
+                <td>{{ movement.recorded_by|default:'-' }}</td>
+                <td>{{ movement.notes|default:movement.batch.notes|default:'-' }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" class="text-center py-4 text-muted">No stock movement records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+    <nav class="mt-3" aria-label="Pagination">
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&product={{ selected_product }}&movement_type={{ selected_movement_type }}&reference_code={{ reference_code }}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&product={{ selected_product }}&movement_type={{ selected_movement_type }}&reference_code={{ reference_code }}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}
