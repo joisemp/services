@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Organization, User
-from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant
+from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine
 
 
 class CentralAdminProductCreateFlowTests(TestCase):
@@ -353,6 +353,189 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Brand X')
 		self.assertContains(response, 'Brand Two')
+
+
+class StockMovementFlowTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Movement Org')
+
+		self.supervisor = User.objects.create_user(
+			email='supervisor@example.com',
+			password='password123',
+			phone_number='+15555550125',
+			user_type='supervisor',
+			organization=self.org,
+		)
+
+		self.central_admin = User.objects.create_user(
+			email='central@example.com',
+			password='password123',
+			phone_number='+15555550126',
+			user_type='central_admin',
+			organization=self.org,
+		)
+
+		self.warehouse = Warehouse.objects.create(name='Movement Warehouse', location='HQ', org=self.org)
+		self.supervisor.warehouses.add(self.warehouse)
+
+		self.single_product = Product.objects.create(
+			name='Single Movement Product',
+			description='Single product',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.warehouse,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+
+		self.multi_product = Product.objects.create(
+			name='Multi Movement Product',
+			description='Multi product',
+			type='MULTI_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.warehouse,
+		)
+		self.variant = Variant.objects.create(
+			name='Variant One',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=20,
+			total_used_quantity=5,
+			universal_available_quantity=15,
+		)
+		self.multi_product.total_incoming_quantity = 20
+		self.multi_product.total_used_quantity = 5
+		self.multi_product.universal_available_quantity = 15
+		self.multi_product.save(update_fields=['total_incoming_quantity', 'total_used_quantity', 'universal_available_quantity'])
+
+	def _create_url(self, product):
+		return reverse(
+			'inventory:supervisor:stock_movement_create',
+			kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug},
+		)
+
+	def _history_url_supervisor(self):
+		return reverse('inventory:supervisor:stock_movement_history', kwargs={'slug': self.warehouse.slug})
+
+	def _product_detail_url(self, product):
+		return reverse(
+			'inventory:supervisor:product_detail',
+			kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug},
+		)
+
+	def _history_url_central_admin(self):
+		return reverse('inventory:central_admin:stock_movement_history', kwargs={'slug': self.warehouse.slug})
+
+	def _base_payload(self):
+		return {
+			'reference_code': 'TXN-001',
+			'movement_type': 'INCOMING',
+			'quantity': '1',
+			'notes': 'Movement note',
+		}
+
+	def test_supervisor_can_record_product_wise_for_single_and_multi_variant(self):
+		self.client.force_login(self.supervisor)
+		single_payload = self._base_payload()
+		single_payload.update({'reference_code': 'TXN-001', 'movement_type': 'INCOMING', 'quantity': '5', 'notes': 'Single product replenish', 'variant': ''})
+		response_single = self.client.post(self._create_url(self.single_product), single_payload)
+		self.assertRedirects(response_single, self._product_detail_url(self.single_product))
+
+		multi_payload = self._base_payload()
+		multi_payload.update({'reference_code': 'TXN-002', 'movement_type': 'OUTGOING', 'quantity': '3', 'notes': 'Variant issued', 'variant': str(self.variant.id)})
+		response_multi = self.client.post(self._create_url(self.multi_product), multi_payload)
+		self.assertRedirects(response_multi, self._product_detail_url(self.multi_product))
+
+		self.single_product.refresh_from_db()
+		self.variant.refresh_from_db()
+		self.multi_product.refresh_from_db()
+
+		self.assertEqual(self.single_product.total_incoming_quantity, 15)
+		self.assertEqual(self.single_product.total_used_quantity, 2)
+		self.assertEqual(self.single_product.universal_available_quantity, 13)
+
+		self.assertEqual(self.variant.total_incoming_quantity, 20)
+		self.assertEqual(self.variant.total_used_quantity, 8)
+		self.assertEqual(self.variant.universal_available_quantity, 12)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 20)
+		self.assertEqual(self.multi_product.total_used_quantity, 8)
+		self.assertEqual(self.multi_product.universal_available_quantity, 12)
+
+		self.assertEqual(StockMovementBatch.objects.count(), 2)
+		self.assertEqual(StockMovementLine.objects.count(), 2)
+
+	def test_outgoing_more_than_available_rolls_back_batch(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update(
+			{
+				'movement_type': 'OUTGOING',
+				'quantity': '50',
+				'notes': 'Invalid outgoing',
+				'variant': '',
+			}
+		)
+
+		response = self.client.post(self._create_url(self.single_product), payload)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'exceeds available quantity')
+
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.universal_available_quantity, 8)
+		self.assertFalse(StockMovementBatch.objects.exists())
+		self.assertFalse(StockMovementLine.objects.exists())
+
+	def test_multi_variant_requires_variant_selection(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update(
+			{
+				'movement_type': 'INCOMING',
+				'quantity': '2',
+				'notes': 'Missing variant',
+				'variant': '',
+			}
+		)
+
+		response = self.client.post(self._create_url(self.multi_product), payload)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'require selecting a variant')
+		self.assertFalse(StockMovementBatch.objects.exists())
+
+	def test_central_admin_can_view_stock_movement_history(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.warehouse,
+			recorded_by=self.supervisor,
+			reference_code='TXN-READ',
+			notes='Audit batch',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='Audit line',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor,
+		)
+
+		self.client.force_login(self.central_admin)
+		response = self.client.get(self._history_url_central_admin())
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'TXN-READ')
 
 
 class SupervisorInventoryDashboardTests(TestCase):

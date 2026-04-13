@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from config.utils import generate_unique_slug, generate_unique_code, compress_image
 from django.utils.text import slugify
 
@@ -179,5 +180,126 @@ class Size(models.Model):
 
     def __str__(self):
         return f"{self.product.name} - {self.name}"
+
+
+class StockMovementBatch(models.Model):
+    reference_code = models.CharField(max_length=32, unique=True, blank=True)
+    slug = models.SlugField(unique=True)
+    org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='stock_movement_batches')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stock_movement_batches')
+    recorded_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        related_name='stock_movement_batches',
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['org', '-created_at']),
+            models.Index(fields=['warehouse', '-created_at']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.reference_code:
+            org_prefix = self.org.name[:3].upper() if self.org else 'INV'
+            unique_code = generate_unique_code(
+                StockMovementBatch,
+                no_of_char=8,
+                unique_field='reference_code',
+            )
+            self.reference_code = f"SMB-{org_prefix}-{unique_code}"
+        if not self.slug:
+            base_slug = slugify(self.reference_code)
+            self.slug = generate_unique_slug(self, base_slug)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.reference_code
+
+
+class StockMovementLine(models.Model):
+    TARGET_TYPE_CHOICES = [
+        ('PRODUCT', 'Product'),
+        ('VARIANT', 'Variant'),
+    ]
+    MOVEMENT_TYPE_CHOICES = [
+        ('INCOMING', 'Incoming'),
+        ('OUTGOING', 'Outgoing'),
+    ]
+
+    batch = models.ForeignKey(StockMovementBatch, on_delete=models.CASCADE, related_name='lines')
+    org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='stock_movement_lines')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stock_movement_lines')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_movement_lines')
+    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name='stock_movement_lines', null=True, blank=True)
+    target_type = models.CharField(max_length=16, choices=TARGET_TYPE_CHOICES)
+    movement_type = models.CharField(max_length=16, choices=MOVEMENT_TYPE_CHOICES)
+    quantity = models.PositiveIntegerField()
+    notes = models.TextField(blank=True)
+
+    old_total_incoming_quantity = models.IntegerField(default=0)
+    old_total_used_quantity = models.IntegerField(default=0)
+    old_available_quantity = models.IntegerField(default=0)
+    new_total_incoming_quantity = models.IntegerField(default=0)
+    new_total_used_quantity = models.IntegerField(default=0)
+    new_available_quantity = models.IntegerField(default=0)
+
+    recorded_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        related_name='stock_movement_lines',
+        null=True,
+        blank=True,
+    )
+    slug = models.SlugField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['org', '-created_at']),
+            models.Index(fields=['warehouse', '-created_at']),
+            models.Index(fields=['product', '-created_at']),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(quantity__gt=0), name='stock_movement_quantity_gt_0'),
+            models.CheckConstraint(
+                check=(
+                    (models.Q(target_type='PRODUCT') & models.Q(variant__isnull=True))
+                    | (models.Q(target_type='VARIANT') & models.Q(variant__isnull=False))
+                ),
+                name='stock_movement_variant_matches_target',
+            ),
+        ]
+
+    def clean(self):
+        if self.product and self.org_id and self.product.org_id != self.org_id:
+            raise ValidationError('Product must belong to the same organization as the movement.')
+
+        if self.warehouse and self.product and self.product.warehouse_id != self.warehouse_id:
+            raise ValidationError('Product must belong to the selected warehouse.')
+
+        if self.variant:
+            if self.variant.product_id != self.product_id:
+                raise ValidationError('Variant must belong to the selected product.')
+            if self.variant.product.org_id != self.org_id:
+                raise ValidationError('Variant must belong to the same organization as the movement.')
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.batch.reference_code}-{self.product.name}-{self.movement_type}")
+            self.slug = generate_unique_slug(self, base_slug)
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        target_name = self.variant.name if self.variant else self.product.name
+        return f"{self.get_movement_type_display()} {self.quantity} - {target_name}"
         
     

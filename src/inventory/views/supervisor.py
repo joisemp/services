@@ -2,9 +2,10 @@ from django.views.generic import ListView, DetailView, FormView, View
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
+from django.core.exceptions import ValidationError
 
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
-from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant
+from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine
 from inventory.forms import (
 	RoomForm,
 	BucketForm,
@@ -16,8 +17,9 @@ from inventory.forms import (
 	ProductAssignBucketForm,
 	ProductAssignCategoryForm,
 	ProductAssignBrandForm,
+	StockMovementRecordForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities
+from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities, apply_stock_movement_line
 
 
 def _get_supervisor_warehouse_queryset(user):
@@ -367,6 +369,116 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 			org = getattr(self.request.user, 'organization', None)
 			context['variant_form'] = ProductVariantForm(org=org)
 
+		context['recent_stock_movements'] = StockMovementLine.objects.filter(
+			org=self.object.org,
+			product=self.object,
+		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')[:8]
+
+		return context
+
+
+class SupervisorStockMovementCreateView(SupervisorWarehouseScopedMixin, FormView):
+	form_class = StockMovementRecordForm
+	template_name = 'supervisor/inventory/stock_movement_create.html'
+
+	def get_movement_mode(self):
+		movement_mode = self.request.GET.get('movement_type', '').upper()
+		if movement_mode in {'INCOMING', 'OUTGOING'}:
+			return movement_mode
+		return ''
+
+	def get_product(self):
+		warehouse = self.get_warehouse()
+		return get_object_or_404(warehouse.products.all(), slug=self.kwargs['product_slug'])
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_user_org()
+		kwargs['warehouse'] = self.get_warehouse()
+		kwargs['product'] = self.get_product()
+		kwargs['force_movement_type'] = self.get_movement_mode()
+		return kwargs
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['product'] = self.get_product()
+		movement_mode = self.get_movement_mode()
+		context['movement_mode'] = movement_mode
+		context['movement_mode_label'] = movement_mode.title() if movement_mode else 'Movement'
+		return context
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		warehouse = self.get_warehouse()
+		batch = StockMovementBatch.objects.create(
+			org=warehouse.org,
+			warehouse=warehouse,
+			recorded_by=self.request.user,
+			reference_code=form.cleaned_data.get('reference_code', '').strip(),
+			notes=form.cleaned_data.get('notes', ''),
+		)
+
+		try:
+			apply_stock_movement_line(
+				batch=batch,
+				product=product,
+				variant=form.cleaned_data.get('variant'),
+				movement_type=form.cleaned_data['movement_type'],
+				quantity=form.cleaned_data['quantity'],
+				notes=form.cleaned_data.get('notes', ''),
+				actor=self.request.user,
+			)
+		except ValidationError as exc:
+			form.add_error(None, exc.messages[0] if exc.messages else str(exc))
+			batch.delete()
+			return self.render_to_response(self.get_context_data(form=form))
+
+		messages.success(self.request, f'Stock movement {batch.reference_code} recorded successfully for {product.name}.')
+		return redirect(
+			'inventory:supervisor:product_detail',
+			slug=warehouse.slug,
+			product_slug=product.slug,
+		)
+
+
+class SupervisorStockMovementHistoryView(SupervisorWarehouseScopedMixin, ListView):
+	model = StockMovementLine
+	template_name = 'supervisor/inventory/stock_movement_history.html'
+	context_object_name = 'movements'
+	paginate_by = 30
+
+	def get_queryset(self):
+		warehouse = self.get_warehouse()
+		queryset = StockMovementLine.objects.filter(
+			org=warehouse.org,
+			warehouse=warehouse,
+		).select_related('batch', 'product', 'variant', 'recorded_by').order_by('-created_at')
+
+		product_slug = self.request.GET.get('product')
+		movement_type = self.request.GET.get('movement_type')
+		reference_code = self.request.GET.get('reference_code')
+
+		if product_slug:
+			queryset = queryset.filter(product__slug=product_slug)
+
+		if movement_type in {'INCOMING', 'OUTGOING'}:
+			queryset = queryset.filter(movement_type=movement_type)
+
+		if reference_code:
+			queryset = queryset.filter(batch__reference_code__icontains=reference_code.strip())
+
+		return queryset
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		warehouse = self.get_warehouse()
+		context['warehouse'] = warehouse
+		context['products'] = Product.objects.filter(org=warehouse.org, warehouse=warehouse).order_by('name')
+		context['selected_product'] = self.request.GET.get('product', '')
+		context['selected_movement_type'] = self.request.GET.get('movement_type', '')
+		context['reference_code'] = self.request.GET.get('reference_code', '')
 		return context
 
 
