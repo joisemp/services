@@ -24,7 +24,6 @@
       Go back to {{ warehouse.name }} products
     </a>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'inventory:central_admin:stock_movement_history' slug=warehouse.slug %}?product={{ product.slug }}" class="btn btn-sm btn-outline-primary">View Change Log</a>
       <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProductModal">Edit</button>
       <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#convertProductTypeModal">Convert Type</button>
       <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProductModal">Delete</button>
@@ -268,6 +267,59 @@
       </div>
     </div>
   </div>
+
+  <section class="mt-3">
+    <h6 class="mb-3">All Change Logs</h6>
+    {% if stock_movement_logs %}
+      {% for movement in stock_movement_logs %}
+        <div class="alert {% if movement.movement_type == 'INCOMING' %}alert-success{% else %}alert-warning{% endif %} mb-2" role="alert">
+          <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+            <div>
+              <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
+              <span class="ms-1">{{ movement.quantity }} units</span>
+              {% if movement.variant %}
+                <div class="small">Variant: {{ movement.variant.name }}</div>
+              {% endif %}
+              {% if movement.batch.reference_code %}
+                <div class="small">Ref: {{ movement.batch.reference_code }}</div>
+              {% endif %}
+            </div>
+            <div class="text-md-end small text-break">
+              <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
+              <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
+              <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if stock_movement_logs.has_other_pages %}
+        <nav aria-label="Product change logs pagination" class="mt-3 overflow-auto">
+          <ul class="pagination pagination-sm mb-0 flex-wrap">
+            <li class="page-item {% if not stock_movement_logs.has_previous %}disabled{% endif %}">
+              {% if stock_movement_logs.has_previous %}
+                <a class="page-link" href="?log_page={{ stock_movement_logs.previous_page_number }}">Previous</a>
+              {% else %}
+                <span class="page-link">Previous</span>
+              {% endif %}
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">Page {{ stock_movement_logs.number }} of {{ stock_movement_logs.paginator.num_pages }}</span>
+            </li>
+            <li class="page-item {% if not stock_movement_logs.has_next %}disabled{% endif %}">
+              {% if stock_movement_logs.has_next %}
+                <a class="page-link" href="?log_page={{ stock_movement_logs.next_page_number }}">Next</a>
+              {% else %}
+                <span class="page-link">Next</span>
+              {% endif %}
+            </li>
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-muted mb-0">No movement records for this product yet.</p>
+    {% endif %}
+  </section>
 </div>
 
 {% if product.type == 'MULTI_VARIANT' %}

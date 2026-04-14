@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine
@@ -839,6 +840,13 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		if self.object.type == 'MULTI_VARIANT':
 			org = getattr(self.request.user, 'organization', None)
 			context['variant_form'] = ProductVariantForm(org=org)
+
+		stock_movements = StockMovementLine.objects.filter(
+			org=self.object.org,
+			product=self.object,
+		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')
+		paginator = Paginator(stock_movements, 20)
+		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
 
 		return context
 

@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine
@@ -386,10 +387,12 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 			org = getattr(self.request.user, 'organization', None)
 			context['variant_form'] = ProductVariantForm(org=org)
 
-		context['recent_stock_movements'] = StockMovementLine.objects.filter(
+		stock_movements = StockMovementLine.objects.filter(
 			org=self.object.org,
 			product=self.object,
-		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')[:8]
+		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')
+		paginator = Paginator(stock_movements, 20)
+		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
 
 		return context
 
