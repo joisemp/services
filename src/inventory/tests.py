@@ -195,6 +195,15 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 	def _assign_brand_url(self, product):
 		return reverse('inventory:central_admin:product_assign_brand', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
+	def _product_edit_url(self, product):
+		return reverse('inventory:central_admin:product_edit', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_delete_url(self, product):
+		return reverse('inventory:central_admin:product_delete', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_convert_url(self, product):
+		return reverse('inventory:central_admin:product_convert_type', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
 	def _product_list_url(self):
 		return reverse('inventory:central_admin:warehouse_products', kwargs={'slug': self.warehouse.slug})
 
@@ -353,6 +362,140 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Brand X')
 		self.assertContains(response, 'Brand Two')
+
+	def test_product_edit_updates_fields_and_variant_units(self):
+		variant = Variant.objects.create(
+			name='Variant Unit Sync',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=12,
+			total_used_quantity=2,
+			universal_available_quantity=10,
+		)
+
+		response = self.client.post(
+			self._product_edit_url(self.multi_product),
+			{
+				'name': 'Multi Product Updated',
+				'description': 'Updated description',
+				'category': self.category.id,
+				'unit': 'BAGS',
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		variant.refresh_from_db()
+		self.assertEqual(self.multi_product.name, 'Multi Product Updated')
+		self.assertEqual(self.multi_product.unit, 'BAGS')
+		self.assertEqual(variant.unit, 'BAGS')
+
+	def test_delete_product_without_history_succeeds(self):
+		response = self.client.post(self._product_delete_url(self.single_product))
+
+		self.assertRedirects(response, self._product_list_url())
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_delete_product_with_history_is_blocked(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.warehouse,
+			recorded_by=self.user,
+			reference_code='DEL-BLOCK-001',
+			notes='Delete blocked history',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='Has history',
+			old_total_incoming_quantity=20,
+			old_total_used_quantity=5,
+			old_available_quantity=15,
+			new_total_incoming_quantity=21,
+			new_total_used_quantity=5,
+			new_available_quantity=16,
+			recorded_by=self.user,
+		)
+
+		response = self.client.post(self._product_delete_url(self.single_product))
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_convert_single_to_multi_clears_brand_and_keeps_totals(self):
+		response = self.client.post(
+			self._product_convert_url(self.single_product),
+			{'target_type': 'MULTI_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.type, 'MULTI_VARIANT')
+		self.assertIsNone(self.single_product.brand)
+		self.assertEqual(self.single_product.total_incoming_quantity, 20)
+		self.assertEqual(self.single_product.total_used_quantity, 5)
+		self.assertEqual(self.single_product.universal_available_quantity, 15)
+
+	def test_convert_multi_to_single_uses_selected_variant_and_deletes_all_variants(self):
+		selected_variant = Variant.objects.create(
+			name='Primary Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=60,
+			total_used_quantity=10,
+			universal_available_quantity=50,
+		)
+		Variant.objects.create(
+			name='Secondary Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=20,
+			total_used_quantity=2,
+			universal_available_quantity=18,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{
+				'target_type': 'SINGLE_VARIANT',
+				'source_variant': selected_variant.id,
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'SINGLE_VARIANT')
+		self.assertEqual(self.multi_product.brand, self.brand)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 60)
+		self.assertEqual(self.multi_product.total_used_quantity, 10)
+		self.assertEqual(self.multi_product.universal_available_quantity, 50)
+		self.assertFalse(self.multi_product.variants.exists())
+
+	def test_convert_multi_to_single_requires_source_variant(self):
+		Variant.objects.create(
+			name='Variant Required',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=12,
+			total_used_quantity=2,
+			universal_available_quantity=10,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{'target_type': 'SINGLE_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'MULTI_VARIANT')
+		self.assertEqual(self.multi_product.variants.count(), 1)
 
 
 class StockMovementFlowTests(TestCase):
@@ -761,6 +904,15 @@ class SupervisorProductParityTests(TestCase):
 	def _assign_brand_url(self, product):
 		return reverse('inventory:supervisor:product_assign_brand', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
 
+	def _product_edit_url(self, product):
+		return reverse('inventory:supervisor:product_edit', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_delete_url(self, product):
+		return reverse('inventory:supervisor:product_delete', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_convert_url(self, product):
+		return reverse('inventory:supervisor:product_convert_type', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
 	def test_supervisor_multi_variant_creates_product_after_step2(self):
 		response_step1 = self.client.post(
 			self._step1_url(self.assigned_warehouse),
@@ -905,4 +1057,118 @@ class SupervisorProductParityTests(TestCase):
 		self.assertContains(response, 'Add Product')
 		self.assertContains(response, 'Supervisor Brand')
 		self.assertContains(response, 'Supervisor Second Brand')
+
+	def test_supervisor_can_edit_product_details(self):
+		response = self.client.post(
+			self._product_edit_url(self.single_product),
+			{
+				'name': 'Supervisor Single Updated',
+				'description': 'Updated by supervisor',
+				'category': self.category.id,
+				'unit': 'BAGS',
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.name, 'Supervisor Single Updated')
+		self.assertEqual(self.single_product.unit, 'BAGS')
+
+	def test_supervisor_delete_blocked_when_stock_history_exists(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-001',
+			notes='Delete blocked',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		response = self.client.post(self._product_delete_url(self.single_product))
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_supervisor_convert_single_to_multi_clears_brand(self):
+		response = self.client.post(
+			self._product_convert_url(self.single_product),
+			{'target_type': 'MULTI_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.type, 'MULTI_VARIANT')
+		self.assertIsNone(self.single_product.brand)
+
+	def test_supervisor_convert_multi_to_single_uses_selected_variant(self):
+		selected_variant = Variant.objects.create(
+			name='Supervisor Selected Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=40,
+			total_used_quantity=5,
+			universal_available_quantity=35,
+		)
+		Variant.objects.create(
+			name='Supervisor Other Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{
+				'target_type': 'SINGLE_VARIANT',
+				'source_variant': selected_variant.id,
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'SINGLE_VARIANT')
+		self.assertEqual(self.multi_product.brand, self.brand)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 40)
+		self.assertEqual(self.multi_product.total_used_quantity, 5)
+		self.assertFalse(self.multi_product.variants.exists())
+
+	def test_supervisor_cannot_edit_product_in_unassigned_warehouse(self):
+		unassigned_product = Product.objects.create(
+			name='Unassigned Product Supervisor Edit',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.unassigned_warehouse,
+		)
+
+		response = self.client.post(
+			self._product_edit_url(unassigned_product),
+			{
+				'name': 'Should Not Update',
+				'description': 'Denied',
+				'category': '',
+				'unit': 'PIECES',
+			},
+		)
+
+		self.assertEqual(response.status_code, 404)
 

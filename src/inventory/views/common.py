@@ -56,6 +56,57 @@ def recompute_product_quantities(product):
 	return product
 
 
+def validate_product_type_conversion(product, target_type, source_variant=None):
+	if target_type not in {'SINGLE_VARIANT', 'MULTI_VARIANT'}:
+		raise ValidationError('Invalid target product type.')
+
+	if target_type == product.type:
+		raise ValidationError('Product is already in the selected type.')
+
+	if product.type == 'MULTI_VARIANT' and target_type == 'SINGLE_VARIANT':
+		if source_variant is None:
+			raise ValidationError('Select a source variant to convert to single variant.')
+		if source_variant.product_id != product.id:
+			raise ValidationError('Selected variant does not belong to this product.')
+
+	if product.type == 'SINGLE_VARIANT' and target_type == 'MULTI_VARIANT' and source_variant is not None:
+		raise ValidationError('Source variant is not allowed when converting to multi variant.')
+
+
+def apply_product_type_conversion(product, target_type, source_variant=None):
+	validate_product_type_conversion(product, target_type, source_variant=source_variant)
+
+	if target_type == 'MULTI_VARIANT':
+		product.type = 'MULTI_VARIANT'
+		product.brand = None
+		product.save(update_fields=['type', 'brand'])
+		return product
+
+	selected_brand = source_variant.brand
+	total_incoming_quantity = source_variant.total_incoming_quantity
+	total_used_quantity = source_variant.total_used_quantity
+
+	product.type = 'SINGLE_VARIANT'
+	product.brand = selected_brand
+	product.total_incoming_quantity = total_incoming_quantity
+	product.total_used_quantity = total_used_quantity
+	product.universal_available_quantity = total_incoming_quantity - total_used_quantity
+	product.save(
+		update_fields=[
+			'type',
+			'brand',
+			'total_incoming_quantity',
+			'total_used_quantity',
+			'universal_available_quantity',
+		],
+	)
+
+	Variant.objects.filter(product=product).delete()
+	recompute_product_quantities(product)
+
+	return product
+
+
 def apply_stock_movement_line(*, batch, product, variant, movement_type, quantity, notes, actor):
 	target = variant if variant else product
 	target_type = 'VARIANT' if variant else 'PRODUCT'

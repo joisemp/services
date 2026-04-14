@@ -17,9 +17,16 @@ from inventory.forms import (
 	ProductAssignBucketForm,
 	ProductAssignCategoryForm,
 	ProductAssignBrandForm,
+	ProductEditForm,
+	ProductTypeConversionForm,
 	StockMovementRecordForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities, apply_stock_movement_line
+from inventory.views.common import (
+	ProductCreateWizardSessionMixin,
+	recompute_product_quantities,
+	apply_stock_movement_line,
+	apply_product_type_conversion,
+)
 
 
 def _get_supervisor_warehouse_queryset(user):
@@ -364,6 +371,16 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 			org=self.object.org,
 			initial={'brand': self.object.brand},
 		)
+		context['product_edit_form'] = ProductEditForm(
+			org=self.object.org,
+			initial={
+				'name': self.object.name,
+				'description': self.object.description,
+				'category': self.object.category,
+				'unit': self.object.unit,
+			},
+		)
+		context['product_conversion_form'] = ProductTypeConversionForm(product=self.object)
 
 		if self.object.type == 'MULTI_VARIANT':
 			org = getattr(self.request.user, 'organization', None)
@@ -626,6 +643,96 @@ class SupervisorProductAssignBrandView(SupervisorProductVariantBaseMixin, FormVi
 		for errors in form.errors.values():
 			for error in errors:
 				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class SupervisorProductEditView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductEditForm
+	template_name = 'supervisor/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_product().org
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		updated_unit = form.cleaned_data['unit']
+		old_unit = product.unit
+
+		product.name = form.cleaned_data['name']
+		product.description = form.cleaned_data['description']
+		product.category = form.cleaned_data.get('category')
+		product.unit = updated_unit
+		product.save(update_fields=['name', 'description', 'category', 'unit'])
+
+		if product.type == 'MULTI_VARIANT' and old_unit != updated_unit:
+			product.variants.update(unit=updated_unit)
+
+		messages.success(self.request, 'Product details updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class SupervisorProductTypeConvertView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductTypeConversionForm
+	template_name = 'supervisor/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['product'] = self.get_product()
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		target_type = form.cleaned_data['target_type']
+		source_variant = form.cleaned_data.get('source_variant')
+
+		try:
+			apply_product_type_conversion(product, target_type, source_variant=source_variant)
+		except ValidationError as exc:
+			messages.error(self.request, exc.messages[0] if exc.messages else str(exc))
+			return self.get_success_redirect()
+
+		messages.success(self.request, 'Product type converted successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		for error in form.non_field_errors():
+			messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class SupervisorProductDeleteView(SupervisorProductVariantBaseMixin, View):
+	def get_success_redirect(self):
+		return redirect('inventory:supervisor:warehouse_products', slug=self.kwargs['slug'])
+
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+
+		has_stock_movement_history = StockMovementLine.objects.filter(product=product).exists()
+		if has_stock_movement_history:
+			messages.warning(request, 'Product cannot be deleted because it has stock movement history.')
+			return redirect(
+				'inventory:supervisor:product_detail',
+				slug=self.kwargs['slug'],
+				product_slug=self.kwargs['product_slug'],
+			)
+
+		product_name = product.name
+		product.delete()
+		messages.success(request, f'Product "{product_name}" deleted successfully.')
 		return self.get_success_redirect()
 
 

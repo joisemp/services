@@ -27,6 +27,9 @@
       <a href="{% url 'inventory:supervisor:stock_movement_create' slug=warehouse.slug product_slug=product.slug %}?movement_type=INCOMING" class="btn btn-success">Incoming</a>
       <a href="{% url 'inventory:supervisor:stock_movement_create' slug=warehouse.slug product_slug=product.slug %}?movement_type=OUTGOING" class="btn btn-warning text-dark">Outgoing</a>
       <a href="{% url 'inventory:supervisor:stock_movement_history' slug=warehouse.slug %}?product={{ product.slug }}" class="btn btn-outline-primary">View Change Log</a>
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProductModal">Edit</button>
+      <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#convertProductTypeModal">Convert Type</button>
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProductModal">Delete</button>
     </div>
   </div>
 
@@ -355,6 +358,94 @@
   </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'inventory:supervisor:product_edit' slug=warehouse.slug product_slug=product.slug %}">
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.name.id_for_label }}">{{ product_edit_form.name.label }}</label>
+            {{ product_edit_form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.description.id_for_label }}">{{ product_edit_form.description.label }}</label>
+            {{ product_edit_form.description }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.category.id_for_label }}">{{ product_edit_form.category.label }}</label>
+            {{ product_edit_form.category }}
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="{{ product_edit_form.unit.id_for_label }}">{{ product_edit_form.unit.label }}</label>
+            {{ product_edit_form.unit }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="convertProductTypeModal" tabindex="-1" aria-labelledby="convertProductTypeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="convertProductTypeModalLabel">Convert Product Type</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'inventory:supervisor:product_convert_type' slug=warehouse.slug product_slug=product.slug %}">
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_conversion_form.target_type.id_for_label }}">{{ product_conversion_form.target_type.label }}</label>
+            {{ product_conversion_form.target_type }}
+          </div>
+          {% if product.type == 'MULTI_VARIANT' %}
+            <div class="mb-0">
+              <label class="form-label" for="{{ product_conversion_form.source_variant.id_for_label }}">Source Variant</label>
+              {{ product_conversion_form.source_variant }}
+              <small class="text-muted d-block mt-1">Selected variant totals and brand become product-level values when converting to single variant.</small>
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-info text-white">Convert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">This will permanently delete <strong>{{ product.name }}</strong> if there is no stock movement history.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'inventory:supervisor:product_delete' slug=warehouse.slug product_slug=product.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete Product</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="assignRoomModal" tabindex="-1" aria-labelledby="assignRoomModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">

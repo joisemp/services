@@ -258,6 +258,74 @@ class ProductAssignBrandForm(BootstrapFormMixin, forms.Form):
 			self.fields['brand'].queryset = Brand.objects.none()
 
 
+class ProductEditForm(BootstrapFormMixin, forms.Form):
+	name = forms.CharField(max_length=255, label='Product Name')
+	description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Description')
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='Select Category')
+	unit = forms.ChoiceField(choices=Product._meta.get_field('unit').choices, label='Unit')
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['category'].queryset = Category.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['category'].queryset = Category.objects.none()
+
+
+class ProductTypeConversionForm(BootstrapFormMixin, forms.Form):
+	target_type = forms.ChoiceField(choices=Product.TYPE_CHOICES, label='Convert To')
+	source_variant = forms.ModelChoiceField(
+		queryset=Variant.objects.none(),
+		required=False,
+		empty_label='Select Source Variant',
+	)
+
+	def __init__(self, *args, **kwargs):
+		self.product = kwargs.pop('product', None)
+		super().__init__(*args, **kwargs)
+
+		if self.product:
+			self.fields['source_variant'].queryset = self.product.variants.select_related('brand').order_by('name')
+			self.fields['target_type'].choices = [
+				(choice_value, choice_label)
+				for choice_value, choice_label in Product.TYPE_CHOICES
+				if choice_value != self.product.type
+			]
+		else:
+			self.fields['source_variant'].queryset = Variant.objects.none()
+
+	def clean(self):
+		cleaned_data = super().clean()
+		product = self.product
+		target_type = cleaned_data.get('target_type')
+		source_variant = cleaned_data.get('source_variant')
+
+		if not product:
+			raise forms.ValidationError('Product context is required.')
+
+		if target_type == product.type:
+			raise forms.ValidationError('Product is already in the selected type.')
+
+		if product.type == 'MULTI_VARIANT' and target_type == 'SINGLE_VARIANT':
+			if not source_variant:
+				raise forms.ValidationError('Select a source variant to convert to single variant.')
+			if source_variant.product_id != product.id:
+				raise forms.ValidationError('Selected variant does not belong to this product.')
+
+		if product.type == 'SINGLE_VARIANT' and target_type == 'MULTI_VARIANT' and source_variant:
+			raise forms.ValidationError('Source variant must be empty when converting to multi variant.')
+
+		if product.type == 'MULTI_VARIANT' and target_type == 'MULTI_VARIANT':
+			raise forms.ValidationError('Product is already multi variant.')
+
+		if product.type == 'SINGLE_VARIANT' and target_type == 'SINGLE_VARIANT':
+			raise forms.ValidationError('Product is already single variant.')
+
+		return cleaned_data
+
+
 class StockMovementRecordForm(BootstrapFormMixin, forms.Form):
 	reference_code = forms.CharField(
 		max_length=32,
