@@ -60,33 +60,45 @@
       </div>
 
       {% if product.type == 'MULTI_VARIANT' %}
-        <div class="my-4 my-md-5">
-          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
-            <div>
-              <h5 class="mb-0">Variants</h5>
-              <small class="text-muted">Stock for this product is tracked per variant.</small>
+        <div class="my-4 my-lg-5">
+          <div class="card border border-primary-subtle bg-body-tertiary mb-3">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <h5 class="mb-0">Variants</h5>
+                    <span class="badge text-bg-light border">{{ variants|length }}</span>
+                  </div>
+                  <small class="text-muted d-block">Stock for this product is tracked per variant. Tap a card to view details.</small>
+                </div>
+                <button type="button" class="btn btn-primary px-3" data-bs-toggle="modal" data-bs-target="#createVariantModal">Add Variant</button>
+              </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createVariantModal">Add Variant</button>
           </div>
 
             {% if variants %}
               <div>
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
                   {% for variant in variants %}
                     <div class="col">
-                      <button type="button" class="btn p-0 border-0 text-start w-100" data-bs-toggle="modal" data-bs-target="#variantDetailModal-{{ variant.id }}">
-                        <div class="card h-100 border">
-                          <div class="card-body p-2 p-md-3">
-                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                              <h6 class="mb-0 small text-truncate">{{ variant.name }}</h6>
-                              <span class="badge {% if variant.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                      <button type="button" class="btn p-0 border-0 text-start w-100 h-100" data-bs-toggle="modal" data-bs-target="#variantDetailModal-{{ variant.id }}">
+                        <div class="card h-100 border border-secondary-subtle rounded-4">
+                          <div class="card-body p-3 p-md-4">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                              <div>
+                                <h6 class="mb-2 text-truncate">{{ variant.name }}</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                  <span class="badge rounded-pill text-bg-light border">{{ variant.brand.name|default:'No Brand' }}</span>
+                                  <span class="badge rounded-pill text-bg-light border">{{ variant.size.name|default:'No Size' }}</span>
+                                </div>
+                              </div>
+                              <span class="badge rounded-pill {% if variant.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
                                 {{ variant.universal_available_quantity }}
                               </span>
                             </div>
-                            <p class="small text-muted mb-1">{{ variant.brand.name|default:'-' }} • {{ variant.size.name|default:'-' }}</p>
-                            <div class="d-flex justify-content-between small">
-                              <span class="text-muted">In: {{ variant.total_incoming_quantity }}</span>
-                              <span class="text-muted">Used: {{ variant.total_used_quantity }}</span>
+                            <div class="d-flex justify-content-between gap-3 small border-top pt-3">
+                              <span class="text-muted">Incoming: <span class="text-body">{{ variant.total_incoming_quantity }}</span></span>
+                              <span class="text-muted">Used: <span class="text-body">{{ variant.total_used_quantity }}</span></span>
                             </div>
                           </div>
                         </div>
@@ -197,8 +209,10 @@
                 {% endfor %}
               </div>
             {% else %}
-              <div class="py-2">
-                <p class="text-muted mb-0">No variants yet. Use the Add Variant button to create one.</p>
+              <div class="card border border-secondary-subtle bg-body-tertiary">
+                <div class="card-body p-4 text-center">
+                  <p class="text-muted mb-0">No variants yet. Use the Add Variant button to create one.</p>
+                </div>
               </div>
             {% endif %}
         </div>
@@ -214,7 +228,7 @@
     </div>
   </div>
 
-  <div class="row g-3 my-4 align-items-stretch">
+  <div class="row g-3 mb-4 align-items-stretch">
     <div class="col-12 col-lg-6">
       <div class="card border border-success-subtle bg-success-subtle h-100">
         <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between gap-3">
