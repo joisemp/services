@@ -161,10 +161,50 @@ class ProductCreateStepTwoForm(BootstrapFormMixin, forms.Form):
 	)
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+	allow_multiple_selected = True
+
+	def value_from_datadict(self, data, files, name):
+		uploads = files.getlist(name)
+		if not uploads:
+			return None
+		return uploads
+
+
+class MultipleFileField(forms.FileField):
+	widget = MultipleFileInput
+
+	def to_python(self, data):
+		if data in self.empty_values:
+			return None
+		if isinstance(data, list):
+			return [super(MultipleFileField, self).to_python(item) for item in data]
+		return super().to_python(data)
+
+	def validate(self, value):
+		if self.required and not value:
+			raise forms.ValidationError(self.error_messages['required'], code='required')
+		if isinstance(value, list):
+			for file_item in value:
+				super(MultipleFileField, self).validate(file_item)
+			return
+		super().validate(value)
+
+
 class ProductCreateSingleVariantForm(BootstrapFormMixin, forms.Form):
 	total_quantity = forms.IntegerField(min_value=0, label='Total Quantity')
 	size_name = forms.CharField(max_length=50, label='Size')
 	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=True, empty_label='Select Brand')
+	image_files = MultipleFileField(
+		required=False,
+		label='Product Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='You can upload multiple product images.',
+	)
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop('org', None)
@@ -182,6 +222,16 @@ class ProductVariantForm(BootstrapFormMixin, forms.Form):
 	size_name = forms.CharField(max_length=50, label='Size', required=False)
 	total_incoming_quantity = forms.IntegerField(min_value=0, label='Total Incoming Quantity', initial=0)
 	total_used_quantity = forms.IntegerField(min_value=0, label='Total Used Quantity', initial=0)
+	image_files = MultipleFileField(
+		required=False,
+		label='Variant Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='Upload one or more images for this variant.',
+	)
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop('org', None)
@@ -263,6 +313,16 @@ class ProductEditForm(BootstrapFormMixin, forms.Form):
 	description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Description')
 	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='Select Category')
 	unit = forms.ChoiceField(choices=Product._meta.get_field('unit').choices, label='Unit')
+	image_files = MultipleFileField(
+		required=False,
+		label='Add Product Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='Single-variant products only.',
+	)
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop('org', None)
@@ -324,6 +384,18 @@ class ProductTypeConversionForm(BootstrapFormMixin, forms.Form):
 			raise forms.ValidationError('Product is already single variant.')
 
 		return cleaned_data
+
+
+class ProductImageUploadForm(BootstrapFormMixin, forms.Form):
+	images = MultipleFileField(
+		required=True,
+		label='Upload Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+	)
 
 
 class StockMovementRecordForm(BootstrapFormMixin, forms.Form):

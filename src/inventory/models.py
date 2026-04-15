@@ -162,6 +162,66 @@ class Variant(models.Model):
 
     def __str__(self):
         return f"{self.product.name} - {self.name}"    
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/product_images/')
+    display_order = models.IntegerField(default=0)
+    slug = models.SlugField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['display_order', 'created_at', 'id']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_code(ProductImage, no_of_char=12, unique_field='slug')
+
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(
+                self.image,
+                max_width=1920,
+                max_height=1920,
+                quality=85,
+                format='WEBP',
+                upload_path='public/product_images/',
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Image for Product: {self.product.name}"
+
+
+class VariantImage(models.Model):
+    variant = models.ForeignKey(Variant, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/variant_images/')
+    display_order = models.IntegerField(default=0)
+    slug = models.SlugField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['display_order', 'created_at', 'id']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generate_unique_code(VariantImage, no_of_char=12, unique_field='slug')
+
+        if self.image and (not self.pk or self._state.adding):
+            self.image = compress_image(
+                self.image,
+                max_width=1920,
+                max_height=1920,
+                quality=85,
+                format='WEBP',
+                upload_path='public/variant_images/',
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Image for Variant: {self.variant.name}"
     
 
 class Size(models.Model):

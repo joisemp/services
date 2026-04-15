@@ -58,8 +58,46 @@
         </button>
       </div>
 
+      <div class="row g-3 g-lg-4 mb-3">
+        <div class="col-12 col-lg-5">
+          <div class="card border-0 mb-0">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+                <h5 class="mb-0">Image Gallery</h5>
+                {% if product.type == 'SINGLE_VARIANT' %}
+                  <a href="{% url 'inventory:supervisor:product_images_manage' slug=warehouse.slug product_slug=product.slug %}" class="btn btn-sm btn-outline-primary">Manage Images</a>
+                {% elif selected_variant %}
+                  <a href="{% url 'inventory:supervisor:variant_images_manage' slug=warehouse.slug product_slug=product.slug variant_slug=selected_variant.slug %}" class="btn btn-sm btn-outline-primary">Manage {{ selected_variant.name }} Images</a>
+                {% endif %}
+              </div>
+
+              {% if product.type == 'MULTI_VARIANT' %}
+                <form method="get" class="mb-3">
+                  <label for="variant-select" class="form-label small text-muted">Selected Variant</label>
+                  <select id="variant-select" name="variant" class="form-select" onchange="this.form.submit()">
+                    {% for variant in variants %}
+                      <option value="{{ variant.slug }}" {% if selected_variant and selected_variant.slug == variant.slug %}selected{% endif %}>{{ variant.name }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              {% endif %}
+
+              {% if product.type == 'SINGLE_VARIANT' %}
+                {% with gallery_images=product_images %}
+                  {% include 'common/inventory/image_gallery_slider.html' %}
+                {% endwith %}
+              {% else %}
+                {% with gallery_images=selected_variant_images %}
+                  {% include 'common/inventory/image_gallery_slider.html' %}
+                {% endwith %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
       {% if product.type == 'MULTI_VARIANT' %}
-        <div class="my-4 my-lg-5">
+        <div class="my-0 my-lg-0">
           <div class="card border border-primary-subtle bg-body-tertiary mb-3">
             <div class="card-body p-3 p-md-4">
               <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
@@ -162,7 +200,7 @@
                           <h5 class="modal-title" id="variantEditModalLabel-{{ variant.id }}">Edit {{ variant.name }}</h5>
                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="post" action="{% url 'inventory:supervisor:product_variant_update' slug=warehouse.slug product_slug=product.slug variant_slug=variant.slug %}">
+                        <form method="post" action="{% url 'inventory:supervisor:product_variant_update' slug=warehouse.slug product_slug=product.slug variant_slug=variant.slug %}" enctype="multipart/form-data">
                           <div class="modal-body">
                             {% csrf_token %}
                             <div class="row g-2">
@@ -195,6 +233,10 @@
                                 <label class="form-label small mb-1">Used</label>
                                 <input type="number" name="total_used_quantity" value="{{ variant.total_used_quantity }}" min="0" class="form-control form-control-sm" required>
                               </div>
+                              <div class="col-12">
+                                <label class="form-label small mb-1">Add Variant Images</label>
+                                <input type="file" name="image_files" class="form-control form-control-sm" accept="image/*" multiple>
+                              </div>
                             </div>
                           </div>
                           <div class="modal-footer">
@@ -223,6 +265,9 @@
           </div>
         </div>
       {% endif %}
+
+        </div>
+      </div>
 
     </div>
   </div>
@@ -328,7 +373,7 @@
         <h5 class="modal-title" id="createVariantModalLabel">Create Variant</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="post" action="{% url 'inventory:supervisor:product_variant_create' slug=warehouse.slug product_slug=product.slug %}">
+      <form method="post" action="{% url 'inventory:supervisor:product_variant_create' slug=warehouse.slug product_slug=product.slug %}" enctype="multipart/form-data">
         <div class="modal-body">
           {% csrf_token %}
 
@@ -366,6 +411,13 @@
               {{ variant_form.total_used_quantity }}
             </div>
           </div>
+          <div class="mt-3">
+            <label class="form-label" for="{{ variant_form.image_files.id_for_label }}">{{ variant_form.image_files.label }}</label>
+            {{ variant_form.image_files }}
+            {% if variant_form.image_files.help_text %}
+              <small class="text-muted d-block mt-1">{{ variant_form.image_files.help_text }}</small>
+            {% endif %}
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -384,7 +436,7 @@
         <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="post" action="{% url 'inventory:supervisor:product_edit' slug=warehouse.slug product_slug=product.slug %}">
+      <form method="post" action="{% url 'inventory:supervisor:product_edit' slug=warehouse.slug product_slug=product.slug %}" enctype="multipart/form-data">
         <div class="modal-body">
           {% csrf_token %}
           <div class="mb-3">
@@ -403,6 +455,15 @@
             <label class="form-label" for="{{ product_edit_form.unit.id_for_label }}">{{ product_edit_form.unit.label }}</label>
             {{ product_edit_form.unit }}
           </div>
+          {% if product.type == 'SINGLE_VARIANT' %}
+            <div class="mt-3">
+              <label class="form-label" for="{{ product_edit_form.image_files.id_for_label }}">{{ product_edit_form.image_files.label }}</label>
+              {{ product_edit_form.image_files }}
+              {% if product_edit_form.image_files.help_text %}
+                <small class="text-muted d-block mt-1">{{ product_edit_form.image_files.help_text }}</small>
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>

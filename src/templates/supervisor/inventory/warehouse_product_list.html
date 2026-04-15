@@ -66,44 +66,35 @@
   </div>
 
   {% if products %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
       {% for product in products %}
         <div class="col">
-          <div class="card h-100 border-0 shadow-sm position-relative">
-            <div class="card-body p-3 p-md-4 d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+          <div class="card h-100 border border-light-subtle position-relative inventory-product-card">
+            <div class="card-body p-2 p-md-3 d-flex flex-column">
+              <div class="mb-3">
+                {% if product.card_images %}
+                  <div id="product-card-carousel-{{ product.id }}" class="carousel slide inventory-card-carousel position-relative z-2" data-bs-ride="carousel" data-bs-interval="4500" data-bs-pause="hover">
+                    <div class="carousel-inner rounded-3">
+                      {% for image in product.card_images %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                          <img src="{{ image.image.url }}" class="d-block w-100 inventory-card-carousel-image" alt="{{ product.name }} image {{ forloop.counter }}">
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% else %}
+                  <img src="{% static 'images/dummy_image.webp' %}" class="d-block w-100 inventory-card-carousel-image rounded-3 border position-relative z-2" alt="No product image available">
+                {% endif %}
+              </div>
+
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                 <h6 class="mb-0 text-truncate text-dark">{{ product.name }}</h6>
                 <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} ms-2">
                   {{ product.universal_available_quantity }}
                 </span>
               </div>
 
-              <div class="small text-muted mb-3">Code: {{ product.product_code }}</div>
-
-              <ul class="list-group list-group-flush small mb-4">
-                <li class="list-group-item d-flex justify-content-between px-0">
-                  <span class="text-muted">Category</span>
-                  <span class="text-end ms-2">{{ product.category.name|default:"-" }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between px-0">
-                  <span class="text-muted">Brand</span>
-                  {% if product.type == 'MULTI_VARIANT' %}
-                    <span class="text-end ms-2">
-                      {% if product.variant_brand_names %}
-                        {{ product.variant_brand_names|join:", " }}
-                      {% else %}
-                        -
-                      {% endif %}
-                    </span>
-                  {% else %}
-                    <span class="text-end ms-2">{{ product.brand.name|default:"-" }}</span>
-                  {% endif %}
-                </li>
-                <li class="list-group-item d-flex justify-content-between px-0">
-                  <span class="text-muted">Room</span>
-                  <span class="text-end ms-2">{{ product.room.name|default:"-" }}</span>
-                </li>
-              </ul>
+              <div class="small text-muted mb-2">Code: {{ product.product_code }}</div>
 
               <small class="text-muted mt-auto">Updated {{ product.updated_at|timesince }} ago</small>
               <a class="stretched-link" href="{% url 'inventory:supervisor:product_detail' slug=warehouse.slug product_slug=product.slug %}" aria-label="View {{ product.name }}"></a>

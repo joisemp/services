@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-from inventory.models import Variant, StockMovementLine
+from inventory.models import ProductImage, Variant, VariantImage, StockMovementLine
 
 
 class ProductCreateWizardSessionMixin:
@@ -157,3 +157,37 @@ def apply_stock_movement_line(*, batch, product, variant, movement_type, quantit
 		new_available_quantity=new_available,
 		recorded_by=actor,
 	)
+
+
+def create_product_images(product, image_files):
+	if not image_files:
+		return 0
+
+	current_order = ProductImage.objects.filter(product=product).count()
+	created_count = 0
+	for offset, image_file in enumerate(image_files):
+		ProductImage.objects.create(
+			product=product,
+			image=image_file,
+			display_order=current_order + offset,
+		)
+		created_count += 1
+
+	return created_count
+
+
+def create_variant_images(variant, image_files):
+	if not image_files:
+		return 0
+
+	current_order = VariantImage.objects.filter(variant=variant).count()
+	created_count = 0
+	for offset, image_file in enumerate(image_files):
+		VariantImage.objects.create(
+			variant=variant,
+			image=image_file,
+			display_order=current_order + offset,
+		)
+		created_count += 1
+
+	return created_count

@@ -27,8 +27,15 @@ from inventory.forms import (
 	ProductAssignBrandForm,
 	ProductEditForm,
 	ProductTypeConversionForm,
+	ProductImageUploadForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities, apply_product_type_conversion
+from inventory.views.common import (
+	ProductCreateWizardSessionMixin,
+	apply_product_type_conversion,
+	create_product_images,
+	create_variant_images,
+	recompute_product_quantities,
+)
 
 
 class CentralAdminWarehouseScopedMixin(CentralAdminOnlyAccessMixin):
@@ -194,8 +201,12 @@ class CentralAdminProductCreateSingleVariantStepView(CentralAdminWarehouseScoped
 		self.set_wizard_step_data('step3', step_data)
 
 		created_product = self.create_single_variant_product()
+		created_images = create_product_images(created_product, form.cleaned_data.get('image_files'))
 		self.clear_wizard_data()
-		messages.success(self.request, f'Product "{created_product.name}" created successfully.')
+		if created_images:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully.')
 		return redirect('inventory:central_admin:warehouse_products', slug=self.kwargs['slug'])
 
 	@transaction.atomic
@@ -765,7 +776,9 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 			'brand',
 			'room',
 		).prefetch_related(
+			'images',
 			'variants__brand',
+			'variants__images',
 		)
 
 		search_query = self.get_search_query()
@@ -788,12 +801,17 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		search_query = self.get_search_query()
 		for product in context.get('products', []):
+			product.card_images = []
 			if product.type == 'MULTI_VARIANT':
 				product.variant_brand_names = sorted(
 					{variant.brand.name for variant in product.variants.all() if variant.brand}
 				)
+				for variant in product.variants.all():
+					product.card_images.extend(list(variant.images.all()))
 			else:
 				product.variant_brand_names = []
+				product.card_images = list(product.images.all())
+			product.card_images = product.card_images[:8]
 		context['warehouse'] = warehouse
 		context['search_query'] = search_query
 		return context
@@ -821,8 +839,10 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 			'room',
 			'bucket',
 		).prefetch_related(
+			'images',
 			'variants__brand',
 			'variants__size',
+			'variants__images',
 			'sizes',
 		)
 
@@ -830,7 +850,15 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		context['warehouse'] = warehouse
-		context['variants'] = self.object.variants.select_related('brand', 'size').all()
+		variants = list(self.object.variants.select_related('brand', 'size').prefetch_related('images').all())
+		context['variants'] = variants
+		context['product_images'] = self.object.images.all()
+		selected_variant_slug = self.request.GET.get('variant', '').strip()
+		selected_variant = None
+		if self.object.type == 'MULTI_VARIANT' and variants:
+			selected_variant = next((variant for variant in variants if variant.slug == selected_variant_slug), variants[0])
+		context['selected_variant'] = selected_variant
+		context['selected_variant_images'] = selected_variant.images.all() if selected_variant else []
 		context['brands'] = Brand.objects.filter(org=self.object.org).order_by('name')
 		context['unit_choices'] = Product._meta.get_field('unit').choices
 		context['room_assign_form'] = ProductAssignRoomForm(warehouse=warehouse, initial={'room': self.object.room})
@@ -895,8 +923,10 @@ class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
 				'room',
 				'bucket',
 			).prefetch_related(
+				'images',
 				'variants__brand',
 				'variants__size',
+				'variants__images',
 				'sizes',
 			),
 			slug=self.kwargs['product_slug'],
@@ -1042,6 +1072,7 @@ class CentralAdminProductEditView(CentralAdminProductVariantBaseMixin, FormView)
 		product = self.get_product()
 		updated_unit = form.cleaned_data['unit']
 		old_unit = product.unit
+		image_files = form.cleaned_data.get('image_files') or []
 
 		product.name = form.cleaned_data['name']
 		product.description = form.cleaned_data['description']
@@ -1051,6 +1082,14 @@ class CentralAdminProductEditView(CentralAdminProductVariantBaseMixin, FormView)
 
 		if product.type == 'MULTI_VARIANT' and old_unit != updated_unit:
 			product.variants.update(unit=updated_unit)
+
+		if image_files:
+			if product.type != 'SINGLE_VARIANT':
+				messages.warning(self.request, 'Images can only be added at product level for single-variant products.')
+			else:
+				created_images = create_product_images(product, image_files)
+				if created_images:
+					messages.success(self.request, f'Added {created_images} product image(s).')
 
 		messages.success(self.request, 'Product details updated successfully.')
 		return self.get_success_redirect()
@@ -1149,7 +1188,7 @@ class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, 
 				defaults={'description': '', 'variant': None},
 			)
 
-		Variant.objects.create(
+		variant = Variant.objects.create(
 			name=form.cleaned_data['name'],
 			unit=product.unit,
 			product=product,
@@ -1160,8 +1199,13 @@ class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, 
 			universal_available_quantity=universal_available_quantity,
 		)
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant created successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, 'Variant created successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -1222,8 +1266,13 @@ class CentralAdminProductVariantUpdateView(CentralAdminProductVariantBaseMixin, 
 		variant.universal_available_quantity = variant.total_incoming_quantity - variant.total_used_quantity
 		variant.save()
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant updated successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant updated successfully and {created_images} image(s) added.')
+		else:
+			messages.success(self.request, 'Variant updated successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -1247,6 +1296,132 @@ class CentralAdminProductVariantDeleteView(CentralAdminProductVariantBaseMixin, 
 		recompute_product_quantities(product)
 		messages.success(request, 'Variant deleted successfully.')
 		return self.get_success_redirect()
+
+
+class CentralAdminProductImageManagementView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'central_admin/inventory/image_management.html'
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'SINGLE_VARIANT':
+			messages.warning(request, 'Product-level image management is available only for single-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['image_items'] = product.images.all()
+		context['image_scope'] = 'product'
+		context['image_scope_title'] = 'Product Images'
+		context['back_url_name'] = 'inventory:central_admin:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:central_admin:product_images_manage',
+			kwargs={'slug': self.kwargs['slug'], 'product_slug': self.kwargs['product_slug']},
+		)
+
+	def form_valid(self, form):
+		product = self.get_product()
+		created_images = create_product_images(product, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} product image(s).')
+		return HttpResponseRedirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminProductImageDeleteView(CentralAdminProductVariantBaseMixin, View):
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+		image = get_object_or_404(product.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Product image deleted successfully.')
+		return redirect(
+			'inventory:central_admin:product_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+		)
+
+
+class CentralAdminVariantImageManagementView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'central_admin/inventory/image_management.html'
+
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(request, 'Variant image management is available only for multi-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		variant = self.get_variant()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['variant'] = variant
+		context['variants'] = product.variants.all()
+		context['image_items'] = variant.images.all()
+		context['image_scope'] = 'variant'
+		context['image_scope_title'] = f'Variant Images - {variant.name}'
+		context['back_url_name'] = 'inventory:central_admin:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:central_admin:variant_images_manage',
+			kwargs={
+				'slug': self.kwargs['slug'],
+				'product_slug': self.kwargs['product_slug'],
+				'variant_slug': self.kwargs['variant_slug'],
+			},
+		)
+
+	def form_valid(self, form):
+		variant = self.get_variant()
+		created_images = create_variant_images(variant, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} variant image(s).')
+		return HttpResponseRedirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminVariantImageDeleteView(CentralAdminProductVariantBaseMixin, View):
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def post(self, request, *args, **kwargs):
+		variant = self.get_variant()
+		image = get_object_or_404(variant.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Variant image deleted successfully.')
+		return redirect(
+			'inventory:central_admin:variant_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+			variant_slug=self.kwargs['variant_slug'],
+		)
 
 
 class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, ListView):

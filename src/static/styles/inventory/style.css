@@ -174,4 +174,78 @@ tr {
 }
 .badge.badge-critical {
   background-color: #dc3545;
+}
+
+.inventory-card-carousel .carousel-inner {
+  border: 1px solid #e9ecef;
+}
+.inventory-card-carousel .carousel-control-prev,
+.inventory-card-carousel .carousel-control-next {
+  width: 2rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.inventory-card-carousel:hover .carousel-control-prev, .inventory-card-carousel:hover .carousel-control-next {
+  opacity: 0.8;
+}
+
+.inventory-card-carousel-image {
+  height: 132px;
+  -o-object-fit: cover;
+     object-fit: cover;
+}
+
+.inventory-card-image-placeholder {
+  background: linear-gradient(135deg, #f8f9fa 0%, #eef1f4 100%);
+  min-height: 132px;
+}
+
+.inventory-detail-image-placeholder {
+  background: linear-gradient(135deg, #f8f9fa 0%, #eef1f4 100%);
+  min-height: 180px;
+}
+
+.inventory-detail-carousel-image {
+  height: 320px;
+  -o-object-fit: cover;
+     object-fit: cover;
+}
+
+.inventory-image-grid-thumb {
+  height: 140px;
+  -o-object-fit: cover;
+     object-fit: cover;
+}
+
+.inventory-product-card .card-body {
+  padding: 0.75rem;
+}
+
+.inventory-product-card h6 {
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.inventory-product-card .small {
+  font-size: 0.74rem;
+}
+
+.inventory-product-card .list-group-item {
+  padding: 0.35rem 0 !important;
+  font-size: 0.8rem;
+}
+
+.inventory-product-card .badge {
+  font-size: 0.68rem;
+}
+
+@media (max-width: 768px) {
+  .inventory-card-carousel-image,
+  .inventory-card-image-placeholder {
+    height: 112px;
+  }
+  .inventory-detail-carousel-image,
+  .inventory-detail-image-placeholder {
+    height: 240px;
+  }
 }/*# sourceMappingURL=style.css.map */
