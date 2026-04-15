@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 
@@ -747,6 +748,9 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 	context_object_name = 'products'
 	paginate_by = 20
 
+	def get_search_query(self):
+		return self.request.GET.get('q', '').strip()
+
 	def get_queryset(self):
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		user = self.request.user
@@ -755,18 +759,34 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		# Check org access
 		if not user.is_superuser and (not org or warehouse.org != org):
 			return Product.objects.none()
-		
-		return warehouse.products.select_related(
+
+		queryset = warehouse.products.select_related(
 			'category',
 			'brand',
 			'room',
 		).prefetch_related(
 			'variants__brand',
-		).order_by('-updated_at')
+		)
+
+		search_query = self.get_search_query()
+		if search_query:
+			queryset = queryset.filter(
+				Q(name__icontains=search_query)
+				| Q(product_code__icontains=search_query)
+				| Q(description__icontains=search_query)
+				| Q(category__name__icontains=search_query)
+				| Q(brand__name__icontains=search_query)
+				| Q(room__name__icontains=search_query)
+				| Q(variants__name__icontains=search_query)
+				| Q(variants__brand__name__icontains=search_query)
+			).distinct()
+
+		return queryset.order_by('-updated_at')
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		search_query = self.get_search_query()
 		for product in context.get('products', []):
 			if product.type == 'MULTI_VARIANT':
 				product.variant_brand_names = sorted(
@@ -775,6 +795,7 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 			else:
 				product.variant_brand_names = []
 		context['warehouse'] = warehouse
+		context['search_query'] = search_query
 		return context
 
 
