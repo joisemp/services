@@ -823,6 +823,58 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		return context
 
 
+class CentralAdminDeletedWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView):
+	model = Product
+	template_name = 'central_admin/inventory/warehouse_deleted_product_list.html'
+	context_object_name = 'products'
+	paginate_by = 20
+
+	def get_search_query(self):
+		return self.request.GET.get('q', '').strip()
+
+	def get_warehouse(self):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if not user.is_superuser and (not org or warehouse.org != org):
+			return None
+
+		return warehouse
+
+	def get_queryset(self):
+		warehouse = self.get_warehouse()
+		if not warehouse:
+			return Product.objects.none()
+
+		queryset = Product.all_objects.filter(
+			warehouse=warehouse,
+			is_deleted=True,
+		).select_related(
+			'category',
+			'brand',
+			'room',
+		)
+
+		search_query = self.get_search_query()
+		if search_query:
+			queryset = queryset.filter(
+				Q(name__icontains=search_query)
+				| Q(product_code__icontains=search_query)
+				| Q(description__icontains=search_query)
+				| Q(category__name__icontains=search_query)
+				| Q(brand__name__icontains=search_query)
+			)
+
+		return queryset.order_by('-deleted_at', '-updated_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['search_query'] = self.get_search_query()
+		return context
+
+
 class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 	model = Product
 	template_name = 'central_admin/inventory/product_detail.html'

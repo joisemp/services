@@ -224,6 +224,9 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 	def _product_list_url(self):
 		return reverse('inventory:central_admin:warehouse_products', kwargs={'slug': self.warehouse.slug})
 
+	def _deleted_product_list_url(self):
+		return reverse('inventory:central_admin:warehouse_deleted_products', kwargs={'slug': self.warehouse.slug})
+
 	def test_single_variant_detail_page_shows_product_tracking_message(self):
 		response = self.client.get(self._detail_url(self.single_product))
 		self.assertEqual(response.status_code, 200)
@@ -591,6 +594,19 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 
 		restored_product = Product.objects.get(id=self.single_product.id)
 		self.assertFalse(restored_product.is_deleted)
+
+	def test_warehouse_detail_links_to_deleted_products_and_lists_deleted_item(self):
+		self.client.post(self._product_delete_url(self.single_product))
+
+		response_warehouse = self.client.get(
+			reverse('inventory:central_admin:warehouse_detail', kwargs={'slug': self.warehouse.slug})
+		)
+		self.assertEqual(response_warehouse.status_code, 200)
+		self.assertContains(response_warehouse, 'Deleted Products')
+
+		response_deleted_list = self.client.get(self._deleted_product_list_url())
+		self.assertEqual(response_deleted_list.status_code, 200)
+		self.assertContains(response_deleted_list, self.single_product.name)
 
 
 class StockMovementFlowTests(TestCase):
