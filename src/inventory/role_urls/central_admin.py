@@ -10,6 +10,7 @@ urlpatterns = [
     path('warehouses/<slug:slug>/', central_admin.CentralAdminWarehouseDetailView.as_view(), name='warehouse_detail'),
     path('warehouses/<slug:slug>/products/', central_admin.CentralAdminWarehouseProductListView.as_view(), name='warehouse_products'),
     path('warehouses/<slug:slug>/stock-movements/history/', central_admin.CentralAdminStockMovementHistoryView.as_view(), name='stock_movement_history'),
+    path('warehouses/<slug:slug>/stock-movements/<int:movement_id>/correct/', central_admin.CentralAdminStockMovementCorrectView.as_view(), name='stock_movement_correct'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/', central_admin.CentralAdminProductDetailView.as_view(), name='product_detail'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/edit/', central_admin.CentralAdminProductEditView.as_view(), name='product_edit'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/delete/', central_admin.CentralAdminProductDeleteView.as_view(), name='product_delete'),

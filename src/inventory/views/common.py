@@ -1,7 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from django.utils import timezone
 
-from inventory.models import ProductImage, Variant, VariantImage, StockMovementLine
+from inventory.models import ProductImage, Variant, VariantImage, StockMovementBatch, StockMovementLine
 
 
 class ProductCreateWizardSessionMixin:
@@ -149,6 +150,84 @@ def apply_stock_movement_line(*, batch, product, variant, movement_type, quantit
 		movement_type=movement_type,
 		quantity=quantity,
 		notes=notes,
+		correction_type='ORIGINAL',
+		old_total_incoming_quantity=old_total_incoming,
+		old_total_used_quantity=old_total_used,
+		old_available_quantity=old_available,
+		new_total_incoming_quantity=new_total_incoming,
+		new_total_used_quantity=new_total_used,
+		new_available_quantity=new_available,
+		recorded_by=actor,
+	)
+
+
+def apply_stock_movement_correction(*, movement, corrected_quantity, correction_reason, actor, reference_code=''):
+	if movement.correction_type != 'ORIGINAL':
+		raise ValidationError('Only original stock movements can be corrected.')
+
+	if movement.corrections.exists():
+		raise ValidationError('This stock movement was already corrected.')
+
+	if corrected_quantity <= 0:
+		raise ValidationError('Correct quantity must be greater than zero.')
+
+	target = movement.variant if movement.variant else movement.product
+	target.refresh_from_db(fields=['total_incoming_quantity', 'total_used_quantity', 'universal_available_quantity'])
+
+	old_total_incoming = target.total_incoming_quantity
+	old_total_used = target.total_used_quantity
+	old_available = target.universal_available_quantity
+
+	new_total_incoming = old_total_incoming
+	new_total_used = old_total_used
+
+	quantity_delta = corrected_quantity - movement.quantity
+	if movement.movement_type == 'INCOMING':
+		new_total_incoming = old_total_incoming + quantity_delta
+	elif movement.movement_type == 'OUTGOING':
+		new_total_used = old_total_used + quantity_delta
+	else:
+		raise ValidationError('Invalid movement type.')
+
+	new_available = new_total_incoming - new_total_used
+
+	if new_total_incoming < 0 or new_total_used < 0:
+		raise ValidationError('Correction would produce invalid stock totals.')
+
+	if new_available < 0:
+		raise ValidationError('Correction would make available quantity negative.')
+
+	target.total_incoming_quantity = new_total_incoming
+	target.total_used_quantity = new_total_used
+	target.universal_available_quantity = new_available
+	target.save(update_fields=['total_incoming_quantity', 'total_used_quantity', 'universal_available_quantity'])
+
+	if movement.variant and movement.product.type == 'MULTI_VARIANT':
+		recompute_product_quantities(movement.product)
+
+	batch = StockMovementBatch.objects.create(
+		org=movement.org,
+		warehouse=movement.warehouse,
+		recorded_by=actor,
+		reference_code=(reference_code or '').strip(),
+		notes=correction_reason,
+	)
+
+	return StockMovementLine.objects.create(
+		batch=batch,
+		org=movement.org,
+		warehouse=movement.warehouse,
+		product=movement.product,
+		variant=movement.variant,
+		target_type=movement.target_type,
+		movement_type=movement.movement_type,
+		quantity=corrected_quantity,
+		notes=correction_reason,
+		correction_type='CORRECTION',
+		corrects_movement=movement,
+		corrected_by=actor,
+		correction_reason=correction_reason,
+		corrected_at=timezone.now(),
 		old_total_incoming_quantity=old_total_incoming,
 		old_total_used_quantity=old_total_used,
 		old_available_quantity=old_available,

@@ -10,6 +10,7 @@ urlpatterns = [
     path('warehouses/<slug:slug>/products/', supervisor.InventoryWarehouseProductListView.as_view(), name='warehouse_products'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/stock-movements/create/', supervisor.SupervisorStockMovementCreateView.as_view(), name='stock_movement_create'),
     path('warehouses/<slug:slug>/stock-movements/history/', supervisor.SupervisorStockMovementHistoryView.as_view(), name='stock_movement_history'),
+    path('warehouses/<slug:slug>/stock-movements/<int:movement_id>/correct/', supervisor.SupervisorStockMovementCorrectView.as_view(), name='stock_movement_correct'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/', supervisor.SupervisorProductDetailView.as_view(), name='product_detail'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/edit/', supervisor.SupervisorProductEditView.as_view(), name='product_edit'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/delete/', supervisor.SupervisorProductDeleteView.as_view(), name='product_delete'),

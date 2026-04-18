@@ -466,3 +466,42 @@ class StockMovementRecordForm(BootstrapFormMixin, forms.Form):
 			cleaned_data['movement_type'] = self.force_movement_type
 
 		return cleaned_data
+
+
+class StockMovementCorrectionForm(BootstrapFormMixin, forms.Form):
+	reference_code = forms.CharField(
+		max_length=32,
+		required=False,
+		label='Reference Code (Optional)',
+		help_text='Leave blank to auto-generate a unique reference code.',
+	)
+	corrected_quantity = forms.IntegerField(min_value=1, label='Correct Quantity')
+	correction_reason = forms.CharField(
+		required=False,
+		widget=forms.Textarea(attrs={'rows': 2}),
+		label='Correction Reason',
+	)
+
+	def __init__(self, *args, **kwargs):
+		movement = kwargs.pop('movement', None)
+		super().__init__(*args, **kwargs)
+		self.movement = movement
+
+		if movement:
+			self.fields['corrected_quantity'].initial = movement.quantity
+
+	def clean(self):
+		cleaned_data = super().clean()
+		movement = self.movement
+
+		if not movement:
+			raise forms.ValidationError('Stock movement is required.')
+
+		corrected_quantity = cleaned_data.get('corrected_quantity')
+		if corrected_quantity is None:
+			return cleaned_data
+
+		if corrected_quantity == movement.quantity:
+			raise forms.ValidationError('Correct quantity must be different from the original quantity.')
+
+		return cleaned_data

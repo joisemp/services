@@ -4,9 +4,10 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine
@@ -28,10 +29,12 @@ from inventory.forms import (
 	ProductEditForm,
 	ProductTypeConversionForm,
 	ProductImageUploadForm,
+	StockMovementCorrectionForm,
 )
 from inventory.views.common import (
 	ProductCreateWizardSessionMixin,
 	apply_product_type_conversion,
+	apply_stock_movement_correction,
 	create_product_images,
 	create_variant_images,
 	recompute_product_quantities,
@@ -893,7 +896,13 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		stock_movements = StockMovementLine.objects.filter(
 			org=self.object.org,
 			product=self.object,
-		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')
+			correction_type='ORIGINAL',
+		).select_related('batch', 'recorded_by', 'variant').prefetch_related(
+			Prefetch(
+				'corrections',
+				queryset=StockMovementLine.objects.select_related('batch', 'recorded_by').order_by('-created_at'),
+			),
+		).order_by('-created_at')
 		paginator = Paginator(stock_movements, 20)
 		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
 
@@ -1424,6 +1433,73 @@ class CentralAdminVariantImageDeleteView(CentralAdminProductVariantBaseMixin, Vi
 		)
 
 
+class CentralAdminStockMovementCorrectView(CentralAdminWarehouseScopedMixin, FormView):
+	form_class = StockMovementCorrectionForm
+	template_name = 'central_admin/inventory/stock_movement_correct.html'
+
+	def get_next_url(self):
+		next_url = self.request.POST.get('next') or self.request.GET.get('next')
+		if next_url and url_has_allowed_host_and_scheme(
+			next_url,
+			allowed_hosts={self.request.get_host()},
+			require_https=self.request.is_secure(),
+		):
+			return next_url
+		return ''
+
+	def get_success_redirect(self):
+		next_url = self.get_next_url()
+		if next_url:
+			return redirect(next_url)
+		return redirect('inventory:central_admin:stock_movement_history', slug=self.kwargs['slug'])
+
+	def get_stock_movement(self):
+		warehouse = self.get_warehouse()
+		return get_object_or_404(
+			StockMovementLine.objects.select_related('product', 'variant', 'batch', 'recorded_by'),
+			id=self.kwargs['movement_id'],
+			org=warehouse.org,
+			warehouse=warehouse,
+		)
+
+	def dispatch(self, request, *args, **kwargs):
+		movement = self.get_stock_movement()
+		if movement.correction_type != 'ORIGINAL' or movement.corrections.exists():
+			messages.error(request, 'Only non-corrected original entries can be corrected.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['movement'] = self.get_stock_movement()
+		return kwargs
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['movement'] = self.get_stock_movement()
+		context['next_url'] = self.get_next_url()
+		return context
+
+	@transaction.atomic
+	def form_valid(self, form):
+		movement = self.get_stock_movement()
+		try:
+			apply_stock_movement_correction(
+				movement=movement,
+				corrected_quantity=form.cleaned_data['corrected_quantity'],
+				correction_reason=form.cleaned_data.get('correction_reason', ''),
+				actor=self.request.user,
+				reference_code=form.cleaned_data.get('reference_code', ''),
+			)
+		except ValidationError as exc:
+			form.add_error(None, exc.messages[0] if exc.messages else str(exc))
+			return self.render_to_response(self.get_context_data(form=form))
+
+		messages.success(self.request, 'Stock movement corrected successfully.')
+		return self.get_success_redirect()
+
+
 class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, ListView):
 	model = StockMovementLine
 	template_name = 'central_admin/inventory/stock_movement_history.html'
@@ -1435,7 +1511,7 @@ class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, Lis
 		queryset = StockMovementLine.objects.filter(
 			org=warehouse.org,
 			warehouse=warehouse,
-		).select_related('batch', 'product', 'variant', 'recorded_by').order_by('-created_at')
+		).select_related('batch', 'product', 'variant', 'recorded_by', 'corrects_movement__batch').prefetch_related('corrections').order_by('-created_at')
 
 		product_slug = self.request.GET.get('product')
 		movement_type = self.request.GET.get('movement_type')

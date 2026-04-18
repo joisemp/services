@@ -1,5 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 from core.models import Organization, User
 from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine
@@ -572,6 +574,18 @@ class StockMovementFlowTests(TestCase):
 	def _history_url_central_admin(self):
 		return reverse('inventory:central_admin:stock_movement_history', kwargs={'slug': self.warehouse.slug})
 
+	def _correct_url_supervisor(self, movement):
+		return reverse(
+			'inventory:supervisor:stock_movement_correct',
+			kwargs={'slug': self.warehouse.slug, 'movement_id': movement.id},
+		)
+
+	def _correct_url_central_admin(self, movement):
+		return reverse(
+			'inventory:central_admin:stock_movement_correct',
+			kwargs={'slug': self.warehouse.slug, 'movement_id': movement.id},
+		)
+
 	def _base_payload(self):
 		return {
 			'reference_code': 'TXN-001',
@@ -679,6 +693,101 @@ class StockMovementFlowTests(TestCase):
 		response = self.client.get(self._history_url_central_admin())
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'TXN-READ')
+
+	def test_supervisor_can_correct_within_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-1', 'movement_type': 'INCOMING', 'quantity': '5', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-1')
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-1A',
+				'corrected_quantity': '3',
+				'correction_reason': 'Correct incoming quantity',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 13)
+		self.assertEqual(self.single_product.total_used_quantity, 2)
+		self.assertEqual(self.single_product.universal_available_quantity, 11)
+
+		correction = StockMovementLine.objects.get(corrects_movement=movement)
+		self.assertEqual(correction.correction_type, 'CORRECTION')
+		self.assertEqual(correction.quantity, 3)
+		self.assertEqual(correction.movement_type, 'INCOMING')
+
+	def test_supervisor_cannot_correct_after_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-2', 'movement_type': 'INCOMING', 'quantity': '4', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-2')
+		StockMovementLine.objects.filter(id=movement.id).update(created_at=timezone.now() - timedelta(hours=49))
+		movement.refresh_from_db()
+
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-2A',
+				'corrected_quantity': '2',
+				'correction_reason': 'Late correction',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.assertFalse(StockMovementLine.objects.filter(corrects_movement=movement).exists())
+
+	def test_central_admin_can_correct_after_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-3', 'movement_type': 'INCOMING', 'quantity': '6', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-3')
+		StockMovementLine.objects.filter(id=movement.id).update(created_at=timezone.now() - timedelta(hours=49))
+
+		self.client.force_login(self.central_admin)
+		response = self.client.post(
+			self._correct_url_central_admin(movement),
+			{
+				'reference_code': 'TXN-CORR-3A',
+				'corrected_quantity': '2',
+				'correction_reason': 'Admin correction after 48 hours',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_central_admin())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 12)
+		self.assertTrue(StockMovementLine.objects.filter(corrects_movement=movement, correction_type='CORRECTION').exists())
+
+	def test_outgoing_correction_updates_used_quantity(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-4', 'movement_type': 'OUTGOING', 'quantity': '3', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-4')
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-4A',
+				'corrected_quantity': '1',
+				'correction_reason': 'Used quantity corrected',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 10)
+		self.assertEqual(self.single_product.total_used_quantity, 3)
+		self.assertEqual(self.single_product.universal_available_quantity, 7)
 
 
 class SupervisorInventoryDashboardTests(TestCase):

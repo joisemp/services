@@ -317,25 +317,112 @@
     <h6 class="mb-3">All Change Logs</h6>
     {% if stock_movement_logs %}
       {% for movement in stock_movement_logs %}
-        <div class="alert {% if movement.movement_type == 'INCOMING' %}alert-success{% else %}alert-warning{% endif %} mb-2" role="alert">
-          <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
-            <div>
-              <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
-              <span class="ms-1">{{ movement.quantity }} units</span>
-              {% if movement.variant %}
-                <div class="small">Variant: {{ movement.variant.name }}</div>
-              {% endif %}
-              {% if movement.batch.reference_code %}
-                <div class="small">Ref: {{ movement.batch.reference_code }}</div>
-              {% endif %}
+        {% with latest_correction=movement.corrections.all.0 %}
+          <div
+            class="alert {% if movement.movement_type == 'INCOMING' %}alert-success{% else %}alert-warning{% endif %} mb-2 {% if movement.corrections.all %}cursor-pointer{% endif %}"
+            role="alert"
+            {% if movement.corrections.all %}
+              data-bs-toggle="collapse"
+              data-bs-target="#movement-{{ movement.id }}"
+              aria-expanded="false"
+              aria-controls="movement-{{ movement.id }}"
+            {% endif %}
+          >
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+              <div>
+                {% if latest_correction %}
+                  <span class="fw-semibold">{{ latest_correction.get_movement_type_display }}</span>
+                  <span class="ms-1">{{ latest_correction.quantity }} units</span>
+                  <span class="badge bg-info text-dark ms-1">Correction</span>
+                  {% if movement.variant %}
+                    <div class="small">Variant: {{ movement.variant.name }}</div>
+                  {% endif %}
+                  {% if latest_correction.batch.reference_code %}
+                    <div class="small">Ref: {{ latest_correction.batch.reference_code }}</div>
+                  {% endif %}
+                  {% if latest_correction.correction_reason %}
+                    <div class="small">Reason: {{ latest_correction.correction_reason }}</div>
+                  {% endif %}
+                {% else %}
+                  <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
+                  <span class="ms-1">{{ movement.quantity }} units</span>
+                  <span class="badge bg-secondary ms-1">Original</span>
+                  {% if movement.variant %}
+                    <div class="small">Variant: {{ movement.variant.name }}</div>
+                  {% endif %}
+                  {% if movement.batch.reference_code %}
+                    <div class="small">Ref: {{ movement.batch.reference_code }}</div>
+                  {% endif %}
+                {% endif %}
+
+                <div class="mt-2">
+                  {% if not movement.corrections.all %}
+                    <a href="{% url 'inventory:central_admin:stock_movement_correct' slug=warehouse.slug movement_id=movement.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">Correct</a>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="text-md-end small text-break">
+                {% if latest_correction %}
+                  <div>{{ latest_correction.created_at|date:'Y-m-d H:i' }}</div>
+                  <div>By: {{ latest_correction.recorded_by.get_full_name|default:latest_correction.recorded_by.email }}</div>
+                  <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ latest_correction.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ latest_correction.new_available_quantity }}</span></div>
+                {% else %}
+                  <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
+                  <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
+                  <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
+                {% endif %}
+              </div>
             </div>
-            <div class="text-md-end small text-break">
-              <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
-              <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
-              <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
-            </div>
+
+            {% if movement.corrections.all %}
+              <div class="collapse mt-2" id="movement-{{ movement.id }}">
+                <div class="ms-md-3 p-2 border rounded bg-light mb-2">
+                  <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+                    <div>
+                      <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
+                      <span class="ms-1">{{ movement.quantity }} units</span>
+                      <span class="badge bg-secondary ms-1">Original</span>
+                      {% if movement.batch.reference_code %}
+                        <div class="small">Ref: {{ movement.batch.reference_code }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="text-md-end small text-break">
+                      <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
+                      <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
+                      <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {% for correction in movement.corrections.all %}
+                  {% if latest_correction and correction.id != latest_correction.id %}
+                    <div class="ms-md-3 p-2 border rounded bg-light mb-2">
+                      <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+                        <div>
+                          <span class="fw-semibold">{{ correction.get_movement_type_display }}</span>
+                          <span class="ms-1">{{ correction.quantity }} units</span>
+                          <span class="badge bg-info text-dark ms-1">Correction</span>
+                          {% if correction.batch.reference_code %}
+                            <div class="small">Ref: {{ correction.batch.reference_code }}</div>
+                          {% endif %}
+                          {% if correction.correction_reason %}
+                            <div class="small">Reason: {{ correction.correction_reason }}</div>
+                          {% endif %}
+                        </div>
+                        <div class="text-md-end small text-break">
+                          <div>{{ correction.created_at|date:'Y-m-d H:i' }}</div>
+                          <div>By: {{ correction.recorded_by.get_full_name|default:correction.recorded_by.email }}</div>
+                          <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ correction.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ correction.new_available_quantity }}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
-        </div>
+        {% endwith %}
       {% endfor %}
 
       {% if stock_movement_logs.has_other_pages %}

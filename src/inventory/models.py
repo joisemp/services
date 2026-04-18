@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from datetime import timedelta
+from django.utils import timezone
 from config.utils import generate_unique_slug, generate_unique_code, compress_image
 from django.utils.text import slugify
 
@@ -292,6 +294,10 @@ class StockMovementLine(models.Model):
         ('INCOMING', 'Incoming'),
         ('OUTGOING', 'Outgoing'),
     ]
+    CORRECTION_TYPE_CHOICES = [
+        ('ORIGINAL', 'Original'),
+        ('CORRECTION', 'Correction'),
+    ]
 
     batch = models.ForeignKey(StockMovementBatch, on_delete=models.CASCADE, related_name='lines')
     org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='stock_movement_lines')
@@ -302,6 +308,23 @@ class StockMovementLine(models.Model):
     movement_type = models.CharField(max_length=16, choices=MOVEMENT_TYPE_CHOICES)
     quantity = models.PositiveIntegerField()
     notes = models.TextField(blank=True)
+    correction_type = models.CharField(max_length=16, choices=CORRECTION_TYPE_CHOICES, default='ORIGINAL')
+    corrects_movement = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        related_name='corrections',
+        null=True,
+        blank=True,
+    )
+    corrected_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        related_name='inventory_corrections_made',
+        null=True,
+        blank=True,
+    )
+    correction_reason = models.TextField(blank=True)
+    corrected_at = models.DateTimeField(null=True, blank=True)
 
     old_total_incoming_quantity = models.IntegerField(default=0)
     old_total_used_quantity = models.IntegerField(default=0)
@@ -326,6 +349,8 @@ class StockMovementLine(models.Model):
             models.Index(fields=['org', '-created_at']),
             models.Index(fields=['warehouse', '-created_at']),
             models.Index(fields=['product', '-created_at']),
+            models.Index(fields=['correction_type', '-created_at']),
+            models.Index(fields=['corrects_movement']),
         ]
         constraints = [
             models.CheckConstraint(check=models.Q(quantity__gt=0), name='stock_movement_quantity_gt_0'),
@@ -350,6 +375,30 @@ class StockMovementLine(models.Model):
                 raise ValidationError('Variant must belong to the selected product.')
             if self.variant.product.org_id != self.org_id:
                 raise ValidationError('Variant must belong to the same organization as the movement.')
+
+        if self.correction_type == 'ORIGINAL' and self.corrects_movement_id:
+            raise ValidationError('Original movement cannot reference corrected movement.')
+
+        if self.correction_type == 'CORRECTION' and not self.corrects_movement_id:
+            raise ValidationError('Correction movement must reference an original movement.')
+
+        if self.corrects_movement_id and self.corrects_movement_id == self.id:
+            raise ValidationError('A movement cannot correct itself.')
+
+        if self.corrects_movement and self.corrects_movement.correction_type != 'ORIGINAL':
+            raise ValidationError('Only original movements can be corrected.')
+
+    def has_correction(self):
+        return self.corrections.exists()
+
+    def can_supervisor_correct(self, at_time=None):
+        if self.correction_type != 'ORIGINAL':
+            return False
+        if self.has_correction():
+            return False
+
+        now = at_time or timezone.now()
+        return now <= self.created_at + timedelta(hours=48)
 
     def save(self, *args, **kwargs):
         if not self.slug:
