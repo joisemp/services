@@ -1239,15 +1239,6 @@ class CentralAdminProductDeleteView(CentralAdminProductVariantBaseMixin, View):
 	def post(self, request, *args, **kwargs):
 		product = self.get_product()
 
-		has_stock_movement_history = StockMovementLine.objects.filter(product=product).exists()
-		if has_stock_movement_history:
-			messages.warning(request, 'Product cannot be deleted because it has stock movement history.')
-			return redirect(
-				'inventory:central_admin:product_detail',
-				slug=self.kwargs['slug'],
-				product_slug=self.kwargs['product_slug'],
-			)
-
 		product_name = product.name
 		product.soft_delete()
 		messages.success(request, f'Product "{product_name}" deleted successfully.')

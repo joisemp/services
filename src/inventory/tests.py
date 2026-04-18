@@ -416,7 +416,7 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertRedirects(response, self._product_list_url())
 		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
 
-	def test_delete_product_with_history_is_blocked(self):
+	def test_delete_product_with_history_succeeds_for_central_admin(self):
 		batch = StockMovementBatch.objects.create(
 			org=self.org,
 			warehouse=self.warehouse,
@@ -444,8 +444,9 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		)
 
 		response = self.client.post(self._product_delete_url(self.single_product))
-		self.assertRedirects(response, self._detail_url(self.single_product))
-		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertRedirects(response, self._product_list_url())
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertTrue(Product.all_objects.filter(id=self.single_product.id, is_deleted=True).exists())
 
 	def test_convert_single_to_multi_clears_brand_and_keeps_totals(self):
 		response = self.client.post(
