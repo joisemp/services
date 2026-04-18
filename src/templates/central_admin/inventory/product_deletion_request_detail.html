@@ -88,7 +88,7 @@
               {% csrf_token %}
               <label for="approveReason" class="form-label">Approval Notes (Optional)</label>
               <textarea id="approveReason" name="review_reason" class="form-control mb-2" rows="3" placeholder="Add approval notes..."></textarea>
-              <button type="submit" class="btn btn-success" {% if not deletion_request.product %}disabled{% endif %}>Approve and Permanently Delete Product</button>
+              <button type="submit" class="btn btn-success" {% if not deletion_request.product %}disabled{% endif %}>Approve and Delete Product</button>
               {% if not deletion_request.product %}
                 <small class="d-block text-danger mt-1">Product is already missing and cannot be deleted again.</small>
               {% endif %}

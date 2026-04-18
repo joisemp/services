@@ -600,6 +600,8 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		warehouse_products = self.object.products.all().select_related(
 			'category',
 			'brand',
+		).filter(
+			is_deleted=False,
 		).order_by('-updated_at')[:10]
 
 		# Get users associated with this warehouse
@@ -611,7 +613,7 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context.update({
 			'summary_cards': summary_cards,
 			'warehouse_products': warehouse_products,
-			'warehouse_products_count': self.object.products.count(),
+			'warehouse_products_count': self.object.products.filter(is_deleted=False).count(),
 			'users': users,
 			'users_count': users.count(),
 			'user_add_form': WarehouseUserAddForm(warehouse=self.object),
@@ -775,7 +777,7 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		if not user.is_superuser and (not org or warehouse.org != org):
 			return Product.objects.none()
 
-		queryset = warehouse.products.select_related(
+		queryset = warehouse.products.filter(is_deleted=False).select_related(
 			'category',
 			'brand',
 			'room',
@@ -836,7 +838,7 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		if not user.is_superuser and (not org or warehouse.org != org):
 			return Product.objects.none()
 
-		return warehouse.products.select_related(
+		return Product.all_objects.filter(warehouse=warehouse).select_related(
 			'category',
 			'brand',
 			'warehouse',
@@ -915,6 +917,34 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		return context
 
 
+class CentralAdminProductRestoreView(CentralAdminOnlyAccessMixin, View):
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = request.user
+		org = getattr(user, 'organization', None)
+
+		if not user.is_superuser and (not org or warehouse.org != org):
+			messages.error(request, 'You do not have permission to restore this product.')
+			return redirect('inventory:central_admin:warehouse_products', slug=warehouse.slug)
+
+		product = get_object_or_404(
+			Product.all_objects.filter(warehouse=warehouse),
+			slug=self.kwargs['product_slug'],
+		)
+
+		if not product.is_deleted:
+			messages.info(request, f'Product "{product.name}" is already active.')
+			return redirect('inventory:central_admin:product_detail', slug=warehouse.slug, product_slug=product.slug)
+
+		product.is_deleted = False
+		product.deleted_at = None
+		product.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])
+
+		messages.success(request, f'Product "{product.name}" restored successfully.')
+		return redirect('inventory:central_admin:product_detail', slug=warehouse.slug, product_slug=product.slug)
+
+
 class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
 	def get_warehouse_queryset(self):
 		user = self.request.user
@@ -931,7 +961,7 @@ class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
 	def get_product(self):
 		warehouse = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
 		return get_object_or_404(
-			warehouse.products.select_related(
+			warehouse.products.filter(is_deleted=False).select_related(
 				'category',
 				'brand',
 				'warehouse',
@@ -1167,7 +1197,7 @@ class CentralAdminProductDeleteView(CentralAdminProductVariantBaseMixin, View):
 			)
 
 		product_name = product.name
-		product.delete()
+		product.soft_delete()
 		messages.success(request, f'Product "{product_name}" deleted successfully.')
 		return self.get_success_redirect()
 
@@ -1253,9 +1283,9 @@ class CentralAdminProductDeletionRequestApproveView(CentralAdminProductDeletionR
 			deletion_request.review_reason = review_reason
 			deletion_request.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_reason'])
 
-			product.delete()
+			product.soft_delete()
 
-		messages.success(request, f'Product "{product_name}" has been permanently deleted.')
+		messages.success(request, f'Product "{product_name}" has been deleted.')
 		return redirect('inventory:central_admin:product_deletion_request_list')
 
 

@@ -626,11 +626,11 @@
             {% csrf_token %}
             {% if has_stock_movement_history %}
               <p class="mb-2">This product has stock movement history and cannot be deleted directly.</p>
-              <p class="mb-3">Submitting this form will create a deletion request for central admin approval. Once approved, the product will be permanently deleted.</p>
+              <p class="mb-3">Submitting this form will create a deletion request for central admin approval. Once approved, the product will be deleted and can be restored by central admin.</p>
               <label for="deletionReason" class="form-label">Reason for deletion request <span class="text-danger">*</span></label>
-              <textarea id="deletionReason" name="deletion_reason" class="form-control" rows="3" required placeholder="Explain why this product should be permanently deleted..."></textarea>
+              <textarea id="deletionReason" name="deletion_reason" class="form-control" rows="3" required placeholder="Explain why this product should be deleted..."></textarea>
             {% else %}
-              <p class="mb-0">This will permanently delete <strong>{{ product.name }}</strong>.</p>
+              <p class="mb-0">This will delete <strong>{{ product.name }}</strong>. Central admin can restore it later.</p>
             {% endif %}
           </div>
           <div class="modal-footer">

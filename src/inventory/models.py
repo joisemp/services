@@ -31,6 +31,11 @@ UNIT_CHOICES = [
 ]
 
 
+class ActiveProductManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 class Category(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -131,6 +136,11 @@ class Product(models.Model):
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    objects = ActiveProductManager()
+    all_objects = models.Manager()
     
     def save(self, *args, **kwargs):
         if not self.product_code:
@@ -144,6 +154,14 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    def soft_delete(self):
+        if self.is_deleted:
+            return
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])
 
 
 class ProductDeletionRequest(models.Model):

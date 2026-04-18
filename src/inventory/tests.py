@@ -203,6 +203,9 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 	def _product_delete_url(self, product):
 		return reverse('inventory:central_admin:product_delete', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
+	def _product_restore_url(self, product):
+		return reverse('inventory:central_admin:product_restore', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
 	def _product_convert_url(self, product):
 		return reverse('inventory:central_admin:product_convert_type', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
@@ -572,6 +575,22 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertEqual(request_item.status, 'rejected')
 		self.assertEqual(request_item.reviewed_by, self.user)
 		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_can_open_deleted_product_detail_and_restore(self):
+		self.client.post(self._product_delete_url(self.single_product))
+
+		deleted_product = Product.all_objects.get(id=self.single_product.id)
+		self.assertTrue(deleted_product.is_deleted)
+
+		response_detail = self.client.get(self._detail_url(deleted_product))
+		self.assertEqual(response_detail.status_code, 200)
+		self.assertContains(response_detail, 'This product is deleted.')
+
+		response_restore = self.client.post(self._product_restore_url(deleted_product))
+		self.assertRedirects(response_restore, self._detail_url(deleted_product))
+
+		restored_product = Product.objects.get(id=self.single_product.id)
+		self.assertFalse(restored_product.is_deleted)
 
 
 class StockMovementFlowTests(TestCase):

@@ -277,7 +277,7 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
-		products = self.object.products.select_related('category', 'brand', 'room').order_by('-updated_at')
+		products = self.object.products.filter(is_deleted=False).select_related('category', 'brand', 'room').order_by('-updated_at')
 
 		summary_cards = [
 			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
@@ -333,7 +333,7 @@ class InventoryWarehouseProductListView(SupervisorOnlyAccessMixin, ListView):
 
 	def get_queryset(self):
 		warehouse = self.get_warehouse()
-		queryset = warehouse.products.select_related('category', 'brand', 'room').prefetch_related('variants__brand')
+		queryset = warehouse.products.filter(is_deleted=False).select_related('category', 'brand', 'room').prefetch_related('variants__brand')
 		queryset = queryset.prefetch_related('images', 'variants__images')
 		search_query = self.get_search_query()
 
@@ -379,7 +379,7 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 
 	def get_queryset(self):
 		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(self.request.user), slug=self.kwargs['slug'])
-		return warehouse.products.select_related(
+		return warehouse.products.filter(is_deleted=False).select_related(
 			'category',
 			'brand',
 			'warehouse',
@@ -471,7 +471,7 @@ class SupervisorStockMovementCreateView(SupervisorWarehouseScopedMixin, FormView
 
 	def get_product(self):
 		warehouse = self.get_warehouse()
-		return get_object_or_404(warehouse.products.all(), slug=self.kwargs['product_slug'])
+		return get_object_or_404(warehouse.products.filter(is_deleted=False), slug=self.kwargs['product_slug'])
 
 	def get_form_kwargs(self):
 		kwargs = super().get_form_kwargs()
@@ -646,7 +646,7 @@ class SupervisorProductVariantBaseMixin(SupervisorOnlyAccessMixin):
 	def get_product(self):
 		warehouse = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
 		return get_object_or_404(
-			warehouse.products.select_related(
+			warehouse.products.filter(is_deleted=False).select_related(
 				'category',
 				'brand',
 				'warehouse',
@@ -912,7 +912,7 @@ class SupervisorProductDeleteView(SupervisorProductVariantBaseMixin, View):
 			)
 
 		product_name = product.name
-		product.delete()
+		product.soft_delete()
 		messages.success(request, f'Product "{product_name}" deleted successfully.')
 		return self.get_success_redirect()
 
