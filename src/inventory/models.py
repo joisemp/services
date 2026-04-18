@@ -144,6 +144,68 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ProductDeletionRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        related_name='deletion_requests',
+        null=True,
+        blank=True,
+    )
+    product_name = models.CharField(max_length=255)
+    product_code = models.CharField(max_length=20, blank=True)
+    org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='product_deletion_requests')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='product_deletion_requests')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='pending')
+
+    requested_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.CASCADE,
+        related_name='product_deletion_requests_made',
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    request_reason = models.TextField()
+
+    reviewed_by = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        related_name='product_deletion_requests_reviewed',
+        null=True,
+        blank=True,
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_reason = models.TextField(blank=True)
+    slug = models.SlugField(unique=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['org', '-requested_at']),
+            models.Index(fields=['status', '-requested_at']),
+            models.Index(fields=['warehouse', '-requested_at']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.product:
+            self.product_name = self.product.name
+            self.product_code = self.product.product_code
+
+        if not self.slug:
+            base_slug = slugify(f"{self.product_name}-deletion-request")
+            self.slug = generate_unique_slug(self, base_slug)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Deletion Request - {self.product_name} ({self.get_status_display()})"
     
 class Variant(models.Model):
     name = models.CharField(max_length=255)

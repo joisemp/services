@@ -36,6 +36,10 @@
           <span class="material-symbols-outlined fs-6">history</span>
           <span>Change Log</span>
         </a>
+        <a href="{% url 'inventory:central_admin:product_deletion_request_list' %}" class="btn btn-outline-warning btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
+          <span class="material-symbols-outlined fs-6">rule</span>
+          <span>Delete Requests</span>
+        </a>
         <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
           <span class="material-symbols-outlined fs-6">edit</span>
           <span>Edit Warehouse</span>

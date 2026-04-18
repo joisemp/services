@@ -11,7 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta
 
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
-from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine
+from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest
 from inventory.forms import (
 	RoomForm,
 	BucketForm,
@@ -450,6 +450,11 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 		paginator = Paginator(stock_movements, 20)
 		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
 		context['supervisor_correction_cutoff'] = timezone.now() - timedelta(hours=48)
+		context['has_stock_movement_history'] = StockMovementLine.objects.filter(product=self.object).exists()
+		context['pending_deletion_request'] = ProductDeletionRequest.objects.filter(
+			product=self.object,
+			status='pending',
+		).select_related('requested_by').first()
 
 		return context
 
@@ -869,7 +874,37 @@ class SupervisorProductDeleteView(SupervisorProductVariantBaseMixin, View):
 
 		has_stock_movement_history = StockMovementLine.objects.filter(product=product).exists()
 		if has_stock_movement_history:
-			messages.warning(request, 'Product cannot be deleted because it has stock movement history.')
+			reason = request.POST.get('deletion_reason', '').strip()
+			if not reason:
+				messages.error(request, 'Please provide a reason for the deletion request.')
+				return redirect(
+					'inventory:supervisor:product_detail',
+					slug=self.kwargs['slug'],
+					product_slug=self.kwargs['product_slug'],
+				)
+
+			existing_request = ProductDeletionRequest.objects.filter(
+				product=product,
+				status='pending',
+			).first()
+			if existing_request:
+				messages.warning(request, 'A deletion request for this product is already pending central admin review.')
+				return redirect(
+					'inventory:supervisor:product_detail',
+					slug=self.kwargs['slug'],
+					product_slug=self.kwargs['product_slug'],
+				)
+
+			ProductDeletionRequest.objects.create(
+				product=product,
+				product_name=product.name,
+				product_code=product.product_code,
+				org=product.org,
+				warehouse=product.warehouse,
+				requested_by=request.user,
+				request_reason=reason,
+			)
+			messages.success(request, 'Deletion request submitted for central admin approval.')
 			return redirect(
 				'inventory:supervisor:product_detail',
 				slug=self.kwargs['slug'],

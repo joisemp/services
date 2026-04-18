@@ -8,9 +8,10 @@ from django.db.models import Q, Prefetch
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils import timezone
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -905,6 +906,11 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		).order_by('-created_at')
 		paginator = Paginator(stock_movements, 20)
 		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
+		context['has_stock_movement_history'] = StockMovementLine.objects.filter(product=self.object).exists()
+		context['pending_deletion_request'] = ProductDeletionRequest.objects.filter(
+			product=self.object,
+			status='pending',
+		).select_related('requested_by').first()
 
 		return context
 
@@ -1164,6 +1170,119 @@ class CentralAdminProductDeleteView(CentralAdminProductVariantBaseMixin, View):
 		product.delete()
 		messages.success(request, f'Product "{product_name}" deleted successfully.')
 		return self.get_success_redirect()
+
+
+class CentralAdminProductDeletionRequestQuerysetMixin(CentralAdminOnlyAccessMixin):
+	def get_deletion_request_queryset(self):
+		queryset = ProductDeletionRequest.objects.select_related(
+			'product',
+			'org',
+			'warehouse',
+			'requested_by',
+			'reviewed_by',
+		)
+
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		if user.is_superuser and not org:
+			return queryset
+		if org:
+			return queryset.filter(org=org)
+		return ProductDeletionRequest.objects.none()
+
+
+class CentralAdminProductDeletionRequestListView(CentralAdminProductDeletionRequestQuerysetMixin, ListView):
+	model = ProductDeletionRequest
+	template_name = 'central_admin/inventory/product_deletion_request_list.html'
+	context_object_name = 'deletion_requests'
+	paginate_by = 25
+
+	def get_status_filter(self):
+		status = self.request.GET.get('status', 'pending').strip().lower()
+		if status in {'pending', 'approved', 'rejected'}:
+			return status
+		return 'pending'
+
+	def get_queryset(self):
+		return self.get_deletion_request_queryset().filter(status=self.get_status_filter()).order_by('-requested_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		all_requests = self.get_deletion_request_queryset()
+		context['current_status_filter'] = self.get_status_filter()
+		context['pending_count'] = all_requests.filter(status='pending').count()
+		context['approved_count'] = all_requests.filter(status='approved').count()
+		context['rejected_count'] = all_requests.filter(status='rejected').count()
+		return context
+
+
+class CentralAdminProductDeletionRequestDetailView(CentralAdminProductDeletionRequestQuerysetMixin, DetailView):
+	model = ProductDeletionRequest
+	template_name = 'central_admin/inventory/product_deletion_request_detail.html'
+	context_object_name = 'deletion_request'
+	slug_field = 'slug'
+	slug_url_kwarg = 'deletion_slug'
+
+	def get_queryset(self):
+		return self.get_deletion_request_queryset()
+
+
+class CentralAdminProductDeletionRequestApproveView(CentralAdminProductDeletionRequestQuerysetMixin, View):
+	def post(self, request, *args, **kwargs):
+		deletion_request = get_object_or_404(
+			self.get_deletion_request_queryset(),
+			slug=self.kwargs['deletion_slug'],
+		)
+
+		if deletion_request.status != 'pending':
+			messages.error(request, 'Only pending deletion requests can be approved.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		if not deletion_request.product:
+			messages.error(request, 'This request cannot be approved because the product no longer exists.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		review_reason = request.POST.get('review_reason', '').strip()
+		product = deletion_request.product
+		product_name = deletion_request.product_name
+
+		with transaction.atomic():
+			deletion_request.status = 'approved'
+			deletion_request.reviewed_by = request.user
+			deletion_request.reviewed_at = timezone.now()
+			deletion_request.review_reason = review_reason
+			deletion_request.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_reason'])
+
+			product.delete()
+
+		messages.success(request, f'Product "{product_name}" has been permanently deleted.')
+		return redirect('inventory:central_admin:product_deletion_request_list')
+
+
+class CentralAdminProductDeletionRequestRejectView(CentralAdminProductDeletionRequestQuerysetMixin, View):
+	def post(self, request, *args, **kwargs):
+		deletion_request = get_object_or_404(
+			self.get_deletion_request_queryset(),
+			slug=self.kwargs['deletion_slug'],
+		)
+
+		if deletion_request.status != 'pending':
+			messages.error(request, 'Only pending deletion requests can be rejected.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		review_reason = request.POST.get('review_reason', '').strip()
+		if not review_reason:
+			messages.error(request, 'Please provide a reason for rejection.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		deletion_request.status = 'rejected'
+		deletion_request.reviewed_by = request.user
+		deletion_request.reviewed_at = timezone.now()
+		deletion_request.review_reason = review_reason
+		deletion_request.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_reason'])
+
+		messages.success(request, 'Deletion request rejected.')
+		return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
 
 
 class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, FormView):

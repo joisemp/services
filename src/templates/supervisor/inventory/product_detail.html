@@ -25,6 +25,16 @@
     </a>
   </div>
 
+  {% if pending_deletion_request %}
+    <div class="alert alert-warning d-flex flex-column flex-md-row justify-content-between gap-2" role="alert">
+      <div>
+        <strong>Deletion request pending.</strong>
+        Requested on {{ pending_deletion_request.requested_at|date:"M d, Y" }} at {{ pending_deletion_request.requested_at|time:"g:i A" }}.
+      </div>
+      <small class="text-muted">Central admin review is required before this product can be deleted.</small>
+    </div>
+  {% endif %}
+
   <div class="row g-3 g-lg-4 align-items-start">
     <div class="col-12">
       <button type="button" class="btn btn-link p-0 text-start w-100 text-decoration-none mb-3" data-bs-toggle="modal" data-bs-target="#productDetailsModal">
@@ -303,7 +313,7 @@
               <span class="material-symbols-outlined me-1" style="font-size: 18px;">transform</span>Convert Type
             </button>
             <button type="button" class="btn btn-danger d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#deleteProductModal">
-              <span class="material-symbols-outlined me-1" style="font-size: 18px;">delete</span>Delete
+              <span class="material-symbols-outlined me-1" style="font-size: 18px;">delete</span>{% if has_stock_movement_history %}Request Delete{% else %}Delete{% endif %}
             </button>
           </div>
         </div>
@@ -599,16 +609,36 @@
         <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p class="mb-0">This will permanently delete <strong>{{ product.name }}</strong> if there is no stock movement history.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+      {% if has_stock_movement_history and pending_deletion_request %}
+        <div class="modal-body">
+          <div class="alert alert-warning mb-3">
+            A deletion request is already pending central admin review for this product.
+          </div>
+          <p class="mb-1"><strong>Request reason:</strong></p>
+          <p class="mb-0 text-muted">{{ pending_deletion_request.request_reason|linebreaksbr }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+        </div>
+      {% else %}
         <form method="post" action="{% url 'inventory:supervisor:product_delete' slug=warehouse.slug product_slug=product.slug %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Delete Product</button>
+          <div class="modal-body">
+            {% csrf_token %}
+            {% if has_stock_movement_history %}
+              <p class="mb-2">This product has stock movement history and cannot be deleted directly.</p>
+              <p class="mb-3">Submitting this form will create a deletion request for central admin approval. Once approved, the product will be permanently deleted.</p>
+              <label for="deletionReason" class="form-label">Reason for deletion request <span class="text-danger">*</span></label>
+              <textarea id="deletionReason" name="deletion_reason" class="form-control" rows="3" required placeholder="Explain why this product should be permanently deleted..."></textarea>
+            {% else %}
+              <p class="mb-0">This will permanently delete <strong>{{ product.name }}</strong>.</p>
+            {% endif %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger">{% if has_stock_movement_history %}Submit Request{% else %}Delete Product{% endif %}</button>
+          </div>
         </form>
-      </div>
+      {% endif %}
     </div>
   </div>
 </div>

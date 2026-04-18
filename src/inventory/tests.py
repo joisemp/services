@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.models import Organization, User
-from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine
+from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest
 
 
 class CentralAdminProductCreateFlowTests(TestCase):
@@ -205,6 +205,18 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 
 	def _product_convert_url(self, product):
 		return reverse('inventory:central_admin:product_convert_type', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _deletion_request_list_url(self):
+		return reverse('inventory:central_admin:product_deletion_request_list')
+
+	def _deletion_request_detail_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_detail', kwargs={'deletion_slug': deletion_request.slug})
+
+	def _deletion_request_approve_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_approve', kwargs={'deletion_slug': deletion_request.slug})
+
+	def _deletion_request_reject_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_reject', kwargs={'deletion_slug': deletion_request.slug})
 
 	def _product_list_url(self):
 		return reverse('inventory:central_admin:warehouse_products', kwargs={'slug': self.warehouse.slug})
@@ -498,6 +510,68 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.multi_product.refresh_from_db()
 		self.assertEqual(self.multi_product.type, 'MULTI_VARIANT')
 		self.assertEqual(self.multi_product.variants.count(), 1)
+
+	def test_central_admin_approve_deletion_request_permanently_deletes_product(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Product should be removed permanently',
+		)
+
+		response = self.client.post(
+			self._deletion_request_approve_url(request_item),
+			{'review_reason': 'Approved for cleanup'},
+		)
+
+		self.assertRedirects(response, self._deletion_request_list_url())
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'approved')
+		self.assertEqual(request_item.reviewed_by, self.user)
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_reject_deletion_request_requires_reason(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Please delete this product',
+		)
+
+		response = self.client.post(self._deletion_request_reject_url(request_item), {'review_reason': ''})
+
+		self.assertRedirects(response, self._deletion_request_detail_url(request_item))
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'pending')
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_reject_deletion_request_keeps_product(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Delete request for old stock item',
+		)
+
+		response = self.client.post(
+			self._deletion_request_reject_url(request_item),
+			{'review_reason': 'Product is still required in operations'},
+		)
+
+		self.assertRedirects(response, self._deletion_request_detail_url(request_item))
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'rejected')
+		self.assertEqual(request_item.reviewed_by, self.user)
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
 
 
 class StockMovementFlowTests(TestCase):
@@ -1210,9 +1284,102 @@ class SupervisorProductParityTests(TestCase):
 			recorded_by=self.supervisor_user,
 		)
 
-		response = self.client.post(self._product_delete_url(self.single_product))
+		response = self.client.post(
+			self._product_delete_url(self.single_product),
+			{'deletion_reason': 'History exists but this product should be removed'},
+		)
 		self.assertRedirects(response, self._detail_url(self.single_product))
 		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertTrue(
+			ProductDeletionRequest.objects.filter(
+				product=self.single_product,
+				status='pending',
+				request_reason='History exists but this product should be removed',
+			).exists()
+		)
+
+	def test_supervisor_delete_with_history_requires_reason(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-002',
+			notes='Delete reason required',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		response = self.client.post(self._product_delete_url(self.single_product), {'deletion_reason': ''})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertFalse(ProductDeletionRequest.objects.filter(product=self.single_product).exists())
+
+	def test_supervisor_direct_delete_without_history_still_succeeds(self):
+		response = self.client.post(self._product_delete_url(self.single_product))
+
+		self.assertRedirects(response, self._products_url(self.assigned_warehouse))
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_supervisor_cannot_create_duplicate_pending_deletion_requests(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-003',
+			notes='Duplicate request guard',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			requested_by=self.supervisor_user,
+			request_reason='Existing request',
+		)
+
+		response = self.client.post(
+			self._product_delete_url(self.single_product),
+			{'deletion_reason': 'Second request should be blocked'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertEqual(ProductDeletionRequest.objects.filter(product=self.single_product, status='pending').count(), 1)
 
 	def test_supervisor_convert_single_to_multi_clears_brand(self):
 		response = self.client.post(
