@@ -203,7 +203,7 @@ class ProductCreateSingleVariantForm(BootstrapFormMixin, forms.Form):
 			'accept': 'image/*',
 			'multiple': True,
 		}),
-		help_text='You can upload multiple product images.',
+		help_text='Optional: upload multiple product images now, or add them later from Manage Images.',
 	)
 
 	def __init__(self, *args, **kwargs):
@@ -230,7 +230,7 @@ class ProductVariantForm(BootstrapFormMixin, forms.Form):
 			'accept': 'image/*',
 			'multiple': True,
 		}),
-		help_text='Upload one or more images for this variant.',
+		help_text='Optional: upload variant images now, or add them later from Manage Images.',
 	)
 
 	def __init__(self, *args, **kwargs):
