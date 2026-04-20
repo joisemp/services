@@ -17,42 +17,77 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2 py-md-3">
-  <section class="mb-4">
-    <h3 class="mb-1">Inventory Dashboard</h3>
-    <p class="text-muted mb-0">Warehouses assigned to you.</p>
-  </section>
+<section id="header" class="mt-2">
+  <div class="alert alert-notification alert-primary" role="alert">
+    <h5 class="mb-1">Inventory Overview</h5>
+    <p class="mb-0">Track stock health, products, and warehouse coverage across your assigned warehouses.</p>
+  </div>
+</section>
 
-  {% if warehouses %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
-      {% for warehouse in warehouses %}
-        <div class="col">
-          <div class="card h-100 border rounded-3">
-            <div class="card-body p-3 p-md-4 d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                <div>
-                  <h5 class="card-title mb-1">{{ warehouse.name }}</h5>
-                  <p class="text-muted small mb-0">{{ warehouse.location }}</p>
-                </div>
-                <span class="badge rounded-pill bg-light text-dark border">Warehouse</span>
-              </div>
+<section id="inventory-tabs" class="mt-4">
+  <div class="d-inline-block border rounded-3 p-2 bg-body-tertiary">
+    <ul class="nav nav-pills gap-2 flex-nowrap overflow-auto" id="inventoryTabsNav" role="tablist">
+      <li class="nav-item" role="presentation">
+        <a class="nav-link active fw-semibold text-nowrap px-3 py-2" href="{% url 'inventory:supervisor:inventory_dashboard' %}">Warehouse</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Categories</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Brands</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Settings</a>
+      </li>
+    </ul>
+  </div>
 
-              <div class="mt-auto pt-3 border-top d-flex gap-2">
-                <a href="{% url 'inventory:supervisor:warehouse_detail' slug=warehouse.slug %}" class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1">
-                  <span class="material-symbols-outlined fs-6">visibility</span>
-                  View
-                </a>
-              </div>
-            </div>
-          </div>
+  <div class="tab-content" id="inventoryTabsContent">
+    <!-- Warehouse Tab -->
+    <div class="tab-pane fade show active" id="warehouse-content" role="tabpanel" aria-labelledby="warehouse-tab">
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="mb-0">Warehouses</h3>
         </div>
-      {% endfor %}
+
+        <div class="container-fluid px-0 mt-3">
+          {% if warehouses %}
+            <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+              {% for warehouse in warehouses %}
+                <div class="col">
+                  <div class="card h-100 border rounded-3">
+                    <div class="card-body p-3 p-md-4 d-flex flex-column">
+                      <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                          <h5 class="card-title mb-1">{{ warehouse.name }}</h5>
+                          <p class="text-muted small mb-0">{{ warehouse.location }}</p>
+                        </div>
+                        <span class="badge rounded-pill bg-light text-dark border">Warehouse</span>
+                      </div>
+
+                      <div class="mt-auto pt-3 border-top d-flex gap-2">
+                        <a href="{% url 'inventory:supervisor:warehouse_detail' slug=warehouse.slug %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1">
+                          <span class="material-symbols-outlined fs-6">visibility</span>
+                          View
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state text-center py-5">
+              <div class="mb-4">
+                <span class="material-symbols-outlined">warehouse</span>
+              </div>
+              <h5 class="text-muted mb-2">No Warehouses</h5>
+              <p class="text-muted mb-0">No warehouses are assigned to you yet.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-  {% else %}
-    <div class="text-center py-5">
-      <span class="material-symbols-outlined mb-2 text-muted display-6">warehouse</span>
-      <p class="text-muted mb-0">No warehouses are assigned to you yet.</p>
-    </div>
-  {% endif %}
-</div>
+  </div>
+</section>
 {% endblock %}
