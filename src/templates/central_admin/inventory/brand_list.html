@@ -84,6 +84,38 @@
                 </div>
               {% endfor %}
             </div>
+
+            {% if is_paginated %}
+              <nav class="mt-4" aria-label="Brand list pagination">
+                <ul class="pagination justify-content-center mb-0">
+                  <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    <a class="page-link" href="?page=1" {% if not page_obj.has_previous %}tabindex="-1" aria-disabled="true"{% endif %}>
+                      First
+                    </a>
+                  </li>
+                  <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    <a class="page-link" href="?page={% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}" {% if not page_obj.has_previous %}tabindex="-1" aria-disabled="true"{% endif %}>
+                      Previous
+                    </a>
+                  </li>
+
+                  <li class="page-item disabled">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                  </li>
+
+                  <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}" {% if not page_obj.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                      Next
+                    </a>
+                  </li>
+                  <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ paginator.num_pages }}" {% if not page_obj.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                      Last
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            {% endif %}
           {% else %}
             <div class="empty-state text-center py-5">
               <div class="mb-4">
