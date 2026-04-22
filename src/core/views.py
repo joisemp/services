@@ -77,9 +77,13 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
 
     def get_queryset(self):
         from django.db.models import Count, Q
+        search_query = self.request.GET.get('q', '').strip()
+        user_type_filter = self.request.GET.get('user_type', '').strip()
+        valid_user_types = {choice[0] for choice in User.USER_TYPE_CHOICES}
+
         # Filter users by the central admin's organization and only show active users
         admin_organization = self.request.user.organization
-        return User.objects.filter(
+        queryset = User.objects.filter(
             organization=admin_organization,
             is_active=True
         ).select_related('organization').prefetch_related('spaces').annotate(
@@ -90,7 +94,32 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
             in_progress_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='in_progress'), distinct=True),
             resolved_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='resolved'), distinct=True),
             closed_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='closed'), distinct=True),
-        ).order_by('first_name', 'last_name')
+        )
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_query)
+                | Q(last_name__icontains=search_query)
+                | Q(email__icontains=search_query)
+                | Q(phone_number__icontains=search_query)
+            )
+
+        if user_type_filter in valid_user_types:
+            queryset = queryset.filter(user_type=user_type_filter)
+
+        return queryset.order_by('first_name', 'last_name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        search_query = self.request.GET.get('q', '').strip()
+        user_type_filter = self.request.GET.get('user_type', '').strip()
+        valid_user_types = {choice[0] for choice in User.USER_TYPE_CHOICES}
+        current_user_type_filter = user_type_filter if user_type_filter in valid_user_types else 'all'
+
+        context['search_query'] = search_query
+        context['current_user_type_filter'] = current_user_type_filter
+        context['user_role_filters'] = [('all', 'All')] + list(User.USER_TYPE_CHOICES)
+        return context
     
 
 class PeopleCreateView(CentralAdminOnlyAccessMixin, CreateView):

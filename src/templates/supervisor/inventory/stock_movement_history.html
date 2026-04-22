@@ -73,12 +73,14 @@
               <th>Date</th>
               <th>Reference</th>
               <th>Item</th>
+              <th>Entry</th>
               <th>Type</th>
               <th>Qty</th>
               <th>Old Avail</th>
               <th>New Avail</th>
               <th>Recorded By</th>
               <th>Notes</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -91,6 +93,19 @@
                   {% if movement.variant %}<div class="small text-muted">Variant: {{ movement.variant.name }}</div>{% endif %}
                 </td>
                 <td>
+                  {% if movement.correction_type == 'CORRECTION' %}
+                    <span class="badge bg-info text-dark">Correction</span>
+                    {% if movement.corrects_movement %}
+                      <div class="small text-muted">For: {{ movement.corrects_movement.batch.reference_code }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-secondary">Original</span>
+                    {% if movement.has_correction %}
+                      <div class="small text-muted">Corrected</div>
+                    {% endif %}
+                  {% endif %}
+                </td>
+                <td>
                   <span class="badge {% if movement.movement_type == 'INCOMING' %}bg-success{% else %}bg-warning text-dark{% endif %}">
                     {{ movement.get_movement_type_display }}
                   </span>
@@ -100,10 +115,17 @@
                 <td>{{ movement.new_available_quantity }}</td>
                 <td>{{ movement.recorded_by|default:'-' }}</td>
                 <td>{{ movement.notes|default:movement.batch.notes|default:'-' }}</td>
+                <td>
+                  {% if movement.correction_type == 'ORIGINAL' and not movement.has_correction and movement.created_at >= supervisor_correction_cutoff %}
+                    <a href="{% url 'inventory:supervisor:stock_movement_correct' slug=warehouse.slug movement_id=movement.id %}" class="btn btn-sm btn-outline-primary">Correct</a>
+                  {% else %}
+                    <span class="text-muted small">-</span>
+                  {% endif %}
+                </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="9" class="text-center py-4 text-muted">No stock movement records found.</td>
+                <td colspan="11" class="text-center py-4 text-muted">No stock movement records found.</td>
               </tr>
             {% endfor %}
           </tbody>

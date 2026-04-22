@@ -1,8 +1,10 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 from core.models import Organization, User
-from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine
+from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest
 
 
 class CentralAdminProductCreateFlowTests(TestCase):
@@ -195,8 +197,35 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 	def _assign_brand_url(self, product):
 		return reverse('inventory:central_admin:product_assign_brand', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
 
+	def _product_edit_url(self, product):
+		return reverse('inventory:central_admin:product_edit', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_delete_url(self, product):
+		return reverse('inventory:central_admin:product_delete', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_restore_url(self, product):
+		return reverse('inventory:central_admin:product_restore', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_convert_url(self, product):
+		return reverse('inventory:central_admin:product_convert_type', kwargs={'slug': self.warehouse.slug, 'product_slug': product.slug})
+
+	def _deletion_request_list_url(self):
+		return reverse('inventory:central_admin:product_deletion_request_list')
+
+	def _deletion_request_detail_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_detail', kwargs={'deletion_slug': deletion_request.slug})
+
+	def _deletion_request_approve_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_approve', kwargs={'deletion_slug': deletion_request.slug})
+
+	def _deletion_request_reject_url(self, deletion_request):
+		return reverse('inventory:central_admin:product_deletion_request_reject', kwargs={'deletion_slug': deletion_request.slug})
+
 	def _product_list_url(self):
 		return reverse('inventory:central_admin:warehouse_products', kwargs={'slug': self.warehouse.slug})
+
+	def _deleted_product_list_url(self):
+		return reverse('inventory:central_admin:warehouse_deleted_products', kwargs={'slug': self.warehouse.slug})
 
 	def test_single_variant_detail_page_shows_product_tracking_message(self):
 		response = self.client.get(self._detail_url(self.single_product))
@@ -354,6 +383,232 @@ class CentralAdminProductDetailVariantManagementTests(TestCase):
 		self.assertContains(response, 'Brand X')
 		self.assertContains(response, 'Brand Two')
 
+	def test_product_edit_updates_fields_and_variant_units(self):
+		variant = Variant.objects.create(
+			name='Variant Unit Sync',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=12,
+			total_used_quantity=2,
+			universal_available_quantity=10,
+		)
+
+		response = self.client.post(
+			self._product_edit_url(self.multi_product),
+			{
+				'name': 'Multi Product Updated',
+				'description': 'Updated description',
+				'category': self.category.id,
+				'unit': 'BAGS',
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		variant.refresh_from_db()
+		self.assertEqual(self.multi_product.name, 'Multi Product Updated')
+		self.assertEqual(self.multi_product.unit, 'BAGS')
+		self.assertEqual(variant.unit, 'BAGS')
+
+	def test_delete_product_without_history_succeeds(self):
+		response = self.client.post(self._product_delete_url(self.single_product))
+
+		self.assertRedirects(response, self._product_list_url())
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_delete_product_with_history_succeeds_for_central_admin(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.warehouse,
+			recorded_by=self.user,
+			reference_code='DEL-BLOCK-001',
+			notes='Delete blocked history',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='Has history',
+			old_total_incoming_quantity=20,
+			old_total_used_quantity=5,
+			old_available_quantity=15,
+			new_total_incoming_quantity=21,
+			new_total_used_quantity=5,
+			new_available_quantity=16,
+			recorded_by=self.user,
+		)
+
+		response = self.client.post(self._product_delete_url(self.single_product))
+		self.assertRedirects(response, self._product_list_url())
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertTrue(Product.all_objects.filter(id=self.single_product.id, is_deleted=True).exists())
+
+	def test_convert_single_to_multi_clears_brand_and_keeps_totals(self):
+		response = self.client.post(
+			self._product_convert_url(self.single_product),
+			{'target_type': 'MULTI_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.type, 'MULTI_VARIANT')
+		self.assertIsNone(self.single_product.brand)
+		self.assertEqual(self.single_product.total_incoming_quantity, 20)
+		self.assertEqual(self.single_product.total_used_quantity, 5)
+		self.assertEqual(self.single_product.universal_available_quantity, 15)
+
+	def test_convert_multi_to_single_uses_selected_variant_and_deletes_all_variants(self):
+		selected_variant = Variant.objects.create(
+			name='Primary Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=60,
+			total_used_quantity=10,
+			universal_available_quantity=50,
+		)
+		Variant.objects.create(
+			name='Secondary Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=20,
+			total_used_quantity=2,
+			universal_available_quantity=18,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{
+				'target_type': 'SINGLE_VARIANT',
+				'source_variant': selected_variant.id,
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'SINGLE_VARIANT')
+		self.assertEqual(self.multi_product.brand, self.brand)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 60)
+		self.assertEqual(self.multi_product.total_used_quantity, 10)
+		self.assertEqual(self.multi_product.universal_available_quantity, 50)
+		self.assertFalse(self.multi_product.variants.exists())
+
+	def test_convert_multi_to_single_requires_source_variant(self):
+		Variant.objects.create(
+			name='Variant Required',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=12,
+			total_used_quantity=2,
+			universal_available_quantity=10,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{'target_type': 'SINGLE_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'MULTI_VARIANT')
+		self.assertEqual(self.multi_product.variants.count(), 1)
+
+	def test_central_admin_approve_deletion_request_permanently_deletes_product(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Product should be removed permanently',
+		)
+
+		response = self.client.post(
+			self._deletion_request_approve_url(request_item),
+			{'review_reason': 'Approved for cleanup'},
+		)
+
+		self.assertRedirects(response, self._deletion_request_list_url())
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'approved')
+		self.assertEqual(request_item.reviewed_by, self.user)
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_reject_deletion_request_requires_reason(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Please delete this product',
+		)
+
+		response = self.client.post(self._deletion_request_reject_url(request_item), {'review_reason': ''})
+
+		self.assertRedirects(response, self._deletion_request_detail_url(request_item))
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'pending')
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_reject_deletion_request_keeps_product(self):
+		request_item = ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.warehouse,
+			requested_by=self.user,
+			request_reason='Delete request for old stock item',
+		)
+
+		response = self.client.post(
+			self._deletion_request_reject_url(request_item),
+			{'review_reason': 'Product is still required in operations'},
+		)
+
+		self.assertRedirects(response, self._deletion_request_detail_url(request_item))
+		request_item.refresh_from_db()
+		self.assertEqual(request_item.status, 'rejected')
+		self.assertEqual(request_item.reviewed_by, self.user)
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_central_admin_can_open_deleted_product_detail_and_restore(self):
+		self.client.post(self._product_delete_url(self.single_product))
+
+		deleted_product = Product.all_objects.get(id=self.single_product.id)
+		self.assertTrue(deleted_product.is_deleted)
+
+		response_detail = self.client.get(self._detail_url(deleted_product))
+		self.assertEqual(response_detail.status_code, 200)
+		self.assertContains(response_detail, 'This product is deleted.')
+
+		response_restore = self.client.post(self._product_restore_url(deleted_product))
+		self.assertRedirects(response_restore, self._detail_url(deleted_product))
+
+		restored_product = Product.objects.get(id=self.single_product.id)
+		self.assertFalse(restored_product.is_deleted)
+
+	def test_warehouse_detail_links_to_deleted_products_and_lists_deleted_item(self):
+		self.client.post(self._product_delete_url(self.single_product))
+
+		response_warehouse = self.client.get(
+			reverse('inventory:central_admin:warehouse_detail', kwargs={'slug': self.warehouse.slug})
+		)
+		self.assertEqual(response_warehouse.status_code, 200)
+		self.assertContains(response_warehouse, 'Deleted Products')
+
+		response_deleted_list = self.client.get(self._deleted_product_list_url())
+		self.assertEqual(response_deleted_list.status_code, 200)
+		self.assertContains(response_deleted_list, self.single_product.name)
+
 
 class StockMovementFlowTests(TestCase):
 	def setUp(self):
@@ -428,6 +683,18 @@ class StockMovementFlowTests(TestCase):
 
 	def _history_url_central_admin(self):
 		return reverse('inventory:central_admin:stock_movement_history', kwargs={'slug': self.warehouse.slug})
+
+	def _correct_url_supervisor(self, movement):
+		return reverse(
+			'inventory:supervisor:stock_movement_correct',
+			kwargs={'slug': self.warehouse.slug, 'movement_id': movement.id},
+		)
+
+	def _correct_url_central_admin(self, movement):
+		return reverse(
+			'inventory:central_admin:stock_movement_correct',
+			kwargs={'slug': self.warehouse.slug, 'movement_id': movement.id},
+		)
 
 	def _base_payload(self):
 		return {
@@ -536,6 +803,101 @@ class StockMovementFlowTests(TestCase):
 		response = self.client.get(self._history_url_central_admin())
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'TXN-READ')
+
+	def test_supervisor_can_correct_within_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-1', 'movement_type': 'INCOMING', 'quantity': '5', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-1')
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-1A',
+				'corrected_quantity': '3',
+				'correction_reason': 'Correct incoming quantity',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 13)
+		self.assertEqual(self.single_product.total_used_quantity, 2)
+		self.assertEqual(self.single_product.universal_available_quantity, 11)
+
+		correction = StockMovementLine.objects.get(corrects_movement=movement)
+		self.assertEqual(correction.correction_type, 'CORRECTION')
+		self.assertEqual(correction.quantity, 3)
+		self.assertEqual(correction.movement_type, 'INCOMING')
+
+	def test_supervisor_cannot_correct_after_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-2', 'movement_type': 'INCOMING', 'quantity': '4', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-2')
+		StockMovementLine.objects.filter(id=movement.id).update(created_at=timezone.now() - timedelta(hours=49))
+		movement.refresh_from_db()
+
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-2A',
+				'corrected_quantity': '2',
+				'correction_reason': 'Late correction',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.assertFalse(StockMovementLine.objects.filter(corrects_movement=movement).exists())
+
+	def test_central_admin_can_correct_after_48_hours(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-3', 'movement_type': 'INCOMING', 'quantity': '6', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-3')
+		StockMovementLine.objects.filter(id=movement.id).update(created_at=timezone.now() - timedelta(hours=49))
+
+		self.client.force_login(self.central_admin)
+		response = self.client.post(
+			self._correct_url_central_admin(movement),
+			{
+				'reference_code': 'TXN-CORR-3A',
+				'corrected_quantity': '2',
+				'correction_reason': 'Admin correction after 48 hours',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_central_admin())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 12)
+		self.assertTrue(StockMovementLine.objects.filter(corrects_movement=movement, correction_type='CORRECTION').exists())
+
+	def test_outgoing_correction_updates_used_quantity(self):
+		self.client.force_login(self.supervisor)
+		payload = self._base_payload()
+		payload.update({'reference_code': 'TXN-CORR-4', 'movement_type': 'OUTGOING', 'quantity': '3', 'variant': ''})
+		self.client.post(self._create_url(self.single_product), payload)
+
+		movement = StockMovementLine.objects.get(batch__reference_code='TXN-CORR-4')
+		response = self.client.post(
+			self._correct_url_supervisor(movement),
+			{
+				'reference_code': 'TXN-CORR-4A',
+				'corrected_quantity': '1',
+				'correction_reason': 'Used quantity corrected',
+			},
+		)
+
+		self.assertRedirects(response, self._history_url_supervisor())
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.total_incoming_quantity, 10)
+		self.assertEqual(self.single_product.total_used_quantity, 3)
+		self.assertEqual(self.single_product.universal_available_quantity, 7)
 
 
 class SupervisorInventoryDashboardTests(TestCase):
@@ -684,6 +1046,169 @@ class SupervisorInventoryDashboardTests(TestCase):
 		self.assertNotContains(response, 'Unassigned Product')
 
 
+class SupervisorInventoryBrandCategoryManagementTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Supervisor Manage Org')
+		self.other_org = Organization.objects.create(name='Supervisor Manage Other Org')
+
+		self.supervisor_user = User.objects.create_user(
+			email='supervisor-manage@example.com',
+			password='password123',
+			phone_number='+15555550128',
+			user_type='supervisor',
+			organization=self.org,
+		)
+
+		self.central_admin_user = User.objects.create_user(
+			email='central-admin-manage@example.com',
+			password='password123',
+			phone_number='+15555550129',
+			user_type='central_admin',
+			organization=self.org,
+		)
+
+		self.own_category = Category.objects.create(name='Own Category', org=self.org)
+		self.other_category = Category.objects.create(name='Other Category', org=self.other_org)
+		self.own_brand = Brand.objects.create(name='Own Brand', org=self.org)
+		self.other_brand = Brand.objects.create(name='Other Brand', org=self.other_org)
+
+	def _dashboard_url(self):
+		return reverse('inventory:supervisor:inventory_dashboard')
+
+	def _category_list_url(self):
+		return reverse('inventory:supervisor:category_list')
+
+	def _create_category_url(self):
+		return reverse('inventory:supervisor:create_category')
+
+	def _edit_category_url(self, category):
+		return reverse('inventory:supervisor:edit_category', kwargs={'slug': category.slug})
+
+	def _delete_category_url(self, category):
+		return reverse('inventory:supervisor:delete_category', kwargs={'slug': category.slug})
+
+	def _brand_list_url(self):
+		return reverse('inventory:supervisor:brand_list')
+
+	def _create_brand_url(self):
+		return reverse('inventory:supervisor:create_brand')
+
+	def _edit_brand_url(self, brand):
+		return reverse('inventory:supervisor:edit_brand', kwargs={'slug': brand.slug})
+
+	def _delete_brand_url(self, brand):
+		return reverse('inventory:supervisor:delete_brand', kwargs={'slug': brand.slug})
+
+	def test_supervisor_list_views_show_only_own_org_records(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.get(self._category_list_url())
+		brand_response = self.client.get(self._brand_list_url())
+
+		self.assertEqual(category_response.status_code, 200)
+		self.assertContains(category_response, self.own_category.name)
+		self.assertNotContains(category_response, self.other_category.name)
+
+		self.assertEqual(brand_response.status_code, 200)
+		self.assertContains(brand_response, self.own_brand.name)
+		self.assertNotContains(brand_response, self.other_brand.name)
+
+	def test_supervisor_can_create_category_and_brand_for_own_org(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._create_category_url(),
+			{'name': 'Created Category', 'description': 'Created by supervisor'},
+		)
+		brand_response = self.client.post(
+			self._create_brand_url(),
+			{'name': 'Created Brand', 'description': 'Created by supervisor'},
+		)
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+
+		created_category = Category.objects.get(name='Created Category')
+		created_brand = Brand.objects.get(name='Created Brand')
+		self.assertEqual(created_category.org, self.org)
+		self.assertEqual(created_brand.org, self.org)
+
+	def test_supervisor_can_edit_own_category_and_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._edit_category_url(self.own_category),
+			{'name': 'Own Category Updated', 'description': 'Updated category'},
+		)
+		brand_response = self.client.post(
+			self._edit_brand_url(self.own_brand),
+			{'name': 'Own Brand Updated', 'description': 'Updated brand'},
+		)
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+
+		self.own_category.refresh_from_db()
+		self.own_brand.refresh_from_db()
+		self.assertEqual(self.own_category.name, 'Own Category Updated')
+		self.assertEqual(self.own_brand.name, 'Own Brand Updated')
+
+	def test_supervisor_cannot_edit_cross_org_category_or_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._edit_category_url(self.other_category),
+			{'name': 'Blocked Category Update', 'description': 'Denied'},
+		)
+		brand_response = self.client.post(
+			self._edit_brand_url(self.other_brand),
+			{'name': 'Blocked Brand Update', 'description': 'Denied'},
+		)
+
+		self.assertEqual(category_response.status_code, 404)
+		self.assertEqual(brand_response.status_code, 404)
+
+	def test_supervisor_can_delete_own_category_and_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(self._delete_category_url(self.own_category))
+		brand_response = self.client.post(self._delete_brand_url(self.own_brand))
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+		self.assertFalse(Category.objects.filter(id=self.own_category.id).exists())
+		self.assertFalse(Brand.objects.filter(id=self.own_brand.id).exists())
+
+	def test_supervisor_cannot_delete_cross_org_category_or_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(self._delete_category_url(self.other_category))
+		brand_response = self.client.post(self._delete_brand_url(self.other_brand))
+
+		self.assertEqual(category_response.status_code, 404)
+		self.assertEqual(brand_response.status_code, 404)
+		self.assertTrue(Category.objects.filter(id=self.other_category.id).exists())
+		self.assertTrue(Brand.objects.filter(id=self.other_brand.id).exists())
+
+	def test_non_supervisor_cannot_access_supervisor_brand_or_category_management(self):
+		self.client.force_login(self.central_admin_user)
+
+		category_response = self.client.get(self._category_list_url())
+		brand_response = self.client.get(self._brand_list_url())
+
+		self.assertEqual(category_response.status_code, 302)
+		self.assertEqual(brand_response.status_code, 302)
+		self.assertTrue(category_response.url.startswith(reverse('core:login')))
+		self.assertTrue(brand_response.url.startswith(reverse('core:login')))
+
+	def test_dashboard_shows_category_and_brand_links(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._dashboard_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, self._category_list_url())
+		self.assertContains(response, self._brand_list_url())
+
 class SupervisorProductParityTests(TestCase):
 	def setUp(self):
 		self.org = Organization.objects.create(name='Supervisor Product Org')
@@ -760,6 +1285,15 @@ class SupervisorProductParityTests(TestCase):
 
 	def _assign_brand_url(self, product):
 		return reverse('inventory:supervisor:product_assign_brand', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_edit_url(self, product):
+		return reverse('inventory:supervisor:product_edit', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_delete_url(self, product):
+		return reverse('inventory:supervisor:product_delete', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
+
+	def _product_convert_url(self, product):
+		return reverse('inventory:supervisor:product_convert_type', kwargs={'slug': product.warehouse.slug, 'product_slug': product.slug})
 
 	def test_supervisor_multi_variant_creates_product_after_step2(self):
 		response_step1 = self.client.post(
@@ -905,4 +1439,211 @@ class SupervisorProductParityTests(TestCase):
 		self.assertContains(response, 'Add Product')
 		self.assertContains(response, 'Supervisor Brand')
 		self.assertContains(response, 'Supervisor Second Brand')
+
+	def test_supervisor_can_edit_product_details(self):
+		response = self.client.post(
+			self._product_edit_url(self.single_product),
+			{
+				'name': 'Supervisor Single Updated',
+				'description': 'Updated by supervisor',
+				'category': self.category.id,
+				'unit': 'BAGS',
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.name, 'Supervisor Single Updated')
+		self.assertEqual(self.single_product.unit, 'BAGS')
+
+	def test_supervisor_delete_blocked_when_stock_history_exists(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-001',
+			notes='Delete blocked',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		response = self.client.post(
+			self._product_delete_url(self.single_product),
+			{'deletion_reason': 'History exists but this product should be removed'},
+		)
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertTrue(
+			ProductDeletionRequest.objects.filter(
+				product=self.single_product,
+				status='pending',
+				request_reason='History exists but this product should be removed',
+			).exists()
+		)
+
+	def test_supervisor_delete_with_history_requires_reason(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-002',
+			notes='Delete reason required',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		response = self.client.post(self._product_delete_url(self.single_product), {'deletion_reason': ''})
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertTrue(Product.objects.filter(id=self.single_product.id).exists())
+		self.assertFalse(ProductDeletionRequest.objects.filter(product=self.single_product).exists())
+
+	def test_supervisor_direct_delete_without_history_still_succeeds(self):
+		response = self.client.post(self._product_delete_url(self.single_product))
+
+		self.assertRedirects(response, self._products_url(self.assigned_warehouse))
+		self.assertFalse(Product.objects.filter(id=self.single_product.id).exists())
+
+	def test_supervisor_cannot_create_duplicate_pending_deletion_requests(self):
+		batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			recorded_by=self.supervisor_user,
+			reference_code='SUP-DEL-BLOCK-003',
+			notes='Duplicate request guard',
+		)
+		StockMovementLine.objects.create(
+			batch=batch,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			product=self.single_product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=1,
+			notes='History exists',
+			old_total_incoming_quantity=10,
+			old_total_used_quantity=2,
+			old_available_quantity=8,
+			new_total_incoming_quantity=11,
+			new_total_used_quantity=2,
+			new_available_quantity=9,
+			recorded_by=self.supervisor_user,
+		)
+
+		ProductDeletionRequest.objects.create(
+			product=self.single_product,
+			product_name=self.single_product.name,
+			product_code=self.single_product.product_code,
+			org=self.org,
+			warehouse=self.assigned_warehouse,
+			requested_by=self.supervisor_user,
+			request_reason='Existing request',
+		)
+
+		response = self.client.post(
+			self._product_delete_url(self.single_product),
+			{'deletion_reason': 'Second request should be blocked'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.assertEqual(ProductDeletionRequest.objects.filter(product=self.single_product, status='pending').count(), 1)
+
+	def test_supervisor_convert_single_to_multi_clears_brand(self):
+		response = self.client.post(
+			self._product_convert_url(self.single_product),
+			{'target_type': 'MULTI_VARIANT'},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.single_product))
+		self.single_product.refresh_from_db()
+		self.assertEqual(self.single_product.type, 'MULTI_VARIANT')
+		self.assertIsNone(self.single_product.brand)
+
+	def test_supervisor_convert_multi_to_single_uses_selected_variant(self):
+		selected_variant = Variant.objects.create(
+			name='Supervisor Selected Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=40,
+			total_used_quantity=5,
+			universal_available_quantity=35,
+		)
+		Variant.objects.create(
+			name='Supervisor Other Variant',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=10,
+			total_used_quantity=2,
+			universal_available_quantity=8,
+		)
+
+		response = self.client.post(
+			self._product_convert_url(self.multi_product),
+			{
+				'target_type': 'SINGLE_VARIANT',
+				'source_variant': selected_variant.id,
+			},
+		)
+
+		self.assertRedirects(response, self._detail_url(self.multi_product))
+		self.multi_product.refresh_from_db()
+		self.assertEqual(self.multi_product.type, 'SINGLE_VARIANT')
+		self.assertEqual(self.multi_product.brand, self.brand)
+		self.assertEqual(self.multi_product.total_incoming_quantity, 40)
+		self.assertEqual(self.multi_product.total_used_quantity, 5)
+		self.assertFalse(self.multi_product.variants.exists())
+
+	def test_supervisor_cannot_edit_product_in_unassigned_warehouse(self):
+		unassigned_product = Product.objects.create(
+			name='Unassigned Product Supervisor Edit',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.unassigned_warehouse,
+		)
+
+		response = self.client.post(
+			self._product_edit_url(unassigned_product),
+			{
+				'name': 'Should Not Update',
+				'description': 'Denied',
+				'category': '',
+				'unit': 'PIECES',
+			},
+		)
+
+		self.assertEqual(response.status_code, 404)
 

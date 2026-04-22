@@ -24,93 +24,81 @@
   </div>
 </section>
 
-<section id="summary" class="mt-4">
-  <div class="row g-3">
-    {% for card in summary_cards %}
-      <div class="col-6 col-lg-4 col-xxl-3">
-        <div class="card h-100 border-0">
-          <div class="card-body d-flex justify-content-between align-items-center">
-            <div>
-              <p class="text-muted small mb-1">{{ card.label }}</p>
-              <h4 class="fw-semibold mb-0">{{ card.value }}</h4>
-            </div>
-            <span class="material-symbols-outlined fs-2 text-{{ card.variant }}">{{ card.icon }}</span>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-</section>
-
 <section id="inventory-tabs" class="mt-4">
-  <ul class="nav nav-tabs" id="inventoryTabsNav" role="tablist">
-    <li class="nav-item" role="presentation">
-      <a class="nav-link" href="{% url 'inventory:central_admin:inventory_dashboard' %}">Warehouse</a>
-    </li>
-    <li class="nav-item" role="presentation">
-      <a class="nav-link active" href="{% url 'inventory:central_admin:category_list' %}">Categories</a>
-    </li>
-    <li class="nav-item" role="presentation">
-      <a class="nav-link" href="{% url 'inventory:central_admin:brand_list' %}">Brands</a>
-    </li>
-    <li class="nav-item" role="presentation">
-      <a class="nav-link" href="#">Settings</a>
-    </li>
-  </ul>
+  <div class="border rounded-3 p-2 bg-body-tertiary w-100 overflow-auto">
+    <ul class="nav nav-pills gap-2 flex-nowrap flex-md-wrap pb-1 pb-md-0" id="inventoryTabsNav" role="tablist">
+      <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="{% url 'inventory:central_admin:inventory_dashboard' %}">Warehouse</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link active fw-semibold text-nowrap px-3 py-2" href="{% url 'inventory:central_admin:category_list' %}">Categories</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="{% url 'inventory:central_admin:brand_list' %}">Brands</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#">Settings</a>
+      </li>
+    </ul>
+  </div>
 
-  <div class="mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="mb-0">Categories</h3>
-      <a href="{% url 'inventory:central_admin:create_category' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
-        <span class="material-symbols-outlined fs-6">add</span>
-        Create Category
-      </a>
-    </div>
-
-    <div class="container-fluid px-0 mt-3">
-      {% if categories %}
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-3 g-3">
-          {% for category in categories %}
-            <div class="col">
-              <div class="card h-100 border rounded-3">
-                <div class="card-body p-3 p-md-4 d-flex flex-column">
-                  <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                    <div>
-                      <h5 class="card-title mb-1">{{ category.name }}</h5>
-                      <p class="small text-muted mb-0">Category</p>
-                    </div>
-                    <span class="badge rounded-pill bg-light text-dark border">Category</span>
-                  </div>
-
-                  <p class="text-muted small mb-0">{{ category.description|default:'No description provided.'|truncatewords:18 }}</p>
-
-                  <div class="mt-auto pt-3 border-top d-flex gap-2">
-                    <a href="{% url 'inventory:central_admin:edit_category' slug=category.slug %}" class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1">
-                      <span class="material-symbols-outlined fs-6">edit</span>
-                      Edit
-                    </a>
-                    <a href="#" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center" title="Delete Category" aria-label="Delete Category">
-                      <span class="material-symbols-outlined fs-6">delete</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="empty-state text-center py-5">
-          <div class="mb-4">
-            <span class="material-symbols-outlined">category</span>
-          </div>
-          <h5 class="text-muted mb-2">No Categories</h5>
-          <p class="text-muted mb-4">Start by creating a category to organize your products.</p>
-          <a href="{% url 'inventory:central_admin:create_category' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
+  <div class="tab-content" id="inventoryTabsContent">
+    <div class="tab-pane fade show active" id="categories-content" role="tabpanel" aria-labelledby="categories-tab">
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="mb-0">Categories</h3>
+          <a href="{% url 'inventory:central_admin:create_category' %}" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3">
             <span class="material-symbols-outlined fs-6">add</span>
             Create Category
           </a>
         </div>
-      {% endif %}
+
+        <div class="container-fluid px-0 mt-3">
+          {% if categories %}
+            <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
+              {% for category in categories %}
+                <div class="col">
+                  <div class="card h-100 border rounded-3">
+                    <div class="card-body p-3 p-md-4 d-flex flex-column">
+                      <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                          <h5 class="card-title mb-1">{{ category.name }}</h5>
+                          <p class="small text-muted mb-0">Category</p>
+                        </div>
+                        <span class="badge rounded-pill bg-light text-dark border">Category</span>
+                      </div>
+
+                      <p class="text-muted small mb-0">{{ category.description|default:'No description provided.'|truncatewords:18 }}</p>
+
+                      <div class="mt-auto pt-3 border-top d-flex gap-2">
+                        <a href="{% url 'inventory:central_admin:edit_category' slug=category.slug %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1">
+                          <span class="material-symbols-outlined fs-6">edit</span>
+                          Edit
+                        </a>
+                        <a href="#" class="btn btn-outline-danger d-inline-flex align-items-center justify-content-center" title="Delete Category" aria-label="Delete Category">
+                          <span class="material-symbols-outlined fs-6">delete</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state text-center py-5">
+              <div class="mb-4">
+                <span class="material-symbols-outlined">category</span>
+              </div>
+              <h5 class="text-muted mb-2">No Categories</h5>
+              <p class="text-muted mb-4">Start by creating a category to organize your products.</p>
+              <a href="{% url 'inventory:central_admin:create_category' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
+                <span class="material-symbols-outlined fs-6">add</span>
+                Create Category
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </section>

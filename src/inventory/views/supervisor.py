@@ -1,11 +1,17 @@
-from django.views.generic import ListView, DetailView, FormView, View
+from django.views.generic import ListView, DetailView, FormView, View, CreateView, UpdateView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q, Prefetch
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from datetime import timedelta
 
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
-from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine
+from inventory.models import Warehouse, Room, Product, Brand, Category, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest
 from inventory.forms import (
 	RoomForm,
 	BucketForm,
@@ -17,9 +23,23 @@ from inventory.forms import (
 	ProductAssignBucketForm,
 	ProductAssignCategoryForm,
 	ProductAssignBrandForm,
+	ProductEditForm,
+	ProductTypeConversionForm,
+	ProductImageUploadForm,
+	CategoryForm,
+	BrandForm,
 	StockMovementRecordForm,
+	StockMovementCorrectionForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities, apply_stock_movement_line
+from inventory.views.common import (
+	ProductCreateWizardSessionMixin,
+	apply_product_type_conversion,
+	apply_stock_movement_line,
+	apply_stock_movement_correction,
+	create_product_images,
+	create_variant_images,
+	recompute_product_quantities,
+)
 
 
 def _get_supervisor_warehouse_queryset(user):
@@ -40,6 +60,129 @@ class SupervisorWarehouseScopedMixin(SupervisorOnlyAccessMixin):
 
 	def get_user_org(self):
 		return getattr(self.request.user, 'organization', None)
+
+
+class SupervisorOrgScopedMixin(SupervisorOnlyAccessMixin):
+	def get_org_filter(self):
+		org = getattr(self.request.user, 'organization', None)
+
+		if org:
+			return {'org': org}
+
+		return {'pk__in': []}
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+
+class SupervisorCategoryListView(SupervisorOrgScopedMixin, ListView):
+	model = Category
+	template_name = 'supervisor/inventory/category_list.html'
+	context_object_name = 'categories'
+	paginate_by = 20
+
+	def get_queryset(self):
+		return Category.objects.filter(**self.get_org_filter()).order_by('name')
+
+
+class SupervisorBrandListView(SupervisorOrgScopedMixin, ListView):
+	model = Brand
+	template_name = 'supervisor/inventory/brand_list.html'
+	context_object_name = 'brands'
+	paginate_by = 20
+
+	def get_queryset(self):
+		return Brand.objects.filter(**self.get_org_filter()).order_by('name')
+
+
+class SupervisorCreateCategoryView(SupervisorOrgScopedMixin, CreateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'supervisor/inventory/create_category.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:category_list')
+
+	def form_valid(self, form):
+		category = form.save(commit=False)
+		org = self.get_user_org()
+
+		if org:
+			category.org = org
+
+		category.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorCreateBrandView(SupervisorOrgScopedMixin, CreateView):
+	model = Brand
+	form_class = BrandForm
+	template_name = 'supervisor/inventory/create_brand.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:brand_list')
+
+	def form_valid(self, form):
+		brand = form.save(commit=False)
+		org = self.get_user_org()
+
+		if org:
+			brand.org = org
+
+		brand.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorEditCategoryView(SupervisorOrgScopedMixin, UpdateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'supervisor/inventory/edit_category.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:category_list')
+
+	def get_queryset(self):
+		return Category.objects.filter(**self.get_org_filter())
+
+	def form_valid(self, form):
+		form.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorEditBrandView(SupervisorOrgScopedMixin, UpdateView):
+	model = Brand
+	form_class = BrandForm
+	template_name = 'supervisor/inventory/edit_brand.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:brand_list')
+
+	def get_queryset(self):
+		return Brand.objects.filter(**self.get_org_filter())
+
+	def form_valid(self, form):
+		form.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorDeleteCategoryView(SupervisorOrgScopedMixin, View):
+	def post(self, request, *args, **kwargs):
+		category = get_object_or_404(Category.objects.filter(**self.get_org_filter()), slug=self.kwargs['slug'])
+		category.delete()
+		messages.success(request, 'Category deleted successfully.')
+		return redirect('inventory:supervisor:category_list')
+
+
+class SupervisorDeleteBrandView(SupervisorOrgScopedMixin, View):
+	def post(self, request, *args, **kwargs):
+		brand = get_object_or_404(Brand.objects.filter(**self.get_org_filter()), slug=self.kwargs['slug'])
+		brand.delete()
+		messages.success(request, 'Brand deleted successfully.')
+		return redirect('inventory:supervisor:brand_list')
 
 
 class SupervisorProductCreateStepOneView(SupervisorWarehouseScopedMixin, ProductCreateWizardSessionMixin, FormView):
@@ -185,8 +328,12 @@ class SupervisorProductCreateSingleVariantStepView(SupervisorWarehouseScopedMixi
 		self.set_wizard_step_data('step3', step_data)
 
 		created_product = self.create_single_variant_product()
+		created_images = create_product_images(created_product, form.cleaned_data.get('image_files'))
 		self.clear_wizard_data()
-		messages.success(self.request, f'Product "{created_product.name}" created successfully.')
+		if created_images:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully.')
 		return redirect('inventory:supervisor:warehouse_products', slug=self.kwargs['slug'])
 
 	@transaction.atomic
@@ -255,7 +402,7 @@ class InventoryWarehouseDetailView(SupervisorOnlyAccessMixin, DetailView):
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
-		products = self.object.products.select_related('category', 'brand', 'room').order_by('-updated_at')
+		products = self.object.products.filter(is_deleted=False).select_related('category', 'brand', 'room').order_by('-updated_at')
 
 		summary_cards = [
 			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
@@ -303,22 +450,48 @@ class InventoryWarehouseProductListView(SupervisorOnlyAccessMixin, ListView):
 	context_object_name = 'products'
 	paginate_by = 20
 
+	def get_search_query(self):
+		return self.request.GET.get('q', '').strip()
+
 	def get_warehouse(self):
 		return get_object_or_404(_get_supervisor_warehouse_queryset(self.request.user), slug=self.kwargs['slug'])
 
 	def get_queryset(self):
 		warehouse = self.get_warehouse()
-		return warehouse.products.select_related('category', 'brand', 'room').prefetch_related('variants__brand').order_by('-updated_at')
+		queryset = warehouse.products.filter(is_deleted=False).select_related('category', 'brand', 'room').prefetch_related('variants__brand')
+		queryset = queryset.prefetch_related('images', 'variants__images')
+		search_query = self.get_search_query()
+
+		if search_query:
+			queryset = queryset.filter(
+				Q(name__icontains=search_query)
+				| Q(product_code__icontains=search_query)
+				| Q(description__icontains=search_query)
+				| Q(category__name__icontains=search_query)
+				| Q(brand__name__icontains=search_query)
+				| Q(room__name__icontains=search_query)
+				| Q(variants__name__icontains=search_query)
+				| Q(variants__brand__name__icontains=search_query)
+			).distinct()
+
+		return queryset.order_by('-updated_at')
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		warehouse = self.get_warehouse()
+		search_query = self.get_search_query()
 		for product in context.get('products', []):
+			product.card_images = []
 			if product.type == 'MULTI_VARIANT':
 				product.variant_brand_names = sorted({variant.brand.name for variant in product.variants.all() if variant.brand})
+				for variant in product.variants.all():
+					product.card_images.extend(list(variant.images.all()))
 			else:
 				product.variant_brand_names = []
+				product.card_images = list(product.images.all())
+			product.card_images = product.card_images[:8]
 		context['warehouse'] = warehouse
+		context['search_query'] = search_query
 		return context
 
 
@@ -331,15 +504,17 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 
 	def get_queryset(self):
 		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(self.request.user), slug=self.kwargs['slug'])
-		return warehouse.products.select_related(
+		return warehouse.products.filter(is_deleted=False).select_related(
 			'category',
 			'brand',
 			'warehouse',
 			'room',
 			'bucket',
 		).prefetch_related(
+			'images',
 			'variants__brand',
 			'variants__size',
+			'variants__images',
 			'sizes',
 		)
 
@@ -347,7 +522,15 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(_get_supervisor_warehouse_queryset(self.request.user), slug=self.kwargs['slug'])
 		context['warehouse'] = warehouse
-		context['variants'] = self.object.variants.select_related('brand', 'size').all()
+		variants = list(self.object.variants.select_related('brand', 'size').prefetch_related('images').all())
+		context['variants'] = variants
+		context['product_images'] = self.object.images.all()
+		selected_variant_slug = self.request.GET.get('variant', '').strip()
+		selected_variant = None
+		if self.object.type == 'MULTI_VARIANT' and variants:
+			selected_variant = next((variant for variant in variants if variant.slug == selected_variant_slug), variants[0])
+		context['selected_variant'] = selected_variant
+		context['selected_variant_images'] = selected_variant.images.all() if selected_variant else []
 		context['brands'] = Brand.objects.filter(org=self.object.org).order_by('name')
 		context['unit_choices'] = Product._meta.get_field('unit').choices
 		context['room_assign_form'] = ProductAssignRoomForm(warehouse=warehouse, initial={'room': self.object.room})
@@ -364,15 +547,39 @@ class SupervisorProductDetailView(SupervisorOnlyAccessMixin, DetailView):
 			org=self.object.org,
 			initial={'brand': self.object.brand},
 		)
+		context['product_edit_form'] = ProductEditForm(
+			org=self.object.org,
+			initial={
+				'name': self.object.name,
+				'description': self.object.description,
+				'category': self.object.category,
+				'unit': self.object.unit,
+			},
+		)
+		context['product_conversion_form'] = ProductTypeConversionForm(product=self.object)
 
 		if self.object.type == 'MULTI_VARIANT':
 			org = getattr(self.request.user, 'organization', None)
 			context['variant_form'] = ProductVariantForm(org=org)
 
-		context['recent_stock_movements'] = StockMovementLine.objects.filter(
+		stock_movements = StockMovementLine.objects.filter(
 			org=self.object.org,
 			product=self.object,
-		).select_related('batch', 'recorded_by', 'variant').order_by('-created_at')[:8]
+			correction_type='ORIGINAL',
+		).select_related('batch', 'recorded_by', 'variant').prefetch_related(
+			Prefetch(
+				'corrections',
+				queryset=StockMovementLine.objects.select_related('batch', 'recorded_by').order_by('-created_at'),
+			),
+		).order_by('-created_at')
+		paginator = Paginator(stock_movements, 20)
+		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
+		context['supervisor_correction_cutoff'] = timezone.now() - timedelta(hours=48)
+		context['has_stock_movement_history'] = StockMovementLine.objects.filter(product=self.object).exists()
+		context['pending_deletion_request'] = ProductDeletionRequest.objects.filter(
+			product=self.object,
+			status='pending',
+		).select_related('requested_by').first()
 
 		return context
 
@@ -389,7 +596,7 @@ class SupervisorStockMovementCreateView(SupervisorWarehouseScopedMixin, FormView
 
 	def get_product(self):
 		warehouse = self.get_warehouse()
-		return get_object_or_404(warehouse.products.all(), slug=self.kwargs['product_slug'])
+		return get_object_or_404(warehouse.products.filter(is_deleted=False), slug=self.kwargs['product_slug'])
 
 	def get_form_kwargs(self):
 		kwargs = super().get_form_kwargs()
@@ -443,6 +650,80 @@ class SupervisorStockMovementCreateView(SupervisorWarehouseScopedMixin, FormView
 		)
 
 
+class SupervisorStockMovementCorrectView(SupervisorWarehouseScopedMixin, FormView):
+	form_class = StockMovementCorrectionForm
+	template_name = 'supervisor/inventory/stock_movement_correct.html'
+
+	def get_next_url(self):
+		next_url = self.request.POST.get('next') or self.request.GET.get('next')
+		if next_url and url_has_allowed_host_and_scheme(
+			next_url,
+			allowed_hosts={self.request.get_host()},
+			require_https=self.request.is_secure(),
+		):
+			return next_url
+		return ''
+
+	def get_success_redirect(self):
+		next_url = self.get_next_url()
+		if next_url:
+			return redirect(next_url)
+		return redirect('inventory:supervisor:stock_movement_history', slug=self.kwargs['slug'])
+
+	def get_stock_movement(self):
+		warehouse = self.get_warehouse()
+		return get_object_or_404(
+			StockMovementLine.objects.select_related('product', 'variant', 'batch', 'recorded_by'),
+			id=self.kwargs['movement_id'],
+			org=warehouse.org,
+			warehouse=warehouse,
+		)
+
+	def dispatch(self, request, *args, **kwargs):
+		movement = self.get_stock_movement()
+		if not movement.can_supervisor_correct():
+			messages.error(request, 'Supervisor can only correct original entries within 48 hours.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['movement'] = self.get_stock_movement()
+		return kwargs
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		movement = self.get_stock_movement()
+		context['warehouse'] = self.get_warehouse()
+		context['movement'] = movement
+		context['correction_deadline'] = movement.created_at + timedelta(hours=48)
+		context['next_url'] = self.get_next_url()
+		return context
+
+	@transaction.atomic
+	def form_valid(self, form):
+		movement = self.get_stock_movement()
+
+		if not movement.can_supervisor_correct():
+			form.add_error(None, 'Supervisor can only correct original entries within 48 hours.')
+			return self.render_to_response(self.get_context_data(form=form))
+
+		try:
+			apply_stock_movement_correction(
+				movement=movement,
+				corrected_quantity=form.cleaned_data['corrected_quantity'],
+				correction_reason=form.cleaned_data.get('correction_reason', ''),
+				actor=self.request.user,
+				reference_code=form.cleaned_data.get('reference_code', ''),
+			)
+		except ValidationError as exc:
+			form.add_error(None, exc.messages[0] if exc.messages else str(exc))
+			return self.render_to_response(self.get_context_data(form=form))
+
+		messages.success(self.request, 'Stock movement corrected successfully.')
+		return self.get_success_redirect()
+
+
 class SupervisorStockMovementHistoryView(SupervisorWarehouseScopedMixin, ListView):
 	model = StockMovementLine
 	template_name = 'supervisor/inventory/stock_movement_history.html'
@@ -454,7 +735,7 @@ class SupervisorStockMovementHistoryView(SupervisorWarehouseScopedMixin, ListVie
 		queryset = StockMovementLine.objects.filter(
 			org=warehouse.org,
 			warehouse=warehouse,
-		).select_related('batch', 'product', 'variant', 'recorded_by').order_by('-created_at')
+		).select_related('batch', 'product', 'variant', 'recorded_by', 'corrects_movement__batch').prefetch_related('corrections').order_by('-created_at')
 
 		product_slug = self.request.GET.get('product')
 		movement_type = self.request.GET.get('movement_type')
@@ -479,6 +760,7 @@ class SupervisorStockMovementHistoryView(SupervisorWarehouseScopedMixin, ListVie
 		context['selected_product'] = self.request.GET.get('product', '')
 		context['selected_movement_type'] = self.request.GET.get('movement_type', '')
 		context['reference_code'] = self.request.GET.get('reference_code', '')
+		context['supervisor_correction_cutoff'] = timezone.now() - timedelta(hours=48)
 		return context
 
 
@@ -489,15 +771,17 @@ class SupervisorProductVariantBaseMixin(SupervisorOnlyAccessMixin):
 	def get_product(self):
 		warehouse = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
 		return get_object_or_404(
-			warehouse.products.select_related(
+			warehouse.products.filter(is_deleted=False).select_related(
 				'category',
 				'brand',
 				'warehouse',
 				'room',
 				'bucket',
 			).prefetch_related(
+				'images',
 				'variants__brand',
 				'variants__size',
+				'variants__images',
 				'sizes',
 			),
 			slug=self.kwargs['product_slug'],
@@ -629,6 +913,135 @@ class SupervisorProductAssignBrandView(SupervisorProductVariantBaseMixin, FormVi
 		return self.get_success_redirect()
 
 
+class SupervisorProductEditView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductEditForm
+	template_name = 'supervisor/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_product().org
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		updated_unit = form.cleaned_data['unit']
+		old_unit = product.unit
+		image_files = form.cleaned_data.get('image_files') or []
+
+		product.name = form.cleaned_data['name']
+		product.description = form.cleaned_data['description']
+		product.category = form.cleaned_data.get('category')
+		product.unit = updated_unit
+		product.save(update_fields=['name', 'description', 'category', 'unit'])
+
+		if product.type == 'MULTI_VARIANT' and old_unit != updated_unit:
+			product.variants.update(unit=updated_unit)
+
+		if image_files:
+			if product.type != 'SINGLE_VARIANT':
+				messages.warning(self.request, 'Images can only be added at product level for single-variant products.')
+			else:
+				created_images = create_product_images(product, image_files)
+				if created_images:
+					messages.success(self.request, f'Added {created_images} product image(s).')
+
+		messages.success(self.request, 'Product details updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class SupervisorProductTypeConvertView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductTypeConversionForm
+	template_name = 'supervisor/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['product'] = self.get_product()
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		target_type = form.cleaned_data['target_type']
+		source_variant = form.cleaned_data.get('source_variant')
+
+		try:
+			apply_product_type_conversion(product, target_type, source_variant=source_variant)
+		except ValidationError as exc:
+			messages.error(self.request, exc.messages[0] if exc.messages else str(exc))
+			return self.get_success_redirect()
+
+		messages.success(self.request, 'Product type converted successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		for error in form.non_field_errors():
+			messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class SupervisorProductDeleteView(SupervisorProductVariantBaseMixin, View):
+	def get_success_redirect(self):
+		return redirect('inventory:supervisor:warehouse_products', slug=self.kwargs['slug'])
+
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+
+		has_stock_movement_history = StockMovementLine.objects.filter(product=product).exists()
+		if has_stock_movement_history:
+			reason = request.POST.get('deletion_reason', '').strip()
+			if not reason:
+				messages.error(request, 'Please provide a reason for the deletion request.')
+				return redirect(
+					'inventory:supervisor:product_detail',
+					slug=self.kwargs['slug'],
+					product_slug=self.kwargs['product_slug'],
+				)
+
+			existing_request = ProductDeletionRequest.objects.filter(
+				product=product,
+				status='pending',
+			).first()
+			if existing_request:
+				messages.warning(request, 'A deletion request for this product is already pending central admin review.')
+				return redirect(
+					'inventory:supervisor:product_detail',
+					slug=self.kwargs['slug'],
+					product_slug=self.kwargs['product_slug'],
+				)
+
+			ProductDeletionRequest.objects.create(
+				product=product,
+				product_name=product.name,
+				product_code=product.product_code,
+				org=product.org,
+				warehouse=product.warehouse,
+				requested_by=request.user,
+				request_reason=reason,
+			)
+			messages.success(request, 'Deletion request submitted for central admin approval.')
+			return redirect(
+				'inventory:supervisor:product_detail',
+				slug=self.kwargs['slug'],
+				product_slug=self.kwargs['product_slug'],
+			)
+
+		product_name = product.name
+		product.soft_delete()
+		messages.success(request, f'Product "{product_name}" deleted successfully.')
+		return self.get_success_redirect()
+
+
 class SupervisorProductVariantCreateView(SupervisorProductVariantBaseMixin, FormView):
 	form_class = ProductVariantForm
 	template_name = 'supervisor/inventory/product_detail.html'
@@ -660,7 +1073,7 @@ class SupervisorProductVariantCreateView(SupervisorProductVariantBaseMixin, Form
 				defaults={'description': '', 'variant': None},
 			)
 
-		Variant.objects.create(
+		variant = Variant.objects.create(
 			name=form.cleaned_data['name'],
 			unit=product.unit,
 			product=product,
@@ -671,8 +1084,13 @@ class SupervisorProductVariantCreateView(SupervisorProductVariantBaseMixin, Form
 			universal_available_quantity=universal_available_quantity,
 		)
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant created successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, 'Variant created successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -733,8 +1151,13 @@ class SupervisorProductVariantUpdateView(SupervisorProductVariantBaseMixin, Form
 		variant.universal_available_quantity = variant.total_incoming_quantity - variant.total_used_quantity
 		variant.save()
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant updated successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant updated successfully and {created_images} image(s) added.')
+		else:
+			messages.success(self.request, 'Variant updated successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -758,6 +1181,132 @@ class SupervisorProductVariantDeleteView(SupervisorProductVariantBaseMixin, View
 		recompute_product_quantities(product)
 		messages.success(request, 'Variant deleted successfully.')
 		return self.get_success_redirect()
+
+
+class SupervisorProductImageManagementView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'supervisor/inventory/image_management.html'
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'SINGLE_VARIANT':
+			messages.warning(request, 'Product-level image management is available only for single-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['image_items'] = product.images.all()
+		context['image_scope'] = 'product'
+		context['image_scope_title'] = 'Product Images'
+		context['back_url_name'] = 'inventory:supervisor:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:supervisor:product_images_manage',
+			kwargs={'slug': self.kwargs['slug'], 'product_slug': self.kwargs['product_slug']},
+		)
+
+	def form_valid(self, form):
+		product = self.get_product()
+		created_images = create_product_images(product, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} product image(s).')
+		return redirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return redirect(self.get_success_url())
+
+
+class SupervisorProductImageDeleteView(SupervisorProductVariantBaseMixin, View):
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+		image = get_object_or_404(product.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Product image deleted successfully.')
+		return redirect(
+			'inventory:supervisor:product_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+		)
+
+
+class SupervisorVariantImageManagementView(SupervisorProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'supervisor/inventory/image_management.html'
+
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(request, 'Variant image management is available only for multi-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		variant = self.get_variant()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['variant'] = variant
+		context['variants'] = product.variants.all()
+		context['image_items'] = variant.images.all()
+		context['image_scope'] = 'variant'
+		context['image_scope_title'] = f'Variant Images - {variant.name}'
+		context['back_url_name'] = 'inventory:supervisor:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:supervisor:variant_images_manage',
+			kwargs={
+				'slug': self.kwargs['slug'],
+				'product_slug': self.kwargs['product_slug'],
+				'variant_slug': self.kwargs['variant_slug'],
+			},
+		)
+
+	def form_valid(self, form):
+		variant = self.get_variant()
+		created_images = create_variant_images(variant, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} variant image(s).')
+		return redirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return redirect(self.get_success_url())
+
+
+class SupervisorVariantImageDeleteView(SupervisorProductVariantBaseMixin, View):
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def post(self, request, *args, **kwargs):
+		variant = self.get_variant()
+		image = get_object_or_404(variant.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Variant image deleted successfully.')
+		return redirect(
+			'inventory:supervisor:variant_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+			variant_slug=self.kwargs['variant_slug'],
+		)
 
 
 class SupervisorCreateRoomView(SupervisorOnlyAccessMixin, View):

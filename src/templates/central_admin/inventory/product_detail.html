@@ -17,72 +17,153 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2 py-md-3">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+<div class="py-4">
+  <div class="mb-4">
     <a class="btn btn-sm btn-dark d-inline-flex align-items-center" href="{% url 'inventory:central_admin:warehouse_products' slug=warehouse.slug %}">
       <span class="material-symbols-outlined me-1 fs-6">arrow_back</span>
-      Go back to {{ warehouse.name }} products
+      Go back
     </a>
-    <a href="{% url 'inventory:central_admin:stock_movement_history' slug=warehouse.slug %}?product={{ product.slug }}" class="btn btn-sm btn-outline-primary">View Change Log</a>
+
+    <a class="btn btn-sm btn-outline-dark d-inline-flex align-items-center ms-2" href="{% url 'inventory:central_admin:product_deletion_request_list' %}">
+      <span class="material-symbols-outlined me-1 fs-6">rule</span>
+      Deletion Requests
+    </a>
+
+    {% if pending_deletion_request %}
+      <a class="btn btn-sm btn-warning d-inline-flex align-items-center ms-2" href="{% url 'inventory:central_admin:product_deletion_request_detail' deletion_slug=pending_deletion_request.slug %}">
+        <span class="material-symbols-outlined me-1 fs-6">pending_actions</span>
+        Review Pending Request
+      </a>
+    {% endif %}
+
   </div>
 
+  {% if product.is_deleted %}
+    <div class="alert alert-warning d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2" role="alert">
+      <div>
+        <strong>This product is deleted.</strong>
+        {% if product.deleted_at %}
+          Deleted on {{ product.deleted_at|date:"M d, Y" }} at {{ product.deleted_at|time:"g:i A" }}.
+        {% endif %}
+      </div>
+      <form method="post" action="{% url 'inventory:central_admin:product_restore' slug=warehouse.slug product_slug=product.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-warning">Restore Product</button>
+      </form>
+    </div>
+  {% endif %}
+
   <div class="row g-3 g-lg-4 align-items-start">
-    <div class="col-12 col-lg-7 order-2 order-lg-1">
-      <div class="card border border-primary-subtle bg-primary-subtle mb-3">
-        <div class="card-body p-3 p-md-4">
-          <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
-            <div>
-              <h4 class="mb-1 text-primary-emphasis">{{ product.name }}</h4>
-              <p class="small mb-0 text-primary-emphasis opacity-75">Code: {{ product.product_code }}</p>
-              <div class="d-flex flex-wrap gap-2 mt-2">
-                <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.room %}btn-primary fw-semibold{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignRoomModal">
-                  {% if product.room %}{{ product.room.name }}{% else %}Room Unassigned{% endif %}
-                </button>
-                <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.bucket %}btn-warning text-dark{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignBucketModal">
-                  Bucket: {{ product.bucket.name|default:'Unassigned' }}
-                </button>
+    <div class="col-12">
+      <button type="button" class="btn btn-link p-0 text-start w-100 text-decoration-none mb-3" data-bs-toggle="modal" data-bs-target="#productDetailsModal">
+        <div class="card border border-primary-subtle bg-primary-subtle">
+          <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+              <div>
+                <h4 class="mb-1 text-primary-emphasis">{{ product.name }}</h4>
+                <p class="small mb-0 text-primary-emphasis opacity-75">Code: {{ product.product_code }}</p>
+              </div>
+              <div class="text-md-end">
+                <span class="badge bg-primary text-white border border-primary mb-1">{{ product.get_type_display }}</span>
+                <div>
+                  <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                    Available: {{ product.universal_available_quantity }}
+                  </span>
+                </div>
               </div>
             </div>
-            <div class="text-md-end">
-              <span class="badge bg-primary text-white border border-primary mb-1">{{ product.get_type_display }}</span>
-              <div>
-                <span class="badge {% if product.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                  Available: {{ product.universal_available_quantity }}
-                </span>
+            <small class="text-primary-emphasis opacity-75 d-block mt-2">Click to view product details</small>
+          </div>
+        </div>
+      </button>
+
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button type="button" class="btn btn-sm rounded-pill py-1 px-2 {% if product.room %}btn-primary fw-semibold{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignRoomModal">
+          {% if product.room %}{{ product.room.name }}{% else %}Room Unassigned{% endif %}
+        </button>
+        <button type="button" class="btn btn-sm rounded-pill py-1 px-2 {% if product.bucket %}btn-warning text-dark{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignBucketModal">
+          Bucket: {{ product.bucket.name|default:'Unassigned' }}
+        </button>
+      </div>
+
+      <div class="row g-3 g-lg-4 mb-3">
+        <div class="col-12 col-lg-5">
+          <div class="card border-0 mb-0">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+                <h5 class="mb-0">Image Gallery</h5>
+                {% if product.type == 'SINGLE_VARIANT' %}
+                  <a href="{% url 'inventory:central_admin:product_images_manage' slug=warehouse.slug product_slug=product.slug %}" class="btn btn-sm btn-outline-primary">Manage Images</a>
+                {% elif selected_variant %}
+                  <a href="{% url 'inventory:central_admin:variant_images_manage' slug=warehouse.slug product_slug=product.slug variant_slug=selected_variant.slug %}" class="btn btn-sm btn-outline-primary">Manage {{ selected_variant.name }} Images</a>
+                {% endif %}
               </div>
+
+              {% if product.type == 'MULTI_VARIANT' %}
+                <form method="get" class="mb-3">
+                  <label for="variant-select" class="form-label small text-muted">Selected Variant</label>
+                  <select id="variant-select" name="variant" class="form-select" onchange="this.form.submit()">
+                    {% for variant in variants %}
+                      <option value="{{ variant.slug }}" {% if selected_variant and selected_variant.slug == variant.slug %}selected{% endif %}>{{ variant.name }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              {% endif %}
+
+              {% if product.type == 'SINGLE_VARIANT' %}
+                {% with gallery_images=product_images %}
+                  {% include 'common/inventory/image_gallery_slider.html' %}
+                {% endwith %}
+              {% else %}
+                {% with gallery_images=selected_variant_images %}
+                  {% include 'common/inventory/image_gallery_slider.html' %}
+                {% endwith %}
+              {% endif %}
             </div>
           </div>
         </div>
-      </div>
 
+        <div class="col-12 col-lg-7">
       {% if product.type == 'MULTI_VARIANT' %}
-        <div class="my-4 my-md-5">
-          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
-            <div>
-              <h5 class="mb-0">Variants</h5>
-              <small class="text-muted">Stock for this product is tracked per variant.</small>
+        <div class="my-0 my-lg-0">
+          <div class="card border border-primary-subtle bg-body-tertiary mb-3">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <h5 class="mb-0">Variants</h5>
+                    <span class="badge text-bg-light border">{{ variants|length }}</span>
+                  </div>
+                  <small class="text-muted d-block">Stock for this product is tracked per variant. Tap a card to view details.</small>
+                </div>
+                <button type="button" class="btn btn-primary px-3" data-bs-toggle="modal" data-bs-target="#createVariantModal">Add Variant</button>
+              </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createVariantModal">Add Variant</button>
           </div>
 
             {% if variants %}
               <div>
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
                   {% for variant in variants %}
                     <div class="col">
-                      <button type="button" class="btn p-0 border-0 text-start w-100" data-bs-toggle="modal" data-bs-target="#variantDetailModal-{{ variant.id }}">
-                        <div class="card h-100 border">
-                          <div class="card-body p-2 p-md-3">
-                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                              <h6 class="mb-0 small text-truncate">{{ variant.name }}</h6>
-                              <span class="badge {% if variant.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                      <button type="button" class="btn p-0 border-0 text-start w-100 h-100" data-bs-toggle="modal" data-bs-target="#variantDetailModal-{{ variant.id }}">
+                        <div class="card h-100 border border-secondary-subtle rounded-4">
+                          <div class="card-body p-3 p-md-4">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                              <div>
+                                <h6 class="mb-2 text-truncate">{{ variant.name }}</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                  <span class="badge rounded-pill text-bg-light border">{{ variant.brand.name|default:'No Brand' }}</span>
+                                  <span class="badge rounded-pill text-bg-light border">{{ variant.size.name|default:'No Size' }}</span>
+                                </div>
+                              </div>
+                              <span class="badge rounded-pill {% if variant.universal_available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
                                 {{ variant.universal_available_quantity }}
                               </span>
                             </div>
-                            <p class="small text-muted mb-1">{{ variant.brand.name|default:'-' }} • {{ variant.size.name|default:'-' }}</p>
-                            <div class="d-flex justify-content-between small">
-                              <span class="text-muted">In: {{ variant.total_incoming_quantity }}</span>
-                              <span class="text-muted">Used: {{ variant.total_used_quantity }}</span>
+                            <div class="d-flex justify-content-between gap-3 small border-top pt-3">
+                              <span class="text-muted">Incoming: <span class="text-body">{{ variant.total_incoming_quantity }}</span></span>
+                              <span class="text-muted">Used: <span class="text-body">{{ variant.total_used_quantity }}</span></span>
                             </div>
                           </div>
                         </div>
@@ -147,7 +228,7 @@
                           <h5 class="modal-title" id="variantEditModalLabel-{{ variant.id }}">Edit {{ variant.name }}</h5>
                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="post" action="{% url 'inventory:central_admin:product_variant_update' slug=warehouse.slug product_slug=product.slug variant_slug=variant.slug %}">
+                        <form method="post" action="{% url 'inventory:central_admin:product_variant_update' slug=warehouse.slug product_slug=product.slug variant_slug=variant.slug %}" enctype="multipart/form-data">
                           <div class="modal-body">
                             {% csrf_token %}
                             <div class="row g-2">
@@ -180,6 +261,10 @@
                                 <label class="form-label small mb-1">Used</label>
                                 <input type="number" name="total_used_quantity" value="{{ variant.total_used_quantity }}" min="0" class="form-control form-control-sm" required>
                               </div>
+                              <div class="col-12">
+                                <label class="form-label small mb-1">Add Variant Images</label>
+                                <input type="file" name="image_files" class="form-control form-control-sm" accept="image/*" multiple>
+                              </div>
                             </div>
                           </div>
                           <div class="modal-footer">
@@ -193,8 +278,10 @@
                 {% endfor %}
               </div>
             {% else %}
-              <div class="py-2">
-                <p class="text-muted mb-0">No variants yet. Use the Add Variant button to create one.</p>
+              <div class="card border border-secondary-subtle bg-body-tertiary">
+                <div class="card-body p-4 text-center">
+                  <p class="text-muted mb-0">No variants yet. Use the Add Variant button to create one.</p>
+                </div>
               </div>
             {% endif %}
         </div>
@@ -207,62 +294,200 @@
         </div>
       {% endif %}
 
-      <div class="card border-0">
-        <div class="card-header bg-white">
-          <h6 class="mb-0">Product Description</h6>
         </div>
-        <div class="card-body p-3 p-md-4">
-          <p class="text-muted mb-0">{{ product.description|default:"-" }}</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4 align-items-stretch">
+    <div class="col-12 col-lg-6">
+      <div class="card border border-success-subtle bg-success-subtle h-100">
+        <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between gap-3">
+          <div>
+            <h6 class="mb-2 text-success-emphasis">Record Movements</h6>
+            <p class="small mb-0 text-success-emphasis opacity-75">Review incoming and outgoing stock changes for this warehouse.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'inventory:central_admin:stock_movement_history' slug=warehouse.slug %}" class="btn btn-success d-inline-flex align-items-center">
+              <span class="material-symbols-outlined me-1" style="font-size: 18px;">history</span>Movement History
+            </a>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-lg-5 order-1 order-lg-2">
-      <div class="card border-0">
-        <div class="card-header bg-white">
-          <h6 class="mb-0">Product Details</h6>
-        </div>
-        <div class="card-body p-3 p-md-4">
-          <ul class="list-group list-group-flush small">
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Type</span>
-              <span>{{ product.get_type_display }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Category</span>
-              <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.category %}btn-primary{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignCategoryModal">
-                {{ product.category.name|default:'Category Unassigned' }}
+    <div class="col-12 col-lg-6">
+      <div class="card border border-info-subtle bg-info-subtle h-100">
+        <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between gap-3">
+          <div>
+            <h6 class="mb-1 text-info-emphasis">Product Actions</h6>
+            <p class="small mb-0 text-info-emphasis opacity-75">Edit details, convert product type, delete, or restore this product</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            {% if not product.is_deleted %}
+              <button type="button" class="btn btn-dark d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#editProductModal">
+                <span class="material-symbols-outlined me-1" style="font-size: 18px;">edit</span>Edit
               </button>
-            </li>
-            {% if product.type == 'SINGLE_VARIANT' %}
-              <li class="list-group-item d-flex justify-content-between px-0">
-                <span class="text-muted">Brand</span>
-                <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.brand %}btn-primary{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignBrandModal">
-                  {{ product.brand.name|default:'Brand Unassigned' }}
+              <button type="button" class="btn btn-info d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#convertProductTypeModal">
+                <span class="material-symbols-outlined me-1" style="font-size: 18px;">transform</span>Convert Type
+              </button>
+              <button type="button" class="btn btn-danger d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#deleteProductModal">
+                <span class="material-symbols-outlined me-1" style="font-size: 18px;">delete</span>Delete
+              </button>
+            {% else %}
+              <form method="post" action="{% url 'inventory:central_admin:product_restore' slug=warehouse.slug product_slug=product.slug %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning d-flex align-items-center">
+                  <span class="material-symbols-outlined me-1" style="font-size: 18px;">settings_backup_restore</span>Restore
                 </button>
-              </li>
+              </form>
             {% endif %}
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Unit</span>
-              <span>{{ product.unit }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Incoming Qty</span>
-              <span>{{ product.total_incoming_quantity }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Used Qty</span>
-              <span>{{ product.total_used_quantity }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between px-0">
-              <span class="text-muted">Available Qty</span>
-              <span class="fw-semibold">{{ product.universal_available_quantity }}</span>
-            </li>
-          </ul>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <section class="mt-3">
+    <h6 class="mb-3">All Change Logs</h6>
+    {% if stock_movement_logs %}
+      {% for movement in stock_movement_logs %}
+        {% with latest_correction=movement.corrections.all.0 %}
+          <div
+            class="alert {% if movement.movement_type == 'INCOMING' %}alert-success{% else %}alert-warning{% endif %} mb-2 {% if movement.corrections.all %}cursor-pointer{% endif %}"
+            role="alert"
+            {% if movement.corrections.all %}
+              data-bs-toggle="collapse"
+              data-bs-target="#movement-{{ movement.id }}"
+              aria-expanded="false"
+              aria-controls="movement-{{ movement.id }}"
+            {% endif %}
+          >
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+              <div>
+                {% if latest_correction %}
+                  <span class="fw-semibold">{{ latest_correction.get_movement_type_display }}</span>
+                  <span class="ms-1">{{ latest_correction.quantity }} units</span>
+                  <span class="badge bg-info text-dark ms-1">Correction</span>
+                  {% if movement.variant %}
+                    <div class="small">Variant: {{ movement.variant.name }}</div>
+                  {% endif %}
+                  {% if latest_correction.batch.reference_code %}
+                    <div class="small">Ref: {{ latest_correction.batch.reference_code }}</div>
+                  {% endif %}
+                  {% if latest_correction.correction_reason %}
+                    <div class="small">Reason: {{ latest_correction.correction_reason }}</div>
+                  {% endif %}
+                {% else %}
+                  <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
+                  <span class="ms-1">{{ movement.quantity }} units</span>
+                  <span class="badge bg-secondary ms-1">Original</span>
+                  {% if movement.variant %}
+                    <div class="small">Variant: {{ movement.variant.name }}</div>
+                  {% endif %}
+                  {% if movement.batch.reference_code %}
+                    <div class="small">Ref: {{ movement.batch.reference_code }}</div>
+                  {% endif %}
+                {% endif %}
+
+                <div class="mt-2">
+                  {% if not movement.corrections.all %}
+                    <a href="{% url 'inventory:central_admin:stock_movement_correct' slug=warehouse.slug movement_id=movement.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">Correct</a>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="text-md-end small text-break">
+                {% if latest_correction %}
+                  <div>{{ latest_correction.created_at|date:'Y-m-d H:i' }}</div>
+                  <div>By: {{ latest_correction.recorded_by.get_full_name|default:latest_correction.recorded_by.email }}</div>
+                  <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ latest_correction.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ latest_correction.new_available_quantity }}</span></div>
+                {% else %}
+                  <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
+                  <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
+                  <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if movement.corrections.all %}
+              <div class="collapse mt-2" id="movement-{{ movement.id }}">
+                <div class="ms-md-3 p-2 border rounded bg-light mb-2">
+                  <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+                    <div>
+                      <span class="fw-semibold">{{ movement.get_movement_type_display }}</span>
+                      <span class="ms-1">{{ movement.quantity }} units</span>
+                      <span class="badge bg-secondary ms-1">Original</span>
+                      {% if movement.batch.reference_code %}
+                        <div class="small">Ref: {{ movement.batch.reference_code }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="text-md-end small text-break">
+                      <div>{{ movement.created_at|date:'Y-m-d H:i' }}</div>
+                      <div>By: {{ movement.recorded_by.get_full_name|default:movement.recorded_by.email }}</div>
+                      <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ movement.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ movement.new_available_quantity }}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {% for correction in movement.corrections.all %}
+                  {% if latest_correction and correction.id != latest_correction.id %}
+                    <div class="ms-md-3 p-2 border rounded bg-light mb-2">
+                      <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+                        <div>
+                          <span class="fw-semibold">{{ correction.get_movement_type_display }}</span>
+                          <span class="ms-1">{{ correction.quantity }} units</span>
+                          <span class="badge bg-info text-dark ms-1">Correction</span>
+                          {% if correction.batch.reference_code %}
+                            <div class="small">Ref: {{ correction.batch.reference_code }}</div>
+                          {% endif %}
+                          {% if correction.correction_reason %}
+                            <div class="small">Reason: {{ correction.correction_reason }}</div>
+                          {% endif %}
+                        </div>
+                        <div class="text-md-end small text-break">
+                          <div>{{ correction.created_at|date:'Y-m-d H:i' }}</div>
+                          <div>By: {{ correction.recorded_by.get_full_name|default:correction.recorded_by.email }}</div>
+                          <div class="d-inline-flex align-items-center gap-1">Avail: <span>{{ correction.old_available_quantity }}</span><span class="material-symbols-outlined fs-6" aria-hidden="true">arrow_right_alt</span><span>{{ correction.new_available_quantity }}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endwith %}
+      {% endfor %}
+
+      {% if stock_movement_logs.has_other_pages %}
+        <nav aria-label="Product change logs pagination" class="mt-3 overflow-auto">
+          <ul class="pagination pagination-sm mb-0 flex-wrap">
+            <li class="page-item {% if not stock_movement_logs.has_previous %}disabled{% endif %}">
+              {% if stock_movement_logs.has_previous %}
+                <a class="page-link" href="?log_page={{ stock_movement_logs.previous_page_number }}">Previous</a>
+              {% else %}
+                <span class="page-link">Previous</span>
+              {% endif %}
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">Page {{ stock_movement_logs.number }} of {{ stock_movement_logs.paginator.num_pages }}</span>
+            </li>
+            <li class="page-item {% if not stock_movement_logs.has_next %}disabled{% endif %}">
+              {% if stock_movement_logs.has_next %}
+                <a class="page-link" href="?log_page={{ stock_movement_logs.next_page_number }}">Next</a>
+              {% else %}
+                <span class="page-link">Next</span>
+              {% endif %}
+            </li>
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-muted mb-0">No movement records for this product yet.</p>
+    {% endif %}
+  </section>
 </div>
 
 {% if product.type == 'MULTI_VARIANT' %}
@@ -273,7 +498,7 @@
         <h5 class="modal-title" id="createVariantModalLabel">Create Variant</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="post" action="{% url 'inventory:central_admin:product_variant_create' slug=warehouse.slug product_slug=product.slug %}">
+      <form method="post" action="{% url 'inventory:central_admin:product_variant_create' slug=warehouse.slug product_slug=product.slug %}" enctype="multipart/form-data">
         <div class="modal-body">
           {% csrf_token %}
 
@@ -311,6 +536,13 @@
               {{ variant_form.total_used_quantity }}
             </div>
           </div>
+          <div class="mt-3">
+            <label class="form-label" for="{{ variant_form.image_files.id_for_label }}">{{ variant_form.image_files.label }}</label>
+            {{ variant_form.image_files }}
+            {% if variant_form.image_files.help_text %}
+              <small class="text-muted d-block mt-1">{{ variant_form.image_files.help_text }}</small>
+            {% endif %}
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -321,6 +553,103 @@
   </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'inventory:central_admin:product_edit' slug=warehouse.slug product_slug=product.slug %}" enctype="multipart/form-data">
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.name.id_for_label }}">{{ product_edit_form.name.label }}</label>
+            {{ product_edit_form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.description.id_for_label }}">{{ product_edit_form.description.label }}</label>
+            {{ product_edit_form.description }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_edit_form.category.id_for_label }}">{{ product_edit_form.category.label }}</label>
+            {{ product_edit_form.category }}
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="{{ product_edit_form.unit.id_for_label }}">{{ product_edit_form.unit.label }}</label>
+            {{ product_edit_form.unit }}
+          </div>
+          {% if product.type == 'SINGLE_VARIANT' %}
+            <div class="mt-3">
+              <label class="form-label" for="{{ product_edit_form.image_files.id_for_label }}">{{ product_edit_form.image_files.label }}</label>
+              {{ product_edit_form.image_files }}
+              {% if product_edit_form.image_files.help_text %}
+                <small class="text-muted d-block mt-1">{{ product_edit_form.image_files.help_text }}</small>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="convertProductTypeModal" tabindex="-1" aria-labelledby="convertProductTypeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="convertProductTypeModalLabel">Convert Product Type</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'inventory:central_admin:product_convert_type' slug=warehouse.slug product_slug=product.slug %}">
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ product_conversion_form.target_type.id_for_label }}">{{ product_conversion_form.target_type.label }}</label>
+            {{ product_conversion_form.target_type }}
+          </div>
+          {% if product.type == 'MULTI_VARIANT' %}
+            <div class="mb-0">
+              <label class="form-label" for="{{ product_conversion_form.source_variant.id_for_label }}">Source Variant</label>
+              {{ product_conversion_form.source_variant }}
+              <small class="text-muted d-block mt-1">Selected variant totals and brand become product-level values when converting to single variant.</small>
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-info text-white">Convert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">This will delete <strong>{{ product.name }}</strong>. You can restore it later.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'inventory:central_admin:product_delete' slug=warehouse.slug product_slug=product.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete Product</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="assignRoomModal" tabindex="-1" aria-labelledby="assignRoomModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
@@ -411,4 +740,61 @@
   </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="productDetailsModal" tabindex="-1" aria-labelledby="productDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="productDetailsModalLabel">Product Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item px-0 py-2">
+            <div class="text-muted small mb-2">Description</div>
+            <div class="text-break">{{ product.description|default:"-" }}</div>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Type</span>
+            <span>{{ product.get_type_display }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span class="text-muted">Category</span>
+            <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.category %}btn-primary{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignCategoryModal">
+              {{ product.category.name|default:'Unassigned' }}
+            </button>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Unit</span>
+            <span>{{ product.unit }}</span>
+          </li>
+          {% if product.type == 'SINGLE_VARIANT' %}
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span class="text-muted">Brand</span>
+            <button type="button" class="btn btn-sm rounded-pill py-0 px-2 small {% if product.brand %}btn-primary{% else %}btn-secondary{% endif %}" data-bs-toggle="modal" data-bs-target="#assignBrandModal">
+              {{ product.brand.name|default:'Unassigned' }}
+            </button>
+          </li>
+          {% endif %}
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Incoming Qty</span>
+            <span>{{ product.total_incoming_quantity }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Used Qty</span>
+            <span>{{ product.total_used_quantity }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Available Qty</span>
+            <span class="fw-semibold">{{ product.universal_available_quantity }}</span>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

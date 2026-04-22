@@ -51,31 +51,46 @@
 </section>
 
 <!-- filter fields -->
-<section id="filter-bar" class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-stretch mb-3">
+<section id="filter-bar" class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-stretch mb-3">
     <!-- search-bar -->
     <section id="search-bar" class="flex-grow-1">
-        <input type="text" placeholder="Search..." class="form-control w-100">
+        <form method="get" class="people-search-form" role="search" aria-label="People search">
+            <input
+                type="text"
+                name="q"
+                value="{{ search_query }}"
+                placeholder="Search by name, email or phone..."
+                class="form-control w-100"
+            >
+            {% if current_user_type_filter != 'all' %}
+                <input type="hidden" name="user_type" value="{{ current_user_type_filter }}">
+            {% endif %}
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
     </section>
     <!-- filters -->
     <section id="options-bar" class="w-100 w-md-auto">
-        <div class="container-nav overflow-auto">
-            <ul class="nav nav-pills flex-nowrap">
-                <li class="nav-item">
-                    <a class="nav-link nav-active" href="#">All</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-wrap-none" href="#">Central admin</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-wrap-none" href="#">Space admin</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-wrap-none" href="#">Maintainer</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-wrap-none" href="#">Reviewer</a>
-                </li>
-            </ul>
+        <div class="role-scroll-wrap">
+            <button type="button" class="role-scroll-btn role-scroll-btn-left" id="roleScrollLeft" aria-label="Scroll filters left">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <div class="container-nav overflow-auto" id="roleFilterContainer">
+                <ul class="nav nav-pills flex-nowrap role-filter-tabs">
+                    {% for role_value, role_label in user_role_filters %}
+                        <li class="nav-item">
+                            <a
+                                class="nav-link text-wrap-none {% if current_user_type_filter == role_value %}nav-active{% endif %}"
+                                href="?{% if role_value != 'all' %}user_type={{ role_value|urlencode }}{% endif %}{% if search_query %}{% if role_value != 'all' %}&{% endif %}q={{ search_query|urlencode }}{% endif %}"
+                            >
+                                {{ role_label }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <button type="button" class="role-scroll-btn role-scroll-btn-right" id="roleScrollRight" aria-label="Scroll filters right">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </button>
         </div>
     </section>
 </section>
@@ -152,12 +167,20 @@
                 <div class="text-center py-5">
                     <div class="text-muted">
                         <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
-                        <h4>No People Found</h4>
-                        <p class="mb-3">There are no users in the system yet.</p>
-                        <a href="{% url 'core:people_create' %}" class="btn btn-primary">
-                            <span class="material-symbols-outlined me-2">add</span>
-                            Add First Person
-                        </a>
+                        {% if search_query or current_user_type_filter != 'all' %}
+                            <h4>No Matching People Found</h4>
+                            <p class="mb-3">Try a different search term or clear your current role filter.</p>
+                            <a href="{% url 'core:people_list' %}" class="btn btn-outline-primary">
+                                Clear Filters
+                            </a>
+                        {% else %}
+                            <h4>No People Found</h4>
+                            <p class="mb-3">There are no users in the system yet.</p>
+                            <a href="{% url 'core:people_create' %}" class="btn btn-primary">
+                                <span class="material-symbols-outlined me-2">add</span>
+                                Add First Person
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -518,6 +541,37 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const roleFilterContainer = document.getElementById('roleFilterContainer');
+    const roleScrollLeft = document.getElementById('roleScrollLeft');
+    const roleScrollRight = document.getElementById('roleScrollRight');
+
+    if (roleFilterContainer && roleScrollLeft && roleScrollRight) {
+        const scrollAmount = 180;
+
+        const updateRoleScrollButtons = () => {
+            const maxScrollLeft = roleFilterContainer.scrollWidth - roleFilterContainer.clientWidth;
+            const hasOverflow = maxScrollLeft > 1;
+
+            roleScrollLeft.style.visibility = hasOverflow ? 'visible' : 'hidden';
+            roleScrollRight.style.visibility = hasOverflow ? 'visible' : 'hidden';
+
+            roleScrollLeft.disabled = !hasOverflow || roleFilterContainer.scrollLeft <= 2;
+            roleScrollRight.disabled = !hasOverflow || roleFilterContainer.scrollLeft >= maxScrollLeft - 2;
+        };
+
+        roleScrollLeft.addEventListener('click', () => {
+            roleFilterContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+
+        roleScrollRight.addEventListener('click', () => {
+            roleFilterContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+
+        roleFilterContainer.addEventListener('scroll', updateRoleScrollButtons);
+        window.addEventListener('resize', updateRoleScrollButtons);
+        updateRoleScrollButtons();
+    }
+
     // User options modal handling
     const userOptionsModal = document.getElementById('userOptionsModal');
     const deleteUserModal = document.getElementById('deleteUserModal');

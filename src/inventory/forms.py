@@ -161,10 +161,50 @@ class ProductCreateStepTwoForm(BootstrapFormMixin, forms.Form):
 	)
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+	allow_multiple_selected = True
+
+	def value_from_datadict(self, data, files, name):
+		uploads = files.getlist(name)
+		if not uploads:
+			return None
+		return uploads
+
+
+class MultipleFileField(forms.FileField):
+	widget = MultipleFileInput
+
+	def to_python(self, data):
+		if data in self.empty_values:
+			return None
+		if isinstance(data, list):
+			return [super(MultipleFileField, self).to_python(item) for item in data]
+		return super().to_python(data)
+
+	def validate(self, value):
+		if self.required and not value:
+			raise forms.ValidationError(self.error_messages['required'], code='required')
+		if isinstance(value, list):
+			for file_item in value:
+				super(MultipleFileField, self).validate(file_item)
+			return
+		super().validate(value)
+
+
 class ProductCreateSingleVariantForm(BootstrapFormMixin, forms.Form):
 	total_quantity = forms.IntegerField(min_value=0, label='Total Quantity')
 	size_name = forms.CharField(max_length=50, label='Size')
 	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=True, empty_label='Select Brand')
+	image_files = MultipleFileField(
+		required=False,
+		label='Product Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='Optional: upload multiple product images now, or add them later from Manage Images.',
+	)
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop('org', None)
@@ -182,6 +222,16 @@ class ProductVariantForm(BootstrapFormMixin, forms.Form):
 	size_name = forms.CharField(max_length=50, label='Size', required=False)
 	total_incoming_quantity = forms.IntegerField(min_value=0, label='Total Incoming Quantity', initial=0)
 	total_used_quantity = forms.IntegerField(min_value=0, label='Total Used Quantity', initial=0)
+	image_files = MultipleFileField(
+		required=False,
+		label='Variant Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='Optional: upload variant images now, or add them later from Manage Images.',
+	)
 
 	def __init__(self, *args, **kwargs):
 		org = kwargs.pop('org', None)
@@ -258,6 +308,96 @@ class ProductAssignBrandForm(BootstrapFormMixin, forms.Form):
 			self.fields['brand'].queryset = Brand.objects.none()
 
 
+class ProductEditForm(BootstrapFormMixin, forms.Form):
+	name = forms.CharField(max_length=255, label='Product Name')
+	description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Description')
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='Select Category')
+	unit = forms.ChoiceField(choices=Product._meta.get_field('unit').choices, label='Unit')
+	image_files = MultipleFileField(
+		required=False,
+		label='Add Product Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+		help_text='Single-variant products only.',
+	)
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+
+		if org:
+			self.fields['category'].queryset = Category.objects.filter(org=org).order_by('name')
+		else:
+			self.fields['category'].queryset = Category.objects.none()
+
+
+class ProductTypeConversionForm(BootstrapFormMixin, forms.Form):
+	target_type = forms.ChoiceField(choices=Product.TYPE_CHOICES, label='Convert To')
+	source_variant = forms.ModelChoiceField(
+		queryset=Variant.objects.none(),
+		required=False,
+		empty_label='Select Source Variant',
+	)
+
+	def __init__(self, *args, **kwargs):
+		self.product = kwargs.pop('product', None)
+		super().__init__(*args, **kwargs)
+
+		if self.product:
+			self.fields['source_variant'].queryset = self.product.variants.select_related('brand').order_by('name')
+			self.fields['target_type'].choices = [
+				(choice_value, choice_label)
+				for choice_value, choice_label in Product.TYPE_CHOICES
+				if choice_value != self.product.type
+			]
+		else:
+			self.fields['source_variant'].queryset = Variant.objects.none()
+
+	def clean(self):
+		cleaned_data = super().clean()
+		product = self.product
+		target_type = cleaned_data.get('target_type')
+		source_variant = cleaned_data.get('source_variant')
+
+		if not product:
+			raise forms.ValidationError('Product context is required.')
+
+		if target_type == product.type:
+			raise forms.ValidationError('Product is already in the selected type.')
+
+		if product.type == 'MULTI_VARIANT' and target_type == 'SINGLE_VARIANT':
+			if not source_variant:
+				raise forms.ValidationError('Select a source variant to convert to single variant.')
+			if source_variant.product_id != product.id:
+				raise forms.ValidationError('Selected variant does not belong to this product.')
+
+		if product.type == 'SINGLE_VARIANT' and target_type == 'MULTI_VARIANT' and source_variant:
+			raise forms.ValidationError('Source variant must be empty when converting to multi variant.')
+
+		if product.type == 'MULTI_VARIANT' and target_type == 'MULTI_VARIANT':
+			raise forms.ValidationError('Product is already multi variant.')
+
+		if product.type == 'SINGLE_VARIANT' and target_type == 'SINGLE_VARIANT':
+			raise forms.ValidationError('Product is already single variant.')
+
+		return cleaned_data
+
+
+class ProductImageUploadForm(BootstrapFormMixin, forms.Form):
+	images = MultipleFileField(
+		required=True,
+		label='Upload Images',
+		widget=MultipleFileInput(attrs={
+			'class': 'form-control',
+			'accept': 'image/*',
+			'multiple': True,
+		}),
+	)
+
+
 class StockMovementRecordForm(BootstrapFormMixin, forms.Form):
 	reference_code = forms.CharField(
 		max_length=32,
@@ -324,5 +464,44 @@ class StockMovementRecordForm(BootstrapFormMixin, forms.Form):
 
 		if self.force_movement_type and cleaned_data.get('movement_type') != self.force_movement_type:
 			cleaned_data['movement_type'] = self.force_movement_type
+
+		return cleaned_data
+
+
+class StockMovementCorrectionForm(BootstrapFormMixin, forms.Form):
+	reference_code = forms.CharField(
+		max_length=32,
+		required=False,
+		label='Reference Code (Optional)',
+		help_text='Leave blank to auto-generate a unique reference code.',
+	)
+	corrected_quantity = forms.IntegerField(min_value=1, label='Correct Quantity')
+	correction_reason = forms.CharField(
+		required=False,
+		widget=forms.Textarea(attrs={'rows': 2}),
+		label='Correction Reason',
+	)
+
+	def __init__(self, *args, **kwargs):
+		movement = kwargs.pop('movement', None)
+		super().__init__(*args, **kwargs)
+		self.movement = movement
+
+		if movement:
+			self.fields['corrected_quantity'].initial = movement.quantity
+
+	def clean(self):
+		cleaned_data = super().clean()
+		movement = self.movement
+
+		if not movement:
+			raise forms.ValidationError('Stock movement is required.')
+
+		corrected_quantity = cleaned_data.get('corrected_quantity')
+		if corrected_quantity is None:
+			return cleaned_data
+
+		if corrected_quantity == movement.quantity:
+			raise forms.ValidationError('Correct quantity must be different from the original quantity.')
 
 		return cleaned_data

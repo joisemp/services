@@ -1,0 +1,128 @@
+{% extends "sidebar_base.html" %}
+
+{% load static %}
+
+{% block title %}Product Deletion Requests{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/inventory/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+    <div>
+      <h4 class="mb-1">Product Deletion Requests</h4>
+      <p class="text-muted mb-0">Review supervisor requests for products with stock movement history.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <span class="badge text-bg-warning">Pending: {{ pending_count }}</span>
+      <span class="badge text-bg-success">Approved: {{ approved_count }}</span>
+      <span class="badge text-bg-danger">Rejected: {{ rejected_count }}</span>
+    </div>
+  </div>
+
+  <div class="card border-0 mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+          <label for="statusFilter" class="form-label small text-muted mb-1">Status</label>
+          <select id="statusFilter" name="status" class="form-select">
+            <option value="pending" {% if current_status_filter == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if current_status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if current_status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-8">
+          <button type="submit" class="btn btn-primary">Apply</button>
+          <a href="{% url 'inventory:central_admin:product_deletion_request_list' %}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0">
+    {% if deletion_requests %}
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Warehouse</th>
+              <th>Requested By</th>
+              <th>Requested At</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for request_item in deletion_requests %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ request_item.product_name }}</div>
+                  <small class="text-muted">{{ request_item.product_code|default:'-' }}</small>
+                </td>
+                <td>{{ request_item.warehouse.name }}</td>
+                <td>
+                  {{ request_item.requested_by.get_full_name|default:request_item.requested_by.email }}
+                  <div class="small text-muted">{{ request_item.requested_by.email }}</div>
+                </td>
+                <td>
+                  <div>{{ request_item.requested_at|date:"M d, Y" }}</div>
+                  <small class="text-muted">{{ request_item.requested_at|time:"g:i A" }}</small>
+                </td>
+                <td>
+                  <span class="badge rounded-pill {% if request_item.status == 'pending' %}text-bg-warning{% elif request_item.status == 'approved' %}text-bg-success{% else %}text-bg-danger{% endif %}">
+                    {{ request_item.get_status_display }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <a href="{% url 'inventory:central_admin:product_deletion_request_detail' deletion_slug=request_item.slug %}" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if is_paginated %}
+        <div class="card-footer bg-white">
+          <nav aria-label="Deletion request pagination">
+            <ul class="pagination mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?status={{ current_status_filter }}&page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+              {% endif %}
+
+              <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?status={{ current_status_filter }}&page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">Next</span></li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="card-body">
+        <p class="text-muted mb-0">No deletion requests found for this status.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

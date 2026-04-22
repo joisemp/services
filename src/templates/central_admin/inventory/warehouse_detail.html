@@ -26,27 +26,71 @@
 
   <!-- Alert and Actions -->
   <section id="alert-details" class="mb-4">
+    {% url 'inventory:central_admin:warehouse_deleted_products' slug=warehouse.slug as warehouse_deleted_products_url %}
     <div class="alert alert-notification alert-primary d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 border-0 rounded-3" role="alert">
       <div class="message flex-grow-1">
         <h3 class="mb-1">{{ warehouse.name }}</h3>
         <span class="alert-text text-body-secondary">{{ warehouse.location }}</span>
       </div>
-      <div class="d-flex flex-column flex-sm-row gap-2">
-        <a href="{% url 'inventory:central_admin:stock_movement_history' slug=warehouse.slug %}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
-          <span class="material-symbols-outlined fs-6">history</span>
-          <span>Change Log</span>
-        </a>
-        <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
-          <span class="material-symbols-outlined fs-6">edit</span>
-          <span>Edit Warehouse</span>
-        </a>
-        <a href="#" class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3">
-          <span class="material-symbols-outlined fs-6">delete</span>
-          <span>Delete Warehouse</span>
-        </a>
+      <div>
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3" data-bs-toggle="modal" data-bs-target="#warehouseSettingsModal">
+          <span class="material-symbols-outlined fs-6">settings</span>
+          <span>Settings</span>
+        </button>
       </div>
     </div>
   </section>
+
+  <div class="modal fade" id="warehouseSettingsModal" tabindex="-1" aria-labelledby="warehouseSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="warehouseSettingsModalLabel">Warehouse Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <section class="mb-3 border rounded-3 p-3 bg-light-subtle">
+            <h6 class="mb-1">Activity and Logs</h6>
+            <p class="text-muted small mb-3">Review inventory movement records and historical updates for this warehouse.</p>
+            <a href="{% url 'inventory:central_admin:stock_movement_history' slug=warehouse.slug %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+              <span class="material-symbols-outlined fs-6">history</span>
+              <span>Change Log</span>
+            </a>
+          </section>
+
+          <section class="mb-3 border rounded-3 p-3 bg-light-subtle">
+            <h6 class="mb-1">Product Deletion Management</h6>
+            <p class="text-muted small mb-3">Review deleted products and process deletion requests from supervisors.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="{% if warehouse_deleted_products_url %}{{ warehouse_deleted_products_url }}{% else %}{% url 'inventory:central_admin:warehouse_products' slug=warehouse.slug %}{% endif %}" class="btn btn-secondary btn-sm d-inline-flex align-items-center gap-1">
+                <span class="material-symbols-outlined fs-6">delete_sweep</span>
+                <span>Deleted Products</span>
+              </a>
+              <a href="{% url 'inventory:central_admin:product_deletion_request_list' %}" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1">
+                <span class="material-symbols-outlined fs-6">rule</span>
+                <span>Delete Requests</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="border rounded-3 p-3 bg-light-subtle">
+            <h6 class="mb-1">Warehouse Administration</h6>
+            <p class="text-muted small mb-3">Update warehouse information or permanently remove this warehouse from the system.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="{% url 'inventory:central_admin:edit_warehouse' slug=warehouse.slug %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                <span class="material-symbols-outlined fs-6">edit</span>
+                <span>Edit Warehouse</span>
+              </a>
+              <a href="#" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1">
+                <span class="material-symbols-outlined fs-6">delete</span>
+                <span>Delete Warehouse</span>
+              </a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Statistics Cards -->
   <div class="row row-cols-2 row-cols-md-4 g-3 stats-cards mb-4">

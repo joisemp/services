@@ -4,9 +4,14 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
+from django.db.models import Q, Prefetch
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils import timezone
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -22,8 +27,19 @@ from inventory.forms import (
 	ProductAssignBucketForm,
 	ProductAssignCategoryForm,
 	ProductAssignBrandForm,
+	ProductEditForm,
+	ProductTypeConversionForm,
+	ProductImageUploadForm,
+	StockMovementCorrectionForm,
 )
-from inventory.views.common import ProductCreateWizardSessionMixin, recompute_product_quantities
+from inventory.views.common import (
+	ProductCreateWizardSessionMixin,
+	apply_product_type_conversion,
+	apply_stock_movement_correction,
+	create_product_images,
+	create_variant_images,
+	recompute_product_quantities,
+)
 
 
 class CentralAdminWarehouseScopedMixin(CentralAdminOnlyAccessMixin):
@@ -189,8 +205,12 @@ class CentralAdminProductCreateSingleVariantStepView(CentralAdminWarehouseScoped
 		self.set_wizard_step_data('step3', step_data)
 
 		created_product = self.create_single_variant_product()
+		created_images = create_product_images(created_product, form.cleaned_data.get('image_files'))
 		self.clear_wizard_data()
-		messages.success(self.request, f'Product "{created_product.name}" created successfully.')
+		if created_images:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, f'Product "{created_product.name}" created successfully.')
 		return redirect('inventory:central_admin:warehouse_products', slug=self.kwargs['slug'])
 
 	@transaction.atomic
@@ -256,34 +276,11 @@ class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateVi
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		org_filter = self.get_org_filter()
-
-		products = Product.objects.filter(**org_filter).select_related(
-			'category',
-			'brand',
-			'warehouse',
-		)
-		categories = Category.objects.filter(**org_filter)
-		brands = Brand.objects.filter(**org_filter)
 		warehouses = Warehouse.objects.filter(**org_filter)
-
-		low_stock_count = products.filter(universal_available_quantity__lte=10).count()
-		out_of_stock_count = products.filter(universal_available_quantity__lte=0).count()
-
-		summary_cards = [
-			{'label': 'Total Products', 'value': products.count(), 'variant': 'primary', 'icon': 'inventory_2'},
-			{'label': 'Categories', 'value': categories.count(), 'variant': 'info', 'icon': 'category'},
-			{'label': 'Warehouses', 'value': warehouses.count(), 'variant': 'success', 'icon': 'warehouse'},
-			{'label': 'Low Stock Items', 'value': low_stock_count, 'variant': 'warning', 'icon': 'warning'},
-			{'label': 'Out of Stock', 'value': out_of_stock_count, 'variant': 'danger', 'icon': 'error'},
-			{'label': 'Brands', 'value': brands.count(), 'variant': 'secondary', 'icon': 'branding_watermark'},
-		]
 
 		context.update(
 			{
-				'summary_cards': summary_cards,
 				'warehouses': warehouses,
-				'low_stock_count': low_stock_count,
-				'out_of_stock_count': out_of_stock_count,
 			}
 		)
 		return context
@@ -580,6 +577,8 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		warehouse_products = self.object.products.all().select_related(
 			'category',
 			'brand',
+		).filter(
+			is_deleted=False,
 		).order_by('-updated_at')[:10]
 
 		# Get users associated with this warehouse
@@ -591,7 +590,7 @@ class CentralAdminWarehouseDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context.update({
 			'summary_cards': summary_cards,
 			'warehouse_products': warehouse_products,
-			'warehouse_products_count': self.object.products.count(),
+			'warehouse_products_count': self.object.products.filter(is_deleted=False).count(),
 			'users': users,
 			'users_count': users.count(),
 			'user_add_form': WarehouseUserAddForm(warehouse=self.object),
@@ -743,6 +742,9 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 	context_object_name = 'products'
 	paginate_by = 20
 
+	def get_search_query(self):
+		return self.request.GET.get('q', '').strip()
+
 	def get_queryset(self):
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		user = self.request.user
@@ -751,26 +753,102 @@ class CentralAdminWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView
 		# Check org access
 		if not user.is_superuser and (not org or warehouse.org != org):
 			return Product.objects.none()
-		
-		return warehouse.products.select_related(
+
+		queryset = warehouse.products.filter(is_deleted=False).select_related(
 			'category',
 			'brand',
 			'room',
 		).prefetch_related(
+			'images',
 			'variants__brand',
-		).order_by('-updated_at')
+			'variants__images',
+		)
+
+		search_query = self.get_search_query()
+		if search_query:
+			queryset = queryset.filter(
+				Q(name__icontains=search_query)
+				| Q(product_code__icontains=search_query)
+				| Q(description__icontains=search_query)
+				| Q(category__name__icontains=search_query)
+				| Q(brand__name__icontains=search_query)
+				| Q(room__name__icontains=search_query)
+				| Q(variants__name__icontains=search_query)
+				| Q(variants__brand__name__icontains=search_query)
+			).distinct()
+
+		return queryset.order_by('-updated_at')
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		search_query = self.get_search_query()
 		for product in context.get('products', []):
+			product.card_images = []
 			if product.type == 'MULTI_VARIANT':
 				product.variant_brand_names = sorted(
 					{variant.brand.name for variant in product.variants.all() if variant.brand}
 				)
+				for variant in product.variants.all():
+					product.card_images.extend(list(variant.images.all()))
 			else:
 				product.variant_brand_names = []
+				product.card_images = list(product.images.all())
+			product.card_images = product.card_images[:8]
 		context['warehouse'] = warehouse
+		context['search_query'] = search_query
+		return context
+
+
+class CentralAdminDeletedWarehouseProductListView(CentralAdminOnlyAccessMixin, ListView):
+	model = Product
+	template_name = 'central_admin/inventory/warehouse_deleted_product_list.html'
+	context_object_name = 'products'
+	paginate_by = 20
+
+	def get_search_query(self):
+		return self.request.GET.get('q', '').strip()
+
+	def get_warehouse(self):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+
+		if not user.is_superuser and (not org or warehouse.org != org):
+			return None
+
+		return warehouse
+
+	def get_queryset(self):
+		warehouse = self.get_warehouse()
+		if not warehouse:
+			return Product.objects.none()
+
+		queryset = Product.all_objects.filter(
+			warehouse=warehouse,
+			is_deleted=True,
+		).select_related(
+			'category',
+			'brand',
+			'room',
+		)
+
+		search_query = self.get_search_query()
+		if search_query:
+			queryset = queryset.filter(
+				Q(name__icontains=search_query)
+				| Q(product_code__icontains=search_query)
+				| Q(description__icontains=search_query)
+				| Q(category__name__icontains=search_query)
+				| Q(brand__name__icontains=search_query)
+			)
+
+		return queryset.order_by('-deleted_at', '-updated_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['search_query'] = self.get_search_query()
 		return context
 
 
@@ -789,15 +867,17 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		if not user.is_superuser and (not org or warehouse.org != org):
 			return Product.objects.none()
 
-		return warehouse.products.select_related(
+		return Product.all_objects.filter(warehouse=warehouse).select_related(
 			'category',
 			'brand',
 			'warehouse',
 			'room',
 			'bucket',
 		).prefetch_related(
+			'images',
 			'variants__brand',
 			'variants__size',
+			'variants__images',
 			'sizes',
 		)
 
@@ -805,7 +885,15 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 		context = super().get_context_data(**kwargs)
 		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
 		context['warehouse'] = warehouse
-		context['variants'] = self.object.variants.select_related('brand', 'size').all()
+		variants = list(self.object.variants.select_related('brand', 'size').prefetch_related('images').all())
+		context['variants'] = variants
+		context['product_images'] = self.object.images.all()
+		selected_variant_slug = self.request.GET.get('variant', '').strip()
+		selected_variant = None
+		if self.object.type == 'MULTI_VARIANT' and variants:
+			selected_variant = next((variant for variant in variants if variant.slug == selected_variant_slug), variants[0])
+		context['selected_variant'] = selected_variant
+		context['selected_variant_images'] = selected_variant.images.all() if selected_variant else []
 		context['brands'] = Brand.objects.filter(org=self.object.org).order_by('name')
 		context['unit_choices'] = Product._meta.get_field('unit').choices
 		context['room_assign_form'] = ProductAssignRoomForm(warehouse=warehouse, initial={'room': self.object.room})
@@ -822,12 +910,68 @@ class CentralAdminProductDetailView(CentralAdminOnlyAccessMixin, DetailView):
 			org=self.object.org,
 			initial={'brand': self.object.brand},
 		)
+		context['product_edit_form'] = ProductEditForm(
+			org=self.object.org,
+			initial={
+				'name': self.object.name,
+				'description': self.object.description,
+				'category': self.object.category,
+				'unit': self.object.unit,
+			},
+		)
+		context['product_conversion_form'] = ProductTypeConversionForm(product=self.object)
 
 		if self.object.type == 'MULTI_VARIANT':
 			org = getattr(self.request.user, 'organization', None)
 			context['variant_form'] = ProductVariantForm(org=org)
 
+		stock_movements = StockMovementLine.objects.filter(
+			org=self.object.org,
+			product=self.object,
+			correction_type='ORIGINAL',
+		).select_related('batch', 'recorded_by', 'variant').prefetch_related(
+			Prefetch(
+				'corrections',
+				queryset=StockMovementLine.objects.select_related('batch', 'recorded_by').order_by('-created_at'),
+			),
+		).order_by('-created_at')
+		paginator = Paginator(stock_movements, 20)
+		context['stock_movement_logs'] = paginator.get_page(self.request.GET.get('log_page', 1))
+		context['has_stock_movement_history'] = StockMovementLine.objects.filter(product=self.object).exists()
+		context['pending_deletion_request'] = ProductDeletionRequest.objects.filter(
+			product=self.object,
+			status='pending',
+		).select_related('requested_by').first()
+
 		return context
+
+
+class CentralAdminProductRestoreView(CentralAdminOnlyAccessMixin, View):
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		warehouse = get_object_or_404(Warehouse, slug=self.kwargs['slug'])
+		user = request.user
+		org = getattr(user, 'organization', None)
+
+		if not user.is_superuser and (not org or warehouse.org != org):
+			messages.error(request, 'You do not have permission to restore this product.')
+			return redirect('inventory:central_admin:warehouse_products', slug=warehouse.slug)
+
+		product = get_object_or_404(
+			Product.all_objects.filter(warehouse=warehouse),
+			slug=self.kwargs['product_slug'],
+		)
+
+		if not product.is_deleted:
+			messages.info(request, f'Product "{product.name}" is already active.')
+			return redirect('inventory:central_admin:product_detail', slug=warehouse.slug, product_slug=product.slug)
+
+		product.is_deleted = False
+		product.deleted_at = None
+		product.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])
+
+		messages.success(request, f'Product "{product.name}" restored successfully.')
+		return redirect('inventory:central_admin:product_detail', slug=warehouse.slug, product_slug=product.slug)
 
 
 class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
@@ -846,15 +990,17 @@ class CentralAdminProductVariantBaseMixin(CentralAdminOnlyAccessMixin):
 	def get_product(self):
 		warehouse = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
 		return get_object_or_404(
-			warehouse.products.select_related(
+			warehouse.products.filter(is_deleted=False).select_related(
 				'category',
 				'brand',
 				'warehouse',
 				'room',
 				'bucket',
 			).prefetch_related(
+				'images',
 				'variants__brand',
 				'variants__size',
+				'variants__images',
 				'sizes',
 			),
 			slug=self.kwargs['product_slug'],
@@ -986,6 +1132,209 @@ class CentralAdminProductAssignBrandView(CentralAdminProductVariantBaseMixin, Fo
 		return self.get_success_redirect()
 
 
+class CentralAdminProductEditView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductEditForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_product().org
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		updated_unit = form.cleaned_data['unit']
+		old_unit = product.unit
+		image_files = form.cleaned_data.get('image_files') or []
+
+		product.name = form.cleaned_data['name']
+		product.description = form.cleaned_data['description']
+		product.category = form.cleaned_data.get('category')
+		product.unit = updated_unit
+		product.save(update_fields=['name', 'description', 'category', 'unit'])
+
+		if product.type == 'MULTI_VARIANT' and old_unit != updated_unit:
+			product.variants.update(unit=updated_unit)
+
+		if image_files:
+			if product.type != 'SINGLE_VARIANT':
+				messages.warning(self.request, 'Images can only be added at product level for single-variant products.')
+			else:
+				created_images = create_product_images(product, image_files)
+				if created_images:
+					messages.success(self.request, f'Added {created_images} product image(s).')
+
+		messages.success(self.request, 'Product details updated successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductTypeConvertView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductTypeConversionForm
+	template_name = 'central_admin/inventory/product_detail.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['product'] = self.get_product()
+		return kwargs
+
+	@transaction.atomic
+	def form_valid(self, form):
+		product = self.get_product()
+		target_type = form.cleaned_data['target_type']
+		source_variant = form.cleaned_data.get('source_variant')
+
+		try:
+			apply_product_type_conversion(product, target_type, source_variant=source_variant)
+		except ValidationError as exc:
+			messages.error(self.request, exc.messages[0] if exc.messages else str(exc))
+			return self.get_success_redirect()
+
+		messages.success(self.request, 'Product type converted successfully.')
+		return self.get_success_redirect()
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		for error in form.non_field_errors():
+			messages.error(self.request, error)
+		return self.get_success_redirect()
+
+
+class CentralAdminProductDeleteView(CentralAdminProductVariantBaseMixin, View):
+	def get_success_redirect(self):
+		return redirect('inventory:central_admin:warehouse_products', slug=self.kwargs['slug'])
+
+	@transaction.atomic
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+
+		product_name = product.name
+		product.soft_delete()
+		messages.success(request, f'Product "{product_name}" deleted successfully.')
+		return self.get_success_redirect()
+
+
+class CentralAdminProductDeletionRequestQuerysetMixin(CentralAdminOnlyAccessMixin):
+	def get_deletion_request_queryset(self):
+		queryset = ProductDeletionRequest.objects.select_related(
+			'product',
+			'org',
+			'warehouse',
+			'requested_by',
+			'reviewed_by',
+		)
+
+		user = self.request.user
+		org = getattr(user, 'organization', None)
+		if user.is_superuser and not org:
+			return queryset
+		if org:
+			return queryset.filter(org=org)
+		return ProductDeletionRequest.objects.none()
+
+
+class CentralAdminProductDeletionRequestListView(CentralAdminProductDeletionRequestQuerysetMixin, ListView):
+	model = ProductDeletionRequest
+	template_name = 'central_admin/inventory/product_deletion_request_list.html'
+	context_object_name = 'deletion_requests'
+	paginate_by = 25
+
+	def get_status_filter(self):
+		status = self.request.GET.get('status', 'pending').strip().lower()
+		if status in {'pending', 'approved', 'rejected'}:
+			return status
+		return 'pending'
+
+	def get_queryset(self):
+		return self.get_deletion_request_queryset().filter(status=self.get_status_filter()).order_by('-requested_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		all_requests = self.get_deletion_request_queryset()
+		context['current_status_filter'] = self.get_status_filter()
+		context['pending_count'] = all_requests.filter(status='pending').count()
+		context['approved_count'] = all_requests.filter(status='approved').count()
+		context['rejected_count'] = all_requests.filter(status='rejected').count()
+		return context
+
+
+class CentralAdminProductDeletionRequestDetailView(CentralAdminProductDeletionRequestQuerysetMixin, DetailView):
+	model = ProductDeletionRequest
+	template_name = 'central_admin/inventory/product_deletion_request_detail.html'
+	context_object_name = 'deletion_request'
+	slug_field = 'slug'
+	slug_url_kwarg = 'deletion_slug'
+
+	def get_queryset(self):
+		return self.get_deletion_request_queryset()
+
+
+class CentralAdminProductDeletionRequestApproveView(CentralAdminProductDeletionRequestQuerysetMixin, View):
+	def post(self, request, *args, **kwargs):
+		deletion_request = get_object_or_404(
+			self.get_deletion_request_queryset(),
+			slug=self.kwargs['deletion_slug'],
+		)
+
+		if deletion_request.status != 'pending':
+			messages.error(request, 'Only pending deletion requests can be approved.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		if not deletion_request.product:
+			messages.error(request, 'This request cannot be approved because the product no longer exists.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		review_reason = request.POST.get('review_reason', '').strip()
+		product = deletion_request.product
+		product_name = deletion_request.product_name
+
+		with transaction.atomic():
+			deletion_request.status = 'approved'
+			deletion_request.reviewed_by = request.user
+			deletion_request.reviewed_at = timezone.now()
+			deletion_request.review_reason = review_reason
+			deletion_request.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_reason'])
+
+			product.soft_delete()
+
+		messages.success(request, f'Product "{product_name}" has been deleted.')
+		return redirect('inventory:central_admin:product_deletion_request_list')
+
+
+class CentralAdminProductDeletionRequestRejectView(CentralAdminProductDeletionRequestQuerysetMixin, View):
+	def post(self, request, *args, **kwargs):
+		deletion_request = get_object_or_404(
+			self.get_deletion_request_queryset(),
+			slug=self.kwargs['deletion_slug'],
+		)
+
+		if deletion_request.status != 'pending':
+			messages.error(request, 'Only pending deletion requests can be rejected.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		review_reason = request.POST.get('review_reason', '').strip()
+		if not review_reason:
+			messages.error(request, 'Please provide a reason for rejection.')
+			return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+		deletion_request.status = 'rejected'
+		deletion_request.reviewed_by = request.user
+		deletion_request.reviewed_at = timezone.now()
+		deletion_request.review_reason = review_reason
+		deletion_request.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_reason'])
+
+		messages.success(request, 'Deletion request rejected.')
+		return redirect('inventory:central_admin:product_deletion_request_detail', deletion_slug=deletion_request.slug)
+
+
 class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, FormView):
 	form_class = ProductVariantForm
 	template_name = 'central_admin/inventory/product_detail.html'
@@ -1017,7 +1366,7 @@ class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, 
 				defaults={'description': '', 'variant': None},
 			)
 
-		Variant.objects.create(
+		variant = Variant.objects.create(
 			name=form.cleaned_data['name'],
 			unit=product.unit,
 			product=product,
@@ -1028,8 +1377,13 @@ class CentralAdminProductVariantCreateView(CentralAdminProductVariantBaseMixin, 
 			universal_available_quantity=universal_available_quantity,
 		)
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant created successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant created successfully with {created_images} image(s).')
+		else:
+			messages.success(self.request, 'Variant created successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -1090,8 +1444,13 @@ class CentralAdminProductVariantUpdateView(CentralAdminProductVariantBaseMixin, 
 		variant.universal_available_quantity = variant.total_incoming_quantity - variant.total_used_quantity
 		variant.save()
 
+		created_images = create_variant_images(variant, form.cleaned_data.get('image_files') or [])
+
 		recompute_product_quantities(product)
-		messages.success(self.request, 'Variant updated successfully.')
+		if created_images:
+			messages.success(self.request, f'Variant updated successfully and {created_images} image(s) added.')
+		else:
+			messages.success(self.request, 'Variant updated successfully.')
 		return self.get_success_redirect()
 
 	def form_invalid(self, form):
@@ -1117,6 +1476,199 @@ class CentralAdminProductVariantDeleteView(CentralAdminProductVariantBaseMixin, 
 		return self.get_success_redirect()
 
 
+class CentralAdminProductImageManagementView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'central_admin/inventory/image_management.html'
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'SINGLE_VARIANT':
+			messages.warning(request, 'Product-level image management is available only for single-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['image_items'] = product.images.all()
+		context['image_scope'] = 'product'
+		context['image_scope_title'] = 'Product Images'
+		context['back_url_name'] = 'inventory:central_admin:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:central_admin:product_images_manage',
+			kwargs={'slug': self.kwargs['slug'], 'product_slug': self.kwargs['product_slug']},
+		)
+
+	def form_valid(self, form):
+		product = self.get_product()
+		created_images = create_product_images(product, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} product image(s).')
+		return HttpResponseRedirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminProductImageDeleteView(CentralAdminProductVariantBaseMixin, View):
+	def post(self, request, *args, **kwargs):
+		product = self.get_product()
+		image = get_object_or_404(product.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Product image deleted successfully.')
+		return redirect(
+			'inventory:central_admin:product_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+		)
+
+
+class CentralAdminVariantImageManagementView(CentralAdminProductVariantBaseMixin, FormView):
+	form_class = ProductImageUploadForm
+	template_name = 'central_admin/inventory/image_management.html'
+
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def dispatch(self, request, *args, **kwargs):
+		product = self.get_product()
+		if product.type != 'MULTI_VARIANT':
+			messages.warning(request, 'Variant image management is available only for multi-variant products.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		product = self.get_product()
+		variant = self.get_variant()
+		context['warehouse'] = get_object_or_404(self.get_warehouse_queryset(), slug=self.kwargs['slug'])
+		context['product'] = product
+		context['variant'] = variant
+		context['variants'] = product.variants.all()
+		context['image_items'] = variant.images.all()
+		context['image_scope'] = 'variant'
+		context['image_scope_title'] = f'Variant Images - {variant.name}'
+		context['back_url_name'] = 'inventory:central_admin:product_detail'
+		return context
+
+	def get_success_url(self):
+		return reverse_lazy(
+			'inventory:central_admin:variant_images_manage',
+			kwargs={
+				'slug': self.kwargs['slug'],
+				'product_slug': self.kwargs['product_slug'],
+				'variant_slug': self.kwargs['variant_slug'],
+			},
+		)
+
+	def form_valid(self, form):
+		variant = self.get_variant()
+		created_images = create_variant_images(variant, form.cleaned_data.get('images') or [])
+		if created_images:
+			messages.success(self.request, f'Uploaded {created_images} variant image(s).')
+		return HttpResponseRedirect(self.get_success_url())
+
+	def form_invalid(self, form):
+		for errors in form.errors.values():
+			for error in errors:
+				messages.error(self.request, error)
+		return HttpResponseRedirect(self.get_success_url())
+
+
+class CentralAdminVariantImageDeleteView(CentralAdminProductVariantBaseMixin, View):
+	def get_variant(self):
+		product = self.get_product()
+		return get_object_or_404(product.variants.select_related('brand', 'size'), slug=self.kwargs['variant_slug'])
+
+	def post(self, request, *args, **kwargs):
+		variant = self.get_variant()
+		image = get_object_or_404(variant.images.all(), slug=self.kwargs['image_slug'])
+		image.delete()
+		messages.success(request, 'Variant image deleted successfully.')
+		return redirect(
+			'inventory:central_admin:variant_images_manage',
+			slug=self.kwargs['slug'],
+			product_slug=self.kwargs['product_slug'],
+			variant_slug=self.kwargs['variant_slug'],
+		)
+
+
+class CentralAdminStockMovementCorrectView(CentralAdminWarehouseScopedMixin, FormView):
+	form_class = StockMovementCorrectionForm
+	template_name = 'central_admin/inventory/stock_movement_correct.html'
+
+	def get_next_url(self):
+		next_url = self.request.POST.get('next') or self.request.GET.get('next')
+		if next_url and url_has_allowed_host_and_scheme(
+			next_url,
+			allowed_hosts={self.request.get_host()},
+			require_https=self.request.is_secure(),
+		):
+			return next_url
+		return ''
+
+	def get_success_redirect(self):
+		next_url = self.get_next_url()
+		if next_url:
+			return redirect(next_url)
+		return redirect('inventory:central_admin:stock_movement_history', slug=self.kwargs['slug'])
+
+	def get_stock_movement(self):
+		warehouse = self.get_warehouse()
+		return get_object_or_404(
+			StockMovementLine.objects.select_related('product', 'variant', 'batch', 'recorded_by'),
+			id=self.kwargs['movement_id'],
+			org=warehouse.org,
+			warehouse=warehouse,
+		)
+
+	def dispatch(self, request, *args, **kwargs):
+		movement = self.get_stock_movement()
+		if movement.correction_type != 'ORIGINAL' or movement.corrections.exists():
+			messages.error(request, 'Only non-corrected original entries can be corrected.')
+			return self.get_success_redirect()
+		return super().dispatch(request, *args, **kwargs)
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['movement'] = self.get_stock_movement()
+		return kwargs
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['warehouse'] = self.get_warehouse()
+		context['movement'] = self.get_stock_movement()
+		context['next_url'] = self.get_next_url()
+		return context
+
+	@transaction.atomic
+	def form_valid(self, form):
+		movement = self.get_stock_movement()
+		try:
+			apply_stock_movement_correction(
+				movement=movement,
+				corrected_quantity=form.cleaned_data['corrected_quantity'],
+				correction_reason=form.cleaned_data.get('correction_reason', ''),
+				actor=self.request.user,
+				reference_code=form.cleaned_data.get('reference_code', ''),
+			)
+		except ValidationError as exc:
+			form.add_error(None, exc.messages[0] if exc.messages else str(exc))
+			return self.render_to_response(self.get_context_data(form=form))
+
+		messages.success(self.request, 'Stock movement corrected successfully.')
+		return self.get_success_redirect()
+
+
 class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, ListView):
 	model = StockMovementLine
 	template_name = 'central_admin/inventory/stock_movement_history.html'
@@ -1128,7 +1680,7 @@ class CentralAdminStockMovementHistoryView(CentralAdminWarehouseScopedMixin, Lis
 		queryset = StockMovementLine.objects.filter(
 			org=warehouse.org,
 			warehouse=warehouse,
-		).select_related('batch', 'product', 'variant', 'recorded_by').order_by('-created_at')
+		).select_related('batch', 'product', 'variant', 'recorded_by', 'corrects_movement__batch').prefetch_related('corrections').order_by('-created_at')
 
 		product_slug = self.request.GET.get('product')
 		movement_type = self.request.GET.get('movement_type')
