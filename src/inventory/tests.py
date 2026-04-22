@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.models import Organization, User
-from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest
+from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest, InventorySettings
 
 
 class CentralAdminProductCreateFlowTests(TestCase):
@@ -121,6 +121,41 @@ class CentralAdminProductCreateFlowTests(TestCase):
 
 		self.assertEqual(response_step3.status_code, 200)
 		self.assertFalse(Product.objects.filter(name='Tiles').exists())
+
+
+class CentralAdminInventorySettingsTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Settings Org')
+		self.user = User.objects.create_user(
+			email='settings-admin@example.com',
+			password='password123',
+			phone_number='+15555550130',
+			user_type='central_admin',
+			organization=self.org,
+		)
+		self.client.force_login(self.user)
+
+	def _settings_url(self):
+		return reverse('inventory:central_admin:inventory_settings')
+
+	def test_settings_page_creates_org_scoped_record_on_first_access(self):
+		response = self.client.get(self._settings_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Inventory Settings')
+		self.assertTrue(InventorySettings.objects.filter(org=self.org).exists())
+		self.assertEqual(response.context['inventory_settings'].org, self.org)
+
+	def test_settings_page_uses_current_org_not_other_org_record(self):
+		other_org = Organization.objects.create(name='Other Org')
+		InventorySettings.objects.create(org=other_org)
+
+		response = self.client.get(self._settings_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['inventory_settings'].org, self.org)
+		self.assertTrue(InventorySettings.objects.filter(org=other_org).exists())
+		self.assertTrue(InventorySettings.objects.filter(org=self.org).exists())
 
 
 class CentralAdminProductDetailVariantManagementTests(TestCase):

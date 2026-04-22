@@ -11,7 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest, InventorySettings
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -281,6 +281,31 @@ class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateVi
 		context.update(
 			{
 				'warehouses': warehouses,
+			}
+		)
+		return context
+
+
+class CentralAdminInventorySettingsView(CentralAdminOnlyAccessMixin, TemplateView):
+	template_name = 'central_admin/inventory/settings.html'
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+	def get_inventory_settings(self):
+		org = self.get_user_org()
+		if not org:
+			return None
+
+		inventory_settings, _ = InventorySettings.objects.get_or_create(org=org)
+		return inventory_settings
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context.update(
+			{
+				'org': self.get_user_org(),
+				'inventory_settings': self.get_inventory_settings(),
 			}
 		)
 		return context
