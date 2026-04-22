@@ -95,6 +95,11 @@
               </div>
 
               <div class="small text-muted mb-2">Code: {{ product.product_code }}</div>
+              {% if product.type == 'MULTI_VARIANT' and product.variant_brand_names %}
+                <div class="small text-muted mb-2">Brands: {{ product.variant_brand_names|join:", " }}</div>
+              {% elif product.brand %}
+                <div class="small text-muted mb-2">Brand: {{ product.brand.name }}</div>
+              {% endif %}
 
               <small class="text-muted mt-auto">Updated {{ product.updated_at|timesince }} ago</small>
               <a class="stretched-link" href="{% url 'inventory:supervisor:product_detail' slug=warehouse.slug product_slug=product.slug %}" aria-label="View {{ product.name }}"></a>
