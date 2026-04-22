@@ -1046,6 +1046,169 @@ class SupervisorInventoryDashboardTests(TestCase):
 		self.assertNotContains(response, 'Unassigned Product')
 
 
+class SupervisorInventoryBrandCategoryManagementTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Supervisor Manage Org')
+		self.other_org = Organization.objects.create(name='Supervisor Manage Other Org')
+
+		self.supervisor_user = User.objects.create_user(
+			email='supervisor-manage@example.com',
+			password='password123',
+			phone_number='+15555550128',
+			user_type='supervisor',
+			organization=self.org,
+		)
+
+		self.central_admin_user = User.objects.create_user(
+			email='central-admin-manage@example.com',
+			password='password123',
+			phone_number='+15555550129',
+			user_type='central_admin',
+			organization=self.org,
+		)
+
+		self.own_category = Category.objects.create(name='Own Category', org=self.org)
+		self.other_category = Category.objects.create(name='Other Category', org=self.other_org)
+		self.own_brand = Brand.objects.create(name='Own Brand', org=self.org)
+		self.other_brand = Brand.objects.create(name='Other Brand', org=self.other_org)
+
+	def _dashboard_url(self):
+		return reverse('inventory:supervisor:inventory_dashboard')
+
+	def _category_list_url(self):
+		return reverse('inventory:supervisor:category_list')
+
+	def _create_category_url(self):
+		return reverse('inventory:supervisor:create_category')
+
+	def _edit_category_url(self, category):
+		return reverse('inventory:supervisor:edit_category', kwargs={'slug': category.slug})
+
+	def _delete_category_url(self, category):
+		return reverse('inventory:supervisor:delete_category', kwargs={'slug': category.slug})
+
+	def _brand_list_url(self):
+		return reverse('inventory:supervisor:brand_list')
+
+	def _create_brand_url(self):
+		return reverse('inventory:supervisor:create_brand')
+
+	def _edit_brand_url(self, brand):
+		return reverse('inventory:supervisor:edit_brand', kwargs={'slug': brand.slug})
+
+	def _delete_brand_url(self, brand):
+		return reverse('inventory:supervisor:delete_brand', kwargs={'slug': brand.slug})
+
+	def test_supervisor_list_views_show_only_own_org_records(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.get(self._category_list_url())
+		brand_response = self.client.get(self._brand_list_url())
+
+		self.assertEqual(category_response.status_code, 200)
+		self.assertContains(category_response, self.own_category.name)
+		self.assertNotContains(category_response, self.other_category.name)
+
+		self.assertEqual(brand_response.status_code, 200)
+		self.assertContains(brand_response, self.own_brand.name)
+		self.assertNotContains(brand_response, self.other_brand.name)
+
+	def test_supervisor_can_create_category_and_brand_for_own_org(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._create_category_url(),
+			{'name': 'Created Category', 'description': 'Created by supervisor'},
+		)
+		brand_response = self.client.post(
+			self._create_brand_url(),
+			{'name': 'Created Brand', 'description': 'Created by supervisor'},
+		)
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+
+		created_category = Category.objects.get(name='Created Category')
+		created_brand = Brand.objects.get(name='Created Brand')
+		self.assertEqual(created_category.org, self.org)
+		self.assertEqual(created_brand.org, self.org)
+
+	def test_supervisor_can_edit_own_category_and_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._edit_category_url(self.own_category),
+			{'name': 'Own Category Updated', 'description': 'Updated category'},
+		)
+		brand_response = self.client.post(
+			self._edit_brand_url(self.own_brand),
+			{'name': 'Own Brand Updated', 'description': 'Updated brand'},
+		)
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+
+		self.own_category.refresh_from_db()
+		self.own_brand.refresh_from_db()
+		self.assertEqual(self.own_category.name, 'Own Category Updated')
+		self.assertEqual(self.own_brand.name, 'Own Brand Updated')
+
+	def test_supervisor_cannot_edit_cross_org_category_or_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(
+			self._edit_category_url(self.other_category),
+			{'name': 'Blocked Category Update', 'description': 'Denied'},
+		)
+		brand_response = self.client.post(
+			self._edit_brand_url(self.other_brand),
+			{'name': 'Blocked Brand Update', 'description': 'Denied'},
+		)
+
+		self.assertEqual(category_response.status_code, 404)
+		self.assertEqual(brand_response.status_code, 404)
+
+	def test_supervisor_can_delete_own_category_and_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(self._delete_category_url(self.own_category))
+		brand_response = self.client.post(self._delete_brand_url(self.own_brand))
+
+		self.assertRedirects(category_response, self._category_list_url())
+		self.assertRedirects(brand_response, self._brand_list_url())
+		self.assertFalse(Category.objects.filter(id=self.own_category.id).exists())
+		self.assertFalse(Brand.objects.filter(id=self.own_brand.id).exists())
+
+	def test_supervisor_cannot_delete_cross_org_category_or_brand(self):
+		self.client.force_login(self.supervisor_user)
+
+		category_response = self.client.post(self._delete_category_url(self.other_category))
+		brand_response = self.client.post(self._delete_brand_url(self.other_brand))
+
+		self.assertEqual(category_response.status_code, 404)
+		self.assertEqual(brand_response.status_code, 404)
+		self.assertTrue(Category.objects.filter(id=self.other_category.id).exists())
+		self.assertTrue(Brand.objects.filter(id=self.other_brand.id).exists())
+
+	def test_non_supervisor_cannot_access_supervisor_brand_or_category_management(self):
+		self.client.force_login(self.central_admin_user)
+
+		category_response = self.client.get(self._category_list_url())
+		brand_response = self.client.get(self._brand_list_url())
+
+		self.assertEqual(category_response.status_code, 302)
+		self.assertEqual(brand_response.status_code, 302)
+		self.assertTrue(category_response.url.startswith(reverse('core:login')))
+		self.assertTrue(brand_response.url.startswith(reverse('core:login')))
+
+	def test_dashboard_shows_category_and_brand_links(self):
+		self.client.force_login(self.supervisor_user)
+		response = self.client.get(self._dashboard_url())
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, self._category_list_url())
+		self.assertContains(response, self._brand_list_url())
+
 class SupervisorProductParityTests(TestCase):
 	def setUp(self):
 		self.org = Organization.objects.create(name='Supervisor Product Org')

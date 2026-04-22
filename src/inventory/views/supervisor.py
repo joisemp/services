@@ -1,4 +1,4 @@
-from django.views.generic import ListView, DetailView, FormView, View
+from django.views.generic import ListView, DetailView, FormView, View, CreateView, UpdateView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
@@ -26,6 +26,8 @@ from inventory.forms import (
 	ProductEditForm,
 	ProductTypeConversionForm,
 	ProductImageUploadForm,
+	CategoryForm,
+	BrandForm,
 	StockMovementRecordForm,
 	StockMovementCorrectionForm,
 )
@@ -58,6 +60,129 @@ class SupervisorWarehouseScopedMixin(SupervisorOnlyAccessMixin):
 
 	def get_user_org(self):
 		return getattr(self.request.user, 'organization', None)
+
+
+class SupervisorOrgScopedMixin(SupervisorOnlyAccessMixin):
+	def get_org_filter(self):
+		org = getattr(self.request.user, 'organization', None)
+
+		if org:
+			return {'org': org}
+
+		return {'pk__in': []}
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+
+class SupervisorCategoryListView(SupervisorOrgScopedMixin, ListView):
+	model = Category
+	template_name = 'supervisor/inventory/category_list.html'
+	context_object_name = 'categories'
+	paginate_by = 20
+
+	def get_queryset(self):
+		return Category.objects.filter(**self.get_org_filter()).order_by('name')
+
+
+class SupervisorBrandListView(SupervisorOrgScopedMixin, ListView):
+	model = Brand
+	template_name = 'supervisor/inventory/brand_list.html'
+	context_object_name = 'brands'
+	paginate_by = 20
+
+	def get_queryset(self):
+		return Brand.objects.filter(**self.get_org_filter()).order_by('name')
+
+
+class SupervisorCreateCategoryView(SupervisorOrgScopedMixin, CreateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'supervisor/inventory/create_category.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:category_list')
+
+	def form_valid(self, form):
+		category = form.save(commit=False)
+		org = self.get_user_org()
+
+		if org:
+			category.org = org
+
+		category.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorCreateBrandView(SupervisorOrgScopedMixin, CreateView):
+	model = Brand
+	form_class = BrandForm
+	template_name = 'supervisor/inventory/create_brand.html'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:brand_list')
+
+	def form_valid(self, form):
+		brand = form.save(commit=False)
+		org = self.get_user_org()
+
+		if org:
+			brand.org = org
+
+		brand.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorEditCategoryView(SupervisorOrgScopedMixin, UpdateView):
+	model = Category
+	form_class = CategoryForm
+	template_name = 'supervisor/inventory/edit_category.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:category_list')
+
+	def get_queryset(self):
+		return Category.objects.filter(**self.get_org_filter())
+
+	def form_valid(self, form):
+		form.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorEditBrandView(SupervisorOrgScopedMixin, UpdateView):
+	model = Brand
+	form_class = BrandForm
+	template_name = 'supervisor/inventory/edit_brand.html'
+	slug_field = 'slug'
+	slug_url_kwarg = 'slug'
+
+	def get_success_url(self):
+		return reverse_lazy('inventory:supervisor:brand_list')
+
+	def get_queryset(self):
+		return Brand.objects.filter(**self.get_org_filter())
+
+	def form_valid(self, form):
+		form.save()
+		return redirect(self.get_success_url())
+
+
+class SupervisorDeleteCategoryView(SupervisorOrgScopedMixin, View):
+	def post(self, request, *args, **kwargs):
+		category = get_object_or_404(Category.objects.filter(**self.get_org_filter()), slug=self.kwargs['slug'])
+		category.delete()
+		messages.success(request, 'Category deleted successfully.')
+		return redirect('inventory:supervisor:category_list')
+
+
+class SupervisorDeleteBrandView(SupervisorOrgScopedMixin, View):
+	def post(self, request, *args, **kwargs):
+		brand = get_object_or_404(Brand.objects.filter(**self.get_org_filter()), slug=self.kwargs['slug'])
+		brand.delete()
+		messages.success(request, 'Brand deleted successfully.')
+		return redirect('inventory:supervisor:brand_list')
 
 
 class SupervisorProductCreateStepOneView(SupervisorWarehouseScopedMixin, ProductCreateWizardSessionMixin, FormView):

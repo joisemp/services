@@ -31,13 +31,10 @@
         <a class="nav-link active fw-semibold text-nowrap px-3 py-2" href="{% url 'inventory:supervisor:inventory_dashboard' %}">Warehouse</a>
       </li>
       <li class="nav-item" role="presentation">
-        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Categories</a>
+        <a class="nav-link fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="{% url 'inventory:supervisor:category_list' %}">Categories</a>
       </li>
       <li class="nav-item" role="presentation">
-        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Brands</a>
-      </li>
-      <li class="nav-item" role="presentation">
-        <a class="nav-link disabled fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="#" aria-disabled="true" tabindex="-1">Settings</a>
+        <a class="nav-link fw-semibold text-nowrap px-3 py-2 text-body-secondary" href="{% url 'inventory:supervisor:brand_list' %}">Brands</a>
       </li>
     </ul>
   </div>

@@ -6,6 +6,14 @@ app_name = 'supervisor'
 
 urlpatterns = [
     path('', supervisor.InventoryDashboardView.as_view(), name='inventory_dashboard'),
+    path('categories/', supervisor.SupervisorCategoryListView.as_view(), name='category_list'),
+    path('categories/create/', supervisor.SupervisorCreateCategoryView.as_view(), name='create_category'),
+    path('categories/<slug:slug>/edit/', supervisor.SupervisorEditCategoryView.as_view(), name='edit_category'),
+    path('categories/<slug:slug>/delete/', supervisor.SupervisorDeleteCategoryView.as_view(), name='delete_category'),
+    path('brands/', supervisor.SupervisorBrandListView.as_view(), name='brand_list'),
+    path('brands/create/', supervisor.SupervisorCreateBrandView.as_view(), name='create_brand'),
+    path('brands/<slug:slug>/edit/', supervisor.SupervisorEditBrandView.as_view(), name='edit_brand'),
+    path('brands/<slug:slug>/delete/', supervisor.SupervisorDeleteBrandView.as_view(), name='delete_brand'),
     path('warehouses/<slug:slug>/', supervisor.InventoryWarehouseDetailView.as_view(), name='warehouse_detail'),
     path('warehouses/<slug:slug>/products/', supervisor.InventoryWarehouseProductListView.as_view(), name='warehouse_products'),
     path('warehouses/<slug:slug>/products/<slug:product_slug>/stock-movements/create/', supervisor.SupervisorStockMovementCreateView.as_view(), name='stock_movement_create'),
