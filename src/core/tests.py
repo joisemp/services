@@ -59,6 +59,29 @@ class PhoneLoginToggleTests(TestCase):
         authenticated = authenticate(phone_number=self.general_user.phone_number)
         self.assertIsNone(authenticated)
 
+    def test_phone_auth_backend_allows_enabled_non_central_admin_user(self):
+        maintainer = User.objects.create_user(
+            phone_number='+10000000006',
+            email='maintainer-two@example.com',
+            password='MaintainerPass123!',
+            user_type='maintainer',
+            organization=self.organization,
+            first_name='Enabled',
+            last_name='Maintainer',
+        )
+
+        authenticated = authenticate(phone_number=maintainer.phone_number)
+        self.assertIsNotNone(authenticated)
+        self.assertEqual(authenticated.id, maintainer.id)
+
+    def test_phone_login_form_rejects_central_admin_even_if_enabled(self):
+        self.central_admin.allow_phone_login = True
+        self.central_admin.save(update_fields=['allow_phone_login'])
+
+        form = PhoneLoginForm(data={'phone_number': self.central_admin.phone_number})
+        self.assertFalse(form.is_valid())
+        self.assertIn('Phone login is not available for this user.', form.errors['phone_number'])
+
     def test_central_admin_can_toggle_phone_login_for_same_org_general_user(self):
         self.client.force_login(self.central_admin)
 
@@ -101,6 +124,27 @@ class PhoneLoginToggleTests(TestCase):
             {'user_id': non_general_user.id},
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
         non_general_user.refresh_from_db()
-        self.assertTrue(non_general_user.allow_phone_login)
+        self.assertFalse(non_general_user.allow_phone_login)
+
+    def test_toggle_phone_login_rejects_central_admin(self):
+        another_admin = User.objects.create_user(
+            phone_number='+10000000005',
+            email='another-admin@example.com',
+            password='AdminPass123!',
+            user_type='central_admin',
+            organization=self.organization,
+            first_name='Another',
+            last_name='Admin',
+        )
+
+        self.client.force_login(self.central_admin)
+        response = self.client.post(
+            reverse('core:toggle_phone_login'),
+            {'user_id': another_admin.id},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        another_admin.refresh_from_db()
+        self.assertTrue(another_admin.allow_phone_login)

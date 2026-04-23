@@ -832,7 +832,7 @@ class GeneratePasswordView(CentralAdminOnlyAccessMixin, View):
 
 class TogglePhoneLoginView(CentralAdminOnlyAccessMixin, View):
     """
-    Toggle phone login access for a general user within the current organization.
+    Toggle phone login access for an eligible user within the current organization.
     """
 
     def post(self, request, *args, **kwargs):
@@ -851,10 +851,16 @@ class TogglePhoneLoginView(CentralAdminOnlyAccessMixin, View):
                 'message': 'You can only update users in your organization'
             }, status=403)
 
-        if user.user_type != 'general_user' or user.auth_method != 'phone':
+        if user.user_type == 'central_admin':
             return JsonResponse({
                 'success': False,
-                'message': 'Phone login toggle is only available for phone-authenticated general users'
+                'message': 'Phone login toggle is not available for central admin users'
+            }, status=400)
+
+        if not user.phone_number:
+            return JsonResponse({
+                'success': False,
+                'message': 'Phone login toggle requires a phone number'
             }, status=400)
 
         user.allow_phone_login = not user.allow_phone_login

@@ -746,8 +746,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show phone login toggle only for phone-authenticated general users
             if (phoneLoginOption) {
                 const isEligibleForToggle =
-                    (selectedUserAuthMethod || '').toLowerCase() === 'phone' &&
-                    (selectedUserTypeValue || '').toLowerCase() === 'general_user';
+                    (selectedUserTypeValue || '').toLowerCase() !== 'central_admin' &&
+                    (userPhone || '').trim() !== '';
 
                 if (isEligibleForToggle) {
                     allowPhoneLoginSwitch.checked = selectedUserAllowPhoneLogin;
@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowPhoneLoginSwitch.checked = false;
                     allowPhoneLoginSwitch.disabled = true;
                     updatePhoneLoginBtn.disabled = true;
-                    phoneLoginHint.textContent = 'This setting is available only for General Users with phone authentication.';
+                    phoneLoginHint.textContent = 'This setting is available for non-central-admin users who have a phone number.';
                 }
             }
             

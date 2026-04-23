@@ -192,7 +192,7 @@ class OrganizationWithAdminForm(BootstrapFormMixin, forms.Form):
 
 class PhoneLoginForm(BootstrapFormMixin, forms.Form):
     """
-    Login form for general users using phone number only (passwordless)
+    Login form for non-central-admin users using phone number only (passwordless)
     """
     phone_number = forms.CharField(
         max_length=17,
@@ -206,12 +206,10 @@ class PhoneLoginForm(BootstrapFormMixin, forms.Form):
     def clean_phone_number(self):
         phone_number = self.cleaned_data['phone_number']
         
-        # Check if user exists with this phone number
+        # Check if user is eligible for phone login
         try:
-            user = User.objects.get(
+            User.objects.exclude(user_type='central_admin').get(
                 phone_number=phone_number,
-                auth_method='phone',
-                user_type='general_user',
                 allow_phone_login=True,
                 is_active=True
             )
