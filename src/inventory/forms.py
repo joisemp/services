@@ -519,3 +519,55 @@ class StockMovementCorrectionForm(BootstrapFormMixin, forms.Form):
 			raise forms.ValidationError('Correct quantity must be different from the original quantity.')
 
 		return cleaned_data
+
+
+class InventoryReportForm(BootstrapFormMixin, forms.Form):
+	REPORT_TYPE_CHOICES = [
+		('products', 'Products Report'),
+		('stock_movements', 'Stock Movements Report'),
+	]
+
+	report_type = forms.ChoiceField(choices=REPORT_TYPE_CHOICES, initial='products')
+	date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+	date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+	warehouse = forms.ModelChoiceField(queryset=Warehouse.objects.none(), required=False, empty_label='All Warehouses')
+	category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label='All Categories')
+	brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=False, empty_label='All Brands')
+	product = forms.ModelChoiceField(queryset=Product.all_objects.none(), required=False, empty_label='All Products')
+	movement_type = forms.ChoiceField(
+		choices=[('', 'All Movement Types')] + list(StockMovementRecordForm.base_fields['movement_type'].choices),
+		required=False,
+	)
+	low_stock_only = forms.BooleanField(required=False)
+	include_deleted_products = forms.BooleanField(required=False)
+
+	def __init__(self, *args, **kwargs):
+		org = kwargs.pop('org', None)
+		super().__init__(*args, **kwargs)
+		self.org = org
+
+		if org:
+			self.fields['warehouse'].queryset = Warehouse.objects.filter(org=org).order_by('name')
+			self.fields['category'].queryset = Category.objects.filter(org=org).order_by('name')
+			self.fields['brand'].queryset = Brand.objects.filter(org=org).order_by('name')
+			self.fields['product'].queryset = Product.all_objects.filter(org=org).order_by('name')
+
+	def clean(self):
+		cleaned_data = super().clean()
+		date_from = cleaned_data.get('date_from')
+		date_to = cleaned_data.get('date_to')
+		report_type = cleaned_data.get('report_type')
+		movement_type = cleaned_data.get('movement_type')
+		warehouse = cleaned_data.get('warehouse')
+		product = cleaned_data.get('product')
+
+		if date_from and date_to and date_from > date_to:
+			raise forms.ValidationError('From date must be earlier than or equal to to date.')
+
+		if report_type != 'stock_movements' and movement_type:
+			raise forms.ValidationError('Movement type filter is available only for stock movements report.')
+
+		if warehouse and product and product.warehouse_id != warehouse.id:
+			raise forms.ValidationError('Selected product does not belong to the selected warehouse.')
+
+		return cleaned_data

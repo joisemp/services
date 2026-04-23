@@ -2,6 +2,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from io import BytesIO
+
+from openpyxl import load_workbook
 
 from core.models import Organization, User
 from inventory.models import Warehouse, Category, Brand, Product, Room, Bucket, Size, Variant, StockMovementBatch, StockMovementLine, ProductDeletionRequest, InventorySettings
@@ -173,6 +176,196 @@ class CentralAdminInventorySettingsTests(TestCase):
 		settings_obj = InventorySettings.objects.get(org=self.org)
 		self.assertFalse(settings_obj.enable_low_stock_alerts)
 		self.assertEqual(settings_obj.low_stock_threshold, 12)
+
+
+class CentralAdminInventoryReportsTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Reports Org')
+		self.user = User.objects.create_user(
+			email='reports-admin@example.com',
+			password='password123',
+			phone_number='+15555550131',
+			user_type='central_admin',
+			organization=self.org,
+		)
+		self.client.force_login(self.user)
+
+		self.warehouse = Warehouse.objects.create(name='Reports Warehouse', location='HQ', org=self.org)
+		self.category = Category.objects.create(name='Reports Category', org=self.org)
+		self.brand = Brand.objects.create(name='Reports Brand', org=self.org)
+
+		self.product = Product.objects.create(
+			name='Report Product',
+			description='Report description',
+			type='SINGLE_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.warehouse,
+			category=self.category,
+			brand=self.brand,
+			total_incoming_quantity=20,
+			total_used_quantity=5,
+			universal_available_quantity=15,
+		)
+
+		self.multi_product = Product.objects.create(
+			name='Report Multi Product',
+			description='Report multi description',
+			type='MULTI_VARIANT',
+			unit='PIECES',
+			org=self.org,
+			warehouse=self.warehouse,
+			category=self.category,
+			total_incoming_quantity=50,
+			total_used_quantity=10,
+			universal_available_quantity=40,
+		)
+
+		self.variant_one = Variant.objects.create(
+			name='Variant One',
+			unit='PIECES',
+			product=self.multi_product,
+			brand=self.brand,
+			total_incoming_quantity=20,
+			total_used_quantity=5,
+			universal_available_quantity=15,
+		)
+		self.variant_two = Variant.objects.create(
+			name='Variant Two',
+			unit='PIECES',
+			product=self.multi_product,
+			total_incoming_quantity=30,
+			total_used_quantity=5,
+			universal_available_quantity=25,
+		)
+
+		self.batch = StockMovementBatch.objects.create(
+			org=self.org,
+			warehouse=self.warehouse,
+			recorded_by=self.user,
+			reference_code='REP-001',
+			notes='Report batch',
+		)
+
+		StockMovementLine.objects.create(
+			batch=self.batch,
+			org=self.org,
+			warehouse=self.warehouse,
+			product=self.product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='INCOMING',
+			quantity=5,
+			notes='Incoming movement',
+			old_total_incoming_quantity=20,
+			old_total_used_quantity=5,
+			old_available_quantity=15,
+			new_total_incoming_quantity=25,
+			new_total_used_quantity=5,
+			new_available_quantity=20,
+			recorded_by=self.user,
+		)
+
+		StockMovementLine.objects.create(
+			batch=self.batch,
+			org=self.org,
+			warehouse=self.warehouse,
+			product=self.product,
+			variant=None,
+			target_type='PRODUCT',
+			movement_type='OUTGOING',
+			quantity=2,
+			notes='Outgoing movement',
+			old_total_incoming_quantity=25,
+			old_total_used_quantity=5,
+			old_available_quantity=20,
+			new_total_incoming_quantity=25,
+			new_total_used_quantity=7,
+			new_available_quantity=18,
+			recorded_by=self.user,
+		)
+
+	def _reports_url(self):
+		return reverse('inventory:central_admin:inventory_reports')
+
+	def test_reports_page_loads_for_central_admin(self):
+		response = self.client.get(self._reports_url())
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Report Generator')
+
+	def test_products_report_downloads_excel(self):
+		response = self.client.post(
+			self._reports_url(),
+			{
+				'report_type': 'products',
+				'warehouse': self.warehouse.id,
+				'category': self.category.id,
+				'brand': self.brand.id,
+				'product': self.product.id,
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(
+			response['Content-Type'],
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		)
+		self.assertIn('.xlsx', response['Content-Disposition'])
+
+		workbook = load_workbook(filename=BytesIO(response.content))
+		sheet = workbook.active
+		self.assertEqual(sheet['A2'].value, 'Report Product')
+		self.assertEqual(sheet['C2'].value, None)
+
+	def test_products_report_expands_multi_variant_rows(self):
+		response = self.client.post(
+			self._reports_url(),
+			{
+				'report_type': 'products',
+				'warehouse': self.warehouse.id,
+				'product': self.multi_product.id,
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		workbook = load_workbook(filename=BytesIO(response.content))
+		sheet = workbook.active
+
+		self.assertEqual(sheet.max_row, 3)
+		self.assertEqual(sheet['C2'].value, 'Variant One')
+		self.assertEqual(sheet['C3'].value, 'Variant Two')
+		self.assertEqual(sheet['A2'].value, 'Report Multi Product')
+		self.assertEqual(sheet['A3'].value, 'Report Multi Product')
+
+	def test_stock_movements_report_applies_movement_type_filter(self):
+		response = self.client.post(
+			self._reports_url(),
+			{
+				'report_type': 'stock_movements',
+				'warehouse': self.warehouse.id,
+				'product': self.product.id,
+				'movement_type': 'INCOMING',
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		workbook = load_workbook(filename=BytesIO(response.content))
+		sheet = workbook.active
+		self.assertEqual(sheet.max_row, 2)
+		self.assertEqual(sheet['E2'].value, 'Incoming')
+
+	def test_reports_form_rejects_invalid_date_range(self):
+		response = self.client.post(
+			self._reports_url(),
+			{
+				'report_type': 'products',
+				'date_from': '2026-04-10',
+				'date_to': '2026-04-01',
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'From date must be earlier than or equal to to date.')
 
 
 class CentralAdminProductDetailVariantManagementTests(TestCase):
