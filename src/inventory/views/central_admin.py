@@ -1,5 +1,5 @@
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, FormView, View
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
@@ -11,7 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
-from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest
+from inventory.models import Brand, Category, Product, Warehouse, Room, Bucket, Size, Variant, StockMovementLine, ProductDeletionRequest, InventorySettings
 from inventory.forms import (
 	WarehouseForm,
 	CategoryForm,
@@ -31,6 +31,13 @@ from inventory.forms import (
 	ProductTypeConversionForm,
 	ProductImageUploadForm,
 	StockMovementCorrectionForm,
+	InventorySettingsForm,
+	InventoryReportForm,
+)
+from inventory.reporting import (
+	build_products_workbook,
+	build_stock_movements_workbook,
+	resolve_date_range,
 )
 from inventory.views.common import (
 	ProductCreateWizardSessionMixin,
@@ -284,6 +291,192 @@ class CentralAdminInventoryDashboardView(CentralAdminOnlyAccessMixin, TemplateVi
 			}
 		)
 		return context
+
+
+class CentralAdminInventorySettingsView(CentralAdminOnlyAccessMixin, TemplateView):
+	template_name = 'central_admin/inventory/settings.html'
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+	def get_inventory_settings(self):
+		org = self.get_user_org()
+		if not org:
+			return None
+
+		inventory_settings, _ = InventorySettings.objects.get_or_create(org=org)
+		return inventory_settings
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		inventory_settings = self.get_inventory_settings()
+		form = kwargs.get('form')
+		if form is None and inventory_settings is not None:
+			form = InventorySettingsForm(instance=inventory_settings)
+
+		context.update(
+			{
+				'org': self.get_user_org(),
+				'inventory_settings': inventory_settings,
+				'form': form,
+			}
+		)
+		return context
+
+	def post(self, request, *args, **kwargs):
+		inventory_settings = self.get_inventory_settings()
+		if inventory_settings is None:
+			messages.error(request, 'Organization context is required to update inventory settings.')
+			return self.get(request, *args, **kwargs)
+
+		form = InventorySettingsForm(request.POST, instance=inventory_settings)
+		if form.is_valid():
+			form.save()
+			messages.success(request, 'Inventory settings updated successfully.')
+			return redirect('inventory:central_admin:inventory_settings')
+
+		messages.error(request, 'Please fix the errors below and try again.')
+		return self.render_to_response(self.get_context_data(form=form))
+
+
+class CentralAdminInventoryReportsView(CentralAdminOnlyAccessMixin, TemplateView):
+	template_name = 'central_admin/inventory/settings_reports.html'
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+	def get_inventory_settings(self):
+		org = self.get_user_org()
+		if not org:
+			return None
+		settings_obj, _ = InventorySettings.objects.get_or_create(org=org)
+		return settings_obj
+
+	def get_form(self, data=None):
+		return InventoryReportForm(data=data, org=self.get_user_org())
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context.update(
+			{
+				'org': self.get_user_org(),
+				'form': kwargs.get('form') or self.get_form(),
+			}
+		)
+		return context
+
+	def post(self, request, *args, **kwargs):
+		org = self.get_user_org()
+		if not org:
+			messages.error(request, 'Organization context is required to generate reports.')
+			return self.render_to_response(self.get_context_data(form=self.get_form(request.POST)))
+
+		form = self.get_form(data=request.POST)
+		if not form.is_valid():
+			messages.error(request, 'Please fix the report filters and try again.')
+			return self.render_to_response(self.get_context_data(form=form))
+
+		report_type = form.cleaned_data['report_type']
+		if report_type == 'products':
+			return self._download_products_report(form)
+		return self._download_stock_movements_report(form)
+
+	def _download_products_report(self, form):
+		settings_obj = self.get_inventory_settings()
+		threshold = settings_obj.low_stock_threshold if settings_obj else 5
+
+		queryset = Product.all_objects.filter(org=self.get_user_org()).select_related(
+			'warehouse',
+			'category',
+			'brand',
+		).prefetch_related(
+			'variants__brand',
+		)
+
+		if not form.cleaned_data.get('include_deleted_products'):
+			queryset = queryset.filter(is_deleted=False)
+
+		if form.cleaned_data.get('warehouse'):
+			queryset = queryset.filter(warehouse=form.cleaned_data['warehouse'])
+		if form.cleaned_data.get('category'):
+			queryset = queryset.filter(category=form.cleaned_data['category'])
+		if form.cleaned_data.get('brand'):
+			queryset = queryset.filter(
+				Q(brand=form.cleaned_data['brand']) | Q(variants__brand=form.cleaned_data['brand'])
+			).distinct()
+		if form.cleaned_data.get('product'):
+			queryset = queryset.filter(id=form.cleaned_data['product'].id)
+
+		date_from, date_to = resolve_date_range(
+			date_from=form.cleaned_data.get('date_from'),
+			date_to=form.cleaned_data.get('date_to'),
+		)
+		if date_from:
+			queryset = queryset.filter(updated_at__gte=date_from)
+		if date_to:
+			queryset = queryset.filter(updated_at__lte=date_to)
+
+		if form.cleaned_data.get('low_stock_only'):
+			queryset = queryset.filter(universal_available_quantity__lte=threshold)
+
+		workbook_buffer = build_products_workbook(
+			products=queryset.order_by('name'),
+			low_stock_threshold=threshold,
+		)
+		return self._build_xlsx_response(workbook_buffer, 'inventory_products_report')
+
+	def _download_stock_movements_report(self, form):
+		settings_obj = self.get_inventory_settings()
+		threshold = settings_obj.low_stock_threshold if settings_obj else 5
+
+		queryset = StockMovementLine.objects.filter(org=self.get_user_org()).select_related(
+			'warehouse',
+			'product',
+			'variant',
+			'batch',
+			'recorded_by',
+			'corrects_movement__batch',
+		)
+
+		if not form.cleaned_data.get('include_deleted_products'):
+			queryset = queryset.filter(product__is_deleted=False)
+
+		if form.cleaned_data.get('warehouse'):
+			queryset = queryset.filter(warehouse=form.cleaned_data['warehouse'])
+		if form.cleaned_data.get('category'):
+			queryset = queryset.filter(product__category=form.cleaned_data['category'])
+		if form.cleaned_data.get('brand'):
+			queryset = queryset.filter(
+				Q(product__brand=form.cleaned_data['brand']) | Q(variant__brand=form.cleaned_data['brand'])
+			)
+		if form.cleaned_data.get('product'):
+			queryset = queryset.filter(product=form.cleaned_data['product'])
+		if form.cleaned_data.get('movement_type'):
+			queryset = queryset.filter(movement_type=form.cleaned_data['movement_type'])
+
+		date_from, date_to = resolve_date_range(
+			date_from=form.cleaned_data.get('date_from'),
+			date_to=form.cleaned_data.get('date_to'),
+		)
+		if date_from:
+			queryset = queryset.filter(created_at__gte=date_from)
+		if date_to:
+			queryset = queryset.filter(created_at__lte=date_to)
+
+		if form.cleaned_data.get('low_stock_only'):
+			queryset = queryset.filter(product__universal_available_quantity__lte=threshold)
+
+		workbook_buffer = build_stock_movements_workbook(movements=queryset.order_by('-created_at'))
+		return self._build_xlsx_response(workbook_buffer, 'inventory_stock_movements_report')
+
+	def _build_xlsx_response(self, workbook_buffer, file_prefix):
+		timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+		response = HttpResponse(
+			workbook_buffer.getvalue(),
+			content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		)
+		response['Content-Disposition'] = f'attachment; filename="{file_prefix}_{timestamp}.xlsx"'
+		return response
 
 
 class CentralAdminCategoryListView(CentralAdminOnlyAccessMixin, ListView):

@@ -6,6 +6,8 @@ app_name = 'central_admin'
 
 urlpatterns = [
     path('', central_admin.CentralAdminInventoryDashboardView.as_view(), name='inventory_dashboard'),
+    path('settings/', central_admin.CentralAdminInventorySettingsView.as_view(), name='inventory_settings'),
+    path('settings/reports/', central_admin.CentralAdminInventoryReportsView.as_view(), name='inventory_reports'),
     path('warehouses/create/', central_admin.CentralAdminCreateWarehouseView.as_view(), name='create_warehouse'),
     path('warehouses/<slug:slug>/', central_admin.CentralAdminWarehouseDetailView.as_view(), name='warehouse_detail'),
     path('warehouses/<slug:slug>/products/', central_admin.CentralAdminWarehouseProductListView.as_view(), name='warehouse_products'),

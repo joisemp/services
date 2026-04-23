@@ -82,6 +82,21 @@ class Warehouse(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class InventorySettings(models.Model):
+    org = models.OneToOneField('core.Organization', on_delete=models.CASCADE, related_name='inventory_settings')
+    enable_low_stock_alerts = models.BooleanField(default=True)
+    low_stock_threshold = models.PositiveIntegerField(default=5)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Inventory Settings'
+        verbose_name_plural = 'Inventory Settings'
+
+    def __str__(self):
+        return f'Inventory Settings - {self.org}'
         
 
 class Room(models.Model):

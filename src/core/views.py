@@ -830,6 +830,52 @@ class GeneratePasswordView(CentralAdminOnlyAccessMixin, View):
         return ''.join(password)
 
 
+class TogglePhoneLoginView(CentralAdminOnlyAccessMixin, View):
+    """
+    Toggle phone login access for an eligible user within the current organization.
+    """
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.POST.get('user_id')
+        if not user_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'User ID is required'
+            }, status=400)
+
+        user = get_object_or_404(User, id=user_id)
+
+        if not request.user.organization or user.organization_id != request.user.organization_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'You can only update users in your organization'
+            }, status=403)
+
+        if user.user_type == 'central_admin':
+            return JsonResponse({
+                'success': False,
+                'message': 'Phone login toggle is not available for central admin users'
+            }, status=400)
+
+        if not user.phone_number:
+            return JsonResponse({
+                'success': False,
+                'message': 'Phone login toggle requires a phone number'
+            }, status=400)
+
+        user.allow_phone_login = not user.allow_phone_login
+        user.save(update_fields=['allow_phone_login'])
+
+        status_text = 'enabled' if user.allow_phone_login else 'disabled'
+        messages.success(request, f'Phone login {status_text} for {user.get_full_name() or user.get_short_name()}.')
+
+        return JsonResponse({
+            'success': True,
+            'allow_phone_login': user.allow_phone_login,
+            'message': f'Phone login {status_text} successfully'
+        })
+
+
 class DeleteUserView(CentralAdminOnlyAccessMixin, View):
     """
     View to deactivate a user (soft delete) with proper validation and safety checks

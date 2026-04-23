@@ -41,6 +41,10 @@ urlpatterns = [
     path('people/delete-user/', 
          views.DeleteUserView.as_view(), 
          name='delete_user'),
+
+    path('people/toggle-phone-login/',
+         views.TogglePhoneLoginView.as_view(),
+         name='toggle_phone_login'),
     
     path('updates/', 
          views.UpdateListView.as_view(), 

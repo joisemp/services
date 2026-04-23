@@ -168,6 +168,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         default='email',
         help_text="Authentication method for this user"
     )
+
+    allow_phone_login = models.BooleanField(
+        default=True,
+        help_text="Whether this user is allowed to use phone number login"
+    )
     
     # Basic user information
     first_name = models.CharField(max_length=30, blank=True)

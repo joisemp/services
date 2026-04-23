@@ -8,7 +8,7 @@ User = get_user_model()
 class DualAuthBackend(BaseBackend):
     """
     Custom authentication backend that supports:
-    1. Phone-only authentication for general users (passwordless)
+    1. Phone-only authentication for non-central-admin users (passwordless)
     2. Email + password authentication for other user types
     3. Email + PIN authentication for other user types (4-digit PIN)
     """
@@ -19,11 +19,10 @@ class DualAuthBackend(BaseBackend):
         """
         try:
             if phone_number:
-                # Phone authentication for general users (passwordless)
-                user = User.objects.get(
+                # Phone authentication for eligible non-central-admin users (passwordless)
+                user = User.objects.exclude(user_type='central_admin').get(
                     phone_number=phone_number,
-                    auth_method='phone',
-                    user_type='general_user',
+                    allow_phone_login=True,
                     is_active=True
                 )
                 # For phone authentication, no password check needed
@@ -76,21 +75,20 @@ class DualAuthBackend(BaseBackend):
 
 class PhoneAuthBackend(BaseBackend):
     """
-    Simplified phone-only authentication backend for general users
+    Simplified phone-only authentication backend for non-central-admin users
     """
     
     def authenticate(self, request, phone_number=None, **kwargs):
         """
-        Authenticate general users with phone number only
+        Authenticate eligible non-central-admin users with phone number only
         """
         if not phone_number:
             return None
             
         try:
-            user = User.objects.get(
+            user = User.objects.exclude(user_type='central_admin').get(
                 phone_number=phone_number,
-                auth_method='phone',
-                user_type='general_user',
+                allow_phone_login=True,
                 is_active=True
             )
             return user
