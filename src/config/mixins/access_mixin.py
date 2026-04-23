@@ -24,6 +24,7 @@ class RedirectLoggedinUsers(AccessMixin):
         "is_reviewer": "issue_management:reviewer:issue_list",
         "is_driver": "home",
         "is_transport_incharge": "home",
+        "is_general_user": "home",
     }
 
     default_redirect = "home"

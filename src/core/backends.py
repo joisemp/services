@@ -24,6 +24,7 @@ class DualAuthBackend(BaseBackend):
                     phone_number=phone_number,
                     auth_method='phone',
                     user_type='general_user',
+                    allow_phone_login=True,
                     is_active=True
                 )
                 # For phone authentication, no password check needed
@@ -91,6 +92,7 @@ class PhoneAuthBackend(BaseBackend):
                 phone_number=phone_number,
                 auth_method='phone',
                 user_type='general_user',
+                allow_phone_login=True,
                 is_active=True
             )
             return user

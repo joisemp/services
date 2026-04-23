@@ -112,7 +112,9 @@
                      data-user-email="{{ user.email|default:'' }}"
                      data-user-phone="{{ user.phone_number|default:'' }}"
                      data-user-type="{{ user.get_user_type_display }}"
+                     data-user-type-value="{{ user.user_type }}"
                      data-user-auth-method="{{ user.auth_method }}"
+                     data-user-allow-phone-login="{% if user.allow_phone_login %}true{% else %}false{% endif %}"
                      data-user-organization="{{ user.organization.name|default:'' }}"
                      data-total-reported="{{ user.total_reported_issues }}"
                      data-total-assigned="{{ user.total_assigned_issues }}"
@@ -431,6 +433,29 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Phone Login Toggle Option -->
+                    <div class="border rounded p-3 mb-3" id="phone-login-option">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-mobile-alt text-primary me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2">Phone Login Access</h6>
+                                <p class="text-muted mb-2 small" id="phone-login-hint">
+                                    Allow or disallow this user from signing in with phone number login.
+                                </p>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="allowPhoneLoginSwitch">
+                                    <label class="form-check-label" for="allowPhoneLoginSwitch">
+                                        Allow phone-number login
+                                    </label>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm" id="updatePhoneLoginBtn">
+                                    <i class="fas fa-save me-2"></i>
+                                    Update Setting
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- View Details Option -->
                     <div class="border rounded p-3 mb-3">
@@ -585,7 +610,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedUserSlug = null;
     let selectedUserAuthMethod = null;
     let selectedUserType = null;
+    let selectedUserTypeValue = null;
+    let selectedUserAllowPhoneLogin = false;
     let selectedUserData = null;
+
+    const phoneLoginOption = document.getElementById('phone-login-option');
+    const allowPhoneLoginSwitch = document.getElementById('allowPhoneLoginSwitch');
+    const updatePhoneLoginBtn = document.getElementById('updatePhoneLoginBtn');
+    const phoneLoginHint = document.getElementById('phone-login-hint');
+
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+               document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    }
     
     if (userOptionsModal) {
         userOptionsModal.addEventListener('show.bs.modal', function (event) {
@@ -597,6 +634,8 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedUserSlug = card.getAttribute('data-user-slug');
             selectedUserAuthMethod = card.getAttribute('data-user-auth-method');
             selectedUserType = card.getAttribute('data-user-type');
+            selectedUserTypeValue = card.getAttribute('data-user-type-value');
+            selectedUserAllowPhoneLogin = card.getAttribute('data-user-allow-phone-login') === 'true';
             const userName = card.getAttribute('data-user-name');
             const userEmail = card.getAttribute('data-user-email');
             const userPhone = card.getAttribute('data-user-phone');
@@ -703,6 +742,25 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 passwordOptions.classList.add('d-none');
             }
+
+            // Show phone login toggle only for phone-authenticated general users
+            if (phoneLoginOption) {
+                const isEligibleForToggle =
+                    (selectedUserAuthMethod || '').toLowerCase() === 'phone' &&
+                    (selectedUserTypeValue || '').toLowerCase() === 'general_user';
+
+                if (isEligibleForToggle) {
+                    allowPhoneLoginSwitch.checked = selectedUserAllowPhoneLogin;
+                    allowPhoneLoginSwitch.disabled = false;
+                    updatePhoneLoginBtn.disabled = false;
+                    phoneLoginHint.textContent = 'Allow or disallow this user from signing in with phone number login.';
+                } else {
+                    allowPhoneLoginSwitch.checked = false;
+                    allowPhoneLoginSwitch.disabled = true;
+                    updatePhoneLoginBtn.disabled = true;
+                    phoneLoginHint.textContent = 'This setting is available only for General Users with phone authentication.';
+                }
+            }
             
             // Reset generated password display
             const generatedPasswordContainer = document.getElementById('generatedPasswordContainer');
@@ -728,10 +786,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resetPasswordBtn.disabled = true;
             const originalContent = resetPasswordBtn.innerHTML;
             resetPasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
-            
-            // Get CSRF token
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = getCsrfToken();
             
             // Send AJAX request
             fetch('{% url "core:regenerate_password" %}', {
@@ -784,10 +839,7 @@ document.addEventListener('DOMContentLoaded', function() {
             generatePasswordBtn.disabled = true;
             const originalContent = generatePasswordBtn.innerHTML;
             generatePasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
-            
-            // Get CSRF token
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = getCsrfToken();
             
             // Send AJAX request
             fetch('{% url "core:generate_password" %}', {
@@ -819,6 +871,63 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Re-enable button
                 generatePasswordBtn.disabled = false;
                 generatePasswordBtn.innerHTML = originalContent;
+            });
+        });
+    }
+
+    // Phone Login Toggle functionality
+    if (updatePhoneLoginBtn) {
+        updatePhoneLoginBtn.addEventListener('click', function() {
+            if (!selectedUserId) {
+                alert('No user selected');
+                return;
+            }
+
+            const desiredState = allowPhoneLoginSwitch.checked;
+            if (desiredState === selectedUserAllowPhoneLogin) {
+                alert('No changes to save.');
+                return;
+            }
+
+            updatePhoneLoginBtn.disabled = true;
+            allowPhoneLoginSwitch.disabled = true;
+            const originalContent = updatePhoneLoginBtn.innerHTML;
+            updatePhoneLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+            const csrfToken = getCsrfToken();
+
+            fetch('toggle-phone-login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `user_id=${selectedUserId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectedUserAllowPhoneLogin = data.allow_phone_login;
+                    allowPhoneLoginSwitch.checked = data.allow_phone_login;
+                    const userCard = document.querySelector(`.user-card[data-user-id="${selectedUserId}"]`);
+                    if (userCard) {
+                        userCard.setAttribute('data-user-allow-phone-login', data.allow_phone_login ? 'true' : 'false');
+                    }
+                    alert(data.message || 'Phone login setting updated successfully.');
+                } else {
+                    allowPhoneLoginSwitch.checked = selectedUserAllowPhoneLogin;
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                allowPhoneLoginSwitch.checked = selectedUserAllowPhoneLogin;
+                alert('An error occurred while updating phone login setting.');
+            })
+            .finally(() => {
+                updatePhoneLoginBtn.disabled = false;
+                allowPhoneLoginSwitch.disabled = false;
+                updatePhoneLoginBtn.innerHTML = originalContent;
             });
         });
     }
@@ -969,9 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalContent = confirmDeleteBtn.innerHTML;
             confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
             
-            // Get CSRF token
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                             document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = getCsrfToken();
             
             // Send AJAX request
             fetch('{% url "core:delete_user" %}', {

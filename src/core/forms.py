@@ -212,10 +212,11 @@ class PhoneLoginForm(BootstrapFormMixin, forms.Form):
                 phone_number=phone_number,
                 auth_method='phone',
                 user_type='general_user',
+                allow_phone_login=True,
                 is_active=True
             )
         except User.DoesNotExist:
-            raise forms.ValidationError("No active general user found with this phone number.")
+            raise forms.ValidationError("Phone login is not available for this user.")
         
         return phone_number
 
