@@ -1,6 +1,6 @@
 from django import forms
 from config.mixins.form_mixin import BootstrapFormMixin
-from .models import Warehouse, Category, Brand, Room, Bucket, Product, Variant
+from .models import Warehouse, Category, Brand, Room, Bucket, Product, Variant, InventorySettings
 from core.models import User
 
 
@@ -11,6 +11,20 @@ class WarehouseForm(BootstrapFormMixin, forms.ModelForm):
 		labels = {
 			'name': 'Warehouse Name',
 			'location': 'Location',
+		}
+
+
+class InventorySettingsForm(BootstrapFormMixin, forms.ModelForm):
+	class Meta:
+		model = InventorySettings
+		fields = ['enable_low_stock_alerts', 'low_stock_threshold']
+		labels = {
+			'enable_low_stock_alerts': 'Enable Low Stock Alerts',
+			'low_stock_threshold': 'Low Stock Threshold',
+		}
+		help_texts = {
+			'enable_low_stock_alerts': 'Turn low stock alerting on or off for your organization.',
+			'low_stock_threshold': 'Products at or below this quantity are considered low stock.',
 		}
 
 

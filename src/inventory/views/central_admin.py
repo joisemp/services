@@ -31,6 +31,7 @@ from inventory.forms import (
 	ProductTypeConversionForm,
 	ProductImageUploadForm,
 	StockMovementCorrectionForm,
+	InventorySettingsForm,
 )
 from inventory.views.common import (
 	ProductCreateWizardSessionMixin,
@@ -302,13 +303,34 @@ class CentralAdminInventorySettingsView(CentralAdminOnlyAccessMixin, TemplateVie
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
+		inventory_settings = self.get_inventory_settings()
+		form = kwargs.get('form')
+		if form is None and inventory_settings is not None:
+			form = InventorySettingsForm(instance=inventory_settings)
+
 		context.update(
 			{
 				'org': self.get_user_org(),
-				'inventory_settings': self.get_inventory_settings(),
+				'inventory_settings': inventory_settings,
+				'form': form,
 			}
 		)
 		return context
+
+	def post(self, request, *args, **kwargs):
+		inventory_settings = self.get_inventory_settings()
+		if inventory_settings is None:
+			messages.error(request, 'Organization context is required to update inventory settings.')
+			return self.get(request, *args, **kwargs)
+
+		form = InventorySettingsForm(request.POST, instance=inventory_settings)
+		if form.is_valid():
+			form.save()
+			messages.success(request, 'Inventory settings updated successfully.')
+			return redirect('inventory:central_admin:inventory_settings')
+
+		messages.error(request, 'Please fix the errors below and try again.')
+		return self.render_to_response(self.get_context_data(form=form))
 
 
 class CentralAdminCategoryListView(CentralAdminOnlyAccessMixin, ListView):

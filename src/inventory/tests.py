@@ -144,7 +144,10 @@ class CentralAdminInventorySettingsTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Inventory Settings')
 		self.assertTrue(InventorySettings.objects.filter(org=self.org).exists())
-		self.assertEqual(response.context['inventory_settings'].org, self.org)
+		settings_obj = response.context['inventory_settings']
+		self.assertEqual(settings_obj.org, self.org)
+		self.assertTrue(settings_obj.enable_low_stock_alerts)
+		self.assertEqual(settings_obj.low_stock_threshold, 5)
 
 	def test_settings_page_uses_current_org_not_other_org_record(self):
 		other_org = Organization.objects.create(name='Other Org')
@@ -156,6 +159,20 @@ class CentralAdminInventorySettingsTests(TestCase):
 		self.assertEqual(response.context['inventory_settings'].org, self.org)
 		self.assertTrue(InventorySettings.objects.filter(org=other_org).exists())
 		self.assertTrue(InventorySettings.objects.filter(org=self.org).exists())
+
+	def test_settings_page_updates_values_with_single_save(self):
+		response = self.client.post(
+			self._settings_url(),
+			{
+				'enable_low_stock_alerts': '',
+				'low_stock_threshold': 12,
+			},
+		)
+
+		self.assertRedirects(response, self._settings_url())
+		settings_obj = InventorySettings.objects.get(org=self.org)
+		self.assertFalse(settings_obj.enable_low_stock_alerts)
+		self.assertEqual(settings_obj.low_stock_threshold, 12)
 
 
 class CentralAdminProductDetailVariantManagementTests(TestCase):

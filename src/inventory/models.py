@@ -86,6 +86,8 @@ class Warehouse(models.Model):
 
 class InventorySettings(models.Model):
     org = models.OneToOneField('core.Organization', on_delete=models.CASCADE, related_name='inventory_settings')
+    enable_low_stock_alerts = models.BooleanField(default=True)
+    low_stock_threshold = models.PositiveIntegerField(default=5)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
