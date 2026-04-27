@@ -41,6 +41,9 @@ urlpatterns = [
 
     # Inventory application URLs
     path('inventory/', include('inventory.urls')),
+
+    # Fleet management application URLs
+    path('fleet/', include('fleet_management.urls')),
     
     # Dashboard application URLs
     path('dashboard/', include('dashboard.urls')),

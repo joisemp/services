@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'issue_management.apps.IssueManagementConfig',
     'inventory.apps.InventoryConfig',
     'dashboard.apps.DashboardConfig',
+    'fleet_management.apps.FleetManagementConfig',
 ]
 
 MIDDLEWARE = [
