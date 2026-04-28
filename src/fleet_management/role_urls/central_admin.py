@@ -5,9 +5,8 @@ Central admin has full access to all fleet management features.
 from django.urls import path
 from fleet_management.views import central_admin
 
-app_name = 'fleet_management_central_admin'
+app_name = 'central_admin'
 
 urlpatterns = [
-    # Add central_admin routes here
-    # TODO: Define URLs for fleet_management central_admin views
+    path('', central_admin.FleetManagementListView.as_view(), name='fleet_list'),
 ]

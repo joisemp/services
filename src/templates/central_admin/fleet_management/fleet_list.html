@@ -1,0 +1,65 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Fleet Management{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="alert alert-info" role="alert">
+    <h4 class="mb-1">Fleet Management</h4>
+    <p class="mb-0">Manage all vehicles and transport operations across the organization.</p>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">Total Vehicles</h6>
+          <h3 class="mb-0">{{ fleet_summary.total_vehicles }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">Active Vehicles</h6>
+          <h3 class="mb-0">{{ fleet_summary.active_vehicles }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">In Maintenance</h6>
+          <h3 class="mb-0">{{ fleet_summary.in_maintenance }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">Pending Inspections</h6>
+          <h3 class="mb-0">{{ fleet_summary.pending_inspections }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-warning" role="alert">
+    <p class="mb-0"><strong>Note:</strong> This is a placeholder view. Fleet management features will be implemented once models are finalized.</p>
+  </div>
+</div>
+{% endblock %}
