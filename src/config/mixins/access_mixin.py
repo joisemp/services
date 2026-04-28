@@ -23,7 +23,7 @@ class RedirectLoggedinUsers(AccessMixin):
         "is_maintainer": "issue_management:maintainer:work_task_list",
         "is_reviewer": "issue_management:reviewer:issue_list",
         "is_driver": "home",
-        "is_transport_incharge": "home",
+        "is_transport_incharge": "dashboard:transport_incharge_dashboard",
         "is_general_user": "home",
     }
 
@@ -144,6 +144,10 @@ class SupervisorOnlyAccessMixin(BaseRoleAccessMixin):
 
 class ReviewerOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_reviewer"
+
+
+class TransportInchargeOnlyAccessMixin(BaseRoleAccessMixin):
+    role_property = "is_transport_incharge"
 
 
 class GeneralUserOnlyAccessMixin(BaseRoleAccessMixin):

@@ -1,0 +1,91 @@
+{% extends 'sidebar_base.html' %}
+
+{% block title %}Transport Dashboard{% endblock %}
+
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="alert alert-info" role="alert">
+    <h4 class="mb-1">Transport Incharge Dashboard</h4>
+    <p class="mb-0">This page currently shows dummy transport-only data.</p>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">Active Vehicles</h6>
+          <h3 class="mb-0">{{ transport_summary.active_vehicles }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">On Trip</h6>
+          <h3 class="mb-0">{{ transport_summary.on_trip }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">In Maintenance</h6>
+          <h3 class="mb-0">{{ transport_summary.in_maintenance }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">Available</h6>
+          <h3 class="mb-0">{{ transport_summary.available }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <strong>Today's Transport Schedule (Dummy)</strong>
+    </div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Route</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in today_schedule %}
+          <tr>
+            <td>{{ item.vehicle }}</td>
+            <td>{{ item.route }}</td>
+            <td>{{ item.status }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center text-muted">No transport schedules for today.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

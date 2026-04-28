@@ -313,7 +313,7 @@ class SetPinView(FormView):
         elif user.is_driver:
             return 'home'
         elif user.is_transport_incharge:
-            return 'home'
+            return 'dashboard:transport_incharge_dashboard'
         else:
             return 'home'
     

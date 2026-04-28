@@ -5,7 +5,7 @@ Transport Incharge has full access to all fleet management features.
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
 
-# TODO: Implement transport_incharge specific views
-# - Full CRUD operations for fleet entities
-# - Unrestricted access to all fleet management data
-# - Fleet coordination and tracking views
+# TODO: Implement transport_incharge specific fleet views
+# - Fleet-specific CRUD operations
+# - Vehicle and route management flows
+# - Permission checks for transport scope
