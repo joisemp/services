@@ -102,16 +102,8 @@ class VehicleTripsView(CentralAdminVehicleScopedMixin, DetailView):
         return self.get_vehicle()
 
 
-class VehicleFuelView(CentralAdminVehicleScopedMixin, DetailView):
-    template_name = 'central_admin/fleet_management/vehicle_fuel.html'
-    context_object_name = 'vehicle'
-
-    def get_object(self, queryset=None):
-        return self.get_vehicle()
-
-
-class VehicleInspectionsView(CentralAdminVehicleScopedMixin, DetailView):
-    template_name = 'central_admin/fleet_management/vehicle_inspections.html'
+class VehicleExpensesView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_expenses.html'
     context_object_name = 'vehicle'
 
     def get_object(self, queryset=None):

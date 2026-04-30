@@ -43,13 +43,9 @@
       <span class="material-symbols-outlined fs-6">directions</span>
       Trips
     </a>
-    <a href="{% url 'fleet_management:transport_incharge:vehicle_fuel' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-      <span class="material-symbols-outlined fs-6">local_gas_station</span>
-      Fuel
-    </a>
-    <a href="{% url 'fleet_management:transport_incharge:vehicle_inspections' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-      <span class="material-symbols-outlined fs-6">assignment_turned_in</span>
-      Inspections
+    <a href="{% url 'fleet_management:transport_incharge:vehicle_expenses' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">receipt</span>
+      Expenses
     </a>
   </div>
 

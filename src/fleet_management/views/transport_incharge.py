@@ -101,16 +101,8 @@ class VehicleTripsView(TransportInchargeVehicleScopedMixin, DetailView):
 		return self.get_vehicle()
 
 
-class VehicleFuelView(TransportInchargeVehicleScopedMixin, DetailView):
-	template_name = 'transport_incharge/fleet_management/vehicle_fuel.html'
-	context_object_name = 'vehicle'
-
-	def get_object(self, queryset=None):
-		return self.get_vehicle()
-
-
-class VehicleInspectionsView(TransportInchargeVehicleScopedMixin, DetailView):
-	template_name = 'transport_incharge/fleet_management/vehicle_inspections.html'
+class VehicleExpensesView(TransportInchargeVehicleScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/vehicle_expenses.html'
 	context_object_name = 'vehicle'
 
 	def get_object(self, queryset=None):
