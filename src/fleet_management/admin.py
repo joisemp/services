@@ -1,12 +1,11 @@
 from django.contrib import admin
 
-# Register your models here.
+from fleet_management.models import Vehicle
 
-# TODO: Register Fleet Management Models once defined
-# Example:
-# @admin.register(Vehicle)
-# class VehicleAdmin(admin.ModelAdmin):
-#     list_display = ['registration_number', 'vehicle_type', 'organization', 'created_at']
-#     list_filter = ['vehicle_type', 'organization', 'created_at']
-#     search_fields = ['registration_number', 'make_model']
-#     readonly_fields = ['created_at', 'updated_at']
+
+@admin.register(Vehicle)
+class VehicleAdmin(admin.ModelAdmin):
+	list_display = ['registration_number', 'vehicle_type', 'status', 'org', 'created_at']
+	list_filter = ['vehicle_type', 'status', 'org', 'created_at']
+	search_fields = ['registration_number', 'manufacturer', 'model']
+	readonly_fields = ['slug', 'created_at', 'updated_at']

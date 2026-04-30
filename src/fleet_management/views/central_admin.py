@@ -1,30 +1,107 @@
 """
 Fleet Management views for Central Admin role.
-Central admin has full access to all fleet management features.
+Central admin has full access to vehicle management within their organization.
 """
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.contrib import messages
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
+from fleet_management.forms import VehicleForm
+from fleet_management.models import Vehicle
 
 
-class FleetManagementListView(CentralAdminOnlyAccessMixin, TemplateView):
-    """
-    Central admin fleet management overview.
-    Placeholder view until fleet models are finalized.
-    """
+class CentralAdminVehicleScopedMixin(CentralAdminOnlyAccessMixin):
+    model = Vehicle
+    slug_url_kwarg = 'slug'
+
+    def get_user_org(self):
+        return getattr(self.request.user, 'organization', None)
+
+    def get_vehicle_queryset(self):
+        user = self.request.user
+        org = self.get_user_org()
+
+        if user.is_superuser and not org:
+            return Vehicle.objects.select_related('org').all()
+
+        if org:
+            return Vehicle.objects.select_related('org').filter(org=org)
+
+        return Vehicle.objects.none()
+
+    def get_queryset(self):
+        return self.get_vehicle_queryset()
+
+    def get_vehicle(self):
+        return get_object_or_404(self.get_vehicle_queryset(), slug=self.kwargs[self.slug_url_kwarg])
+
+
+class VehicleListView(CentralAdminVehicleScopedMixin, ListView):
     template_name = 'central_admin/fleet_management/fleet_list.html'
+    context_object_name = 'vehicles'
+    paginate_by = 20
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['fleet_summary'] = {
-            'total_vehicles': 25,
-            'active_vehicles': 12,
-            'in_maintenance': 3,
-            'pending_inspections': 5,
+        queryset = self.get_vehicle_queryset()
+
+        context['vehicle_summary'] = {
+            'total_vehicles': queryset.count(),
+            'active_vehicles': queryset.filter(status=Vehicle.STATUS_ACTIVE).count(),
+            'in_maintenance': queryset.filter(status=Vehicle.STATUS_IN_MAINTENANCE).count(),
+            'out_of_service': queryset.filter(status=Vehicle.STATUS_OUT_OF_SERVICE).count(),
         }
+        context['organization'] = self.get_user_org()
         return context
 
 
-# TODO: Implement central_admin specific fleet views
-# - Full CRUD operations for all fleet entities
-# - Unrestricted access to all fleet management data
-# - Admin-level reporting and analytics
+class VehicleCreateView(CentralAdminVehicleScopedMixin, CreateView):
+    form_class = VehicleForm
+    template_name = 'central_admin/fleet_management/vehicle_form.html'
+
+    def form_valid(self, form):
+        org = self.get_user_org()
+        if org is None:
+            messages.error(self.request, 'A vehicle can only be created within an organization context.')
+            return redirect('fleet_management:central_admin:vehicle_list')
+
+        form.instance.org = org
+        messages.success(self.request, 'Vehicle created successfully.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('fleet_management:central_admin:vehicle_list')
+
+
+class VehicleDetailView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_detail.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+
+class VehicleUpdateView(CentralAdminVehicleScopedMixin, UpdateView):
+    form_class = VehicleForm
+    template_name = 'central_admin/fleet_management/vehicle_form.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+    def get_success_url(self):
+        return reverse_lazy('fleet_management:central_admin:vehicle_detail', kwargs={'slug': self.object.slug})
+
+
+class VehicleDeleteView(CentralAdminVehicleScopedMixin, DeleteView):
+    template_name = 'central_admin/fleet_management/vehicle_confirm_delete.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+    def get_success_url(self):
+        return reverse_lazy('fleet_management:central_admin:vehicle_list')

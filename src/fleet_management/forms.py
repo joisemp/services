@@ -3,15 +3,27 @@ Django Forms for Fleet Management.
 Contains form definitions for vehicle management, fleet operations, and related tasks.
 """
 from django import forms
-from config.mixins import BootstrapFormMixin
+from config.mixins.form_mixin import BootstrapFormMixin
 
-# TODO: Implement Fleet Management Forms once models are defined
-# - VehicleForm - Create/Update vehicle information
-# - FleetAssignmentForm - Assign vehicles to fleet groups
-# - MaintenanceForm - Track maintenance records
-# - DriverAssignmentForm - Assign drivers to vehicles
-# Example:
-# class VehicleForm(BootstrapFormMixin, forms.ModelForm):
-#     class Meta:
-#         model = Vehicle
-#         fields = ['registration_number', 'vehicle_type', 'make_model', ...]
+from fleet_management.models import Vehicle
+
+
+class VehicleForm(BootstrapFormMixin, forms.ModelForm):
+	class Meta:
+		model = Vehicle
+		fields = [
+			'registration_number',
+			'vehicle_type',
+			'manufacturer',
+			'model',
+			'year',
+			'status',
+			'notes',
+		]
+		widgets = {
+			'notes': forms.Textarea(attrs={'rows': 4}),
+			'year': forms.NumberInput(attrs={'min': 1900, 'max': 2100}),
+		}
+
+	def clean_registration_number(self):
+		return self.cleaned_data['registration_number'].strip().upper()

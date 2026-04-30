@@ -8,5 +8,10 @@ from fleet_management.views import central_admin
 app_name = 'central_admin'
 
 urlpatterns = [
-    path('', central_admin.FleetManagementListView.as_view(), name='fleet_list'),
+    path('', central_admin.VehicleListView.as_view(), name='fleet_list'),
+    path('vehicles/', central_admin.VehicleListView.as_view(), name='vehicle_list'),
+    path('vehicles/create/', central_admin.VehicleCreateView.as_view(), name='vehicle_create'),
+    path('vehicles/<slug:slug>/', central_admin.VehicleDetailView.as_view(), name='vehicle_detail'),
+    path('vehicles/<slug:slug>/edit/', central_admin.VehicleUpdateView.as_view(), name='vehicle_update'),
+    path('vehicles/<slug:slug>/delete/', central_admin.VehicleDeleteView.as_view(), name='vehicle_delete'),
 ]
