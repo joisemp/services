@@ -83,3 +83,36 @@ class VehicleDeleteView(CentralAdminVehicleScopedMixin, DeleteView):
 
     def get_success_url(self):
         return reverse_lazy('fleet_management:central_admin:vehicle_list')
+
+
+# Tab views - separate pages for each section
+class VehicleMaintenanceView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_maintenance.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+
+class VehicleTripsView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_trips.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+
+class VehicleFuelView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_fuel.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()
+
+
+class VehicleInspectionsView(CentralAdminVehicleScopedMixin, DetailView):
+    template_name = 'central_admin/fleet_management/vehicle_inspections.html'
+    context_object_name = 'vehicle'
+
+    def get_object(self, queryset=None):
+        return self.get_vehicle()

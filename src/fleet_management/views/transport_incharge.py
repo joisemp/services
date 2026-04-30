@@ -82,3 +82,36 @@ class VehicleDeleteView(TransportInchargeVehicleScopedMixin, DeleteView):
 
 	def get_success_url(self):
 		return reverse_lazy('fleet_management:transport_incharge:fleet_list')
+
+
+# Tab views - separate pages for each section
+class VehicleMaintenanceView(TransportInchargeVehicleScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/vehicle_maintenance.html'
+	context_object_name = 'vehicle'
+
+	def get_object(self, queryset=None):
+		return self.get_vehicle()
+
+
+class VehicleTripsView(TransportInchargeVehicleScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/vehicle_trips.html'
+	context_object_name = 'vehicle'
+
+	def get_object(self, queryset=None):
+		return self.get_vehicle()
+
+
+class VehicleFuelView(TransportInchargeVehicleScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/vehicle_fuel.html'
+	context_object_name = 'vehicle'
+
+	def get_object(self, queryset=None):
+		return self.get_vehicle()
+
+
+class VehicleInspectionsView(TransportInchargeVehicleScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/vehicle_inspections.html'
+	context_object_name = 'vehicle'
+
+	def get_object(self, queryset=None):
+		return self.get_vehicle()
