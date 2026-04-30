@@ -1,0 +1,34 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Delete Vehicle{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="border border-danger rounded-3 bg-white p-4">
+    <h1 class="h4 mb-2">Delete Vehicle</h1>
+    <p class="mb-4">Delete {{ vehicle.registration_number }} - {{ vehicle.manufacturer }} {{ vehicle.model }}?</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'fleet_management:transport_incharge:vehicle_detail' slug=vehicle.slug %}">Cancel</a>
+        <button class="btn btn-danger" type="submit">Delete Vehicle</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

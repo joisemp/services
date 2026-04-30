@@ -130,3 +130,104 @@ class CentralAdminVehicleViewTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, self.other_vehicle.registration_number)
 		self.assertNotContains(response, self.vehicle.registration_number)
+
+
+class TransportInchargeVehicleViewTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Org One')
+
+		self.transport_incharge = User.objects.create_user(
+			phone_number='+10000000021',
+			email='transport@example.com',
+			password='TransportPass123!',
+			user_type='transport_incharge',
+			organization=self.org,
+			first_name='Transport',
+			last_name='Incharge',
+		)
+
+		self.vehicle = Vehicle.objects.create(
+			org=self.org,
+			registration_number='ABC 123',
+			vehicle_type=Vehicle.TYPE_CAR,
+			manufacturer='Toyota',
+			model='Corolla',
+			year=2022,
+			status=Vehicle.STATUS_ACTIVE,
+		)
+
+	def test_fleet_list_is_available(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.get(reverse('fleet_management:transport_incharge:fleet_list'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Fleets')
+		self.assertContains(response, self.vehicle.registration_number)
+
+	def test_fleet_sidebar_tab_is_present(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.get(reverse('fleet_management:transport_incharge:fleet_list'))
+
+		self.assertContains(response, 'Fleets')
+
+	def test_vehicle_create_sets_organization(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.post(
+			reverse('fleet_management:transport_incharge:vehicle_create'),
+			{
+				'registration_number': 'new 555',
+				'vehicle_type': Vehicle.TYPE_BUS,
+				'manufacturer': 'Mercedes',
+				'model': 'Sprinter',
+				'year': 2020,
+				'status': Vehicle.STATUS_ACTIVE,
+				'notes': 'Transport incharge vehicle',
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		created_vehicle = Vehicle.objects.get(registration_number='NEW 555')
+		self.assertEqual(created_vehicle.org, self.org)
+
+	def test_vehicle_detail_is_available(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.get(
+			reverse('fleet_management:transport_incharge:vehicle_detail', kwargs={'slug': self.vehicle.slug})
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, self.vehicle.registration_number)
+
+	def test_vehicle_update_is_available(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.post(
+			reverse('fleet_management:transport_incharge:vehicle_update', kwargs={'slug': self.vehicle.slug}),
+			{
+				'registration_number': self.vehicle.registration_number,
+				'vehicle_type': Vehicle.TYPE_CAR,
+				'manufacturer': 'Toyota',
+				'model': 'Corolla Cross',
+				'year': 2023,
+				'status': Vehicle.STATUS_ACTIVE,
+				'notes': 'Updated model',
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.vehicle.refresh_from_db()
+		self.assertEqual(self.vehicle.model, 'Corolla Cross')
+
+	def test_vehicle_delete_is_available(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.post(
+			reverse('fleet_management:transport_incharge:vehicle_delete', kwargs={'slug': self.vehicle.slug})
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertFalse(Vehicle.objects.filter(pk=self.vehicle.pk).exists())

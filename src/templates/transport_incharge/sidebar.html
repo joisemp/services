@@ -7,5 +7,12 @@
             </span>
             <span class="menu-text">Dashboard</span>
         </a>
+
+        <a class="navlink {% is_active 'fleet_management:transport_incharge:fleet_list,fleet_management:transport_incharge:vehicle_list,fleet_management:transport_incharge:vehicle_detail,fleet_management:transport_incharge:vehicle_create,fleet_management:transport_incharge:vehicle_update,fleet_management:transport_incharge:vehicle_delete' %}" href="{% url 'fleet_management:transport_incharge:fleet_list' %}">
+            <span class="material-symbols-outlined me-2">
+                local_shipping
+            </span>
+            <span class="menu-text">Fleets</span>
+        </a>
     </div>
 </section>

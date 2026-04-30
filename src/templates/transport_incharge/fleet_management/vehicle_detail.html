@@ -1,0 +1,43 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Vehicle Details{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">{{ vehicle.registration_number }}</h1>
+      <p class="text-muted mb-0">{{ vehicle.manufacturer }} {{ vehicle.model }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'fleet_management:transport_incharge:fleet_list' %}">Back</a>
+      <a class="btn btn-outline-primary" href="{% url 'fleet_management:transport_incharge:vehicle_update' slug=vehicle.slug %}">Edit</a>
+      <a class="btn btn-outline-danger" href="{% url 'fleet_management:transport_incharge:vehicle_delete' slug=vehicle.slug %}">Delete</a>
+    </div>
+  </div>
+
+  <div class="border rounded-3 bg-white p-4">
+    <div class="row g-3">
+      <div class="col-12 col-md-6"><strong>Vehicle Type:</strong> {{ vehicle.get_vehicle_type_display }}</div>
+      <div class="col-12 col-md-6"><strong>Status:</strong> {{ vehicle.get_status_display }}</div>
+      <div class="col-12 col-md-6"><strong>Year:</strong> {{ vehicle.year|default:'-' }}</div>
+      <div class="col-12 col-md-6"><strong>Organization:</strong> {{ vehicle.org }}</div>
+      <div class="col-12"><strong>Notes:</strong> {{ vehicle.notes|default:'-' }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

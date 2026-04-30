@@ -3,40 +3,18 @@ Fleet Management views for Central Admin role.
 Central admin has full access to vehicle management within their organization.
 """
 from django.contrib import messages
-from django.db.models import Count
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from fleet_management.forms import VehicleForm
 from fleet_management.models import Vehicle
+from fleet_management.views.common import VehicleScopedMixin
 
 
-class CentralAdminVehicleScopedMixin(CentralAdminOnlyAccessMixin):
-    model = Vehicle
-    slug_url_kwarg = 'slug'
-
-    def get_user_org(self):
-        return getattr(self.request.user, 'organization', None)
-
-    def get_vehicle_queryset(self):
-        user = self.request.user
-        org = self.get_user_org()
-
-        if user.is_superuser and not org:
-            return Vehicle.objects.select_related('org').all()
-
-        if org:
-            return Vehicle.objects.select_related('org').filter(org=org)
-
-        return Vehicle.objects.none()
-
-    def get_queryset(self):
-        return self.get_vehicle_queryset()
-
-    def get_vehicle(self):
-        return get_object_or_404(self.get_vehicle_queryset(), slug=self.kwargs[self.slug_url_kwarg])
+class CentralAdminVehicleScopedMixin(CentralAdminOnlyAccessMixin, VehicleScopedMixin):
+    sidebar_template = 'central_admin/sidebar.html'
 
 
 class VehicleListView(CentralAdminVehicleScopedMixin, ListView):
