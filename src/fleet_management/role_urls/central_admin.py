@@ -18,4 +18,9 @@ urlpatterns = [
     path('vehicles/<slug:slug>/status/', central_admin.VehicleStatusChangeView.as_view(), name='vehicle_status_change'),
     path('vehicles/<slug:slug>/edit/', central_admin.VehicleUpdateView.as_view(), name='vehicle_update'),
     path('vehicles/<slug:slug>/delete/', central_admin.VehicleDeleteView.as_view(), name='vehicle_delete'),
+    path('workshops/', central_admin.WorkshopListView.as_view(), name='workshop_list'),
+    path('workshops/create/', central_admin.WorkshopCreateView.as_view(), name='workshop_create'),
+    path('workshops/<slug:slug>/', central_admin.WorkshopDetailView.as_view(), name='workshop_detail'),
+    path('workshops/<slug:slug>/edit/', central_admin.WorkshopUpdateView.as_view(), name='workshop_update'),
+    path('workshops/<slug:slug>/delete/', central_admin.WorkshopDeleteView.as_view(), name='workshop_delete'),
 ]

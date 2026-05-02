@@ -18,4 +18,9 @@ urlpatterns = [
     path('vehicles/<slug:slug>/status/', transport_incharge.VehicleStatusChangeView.as_view(), name='vehicle_status_change'),
     path('vehicles/<slug:slug>/edit/', transport_incharge.VehicleUpdateView.as_view(), name='vehicle_update'),
     path('vehicles/<slug:slug>/delete/', transport_incharge.VehicleDeleteView.as_view(), name='vehicle_delete'),
+    path('workshops/', transport_incharge.WorkshopListView.as_view(), name='workshop_list'),
+    path('workshops/create/', transport_incharge.WorkshopCreateView.as_view(), name='workshop_create'),
+    path('workshops/<slug:slug>/', transport_incharge.WorkshopDetailView.as_view(), name='workshop_detail'),
+    path('workshops/<slug:slug>/edit/', transport_incharge.WorkshopUpdateView.as_view(), name='workshop_update'),
+    path('workshops/<slug:slug>/delete/', transport_incharge.WorkshopDeleteView.as_view(), name='workshop_delete'),
 ]

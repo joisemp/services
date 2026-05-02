@@ -5,7 +5,7 @@ This module contains common view logic used across different roles.
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, DetailView
 
-from fleet_management.models import Vehicle
+from fleet_management.models import Vehicle, Workshop
 
 
 def get_next_status(current_status):
@@ -59,6 +59,38 @@ class VehicleScopedMixin:
 
 	def get_vehicle(self):
 		return get_object_or_404(self.get_vehicle_queryset(), slug=self.kwargs[self.slug_url_kwarg])
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['sidebar_template'] = self.sidebar_template
+		return context
+
+
+class WorkshopScopedMixin:
+	model = Workshop
+	slug_url_kwarg = 'slug'
+	sidebar_template = 'central_admin/sidebar.html'
+
+	def get_user_org(self):
+		return getattr(self.request.user, 'organization', None)
+
+	def get_workshop_queryset(self):
+		user = self.request.user
+		org = self.get_user_org()
+
+		if user.is_superuser and not org:
+			return Workshop.objects.select_related('org').prefetch_related('incharges').all()
+
+		if org:
+			return Workshop.objects.select_related('org').prefetch_related('incharges').filter(org=org)
+
+		return Workshop.objects.none()
+
+	def get_queryset(self):
+		return self.get_workshop_queryset()
+
+	def get_workshop(self):
+		return get_object_or_404(self.get_workshop_queryset(), slug=self.kwargs[self.slug_url_kwarg])
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)

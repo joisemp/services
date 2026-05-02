@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.test import TestCase
 
 from core.models import Organization
-from fleet_management.models import Vehicle
+from fleet_management.models import Vehicle, Workshop
 
 
 User = get_user_model()
@@ -231,3 +231,221 @@ class TransportInchargeVehicleViewTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertFalse(Vehicle.objects.filter(pk=self.vehicle.pk).exists())
+
+
+class CentralAdminWorkshopViewTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Org One')
+		self.other_org = Organization.objects.create(name='Org Two')
+
+		self.central_admin = User.objects.create_user(
+			phone_number='+10000000031',
+			email='workshop-admin@example.com',
+			password='AdminPass123!',
+			user_type='central_admin',
+			organization=self.org,
+			first_name='Central',
+			last_name='Admin',
+		)
+		self.maintainer = User.objects.create_user(
+			phone_number='+10000000032',
+			email='maintainer@example.com',
+			password='MaintainerPass123!',
+			user_type='maintainer',
+			organization=self.org,
+		)
+		self.supervisor = User.objects.create_user(
+			phone_number='+10000000033',
+			email='supervisor@example.com',
+			password='SupervisorPass123!',
+			user_type='supervisor',
+			organization=self.org,
+		)
+		self.driver = User.objects.create_user(
+			phone_number='+10000000034',
+			email='driver@example.com',
+			password='DriverPass123!',
+			user_type='driver',
+			organization=self.org,
+		)
+		self.other_org_maintainer = User.objects.create_user(
+			phone_number='+10000000035',
+			email='other-maintainer@example.com',
+			password='MaintainerPass123!',
+			user_type='maintainer',
+			organization=self.other_org,
+		)
+
+		self.workshop = Workshop.objects.create(
+			org=self.org,
+			name='Main Workshop',
+		)
+		self.workshop.incharges.set([self.maintainer])
+		self.other_workshop = Workshop.objects.create(
+			org=self.other_org,
+			name='Other Workshop',
+		)
+
+	def test_workshop_list_is_org_scoped(self):
+		self.client.force_login(self.central_admin)
+
+		response = self.client.get(reverse('fleet_management:central_admin:workshop_list'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, self.workshop.name)
+		self.assertNotContains(response, self.other_workshop.name)
+
+	def test_workshop_create_sets_org_and_allows_valid_incharges(self):
+		self.client.force_login(self.central_admin)
+
+		response = self.client.post(
+			reverse('fleet_management:central_admin:workshop_create'),
+			{
+				'name': 'North Workshop',
+				'incharges': [self.maintainer.pk, self.supervisor.pk],
+				'notes': 'North side workshop',
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		created = Workshop.objects.get(org=self.org, name='North Workshop')
+		self.assertEqual(created.name, 'North Workshop')
+		self.assertEqual(created.incharges.count(), 2)
+
+	def test_workshop_create_blocks_invalid_incharge_role(self):
+		self.client.force_login(self.central_admin)
+
+		response = self.client.post(
+			reverse('fleet_management:central_admin:workshop_create'),
+			{
+				'name': 'Invalid Role Workshop',
+				'incharges': [self.driver.pk],
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Select a valid choice')
+		self.assertFalse(Workshop.objects.filter(org=self.org, name='Invalid Role Workshop').exists())
+
+	def test_workshop_create_blocks_other_org_incharge(self):
+		self.client.force_login(self.central_admin)
+
+		response = self.client.post(
+			reverse('fleet_management:central_admin:workshop_create'),
+			{
+				'name': 'Cross Org Workshop',
+				'incharges': [self.other_org_maintainer.pk],
+			},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Select a valid choice')
+		self.assertFalse(Workshop.objects.filter(org=self.org, name='Cross Org Workshop').exists())
+
+	def test_workshop_detail_blocks_other_org_workshop(self):
+		self.client.force_login(self.central_admin)
+
+		response = self.client.get(
+			reverse('fleet_management:central_admin:workshop_detail', kwargs={'slug': self.other_workshop.slug})
+		)
+
+		self.assertEqual(response.status_code, 404)
+
+	def test_workshop_update_and_delete(self):
+		self.client.force_login(self.central_admin)
+
+		update_response = self.client.post(
+			reverse('fleet_management:central_admin:workshop_update', kwargs={'slug': self.workshop.slug}),
+			{
+				'name': 'Main Workshop Updated',
+				'incharges': [self.supervisor.pk],
+				'notes': 'Updated',
+			},
+		)
+
+		self.assertEqual(update_response.status_code, 302)
+		self.workshop.refresh_from_db()
+		self.assertEqual(self.workshop.name, 'Main Workshop Updated')
+		self.assertEqual(self.workshop.incharges.count(), 1)
+
+		delete_response = self.client.post(
+			reverse('fleet_management:central_admin:workshop_delete', kwargs={'slug': self.workshop.slug})
+		)
+		self.assertEqual(delete_response.status_code, 302)
+		self.assertFalse(Workshop.objects.filter(pk=self.workshop.pk).exists())
+
+
+class TransportInchargeWorkshopViewTests(TestCase):
+	def setUp(self):
+		self.org = Organization.objects.create(name='Org One')
+		self.other_org = Organization.objects.create(name='Org Two')
+
+		self.transport_incharge = User.objects.create_user(
+			phone_number='+10000000041',
+			email='transport-ws@example.com',
+			password='TransportPass123!',
+			user_type='transport_incharge',
+			organization=self.org,
+		)
+		self.maintainer = User.objects.create_user(
+			phone_number='+10000000042',
+			email='maintainer-ws@example.com',
+			password='MaintainerPass123!',
+			user_type='maintainer',
+			organization=self.org,
+		)
+
+		self.workshop = Workshop.objects.create(
+			org=self.org,
+			name='Transport Workshop',
+		)
+		self.other_workshop = Workshop.objects.create(
+			org=self.other_org,
+			name='Other Transport Workshop',
+		)
+
+	def test_workshop_sidebar_tab_is_present(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.get(reverse('fleet_management:transport_incharge:workshop_list'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Workshops')
+
+	def test_workshop_list_is_org_scoped(self):
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.get(reverse('fleet_management:transport_incharge:workshop_list'))
+
+		self.assertContains(response, self.workshop.name)
+		self.assertNotContains(response, self.other_workshop.name)
+
+	def test_transport_incharge_can_create_update_delete_workshop(self):
+		self.client.force_login(self.transport_incharge)
+
+		create_response = self.client.post(
+			reverse('fleet_management:transport_incharge:workshop_create'),
+			{
+				'name': 'Created Workshop',
+				'incharges': [self.maintainer.pk],
+				'notes': 'Created by transport incharge',
+			},
+		)
+		self.assertEqual(create_response.status_code, 302)
+		created = Workshop.objects.get(org=self.org, name='Created Workshop')
+
+		update_response = self.client.post(
+			reverse('fleet_management:transport_incharge:workshop_update', kwargs={'slug': created.slug}),
+			{
+				'name': 'Created Workshop Updated',
+				'incharges': [self.maintainer.pk],
+				'notes': 'Updated by transport incharge',
+			},
+		)
+		self.assertEqual(update_response.status_code, 302)
+
+		delete_response = self.client.post(
+			reverse('fleet_management:transport_incharge:workshop_delete', kwargs={'slug': created.slug})
+		)
+		self.assertEqual(delete_response.status_code, 302)
+		self.assertFalse(Workshop.objects.filter(pk=created.pk).exists())

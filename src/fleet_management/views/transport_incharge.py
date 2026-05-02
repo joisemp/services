@@ -13,12 +13,16 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 
 from config.mixins.access_mixin import TransportInchargeOnlyAccessMixin
-from fleet_management.forms import VehicleForm
-from fleet_management.models import Vehicle, VehicleActivity
-from fleet_management.views.common import VehicleScopedMixin, get_next_status
+from fleet_management.forms import VehicleForm, WorkshopForm
+from fleet_management.models import Vehicle, VehicleActivity, Workshop
+from fleet_management.views.common import VehicleScopedMixin, WorkshopScopedMixin, get_next_status
 
 
 class TransportInchargeVehicleScopedMixin(TransportInchargeOnlyAccessMixin, VehicleScopedMixin):
+	sidebar_template = 'transport_incharge/sidebar.html'
+
+
+class TransportInchargeWorkshopScopedMixin(TransportInchargeOnlyAccessMixin, WorkshopScopedMixin):
 	sidebar_template = 'transport_incharge/sidebar.html'
 
 
@@ -193,3 +197,79 @@ class VehicleStatusChangeView(TransportInchargeVehicleScopedMixin, View):
 		"""Get vehicle by slug with org scoping."""
 		queryset = self.get_vehicle_queryset()
 		return get_object_or_404(queryset, slug=slug)
+
+
+class WorkshopListView(TransportInchargeWorkshopScopedMixin, ListView):
+	template_name = 'transport_incharge/fleet_management/workshop_list.html'
+	context_object_name = 'workshops'
+	paginate_by = 20
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		queryset = self.get_workshop_queryset()
+		context['workshop_summary'] = {
+			'total_workshops': queryset.count(),
+			'with_incharges': queryset.filter(incharges__isnull=False).distinct().count(),
+		}
+		return context
+
+
+class WorkshopCreateView(TransportInchargeWorkshopScopedMixin, CreateView):
+	form_class = WorkshopForm
+	template_name = 'transport_incharge/fleet_management/workshop_form.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_user_org()
+		return kwargs
+
+	def form_valid(self, form):
+		org = self.get_user_org()
+		if org is None:
+			messages.error(self.request, 'A workshop can only be created within an organization context.')
+			return redirect('fleet_management:transport_incharge:workshop_list')
+
+		form.instance.org = org
+		response = super().form_valid(form)
+		messages.success(self.request, 'Workshop created successfully.')
+		return response
+
+	def get_success_url(self):
+		return reverse_lazy('fleet_management:transport_incharge:workshop_list')
+
+
+class WorkshopDetailView(TransportInchargeWorkshopScopedMixin, DetailView):
+	template_name = 'transport_incharge/fleet_management/workshop_detail.html'
+	context_object_name = 'workshop'
+
+	def get_object(self, queryset=None):
+		return self.get_workshop()
+
+
+class WorkshopUpdateView(TransportInchargeWorkshopScopedMixin, UpdateView):
+	form_class = WorkshopForm
+	template_name = 'transport_incharge/fleet_management/workshop_form.html'
+	context_object_name = 'workshop'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		kwargs['org'] = self.get_user_org()
+		return kwargs
+
+	def get_object(self, queryset=None):
+		return self.get_workshop()
+
+	def get_success_url(self):
+		return reverse_lazy('fleet_management:transport_incharge:workshop_detail', kwargs={'slug': self.object.slug})
+
+
+class WorkshopDeleteView(TransportInchargeWorkshopScopedMixin, DeleteView):
+	model = Workshop
+	template_name = 'transport_incharge/fleet_management/workshop_confirm_delete.html'
+	context_object_name = 'workshop'
+
+	def get_object(self, queryset=None):
+		return self.get_workshop()
+
+	def get_success_url(self):
+		return reverse_lazy('fleet_management:transport_incharge:workshop_list')

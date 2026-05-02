@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -65,6 +66,52 @@ class Vehicle(models.Model):
 
 	def get_absolute_url(self):
 		return reverse('fleet_management:central_admin:vehicle_detail', kwargs={'slug': self.slug})
+
+
+class Workshop(models.Model):
+	org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='workshops')
+	name = models.CharField(max_length=120)
+	notes = models.TextField(blank=True)
+	slug = models.SlugField(unique=True, blank=True)
+	incharges = models.ManyToManyField('core.User', related_name='workshops_incharge', blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ['name']
+		verbose_name = 'Workshop'
+		verbose_name_plural = 'Workshops'
+
+	def clean(self):
+		super().clean()
+		if not self.org_id:
+			return
+
+		# M2M values exist only after initial save, so validate when id is available.
+		if not self.pk:
+			return
+
+		invalid_incharges = self.incharges.exclude(
+			organization=self.org,
+			user_type__in=['maintainer', 'supervisor'],
+		)
+		if invalid_incharges.exists():
+			raise ValidationError('Workshop incharges must be maintainers or supervisors in the same organization.')
+
+	def save(self, *args, **kwargs):
+		self.name = self.name.strip()
+
+		if not self.slug:
+			base_slug = slugify(self.name)
+			self.slug = generate_unique_slug(self, base_slug)
+
+		super().save(*args, **kwargs)
+
+	def __str__(self):
+		return self.name
+
+	def get_absolute_url(self):
+		return reverse('fleet_management:central_admin:workshop_detail', kwargs={'slug': self.slug})
 
 
 class VehicleActivity(models.Model):
