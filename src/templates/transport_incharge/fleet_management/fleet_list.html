@@ -3,6 +3,7 @@
 {% block title %}Fleets{% endblock %}
 
 {% load static %}
+{% load fleet_filters %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
@@ -67,7 +68,7 @@
               <hr>
               <div class="d-flex justify-content-between mt-4">
                 <h6 class="card-subtitle mb-2 text-body-secondary">{{ vehicle.get_vehicle_type_display }}</h6>
-                <span class="badge rounded-pill bg-secondary">{{ vehicle.get_status_display }}</span>
+                {{ vehicle.status|status_badge|safe }}
               </div>
               <div class="d-flex justify-content-between mt-4">
                 <h6 class="card-text me-2">Manufacturer</h6>

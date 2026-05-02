@@ -8,6 +8,25 @@ from django.views.generic import ListView, DetailView
 from fleet_management.models import Vehicle
 
 
+def get_next_status(current_status):
+	"""
+	Get the next status in the cycling sequence.
+	Cycle: Active → Maintenance → Out of Service → Active
+	"""
+	status_sequence = [
+		Vehicle.STATUS_ACTIVE,
+		Vehicle.STATUS_IN_MAINTENANCE,
+		Vehicle.STATUS_OUT_OF_SERVICE,
+	]
+
+	try:
+		current_index = status_sequence.index(current_status)
+		next_index = (current_index + 1) % len(status_sequence)
+		return status_sequence[next_index]
+	except (ValueError, IndexError):
+		return Vehicle.STATUS_ACTIVE
+
+
 # TODO: Add common views here
 # Example patterns to follow:
 # - ListViews with select_related/prefetch_related optimization

@@ -1,6 +1,7 @@
 {% extends 'sidebar_base.html' %}
 
 {% load static %}
+{% load fleet_filters %}
 
 {% block title %}Vehicle Details{% endblock %}
 
@@ -54,7 +55,7 @@
     <div class="card-body p-4">
       <div class="row g-3">
         <div class="col-12 col-md-6"><strong>Vehicle Type:</strong> {{ vehicle.get_vehicle_type_display }}</div>
-        <div class="col-12 col-md-6"><strong>Status:</strong> {{ vehicle.get_status_display }}</div>
+        <div class="col-12 col-md-6"><strong>Status:</strong> <span id="status-display">{{ vehicle.status|status_badge|safe }}</span></div>
         <div class="col-12 col-md-6"><strong>Year:</strong> {{ vehicle.year|default:'-' }}</div>
         <div class="col-12 col-md-6"><strong>Organization:</strong> {{ vehicle.org }}</div>
         <div class="col-12"><strong>Notes:</strong> {{ vehicle.notes|default:'-' }}</div>
@@ -62,8 +63,19 @@
     </div>
   </div>
 
-  <!-- Action Buttons -->
+  <!-- Manage Vehicle Section -->
   <div class="d-flex gap-2 mt-4">
+    <div class="btn-group" role="group">
+      <button type="button" class="btn btn-info d-inline-flex align-items-center gap-1 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="material-symbols-outlined">swap_vert</span>
+        Change Status
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" hx-post="{% url 'fleet_management:transport_incharge:vehicle_status_change' slug=vehicle.slug %}" hx-vals='{"status": "active"}' hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-target="#status-display" hx-swap="innerHTML" data-status="active">Active</a></li>
+        <li><a class="dropdown-item" href="#" hx-post="{% url 'fleet_management:transport_incharge:vehicle_status_change' slug=vehicle.slug %}" hx-vals='{"status": "maintenance"}' hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-target="#status-display" hx-swap="innerHTML" data-status="maintenance">In Maintenance</a></li>
+        <li><a class="dropdown-item" href="#" hx-post="{% url 'fleet_management:transport_incharge:vehicle_status_change' slug=vehicle.slug %}" hx-vals='{"status": "out_of_service"}' hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-target="#status-display" hx-swap="innerHTML" data-status="out_of_service">Out of Service</a></li>
+      </ul>
+    </div>
     <a class="btn btn-primary d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:vehicle_update' slug=vehicle.slug %}">
       <span class="material-symbols-outlined">edit</span>
       Edit
@@ -73,5 +85,148 @@
       Delete
     </a>
   </div>
+
+  <!-- Status Change Modal -->
+  <div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="statusChangeModalLabel">Change Vehicle Status</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Current Status: <strong id="current-status">{{ vehicle.get_status_display }}</strong></p>
+          <p class="mb-0">Next Status: <strong id="next-status">Loading...</strong></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirm-status-change">Confirm Change</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Logs Section -->
+  <div class="mt-5">
+    <h4 class="mb-3">Activity Logs</h4>
+    {% if activity_logs %}
+      <div class="card border rounded-3">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Action</th>
+                <th>User</th>
+                <th>Time</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in activity_logs %}
+                <tr>
+                  <td>
+                    <span class="badge bg-secondary">{{ log.get_action_display }}</span>
+                  </td>
+                  <td>{{ log.user.get_full_name|default:"System" }}</td>
+                  <td>{{ log.timestamp|date:"M d, Y H:i" }}</td>
+                  <td>{{ log.details }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Activity Pagination -->
+      {% if activity_logs.paginator.num_pages > 1 %}
+        <nav aria-label="Activity logs pagination" class="mt-3">
+          <ul class="pagination justify-content-center">
+            {% if activity_logs.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?activity_page=1">First</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?activity_page={{ activity_logs.previous_page_number }}">Previous</a>
+              </li>
+            {% endif %}
+
+            {% for num in activity_logs.paginator.page_range %}
+              {% if activity_logs.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}<span class="visually-hidden">(current)</span></span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a class="page-link" href="?activity_page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if activity_logs.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?activity_page={{ activity_logs.next_page_number }}">Next</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?activity_page={{ activity_logs.paginator.num_pages }}">Last</a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="alert alert-info">No activity logs yet.</div>
+    {% endif %}
+  </div>
 </div>
+
+<!-- HTMX Status Change Handler -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle HTMX responses for status changes
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+      if (event.detail.target?.id === 'status-display') {
+        // Show success message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `
+          Status changed to <strong>${event.detail.xhr.response}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+          container.insertBefore(alertDiv, container.firstChild);
+        }
+        
+        // Reload page after 2 seconds to update activity logs
+        setTimeout(() => {
+          location.reload();
+        }, 2000);
+      }
+    });
+
+    // Handle HTMX errors
+    document.body.addEventListener('htmx:responseError', function(event) {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+      alertDiv.setAttribute('role', 'alert');
+      alertDiv.innerHTML = `
+        Failed to change status. Please try again.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      const container = document.querySelector('.container-fluid');
+      if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+      }
+    });
+
+    // Prevent default link behavior on status dropdown
+    const statusLinks = document.querySelectorAll('a[hx-post]');
+    statusLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+      });
+    });
+  });
+</script>
 {% endblock %}

@@ -15,6 +15,7 @@ urlpatterns = [
     path('vehicles/<slug:slug>/maintenance/', central_admin.VehicleMaintenanceView.as_view(), name='vehicle_maintenance'),
     path('vehicles/<slug:slug>/trips/', central_admin.VehicleTripsView.as_view(), name='vehicle_trips'),
     path('vehicles/<slug:slug>/expenses/', central_admin.VehicleExpensesView.as_view(), name='vehicle_expenses'),
+    path('vehicles/<slug:slug>/status/', central_admin.VehicleStatusChangeView.as_view(), name='vehicle_status_change'),
     path('vehicles/<slug:slug>/edit/', central_admin.VehicleUpdateView.as_view(), name='vehicle_update'),
     path('vehicles/<slug:slug>/delete/', central_admin.VehicleDeleteView.as_view(), name='vehicle_delete'),
 ]

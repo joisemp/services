@@ -17,7 +17,6 @@ class VehicleForm(BootstrapFormMixin, forms.ModelForm):
 			'manufacturer',
 			'model',
 			'year',
-			'status',
 			'notes',
 		]
 		widgets = {
@@ -27,3 +26,8 @@ class VehicleForm(BootstrapFormMixin, forms.ModelForm):
 
 	def clean_registration_number(self):
 		return self.cleaned_data['registration_number'].strip().upper()
+
+
+class StatusChangeForm(forms.Form):
+	"""Form for handling vehicle status changes via AJAX."""
+	vehicle_id = forms.IntegerField(widget=forms.HiddenInput())

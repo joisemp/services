@@ -66,3 +66,42 @@ class Vehicle(models.Model):
 	def get_absolute_url(self):
 		return reverse('fleet_management:central_admin:vehicle_detail', kwargs={'slug': self.slug})
 
+
+class VehicleActivity(models.Model):
+	ACTION_CREATED = 'created'
+	ACTION_UPDATED = 'updated'
+	ACTION_STATUS_CHANGED = 'status_changed'
+	ACTION_DELETED = 'deleted'
+	ACTION_DETAILS_EDITED = 'details_edited'
+
+	ACTION_CHOICES = [
+		(ACTION_CREATED, 'Created'),
+		(ACTION_UPDATED, 'Updated'),
+		(ACTION_STATUS_CHANGED, 'Status Changed'),
+		(ACTION_DELETED, 'Deleted'),
+		(ACTION_DETAILS_EDITED, 'Details Edited'),
+	]
+
+	vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='activities', null=True, blank=True)
+	org = models.ForeignKey('core.Organization', on_delete=models.CASCADE, related_name='vehicle_activities')
+	action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+	user = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True)
+	timestamp = models.DateTimeField(auto_now_add=True)
+	field_name = models.CharField(max_length=100, blank=True, null=True)
+	old_value = models.TextField(blank=True, null=True)
+	new_value = models.TextField(blank=True, null=True)
+	details = models.TextField(blank=True, null=True)
+	vehicle_slug = models.SlugField(blank=True, null=True, help_text="Slug of deleted vehicle for reference")
+
+	class Meta:
+		ordering = ['-timestamp']
+		verbose_name = 'Vehicle Activity'
+		verbose_name_plural = 'Vehicle Activities'
+		indexes = [
+			models.Index(fields=['org', '-timestamp']),
+			models.Index(fields=['vehicle', '-timestamp']),
+		]
+
+	def __str__(self):
+		return f"{self.get_action_display()} - {self.vehicle or self.vehicle_slug} by {self.user or 'System'}"
+
