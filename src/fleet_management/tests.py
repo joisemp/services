@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from core.models import Organization
 from fleet_management.models import Vehicle, Workshop
+from issue_management.models import Issue
 
 
 User = get_user_model()
@@ -399,6 +400,15 @@ class TransportInchargeWorkshopViewTests(TestCase):
 			org=self.org,
 			name='Transport Workshop',
 		)
+		self.vehicle = Vehicle.objects.create(
+			org=self.org,
+			registration_number='ABC 123',
+			vehicle_type=Vehicle.TYPE_CAR,
+			manufacturer='Toyota',
+			model='Corolla',
+			year=2022,
+			status=Vehicle.STATUS_ACTIVE,
+		)
 		self.other_workshop = Workshop.objects.create(
 			org=self.other_org,
 			name='Other Transport Workshop',
@@ -449,3 +459,24 @@ class TransportInchargeWorkshopViewTests(TestCase):
 		)
 		self.assertEqual(delete_response.status_code, 302)
 		self.assertFalse(Workshop.objects.filter(pk=created.pk).exists())
+
+	def test_workshop_detail_lists_reported_issues(self):
+		self.client.force_login(self.transport_incharge)
+
+		issue = Issue.objects.create(
+			title='Workshop Issue',
+			description='Reported to workshop',
+			reporter=self.transport_incharge,
+			org=self.org,
+			vehicle=self.vehicle,
+			workshop=self.workshop,
+		)
+
+		response = self.client.get(
+			reverse('fleet_management:transport_incharge:workshop_detail', kwargs={'slug': self.workshop.slug})
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Reported Issues')
+		self.assertContains(response, issue.title)
+		self.assertContains(response, reverse('issue_management:transport_incharge:issue_detail', kwargs={'issue_slug': issue.slug}))

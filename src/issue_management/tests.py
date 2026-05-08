@@ -44,6 +44,14 @@ class VehicleIssueIntegrationTests(TestCase):
             organization=self.org2,
             is_active=True
         )
+        self.transport_incharge = User.objects.create_user(
+            email="transport@org1.com",
+            phone_number="+1234567892",
+            password="testpass123",
+            user_type="transport_incharge",
+            organization=self.org1,
+            is_active=True
+        )
         
         # Create vehicles
         self.vehicle1 = Vehicle.objects.create(
@@ -272,6 +280,36 @@ class VehicleIssueIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFormError(response.context['form'], 'workshop', 'This field is required.')
         self.assertFalse(Issue.objects.filter(title='Vehicle-linked issue without workshop').exists())
+
+    def test_transport_incharge_issue_create_auto_attaches_vehicle_and_requires_workshop(self):
+        """Test the transport incharge issue create flow mirrors the vehicle-linked workshop behavior"""
+        self.client.force_login(self.transport_incharge)
+
+        response = self.client.post(
+            reverse('issue_management:transport_incharge:issue_create') + f'?vehicle={self.vehicle1.slug}',
+            {
+                'title': 'Transport issue',
+                'description': 'Reported by transport incharge',
+                'priority': 'medium',
+                'space': '',
+                'workshop': self.workshop.pk,
+                'voice': '',
+            }
+        )
+
+        self.assertEqual(response.status_code, 302)
+        issue = Issue.objects.get(title='Transport issue')
+        self.assertEqual(issue.vehicle, self.vehicle1)
+        self.assertEqual(issue.workshop, self.workshop)
+
+    def test_transport_incharge_vehicle_detail_links_to_issue_create(self):
+        """Test that transport incharge vehicle detail links to the issue create flow"""
+        self.client.force_login(self.transport_incharge)
+        response = self.client.get(
+            reverse('fleet_management:transport_incharge:vehicle_detail', kwargs={'slug': self.vehicle1.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('issue_management:transport_incharge:issue_create') + f'?vehicle={self.vehicle1.slug}')
     
     def test_issue_create_view_restricts_vehicle_queryset_by_org(self):
         """Test that IssueCreateView restricts vehicle choices to user's org"""

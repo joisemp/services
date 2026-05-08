@@ -84,6 +84,10 @@
       <span class="material-symbols-outlined">delete</span>
       Delete
     </a>
+    <a class="btn btn-warning d-inline-flex align-items-center gap-1" href="{% url 'issue_management:transport_incharge:issue_create' %}?vehicle={{ vehicle.slug }}">
+      <span class="material-symbols-outlined">report_problem</span>
+      Report Issue
+    </a>
   </div>
 
   <!-- Status Change Modal -->

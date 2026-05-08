@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 
 from config.mixins.access_mixin import TransportInchargeOnlyAccessMixin
+from issue_management.models import Issue
 from fleet_management.forms import VehicleForm, WorkshopForm
 from fleet_management.models import Vehicle, VehicleActivity, Workshop
 from fleet_management.views.common import VehicleScopedMixin, WorkshopScopedMixin, get_next_status
@@ -244,6 +245,15 @@ class WorkshopDetailView(TransportInchargeWorkshopScopedMixin, DetailView):
 
 	def get_object(self, queryset=None):
 		return self.get_workshop()
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		workshop = self.get_workshop()
+		context['issues'] = Issue.objects.filter(workshop=workshop).select_related(
+			'reporter', 'vehicle', 'workshop'
+		).order_by('-created_at')
+		context['issues_count'] = context['issues'].count()
+		return context
 
 
 class WorkshopUpdateView(TransportInchargeWorkshopScopedMixin, UpdateView):

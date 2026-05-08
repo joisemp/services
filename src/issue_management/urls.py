@@ -15,4 +15,5 @@ urlpatterns = [
     path('reviewer/', include('issue_management.role_urls.reviewer')),
     path('space-admin/', include('issue_management.role_urls.space_admin')),
     path('supervisor/', include('issue_management.role_urls.supervisor')),
+    path('transport-incharge/', include('issue_management.role_urls.transport_incharge')),
 ]
