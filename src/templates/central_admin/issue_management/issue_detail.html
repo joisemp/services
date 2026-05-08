@@ -37,6 +37,22 @@
     <div class="message flex-grow-1 mb-2 mb-md-0">
       <h4 class="mb-2">{{ issue.title }}</h4>
       <p class="alert-text text-body-secondary mb-0">Reported by {{ issue.reporter.get_full_name }} {% if issue.space %}({{ issue.space.name }}){% else %}(Organization wide){% endif %}</p>
+      {% if issue.vehicle %}
+      <p class="alert-text text-body-secondary mb-0">
+        <strong>Vehicle:</strong>
+        <a href="{% url 'fleet_management:central_admin:vehicle_detail' slug=issue.vehicle.slug %}">{{ issue.vehicle.registration_number }}</a>
+      </p>
+      {% endif %}
+      {% if issue.workshop %}
+      <p class="alert-text text-body-secondary mb-0">
+        <strong>Workshop:</strong>
+        <a href="{% url 'fleet_management:central_admin:workshop_detail' slug=issue.workshop.slug %}">{{ issue.workshop.name }}</a>
+        <a href="{% url 'issue_management:central_admin:issue_change_workshop' issue_slug=issue.slug %}" class="btn btn-sm btn-link ms-2">Change</a>
+      </p>
+      {% endif %}
+      {% if issue.vehicle %}
+      <p class="alert-text text-body-secondary mb-0"><strong>Vehicle Type:</strong> {{ issue.vehicle.get_vehicle_type_display }}</p>
+      {% endif %}
       <p class="alert-text text-body-secondary mb-0 fw-semibold">{{ issue.reporter.phone_number | default:"N/A" }}</p>
     </div>
     <div class="alert-buttons ms-md-3 d-flex flex-row gap-2 mt-3">

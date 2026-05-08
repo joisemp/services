@@ -11,6 +11,8 @@ from ..forms_reports import PerformanceReportForm
 from ..utils.performance_report import PerformanceReportGenerator
 from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
 from core.models import Space
+from fleet_management.models import Vehicle
+from fleet_management.models import Workshop
 
 
 class IssueListView(CentralAdminOnlyAccessMixin, ListView):
@@ -19,7 +21,7 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     model = Issue
     
     def get_queryset(self):
-        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to').all()
+        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to', 'vehicle', 'workshop').all()
         
         # Filter by reporter if provided (slug or ID)
         reporter_filter = self.request.GET.get('reporter')
@@ -92,11 +94,77 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
         context['spaces'] = Space.objects.select_related('org').all().order_by('org__name', 'name')
         return context
 
+
+class VehicleIssueListView(CentralAdminOnlyAccessMixin, ListView):
+    """List issues for a specific vehicle"""
+    template_name = "central_admin/issue_management/vehicle_issue_list.html"
+    context_object_name = "issues"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.vehicle = get_object_or_404(Vehicle, slug=kwargs.get('vehicle_slug'))
+        # Ensure organization scoping
+        if request.user.organization and self.vehicle.org != request.user.organization:
+            return redirect(reverse('issue_management:central_admin:issue_list'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.vehicle.issues.prefetch_related('images').select_related('reporter', 'assigned_to', 'org').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['vehicle'] = self.vehicle
+        return context
+
+
+class IssueWorkshopTransferView(CentralAdminOnlyAccessMixin, UpdateView):
+    """Allow transferring an issue to a different workshop."""
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    fields = ['workshop']
+    template_name = 'central_admin/issue_management/issue_change_workshop.html'
+
+    def get_queryset(self):
+        return Issue.objects.select_related('org', 'vehicle').all()
+
+    def form_valid(self, form):
+        # Track who changed the workshop
+        form.instance._changed_by = self.request.user
+        old_workshop = None
+        if self.object and self.object.workshop:
+            old_workshop = self.object.workshop
+        response = super().form_valid(form)
+        # Log activity
+        try:
+            IssueActivity.objects.create(
+                issue=self.object,
+                activity_type='workshop_changed',
+                user=self.request.user,
+                description=f'Workshop changed from {old_workshop.name if old_workshop else "None"} to {self.object.workshop.name if self.object.workshop else "None"}'
+            )
+        except Exception:
+            pass
+        messages.success(self.request, 'Workshop assignment updated.')
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
+
     
 class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     template_name = "central_admin/issue_management/issue_create.html"
     form_class = IssueForm
     success_url = reverse_lazy('issue_management:central_admin:issue_list')
+
+    def _get_vehicle_from_query(self):
+        vehicle_slug = self.request.GET.get('vehicle')
+        if not vehicle_slug or not self.request.user.organization:
+            return None
+
+        try:
+            return Vehicle.objects.get(slug=vehicle_slug, org=self.request.user.organization)
+        except Vehicle.DoesNotExist:
+            return None
     
     def get_form_kwargs(self):
         """Pass current_user to form"""
@@ -111,7 +179,29 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
             form.fields['space'].queryset = Space.objects.filter(
                 org=self.request.user.organization
             ).order_by('name')
+
+        vehicle = self._get_vehicle_from_query()
+        self.vehicle_context = vehicle
+
+        if 'vehicle' in form.fields:
+            form.fields['vehicle'].required = False
+            form.fields['vehicle'].queryset = Vehicle.objects.filter(
+                org=self.request.user.organization
+            ).order_by('registration_number')
+            if vehicle:
+                form.initial['vehicle'] = vehicle.pk
+
+        if 'workshop' in form.fields:
+            form.fields['workshop'].required = bool(vehicle)
+            form.fields['workshop'].queryset = Workshop.objects.filter(
+                org=self.request.user.organization
+            ).order_by('name')
         return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_workshop_field'] = bool(self._get_vehicle_from_query())
+        return context
     
     def post(self, request, *args, **kwargs):
         """Override post to prevent duplicate submissions"""
@@ -129,6 +219,9 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     def form_valid(self, form):
         # Set the reporter to the current user before saving
         form.instance.reporter = self.request.user
+        vehicle = self._get_vehicle_from_query()
+        if vehicle:
+            form.instance.vehicle = vehicle
         
         # Save the issue first
         response = super().form_valid(form)

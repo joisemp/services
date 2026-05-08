@@ -9,6 +9,22 @@ from .middleware import get_current_request_user
 from .models import Vehicle, VehicleActivity
 
 
+def _safe_current_user():
+	"""Return the current request user only if it still exists in the database."""
+	user = get_current_request_user()
+	if user is None:
+		return None
+
+	try:
+		from core.models import User as CoreUser
+		if CoreUser.objects.filter(pk=getattr(user, 'pk', None)).exists():
+			return user
+	except Exception:
+		pass
+
+	return None
+
+
 def _get_org_for_signal(instance):
 	"""Get organization from instance or create default context."""
 	if hasattr(instance, 'org'):
@@ -19,7 +35,7 @@ def _get_org_for_signal(instance):
 @receiver(post_save, sender=Vehicle)
 def log_vehicle_activity(sender, instance, created, **kwargs):
 	"""Log vehicle creation or update."""
-	user = get_current_request_user()
+	user = _safe_current_user()
 	org = _get_org_for_signal(instance)
 
 	if not org:
@@ -47,7 +63,7 @@ def log_vehicle_activity(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Vehicle)
 def log_vehicle_deletion(sender, instance, **kwargs):
 	"""Log vehicle deletion."""
-	user = get_current_request_user()
+	user = _safe_current_user()
 	org = _get_org_for_signal(instance)
 
 	if not org:

@@ -5,6 +5,28 @@ from .utils.firebase_notifications import send_issue_created_notification
 from core.models import User
 
 
+@receiver(post_save, sender=Issue, dispatch_uid="assign_vehicle_to_workshop_on_issue")
+def assign_vehicle_to_workshop_on_issue(sender, instance, created, **kwargs):
+    """When an issue related to a vehicle is created, mark the vehicle as in maintenance."""
+    # Do NOT change vehicle.status here. Instead, log that an issue was reported for the vehicle.
+    if created and getattr(instance, 'vehicle', None):
+        try:
+            vehicle = instance.vehicle
+            # Log that an issue was reported for this vehicle (no status change)
+            try:
+                IssueActivity.objects.create(
+                    issue=instance,
+                    activity_type='vehicle_issue_reported',
+                    user=instance.reporter,
+                    description=f'Issue reported for vehicle "{vehicle.registration_number}" (no status change)'
+                )
+            except Exception:
+                pass
+        except Exception:
+            # Fail silently to avoid breaking issue creation
+            pass
+
+
 # Dictionary to store old values of instances before saving
 _issue_pre_save_data = {}
 _work_task_pre_save_data = {}
