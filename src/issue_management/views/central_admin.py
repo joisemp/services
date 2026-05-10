@@ -9,7 +9,7 @@ from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteV
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from ..forms_reports import PerformanceReportForm
 from ..utils.performance_report import PerformanceReportGenerator
-from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
+from config.mixins.access_mixin import IssueManagementStaffAccessMixin as CentralAdminOnlyAccessMixin
 from core.models import Space
 from fleet_management.models import Vehicle
 from fleet_management.models import Workshop
@@ -267,11 +267,15 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
             'site_visits__created_by',
             'site_visits__assigned_to',
             'site_visits__images',
-            'activities__user'
-        ).select_related('org', 'space')
+            'activities__user',
+            'purchase_requests__requested_by',
+            'purchase_requests__reviewed_by',
+        ).select_related('org', 'space', 'reporter', 'assigned_to', 'assigned_by', 'reviewed_by', 'vehicle', 'workshop')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['sidebar_template'] = 'central_admin/sidebar.html'
+        context['back_url'] = reverse('issue_management:central_admin:issue_list')
         # Add work tasks to context sorted by completion status and issue priority
         work_tasks = self.object.work_tasks.select_related('issue').prefetch_related('resolution_images').all().annotate(
             priority_order=Case(

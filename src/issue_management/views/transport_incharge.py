@@ -7,6 +7,8 @@ from config.mixins.access_mixin import TransportInchargeOnlyAccessMixin
 from core.models import Space
 from fleet_management.models import Vehicle, Workshop
 
+from . import central_admin as central_admin_views
+
 from ..forms import IssueForm
 from ..models import Issue, IssueActivity, IssueImage
 
@@ -97,15 +99,17 @@ class IssueCreateView(TransportInchargeIssueScopedMixin, CreateView):
 		return reverse_lazy('issue_management:transport_incharge:issue_detail', kwargs={'issue_slug': self.object.slug})
 
 
-class IssueDetailView(TransportInchargeIssueScopedMixin, DetailView):
-	template_name = 'transport_incharge/issue_management/issue_detail.html'
-	context_object_name = 'issue'
-	model = Issue
-	slug_field = 'slug'
-	slug_url_kwarg = 'issue_slug'
+class IssueDetailView(central_admin_views.IssueDetailView):
+	template_name = 'central_admin/issue_management/issue_detail.html'
 
-	def get_queryset(self):
-		return Issue.objects.select_related('org', 'space', 'reporter', 'vehicle', 'workshop')
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['sidebar_template'] = 'transport_incharge/sidebar.html'
+		if self.object.vehicle:
+			context['back_url'] = reverse('fleet_management:transport_incharge:vehicle_detail', kwargs={'slug': self.object.vehicle.slug})
+		else:
+			context['back_url'] = reverse('fleet_management:transport_incharge:fleet_list')
+		return context
 
 
 class IssueWorkshopTransferView(TransportInchargeIssueScopedMixin, UpdateView):
@@ -141,3 +145,13 @@ class IssueWorkshopTransferView(TransportInchargeIssueScopedMixin, UpdateView):
 
 	def get_success_url(self):
 		return reverse_lazy('issue_management:transport_incharge:issue_detail', kwargs={'issue_slug': self.object.slug})
+
+
+class IssueDeleteView(central_admin_views.IssueDeleteView):
+	"""Transport-incharge specific delete view that redirects to a transport-incharge landing page."""
+
+	def get_success_url(self):
+		# If issue is tied to a vehicle, go back to that vehicle's issue list; otherwise go to fleet list
+		if self.object and getattr(self.object, 'vehicle', None):
+			return reverse_lazy('issue_management:transport_incharge:vehicle_issue_list', kwargs={'vehicle_slug': self.object.vehicle.slug})
+		return reverse_lazy('fleet_management:transport_incharge:fleet_list')

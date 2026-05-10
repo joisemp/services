@@ -15,12 +15,18 @@
 {% endblock %}
 
 {% block sidebar %}
+{% if request.user.is_transport_incharge %}
+{% include 'transport_incharge/sidebar.html' %}
+{% elif request.user.is_central_admin %}
 {% include 'central_admin/sidebar.html' %}
+{% else %}
+{% include sidebar_template %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
 
-<a href="{% url 'issue_management:central_admin:issue_list' %}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Go back</a>
+<a href="{{ back_url }}" class="btn btn-sm btn-dark"><i class="fas fa-arrow-left me-2"></i>Go back</a>
 
 <section id="breadcrumb" class="mb-3">
   <span class="badge rounded-pill border border-dark text-dark">{{ issue.issue_id }}</span>

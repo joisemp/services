@@ -12,7 +12,11 @@
 {% endblock %}
 
 {% block sidebar %}
+{% if request.user.is_transport_incharge %}
+{% include 'transport_incharge/sidebar.html' %}
+{% else %}
 {% include 'central_admin/sidebar.html' %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -52,7 +56,7 @@
                 <!-- Form Actions -->
                 <hr>
 
-                <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}"
+                <a href="{% if request.user.is_transport_incharge %}{% url 'issue_management:transport_incharge:issue_detail' issue_slug=issue.slug %}{% else %}{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}{% endif %}"
                     class="btn btn-dark">
                     <i class="fas fa-times me-1"></i>Cancel
                 </a>
