@@ -1,0 +1,78 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Delete Expense{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="mb-3">
+    <a class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:expense_list' %}">
+      <span class="material-symbols-outlined fs-6">arrow_back</span>
+      Back
+    </a>
+  </div>
+
+  <div class="mb-4">
+    <h1 class="h3 mb-1">Delete Expense</h1>
+    <p class="text-muted">This action cannot be undone.</p>
+  </div>
+
+  <div class="card border rounded-3 border-danger">
+    <div class="card-body p-4">
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <strong>Warning!</strong> You are about to permanently delete this expense.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+          <p><strong>Vehicle:</strong> {{ object.vehicle.registration_number }}</p>
+        </div>
+        <div class="col-12 col-md-6">
+          <p><strong>Category:</strong> <span class="badge bg-info">{{ object.get_category_display }}</span></p>
+        </div>
+        <div class="col-12 col-md-6">
+          <p><strong>Amount:</strong> ${{ object.amount|floatformat:2 }}</p>
+        </div>
+        <div class="col-12 col-md-6">
+          <p><strong>Date:</strong> {{ object.expense_date|date:"M d, Y" }}</p>
+        </div>
+        <div class="col-12">
+          <p><strong>Description:</strong> {{ object.description|default:"-" }}</p>
+        </div>
+        {% if object.receipt %}
+          <div class="col-12">
+            <p><strong>Receipt:</strong> <a href="{{ object.receipt.url }}" target="_blank">{{ object.receipt.name }}</a></p>
+          </div>
+        {% endif %}
+      </div>
+
+      <form method="post" class="d-inline">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-danger d-inline-flex align-items-center gap-1">
+            <span class="material-symbols-outlined">delete</span>
+            Yes, Delete This Expense
+          </button>
+          <a href="{% url 'fleet_management:transport_incharge:expense_list' %}" class="btn btn-secondary">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

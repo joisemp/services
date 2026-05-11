@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.test import TestCase
+from django.utils.timezone import now
 
 from core.models import Organization
-from fleet_management.models import Vehicle, Workshop
+from fleet_management.models import Vehicle, Workshop, VehicleExpense, VehicleActivity
 from issue_management.models import Issue
 
 
@@ -480,3 +481,113 @@ class TransportInchargeWorkshopViewTests(TestCase):
 		self.assertContains(response, 'Reported Issues')
 		self.assertContains(response, issue.title)
 		self.assertContains(response, reverse('issue_management:transport_incharge:issue_detail', kwargs={'issue_slug': issue.slug}))
+
+
+class TransportInchargeExpenseViewTests(TestCase):
+	"""Tests for expense CRUD operations and activity logging."""
+
+	def setUp(self):
+		self.org = Organization.objects.create(name='Org One')
+		self.other_org = Organization.objects.create(name='Org Two')
+
+		self.transport_incharge = User.objects.create_user(
+			phone_number='+10000000051',
+			email='transport-expense@example.com',
+			password='TransportPass123!',
+			user_type='transport_incharge',
+			organization=self.org,
+			first_name='Transport',
+			last_name='Incharge',
+		)
+
+		self.vehicle = Vehicle.objects.create(
+			org=self.org,
+			registration_number='ABC 123',
+			vehicle_type=Vehicle.TYPE_CAR,
+			manufacturer='Toyota',
+			model='Corolla',
+			year=2022,
+			status=Vehicle.STATUS_ACTIVE,
+		)
+
+	def test_expense_create_success(self):
+		"""Test creating an expense successfully."""
+		self.client.force_login(self.transport_incharge)
+
+		response = self.client.post(
+			reverse('fleet_management:transport_incharge:expense_create'),
+			{
+				'vehicle': self.vehicle.pk,
+				'amount': '50.00',
+				'expense_date': now().date(),
+				'category': VehicleExpense.CATEGORY_FUEL,
+				'description': 'Fuel for delivery',
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		created_expense = VehicleExpense.objects.get(description='Fuel for delivery')
+		self.assertEqual(created_expense.vehicle, self.vehicle)
+		self.assertEqual(created_expense.amount, 50)
+		self.assertEqual(created_expense.created_by, self.transport_incharge)
+
+	def test_expense_create_logs_activity(self):
+		"""Test that creating an expense logs a VehicleActivity."""
+		self.client.force_login(self.transport_incharge)
+
+		initial_count = VehicleActivity.objects.count()
+
+		self.client.post(
+			reverse('fleet_management:transport_incharge:expense_create'),
+			{
+				'vehicle': self.vehicle.pk,
+				'amount': '75.50',
+				'expense_date': now().date(),
+				'category': VehicleExpense.CATEGORY_MAINTENANCE,
+				'description': 'Oil change',
+			},
+		)
+
+		# Check that activity was logged
+		self.assertEqual(VehicleActivity.objects.count(), initial_count + 1)
+		activity = VehicleActivity.objects.latest('timestamp')
+		self.assertEqual(activity.action, VehicleActivity.ACTION_EXPENSE_CREATED)
+		self.assertEqual(activity.user, self.transport_incharge)
+		self.assertEqual(activity.vehicle, self.vehicle)
+		self.assertEqual(activity.org, self.org)
+
+	def test_expense_list_is_org_scoped(self):
+		"""Test that expense list only shows expenses from the user's org."""
+		self.client.force_login(self.transport_incharge)
+
+		other_vehicle = Vehicle.objects.create(
+			org=self.other_org,
+			registration_number='XYZ 789',
+			vehicle_type=Vehicle.TYPE_VAN,
+			manufacturer='Nissan',
+			model='Urvan',
+		)
+
+		# Create expenses in both orgs
+		expense1 = VehicleExpense.objects.create(
+			vehicle=self.vehicle,
+			amount=50,
+			expense_date=now().date(),
+			category=VehicleExpense.CATEGORY_FUEL,
+			description='Org 1 fuel',
+			created_by=self.transport_incharge,
+		)
+		expense2 = VehicleExpense.objects.create(
+			vehicle=other_vehicle,
+			amount=75,
+			expense_date=now().date(),
+			category=VehicleExpense.CATEGORY_MAINTENANCE,
+			description='Org 2 maintenance',
+			created_by=None,
+		)
+
+		response = self.client.get(reverse('fleet_management:transport_incharge:expense_list'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, expense1.description)
+		self.assertNotContains(response, expense2.description)

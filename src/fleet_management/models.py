@@ -6,6 +6,12 @@ from django.utils.text import slugify
 from config.utils import generate_unique_slug
 
 
+def get_expense_upload_path(instance, filename):
+	"""Generate upload path for expense receipts."""
+	vehicle_slug = instance.vehicle.slug if instance.vehicle else 'unknown'
+	return f'vehicle/{vehicle_slug}/expenses/{filename}'
+
+
 class Vehicle(models.Model):
 	STATUS_ACTIVE = 'active'
 	STATUS_IN_MAINTENANCE = 'maintenance'
@@ -120,6 +126,9 @@ class VehicleActivity(models.Model):
 	ACTION_STATUS_CHANGED = 'status_changed'
 	ACTION_DELETED = 'deleted'
 	ACTION_DETAILS_EDITED = 'details_edited'
+	ACTION_EXPENSE_CREATED = 'expense_created'
+	ACTION_EXPENSE_UPDATED = 'expense_updated'
+	ACTION_EXPENSE_DELETED = 'expense_deleted'
 
 	ACTION_CHOICES = [
 		(ACTION_CREATED, 'Created'),
@@ -127,6 +136,9 @@ class VehicleActivity(models.Model):
 		(ACTION_STATUS_CHANGED, 'Status Changed'),
 		(ACTION_DELETED, 'Deleted'),
 		(ACTION_DETAILS_EDITED, 'Details Edited'),
+		(ACTION_EXPENSE_CREATED, 'Expense Created'),
+		(ACTION_EXPENSE_UPDATED, 'Expense Updated'),
+		(ACTION_EXPENSE_DELETED, 'Expense Deleted'),
 	]
 
 	vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='activities', null=True, blank=True)
@@ -151,4 +163,46 @@ class VehicleActivity(models.Model):
 
 	def __str__(self):
 		return f"{self.get_action_display()} - {self.vehicle or self.vehicle_slug} by {self.user or 'System'}"
+
+
+class VehicleExpense(models.Model):
+	CATEGORY_FUEL = 'fuel'
+	CATEGORY_MAINTENANCE = 'maintenance'
+	CATEGORY_REPAIRS = 'repairs'
+	CATEGORY_TOLLS = 'tolls'
+	CATEGORY_PARKING = 'parking'
+	CATEGORY_INSURANCE = 'insurance'
+	CATEGORY_OTHER = 'other'
+
+	CATEGORY_CHOICES = [
+		(CATEGORY_FUEL, 'Fuel'),
+		(CATEGORY_MAINTENANCE, 'Maintenance'),
+		(CATEGORY_REPAIRS, 'Repairs'),
+		(CATEGORY_TOLLS, 'Tolls'),
+		(CATEGORY_PARKING, 'Parking'),
+		(CATEGORY_INSURANCE, 'Insurance'),
+		(CATEGORY_OTHER, 'Other'),
+	]
+
+	vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='expenses')
+	amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Expense amount in currency")
+	expense_date = models.DateField(help_text="Date when expense occurred")
+	category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+	description = models.TextField(blank=True, null=True)
+	receipt = models.FileField(upload_to=get_expense_upload_path, blank=True, null=True)
+	created_by = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_expenses')
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ['-expense_date', '-created_at']
+		verbose_name = 'Vehicle Expense'
+		verbose_name_plural = 'Vehicle Expenses'
+		indexes = [
+			models.Index(fields=['vehicle', '-expense_date']),
+			models.Index(fields=['created_by', '-created_at']),
+		]
+
+	def __str__(self):
+		return f"{self.get_category_display()} - {self.vehicle} - {self.amount}"
 

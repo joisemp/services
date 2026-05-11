@@ -5,6 +5,7 @@ Transport Incharge has full access to all fleet management features.
 import json
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import models
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
@@ -14,8 +15,8 @@ from django.utils.decorators import method_decorator
 
 from config.mixins.access_mixin import TransportInchargeOnlyAccessMixin
 from issue_management.models import Issue
-from fleet_management.forms import VehicleForm, WorkshopForm
-from fleet_management.models import Vehicle, VehicleActivity, Workshop
+from fleet_management.forms import VehicleForm, WorkshopForm, VehicleExpenseForm
+from fleet_management.models import Vehicle, VehicleActivity, Workshop, VehicleExpense
 from fleet_management.views.common import VehicleScopedMixin, WorkshopScopedMixin, get_next_status
 
 
@@ -131,6 +132,20 @@ class VehicleExpensesView(TransportInchargeVehicleScopedMixin, DetailView):
 	def get_object(self, queryset=None):
 		return self.get_vehicle()
 
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		vehicle = self.get_vehicle()
+		
+		# Get recent expenses for this vehicle
+		expenses = VehicleExpense.objects.filter(vehicle=vehicle).select_related(
+			'created_by', 'vehicle'
+		).order_by('-expense_date', '-created_at')[:10]
+		
+		context['expenses'] = expenses
+		context['total_expense_amount'] = sum(e.amount for e in VehicleExpense.objects.filter(vehicle=vehicle))
+		
+		return context
+
 
 @method_decorator(require_http_methods(["POST"]), name='dispatch')
 class VehicleStatusChangeView(TransportInchargeVehicleScopedMixin, View):
@@ -198,6 +213,135 @@ class VehicleStatusChangeView(TransportInchargeVehicleScopedMixin, View):
 		"""Get vehicle by slug with org scoping."""
 		queryset = self.get_vehicle_queryset()
 		return get_object_or_404(queryset, slug=slug)
+
+
+# Expense Management Views
+class ExpenseListView(TransportInchargeVehicleScopedMixin, ListView):
+	"""List all expenses for the organization."""
+	template_name = 'transport_incharge/fleet_management/expense_list.html'
+	context_object_name = 'expenses'
+	paginate_by = 20
+
+	def get_queryset(self):
+		org = self.get_user_org()
+		return VehicleExpense.objects.filter(
+			vehicle__org=org
+		).select_related('vehicle', 'created_by').order_by('-expense_date', '-created_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		queryset = self.get_queryset()
+		context['total_expenses'] = queryset.aggregate(total=models.Sum('amount'))['total'] or 0
+		context['expense_count'] = queryset.count()
+		return context
+
+
+class VehicleExpenseListView(TransportInchargeVehicleScopedMixin, ListView):
+	"""List expenses for a specific vehicle."""
+	template_name = 'transport_incharge/fleet_management/vehicle_expense_list.html'
+	context_object_name = 'expenses'
+	paginate_by = 20
+
+	def get_queryset(self):
+		vehicle = self.get_vehicle()
+		return VehicleExpense.objects.filter(
+			vehicle=vehicle
+		).select_related('vehicle', 'created_by').order_by('-expense_date', '-created_at')
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		vehicle = self.get_vehicle()
+		context['vehicle'] = vehicle
+		queryset = self.get_queryset()
+		context['total_expenses'] = queryset.aggregate(total=models.Sum('amount'))['total'] or 0
+		return context
+
+
+class ExpenseCreateView(TransportInchargeVehicleScopedMixin, CreateView):
+	"""Create a new expense."""
+	form_class = VehicleExpenseForm
+	template_name = 'transport_incharge/fleet_management/expense_form.html'
+
+	def get_form_kwargs(self):
+		kwargs = super().get_form_kwargs()
+		org = self.get_user_org()
+		
+		# Filter vehicles to only those in the org
+		if self.request.GET.get('vehicle'):
+			try:
+				vehicle_slug = self.request.GET.get('vehicle')
+				vehicle = self.get_vehicle_queryset().get(slug=vehicle_slug)
+				# Pre-populate vehicle if provided
+				if not kwargs.get('data'):
+					kwargs['initial'] = {'vehicle': vehicle}
+			except Vehicle.DoesNotExist:
+				pass
+		
+		return kwargs
+
+	def get_form(self, form_class=None):
+		form = super().get_form(form_class)
+		org = self.get_user_org()
+		
+		# Filter vehicle queryset to only org vehicles
+		form.fields['vehicle'].queryset = self.get_vehicle_queryset()
+		
+		return form
+
+	def form_valid(self, form):
+		form.instance.created_by = self.request.user
+		messages.success(self.request, 'Expense created successfully.')
+		return super().form_valid(form)
+
+	def get_success_url(self):
+		vehicle_slug = self.object.vehicle.slug
+		return reverse_lazy('fleet_management:transport_incharge:vehicle_expense_list', kwargs={'slug': vehicle_slug})
+
+
+class ExpenseUpdateView(TransportInchargeVehicleScopedMixin, UpdateView):
+	"""Update an existing expense."""
+	model = VehicleExpense
+	form_class = VehicleExpenseForm
+	template_name = 'transport_incharge/fleet_management/expense_form.html'
+
+	def get_queryset(self):
+		org = self.get_user_org()
+		return VehicleExpense.objects.filter(vehicle__org=org)
+
+	def get_form(self, form_class=None):
+		form = super().get_form(form_class)
+		org = self.get_user_org()
+		form.fields['vehicle'].queryset = self.get_vehicle_queryset()
+		return form
+
+	def form_valid(self, form):
+		messages.success(self.request, 'Expense updated successfully.')
+		return super().form_valid(form)
+
+	def get_success_url(self):
+		vehicle_slug = self.object.vehicle.slug
+		return reverse_lazy('fleet_management:transport_incharge:vehicle_expense_list', kwargs={'slug': vehicle_slug})
+
+
+class ExpenseDeleteView(TransportInchargeVehicleScopedMixin, DeleteView):
+	"""Delete an expense."""
+	model = VehicleExpense
+	template_name = 'transport_incharge/fleet_management/expense_confirm_delete.html'
+
+	def get_queryset(self):
+		org = self.get_user_org()
+		return VehicleExpense.objects.filter(vehicle__org=org)
+
+	def delete(self, request, *args, **kwargs):
+		self.object = self.get_object()
+		vehicle_slug = self.object.vehicle.slug
+		response = super().delete(request, *args, **kwargs)
+		messages.success(request, 'Expense deleted successfully.')
+		return response
+
+	def get_success_url(self):
+		vehicle_slug = self.object.vehicle.slug
+		return reverse_lazy('fleet_management:transport_incharge:vehicle_expense_list', kwargs={'slug': vehicle_slug})
 
 
 class WorkshopListView(TransportInchargeWorkshopScopedMixin, ListView):

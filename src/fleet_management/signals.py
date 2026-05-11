@@ -4,9 +4,10 @@ Handles activity tracking, auto-updates, and event-driven workflows.
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+import json
 
 from .middleware import get_current_request_user
-from .models import Vehicle, VehicleActivity
+from .models import Vehicle, VehicleActivity, VehicleExpense
 
 
 def _safe_current_user():
@@ -76,4 +77,68 @@ def log_vehicle_deletion(sender, instance, **kwargs):
 		action=VehicleActivity.ACTION_DELETED,
 		user=user,
 		details=f"Vehicle deleted: {instance.registration_number}",
+	)
+
+
+@receiver(post_save, sender=VehicleExpense)
+def log_expense_activity(sender, instance, created, **kwargs):
+	"""Log expense creation or update."""
+	user = _safe_current_user()
+	org = instance.vehicle.org if instance.vehicle else None
+
+	if not org:
+		return
+
+	if created:
+		details = json.dumps({
+			'amount': str(instance.amount),
+			'category': instance.category,
+			'expense_date': str(instance.expense_date),
+			'description': instance.description[:100] if instance.description else '',
+		})
+		VehicleActivity.objects.create(
+			vehicle=instance.vehicle,
+			org=org,
+			action=VehicleActivity.ACTION_EXPENSE_CREATED,
+			user=user,
+			details=details,
+		)
+	else:
+		# Log update
+		details = json.dumps({
+			'amount': str(instance.amount),
+			'category': instance.category,
+			'expense_date': str(instance.expense_date),
+			'description': instance.description[:100] if instance.description else '',
+		})
+		VehicleActivity.objects.create(
+			vehicle=instance.vehicle,
+			org=org,
+			action=VehicleActivity.ACTION_EXPENSE_UPDATED,
+			user=user,
+			details=details,
+		)
+
+
+@receiver(post_delete, sender=VehicleExpense)
+def log_expense_deletion(sender, instance, **kwargs):
+	"""Log expense deletion."""
+	user = _safe_current_user()
+	org = instance.vehicle.org if instance.vehicle else None
+
+	if not org:
+		return
+
+	details = json.dumps({
+		'amount': str(instance.amount),
+		'category': instance.category,
+		'expense_date': str(instance.expense_date),
+		'description': instance.description[:100] if instance.description else '',
+	})
+	VehicleActivity.objects.create(
+		vehicle=instance.vehicle,
+		org=org,
+		action=VehicleActivity.ACTION_EXPENSE_DELETED,
+		user=user,
+		details=details,
 	)
