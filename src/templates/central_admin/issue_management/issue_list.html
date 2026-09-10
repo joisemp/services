@@ -25,8 +25,18 @@
       <h3 class="mb-1">Issues</h3>
       <span class="alert-text text-body-secondary">View and manage all reported issues across the platform.</span>
     </div>
-    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
-      <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary d-flex w-100 w-md-auto"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Issue</span></a>
+    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto d-flex gap-2 flex-wrap">
+      <a href="{% url 'issue_management:central_admin:issue_create' %}" class="btn btn-primary d-flex align-items-center"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Issue</span></a>
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary d-flex align-items-center dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="material-symbols-outlined">download</span>
+          <span class="ms-2">Generate Report</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="reportDropdown">
+          <li><a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('xlsx'); return false;"><span class="material-symbols-outlined" style="font-size:18px;">table_view</span> Excel (.xlsx)</a></li>
+          <li><a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('pdf'); return false;"><span class="material-symbols-outlined" style="font-size:18px;">picture_as_pdf</span> PDF</a></li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -41,6 +51,9 @@
       </li>
       <li class="nav-item">
         <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=assigned{% if space_filter %}&space={{ space_filter }}{% endif %}">Assigned</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'unassigned' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=unassigned{% if space_filter %}&space={{ space_filter }}{% endif %}">Unassigned</a>
       </li>
       <li class="nav-item">
         <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'issue_management:central_admin:issue_list' %}?status=in_progress{% if space_filter %}&space={{ space_filter }}{% endif %}">In progress</a>
@@ -123,6 +136,22 @@ function filterBySpace(spaceSlug) {
   // Construct the new URL with updated parameters
   const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
   window.location.href = newUrl;
+}
+
+function downloadReport(format) {
+  // Copy the current filter params (status, space, reporter, assignee) and add ?format=
+  const urlParams = new URLSearchParams(window.location.search);
+  const reportParams = new URLSearchParams();
+
+  ['status', 'space', 'reporter', 'assignee'].forEach(function(key) {
+    if (urlParams.has(key)) {
+      reportParams.set(key, urlParams.get(key));
+    }
+  });
+  reportParams.set('format', format);
+
+  const reportUrl = "{% url 'issue_management:central_admin:issue_list_report' %}" + '?' + reportParams.toString();
+  window.location.href = reportUrl;
 }
 </script>
 {% endblock %}

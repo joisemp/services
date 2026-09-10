@@ -8,6 +8,7 @@ urlpatterns = [
     path('create/', central_admin.IssueCreateView.as_view(), name='issue_create'),
     path('site-visits/', central_admin.SiteVisitListView.as_view(), name='site_visit_list'),
     path('performance-report/', central_admin.PerformanceReportView.as_view(), name='performance_report'),
+    path('issue-report/', central_admin.IssueListReportView.as_view(), name='issue_list_report'),
     
     # Purchase Request URLs (must be before issue_slug patterns)
     path('purchase-requests/', central_admin.PurchaseRequestListView.as_view(), name='purchase_request_list'),

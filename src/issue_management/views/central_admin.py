@@ -1,4 +1,4 @@
-﻿from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
@@ -9,6 +9,8 @@ from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteV
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from ..forms_reports import PerformanceReportForm
 from ..utils.performance_report import PerformanceReportGenerator
+from ..utils.issue_filters import apply_issue_list_filters, annotate_and_order, describe_filters
+from ..utils.issue_list_report import build_issue_list_excel, build_issue_list_pdf
 from config.mixins.access_mixin import IssueManagementStaffAccessMixin as CentralAdminOnlyAccessMixin
 from core.models import Space
 from fleet_management.models import Vehicle
@@ -22,69 +24,16 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     
     def get_queryset(self):
         queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to', 'vehicle', 'workshop').all()
-        
-        # Filter by reporter if provided (slug or ID)
-        reporter_filter = self.request.GET.get('reporter')
-        if reporter_filter:
-            # Try slug first, fallback to ID
-            if reporter_filter.isdigit():
-                queryset = queryset.filter(reporter_id=reporter_filter)
-            else:
-                queryset = queryset.filter(reporter__slug=reporter_filter)
-        
-        # Filter by assignee if provided (slug or ID)
-        assignee_filter = self.request.GET.get('assignee')
-        if assignee_filter:
-            # Try slug first, fallback to ID
-            if assignee_filter.isdigit():
-                queryset = queryset.filter(assigned_to_id=assignee_filter)
-            else:
-                queryset = queryset.filter(assigned_to__slug=assignee_filter)
-        
-        # Filter by status if provided
-        status_filter = self.request.GET.get('status')
-        if status_filter:
-            if status_filter == 'not_resolved':
-                # Filter for issues that are not resolved (open, assigned, in_progress, escalated)
-                queryset = queryset.exclude(status='resolved')
-            elif status_filter == 'critical':
-                queryset = queryset.filter(priority='critical')
-            elif status_filter in ['open', 'assigned', 'in_progress', 'resolved', 'escalated', 'closed', 'cancelled']:
-                queryset = queryset.filter(status=status_filter)
-        
-        # Filter by space if provided
-        space_filter = self.request.GET.get('space')
-        if space_filter:
-            if space_filter == 'no_space':
-                # Filter issues with no space assigned
-                queryset = queryset.filter(space__isnull=True)
-            else:
-                # Filter by specific space slug
-                queryset = queryset.filter(space__slug=space_filter)
-        
-        # Order by status (open/assigned/in_progress first, then resolved/escalated, then closed/cancelled)
-        # Then by priority (criticalâ†’highâ†’mediumâ†’low), then by creation date
-        return queryset.annotate(
-            status_order=Case(
-                When(status='open', then=1),
-                When(status='assigned', then=2),
-                When(status='in_progress', then=3),
-                When(status='resolved', then=4),
-                When(status='escalated', then=5),
-                When(status='closed', then=6),
-                When(status='cancelled', then=7),
-                default=8,
-                output_field=IntegerField(),
-            ),
-            priority_order=Case(
-                When(priority='critical', then=1),
-                When(priority='high', then=2),
-                When(priority='medium', then=3),
-                When(priority='low', then=4),
-                default=5,
-                output_field=IntegerField(),
-            )
-        ).order_by('status_order', 'priority_order', '-created_at')
+
+        queryset = apply_issue_list_filters(
+            queryset,
+            status_filter=self.request.GET.get('status'),
+            space_filter=self.request.GET.get('space'),
+            reporter_filter=self.request.GET.get('reporter'),
+            assignee_filter=self.request.GET.get('assignee'),
+        )
+
+        return annotate_and_order(queryset)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1221,6 +1170,68 @@ class PerformanceReportView(CentralAdminOnlyAccessMixin, View):
             }
             return render(request, self.template_name, context)
 
+
+
+
+class IssueListReportView(CentralAdminOnlyAccessMixin, View):
+    """Download a PDF or Excel report of issues matching the current list filters."""
+
+    def get(self, request):
+        report_format = request.GET.get('format', 'xlsx')
+
+        # Build filtered queryset (same logic as IssueListView)
+        queryset = Issue.objects.select_related(
+            'org', 'space', 'reporter', 'assigned_to'
+        ).prefetch_related('images')
+
+        status_filter = request.GET.get('status')
+        space_filter = request.GET.get('space')
+        reporter_filter = request.GET.get('reporter')
+        assignee_filter = request.GET.get('assignee')
+
+        queryset = apply_issue_list_filters(
+            queryset,
+            status_filter=status_filter,
+            space_filter=space_filter,
+            reporter_filter=reporter_filter,
+            assignee_filter=assignee_filter,
+        )
+        queryset = annotate_and_order(queryset)
+
+        filter_descriptions = describe_filters(
+            status_filter=status_filter,
+            space_filter=space_filter,
+            reporter_filter=reporter_filter,
+            assignee_filter=assignee_filter,
+        )
+
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+
+        if report_format == 'pdf':
+            try:
+                buf = build_issue_list_pdf(queryset, filter_descriptions)
+                response = HttpResponse(buf.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = (
+                    f'attachment; filename="issue_report_{timestamp}.pdf"'
+                )
+                return response
+            except Exception as e:
+                messages.error(request, f'Failed to generate PDF report: {str(e)}')
+                return redirect('issue_management:central_admin:issue_list')
+        else:
+            try:
+                buf = build_issue_list_excel(queryset, filter_descriptions)
+                response = HttpResponse(
+                    buf.getvalue(),
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                )
+                response['Content-Disposition'] = (
+                    f'attachment; filename="issue_report_{timestamp}.xlsx"'
+                )
+                return response
+            except Exception as e:
+                messages.error(request, f'Failed to generate Excel report: {str(e)}')
+                return redirect('issue_management:central_admin:issue_list')
 
 class PurchaseRequestListView(CentralAdminOnlyAccessMixin, ListView):
     """List all purchase requests for central admin"""
