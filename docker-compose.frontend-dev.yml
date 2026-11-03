@@ -1,0 +1,66 @@
+###############################################################################
+# FRONTEND DEVELOPER — COPY-PASTE COMPOSE FILE
+# ─────────────────────────────────────────────────────────────────────────────
+# Drop this file into your React project root.
+# It pulls the pre-built API image from GHCR — no cloning the backend needed.
+#
+# SETUP (one-time):
+#   1. Copy this file into your React project root.
+#   2. Copy .env.frontend.example → .env.api (Django settings for the API container)
+#   3. Put API_IMAGE in a .env file next to this compose file:
+#        API_IMAGE=ghcr.io/joisemp/services:dev
+#      Compose interpolates API_IMAGE from that .env (or the shell).
+#      .env.api is only passed into the API container — it does not set the image.
+#   4. If the GHCR package is private: docker login ghcr.io
+#
+# START:
+#   docker compose -f docker-compose.frontend-dev.yml up
+#
+# API available at:      http://localhost:7000
+# Swagger docs at:       http://localhost:7000/api/docs/
+# ReDoc at:              http://localhost:7000/api/redoc/
+# Mailpit inbox at:      http://localhost:8025
+###############################################################################
+name: frontend-dev
+
+services:
+
+  # ── API (pre-built image) ──────────────────────────────────────────────────
+  api:
+    image: ${API_IMAGE:?Set API_IMAGE to ghcr.io/joisemp/services:dev}
+    env_file: .env.api
+    ports:
+      - "7000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-services}
+      POSTGRES_USER: ${POSTGRES_USER:-services}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-services}
+    volumes:
+      - frontend_dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-services}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Mailpit (dev email inbox) ───────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web UI → http://localhost:8025
+      - "1025:1025"   # SMTP → Django sends here
+    restart: unless-stopped
+
+volumes:
+  frontend_dev_postgres_data:

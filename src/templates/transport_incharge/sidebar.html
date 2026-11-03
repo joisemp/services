@@ -1,0 +1,25 @@
+{% load core_tags %}
+<section class="sidebar sidebar-collapsed">
+    <div class="nav">
+        <a class="navlink {% is_active 'dashboard:transport_incharge_dashboard' %}" href="{% url 'dashboard:transport_incharge_dashboard' %}">
+            <span class="material-symbols-outlined me-2">
+                dashboard
+            </span>
+            <span class="menu-text">Dashboard</span>
+        </a>
+
+        <a class="navlink {% is_active 'fleet_management:transport_incharge:fleet_list,fleet_management:transport_incharge:vehicle_list,fleet_management:transport_incharge:vehicle_detail,fleet_management:transport_incharge:vehicle_create,fleet_management:transport_incharge:vehicle_update,fleet_management:transport_incharge:vehicle_delete' %}" href="{% url 'fleet_management:transport_incharge:fleet_list' %}">
+            <span class="material-symbols-outlined me-2">
+                local_shipping
+            </span>
+            <span class="menu-text">Fleets</span>
+        </a>
+
+        <a class="navlink {% is_active 'fleet_management:transport_incharge:workshop_list,fleet_management:transport_incharge:workshop_detail,fleet_management:transport_incharge:workshop_create,fleet_management:transport_incharge:workshop_update,fleet_management:transport_incharge:workshop_delete' %}" href="{% url 'fleet_management:transport_incharge:workshop_list' %}">
+            <span class="material-symbols-outlined me-2">
+                home_repair_service
+            </span>
+            <span class="menu-text">Workshops</span>
+        </a>
+    </div>
+</section>

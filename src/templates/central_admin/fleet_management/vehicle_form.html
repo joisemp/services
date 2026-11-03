@@ -1,0 +1,48 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}{% if object %}Edit Vehicle{% else %}Add Vehicle{% endif %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">{% if object %}Edit Vehicle{% else %}Add Vehicle{% endif %}</h1>
+      <p class="text-muted mb-0">Capture the key details for this transport asset.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'fleet_management:central_admin:vehicle_list' %}">Back to Vehicles</a>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-12 col-md-6">{{ form.registration_number.label_tag }}{{ form.registration_number }}</div>
+      <div class="col-12 col-md-6">{{ form.vehicle_type.label_tag }}{{ form.vehicle_type }}</div>
+      <div class="col-12 col-md-6">{{ form.manufacturer.label_tag }}{{ form.manufacturer }}</div>
+      <div class="col-12 col-md-6">{{ form.model.label_tag }}{{ form.model }}</div>
+      <div class="col-12 col-md-4">{{ form.year.label_tag }}{{ form.year }}</div>
+      <div class="col-12 col-md-4">{{ form.status.label_tag }}{{ form.status }}</div>
+      <div class="col-12">{{ form.notes.label_tag }}{{ form.notes }}</div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a class="btn btn-outline-secondary" href="{% url 'fleet_management:central_admin:vehicle_list' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{% if object %}Save Changes{% else %}Create Vehicle{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

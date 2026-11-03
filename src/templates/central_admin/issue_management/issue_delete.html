@@ -13,7 +13,13 @@
 {% endblock %}
 
 {% block sidebar %}
+{% if request.user.is_transport_incharge %}
+{% include 'transport_incharge/sidebar.html' %}
+{% elif request.user.is_central_admin %}
 {% include 'central_admin/sidebar.html' %}
+{% else %}
+{% include 'central_admin/sidebar.html' %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -107,7 +113,7 @@
             </div>
             
             <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-0 justify-content-sm-between">
-              <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" 
+              <a href="{% if request.user.is_transport_incharge %}{% url 'issue_management:transport_incharge:issue_detail' issue_slug=issue.slug %}{% else %}{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}{% endif %}" 
                  class="btn btn-secondary order-2 order-sm-1 d-flex align-items-center justify-content-center">
                 <i class="fas fa-arrow-left me-2"></i>
                 <span>Cancel</span>

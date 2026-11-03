@@ -5,7 +5,12 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from issue_management.models import Issue, WorkTask
-from config.mixins.access_mixin import CentralAdminOnlyAccessMixin, SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
+from config.mixins.access_mixin import (
+    CentralAdminOnlyAccessMixin,
+    SpaceAdminOnlyAccessMixin,
+    SpaceAdminWithActiveSpaceMixin,
+    TransportInchargeOnlyAccessMixin,
+)
 
 
 class DashboardDataMixin:
@@ -303,3 +308,22 @@ class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin
 
     def get_issue_detail_route_name(self):
         return 'issue_management:space_admin:issue_detail'
+
+
+class TransportInchargeDashboardView(TransportInchargeOnlyAccessMixin, TemplateView):
+    template_name = 'transport_incharge/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['transport_summary'] = {
+            'active_vehicles': 12,
+            'on_trip': 5,
+            'in_maintenance': 2,
+            'available': 5,
+        }
+        context['today_schedule'] = [
+            {'vehicle': 'KL-07-AB-1021', 'route': 'City Hub -> North Depot', 'status': 'On Time'},
+            {'vehicle': 'KL-07-AB-1184', 'route': 'South Depot -> Airport', 'status': 'Delayed'},
+            {'vehicle': 'KL-07-AB-1210', 'route': 'Warehouse A -> Service Center', 'status': 'On Time'},
+        ]
+        return context

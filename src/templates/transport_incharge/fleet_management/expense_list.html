@@ -1,0 +1,129 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Expenses{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="mb-3">
+    <a class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:fleet_list' %}">
+      <span class="material-symbols-outlined fs-6">arrow_back</span>
+      Back
+    </a>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Vehicle Expenses</h1>
+      <p class="text-muted mb-0">Total Expenses: <strong>${{ total_expenses|floatformat:2 }}</strong> ({{ expense_count }} records)</p>
+    </div>
+    <a class="btn btn-primary d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:expense_create' %}">
+      <span class="material-symbols-outlined">add</span>
+      Add Expense
+    </a>
+  </div>
+
+  <!-- Expenses Table -->
+  {% if expenses %}
+    <div class="card border rounded-3">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Vehicle</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Created By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for expense in expenses %}
+              <tr>
+                <td>
+                  <a href="{% url 'fleet_management:transport_incharge:vehicle_detail' slug=expense.vehicle.slug %}">
+                    {{ expense.vehicle.registration_number }}
+                  </a>
+                </td>
+                <td>
+                  <span class="badge bg-info">{{ expense.get_category_display }}</span>
+                </td>
+                <td><strong>${{ expense.amount|floatformat:2 }}</strong></td>
+                <td>{{ expense.expense_date|date:"M d, Y" }}</td>
+                <td>{{ expense.description|truncatewords:10|default:"-" }}</td>
+                <td>{{ expense.created_by.get_full_name|default:"System" }}</td>
+                <td>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{% url 'fleet_management:transport_incharge:expense_update' pk=expense.pk %}" class="btn btn-outline-primary" title="Edit">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                    </a>
+                    <a href="{% url 'fleet_management:transport_incharge:expense_delete' pk=expense.pk %}" class="btn btn-outline-danger" title="Delete">
+                      <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav aria-label="Expenses pagination" class="mt-3">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}<span class="visually-hidden">(current)</span></span>
+              </li>
+            {% else %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info" role="alert">
+      <strong>No expenses yet.</strong> <a href="{% url 'fleet_management:transport_incharge:expense_create' %}">Create an expense</a> to get started.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

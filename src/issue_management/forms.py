@@ -19,7 +19,7 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
     
     class Meta:
         model = Issue
-        fields = ['title', 'description', 'priority', 'space', 'voice']
+        fields = ['title', 'description', 'priority', 'space', 'vehicle', 'workshop', 'voice']
         widgets = {
             'voice': forms.FileInput(attrs={
                 'class': 'voice-file-input',
@@ -37,6 +37,28 @@ class IssueForm(BootstrapFormMixin, forms.ModelForm):
         # Make space field optional
         self.fields['space'].required = False
         self.fields['space'].empty_label = "Select a space (optional)"
+        # Vehicle field: limit to vehicles in the user's organization
+        if 'vehicle' in self.fields:
+            try:
+                from fleet_management.models import Vehicle
+            except Exception:
+                Vehicle = None
+            if self.current_user and getattr(self.current_user, 'organization', None) and Vehicle:
+                self.fields['vehicle'].queryset = Vehicle.objects.filter(
+                    org=self.current_user.organization
+                ).order_by('registration_number')
+            self.fields['vehicle'].required = False
+        # Workshop field: limit to workshops in the user's organization
+        if 'workshop' in self.fields:
+            try:
+                from fleet_management.models import Workshop
+            except Exception:
+                Workshop = None
+            if self.current_user and getattr(self.current_user, 'organization', None) and Workshop:
+                self.fields['workshop'].queryset = Workshop.objects.filter(
+                    org=self.current_user.organization
+                ).order_by('name')
+            self.fields['workshop'].required = False
 
     def clean(self):
         cleaned_data = super().clean()

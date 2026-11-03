@@ -11,16 +11,22 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from environ import Env
 
-env = Env()
-Env.read_env()
-
-ENVIRONMENT = env('ENVIRONMENT', default="development")
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = Env()
+# Load file-based env without overriding process env (Docker Compose / CI win).
+# Skip legacy src/config/.env when Compose already injected POSTGRES_HOST —
+# that file often points at Railway and can confuse local Docker.
+Env.read_env(BASE_DIR.parent / '.env', overwrite=False)
+if not os.environ.get('POSTGRES_HOST'):
+    Env.read_env(BASE_DIR / 'config' / '.env', overwrite=False)
+
+ENVIRONMENT = env('ENVIRONMENT', default="development")
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,6 +34,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
+
+# Optional dedicated HMAC key for JWTs. If unset, SECRET_KEY is used.
+JWT_SIGNING_KEY = env('JWT_SIGNING_KEY', default='') or SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if ENVIRONMENT == 'development':
@@ -47,19 +56,30 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    'django_filters',
+    'drf_spectacular',
+    # Local
     'core.apps.CoreConfig',
     'issue_management.apps.IssueManagementConfig',
     'inventory.apps.InventoryConfig',
     'dashboard.apps.DashboardConfig',
+    'fleet_management.apps.FleetManagementConfig',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'fleet_management.middleware.RequestUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -91,11 +111,11 @@ if ENVIRONMENT == 'development':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'postgres',
-            'USER': 'postgres',
-            'PASSWORD': 'postgres',
-            'HOST': 'postgres',
-            'PORT': 5432,
+            'NAME': env('POSTGRES_DB', default='services'),
+            'USER': env('POSTGRES_USER', default='services'),
+            'PASSWORD': env('POSTGRES_PASSWORD', default='services'),
+            'HOST': env('POSTGRES_HOST', default='db'),
+            'PORT': env('POSTGRES_PORT', default='5432'),
         }
     }
 else:
@@ -201,17 +221,25 @@ LOGIN_REDIRECT_URL = '/core/people/'
 LOGOUT_REDIRECT_URL = '/core/login/'
 
 # Email Configuration
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@services.local')
+SERVER_EMAIL = env('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
+
 if ENVIRONMENT == 'development':
-    # For development - use console backend or configure SMTP
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'noreply@services.local'
-    SERVER_EMAIL = 'server@services.local'
+    # Mailpit (or other SMTP) when EMAIL_HOST is set; otherwise console.
+    if env('EMAIL_HOST', default=''):
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = env('EMAIL_HOST')
+        EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
+        EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+        EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+        EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
-    # For production - configure your email backend
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-    EMAIL_PORT = env('EMAIL_PORT', default=587)
-    EMAIL_USE_TLS = env('EMAIL_USE_TLS', default=True)
+    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
     EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
     EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
     DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@services.com')
@@ -255,7 +283,103 @@ else:
     # In production, use CDN URL from static files
     NOTIFICATION_ICON_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/static/images/logo-icon.svg"
 
+# Frontend URL — used in password-reset emails and API clients
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
     url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
 ]
+
+# ---------------------------------------------------------------------------
+# Django REST Framework
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth': '10/min',
+    },
+}
+
+# ---------------------------------------------------------------------------
+# JWT Settings
+# ---------------------------------------------------------------------------
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': JWT_SIGNING_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_OBTAIN_SERIALIZER': 'core.api.auth.serializers.CustomTokenObtainPairSerializer',
+}
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = env.list(
+    'CORS_ALLOWED_ORIGINS',
+    default=[
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173',
+    ],
+)
+CORS_ALLOW_CREDENTIALS = True
+
+# ---------------------------------------------------------------------------
+# HttpOnly refresh cookie (login / refresh / logout)
+# ---------------------------------------------------------------------------
+REFRESH_TOKEN_COOKIE_NAME = env('REFRESH_COOKIE_NAME', default='services_refresh')
+REFRESH_TOKEN_COOKIE_PATH = '/api/auth/'
+REFRESH_TOKEN_COOKIE_SAMESITE = env('REFRESH_COOKIE_SAMESITE', default='Lax')
+REFRESH_TOKEN_COOKIE_SECURE = ENVIRONMENT != 'development'
+
+# ---------------------------------------------------------------------------
+# drf-spectacular (API Docs)
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': env('PROJECT_NAME', default='Services API'),
+    'DESCRIPTION': (
+        'REST API for auth, people, spaces, dashboards, and issues.\n\n'
+        '### Authentication\n'
+        'Obtain an access token from `POST /api/auth/login/` '
+        '(refresh is an httpOnly cookie). Click **Authorize** and enter:\n'
+        '```\nBearer <access_token>\n```'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        'filter': True,
+        'displayRequestDuration': True,
+        'docExpansion': 'list',
+    },
+}

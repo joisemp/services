@@ -1,0 +1,58 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}{% if object %}Edit Workshop{% else %}Add Workshop{% endif %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">{% if object %}Edit Workshop{% else %}Add Workshop{% endif %}</h1>
+      <p class="text-muted mb-0">Capture workshop details and assign incharges.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'fleet_management:central_admin:workshop_list' %}">Back to Workshops</a>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-12 col-md-6">{{ form.name.label_tag }}{{ form.name }}{{ form.name.errors }}</div>
+      <div class="col-12">
+        <label class="mb-1 ps-1" for="{{ form.incharges.id_for_label }}">Incharges</label>
+        <div class="border rounded-3 p-3 bg-white">
+          {% for checkbox in form.incharges %}
+            <div class="form-check mb-2">
+              {{ checkbox.tag }}
+              <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+            </div>
+          {% empty %}
+            <p class="text-muted mb-0">No maintainers or supervisors available.</p>
+          {% endfor %}
+        </div>
+        {{ form.incharges.errors }}
+        {% if form.incharges.help_text %}<small class="text-muted d-block mt-1">{{ form.incharges.help_text }}</small>{% endif %}
+      </div>
+      <div class="col-12">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a class="btn btn-outline-secondary" href="{% url 'fleet_management:central_admin:workshop_list' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{% if object %}Save Changes{% else %}Create Workshop{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

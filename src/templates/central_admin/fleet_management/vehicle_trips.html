@@ -1,0 +1,62 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Vehicle Trips{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="mb-3">
+    <a class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:central_admin:vehicle_list' %}">
+      <span class="material-symbols-outlined fs-6">arrow_back</span>
+      Back
+    </a>
+  </div>
+  <div class="mb-4">
+    <h1 class="h3 mb-1">{{ vehicle.registration_number }}</h1>
+    <p class="text-muted mb-0">{{ vehicle.manufacturer }} {{ vehicle.model }}</p>
+  </div>
+
+  <!-- Navigation Links -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'fleet_management:central_admin:vehicle_detail' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">info</span>
+      Overview
+    </a>
+    <a href="{% url 'fleet_management:central_admin:vehicle_maintenance' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">build</span>
+      Maintenance
+    </a>
+    <a href="{% url 'fleet_management:central_admin:vehicle_trips' slug=vehicle.slug %}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">directions</span>
+      Trips
+    </a>
+    <a href="{% url 'fleet_management:central_admin:vehicle_expenses' slug=vehicle.slug %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+      <span class="material-symbols-outlined fs-6">receipt</span>
+      Expenses
+    </a>
+  </div>
+
+  <!-- Content Card -->
+  <div class="card border rounded-3">
+    <div class="card-body p-4">
+      <div class="text-center py-5">
+        <span class="material-symbols-outlined d-block mb-3" style="font-size: 48px; color: #ccc;">directions</span>
+        <p class="text-muted">No trip records available yet.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

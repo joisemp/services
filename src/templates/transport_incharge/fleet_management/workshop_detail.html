@@ -1,0 +1,115 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Workshop Details{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/issue_management/issue_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="mb-3">
+    <a class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:workshop_list' %}">
+      <span class="material-symbols-outlined fs-6">arrow_back</span>
+      Back
+    </a>
+  </div>
+  <div class="mb-4">
+    <h1 class="h3 mb-1">{{ workshop.name }}</h1>
+  </div>
+
+  <div class="card border rounded-3">
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-12 col-md-6"><strong>Workshop Name:</strong> {{ workshop.name }}</div>
+        <div class="col-12 col-md-6"><strong>Organization:</strong> {{ workshop.org }}</div>
+        <div class="col-12 col-md-6"><strong>Incharges:</strong> {{ workshop.incharges.count }}</div>
+        <div class="col-12"><strong>Assigned Incharges:</strong>
+          {% if workshop.incharges.exists %}
+            <ul class="mt-2 mb-0">
+              {% for incharge in workshop.incharges.all %}
+              <li>{{ incharge.get_full_name|default:incharge.email }} ({{ incharge.get_user_type_display }})</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="text-muted"> None</span>
+          {% endif %}
+        </div>
+        <div class="col-12"><strong>Notes:</strong> {{ workshop.notes|default:'-' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <a class="btn btn-primary d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:workshop_update' slug=workshop.slug %}">
+      <span class="material-symbols-outlined">edit</span>
+      Edit
+    </a>
+    <a class="btn btn-danger d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:workshop_delete' slug=workshop.slug %}">
+      <span class="material-symbols-outlined">delete</span>
+      Delete
+    </a>
+  </div>
+
+  <section id="alert" class="mt-5">
+    <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
+      <div class="message flex-grow-1 mb-2 mb-md-0">
+        <h3 class="mb-1">Reported Issues</h3>
+        <span class="alert-text text-body-secondary">Issues reported to this workshop.</span>
+      </div>
+      <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
+        <span class="badge rounded-pill text-bg-dark">{{ issues_count }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="issue-list" class="mt-4">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
+      {% for issue in issues %}
+      <div class="col mt-2">
+        <a href="{% url 'issue_management:transport_incharge:issue_detail' issue_slug=issue.slug %}" class="text-decoration-none card-link-wrapper">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">{{ issue.title }}</h5>
+                <span class="badge rounded-pill border border-dark text-dark ms-2">{{ issue.issue_id }}</span>
+              </div>
+              <hr>
+              <div class="d-flex justify-content-between mt-4">
+                <h6 class="card-subtitle mb-2 text-body-secondary">{{ issue.created_at|date:"M d, Y" }}</h6>
+                <span class="badge badge-{{ issue.priority }} rounded-pill">{{ issue.get_priority_display }}</span>
+              </div>
+              <div class="d-flex justify-content-between mt-4">
+                <h6 class="card-text me-2">Reporter</h6>
+                <h6 class="card-text ms-2">Status</h6>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h6 class="card-text text-body-secondary me-2">
+                  {{ issue.reporter.get_full_name|default:issue.reporter.phone_number|default:issue.reporter.email|default:"Mello Hello" }}
+                </h6>
+                <span class="badge badge-{{ issue.status }} rounded-pill d-flex align-items-center">{{ issue.get_status_display }}</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="col-12 mt-2">
+        <div class="border rounded-3 bg-white p-4 text-center text-muted">No issues have been reported to this workshop yet.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

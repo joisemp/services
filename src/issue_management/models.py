@@ -75,6 +75,22 @@ class Issue(models.Model):
     
     org = models.ForeignKey('core.Organization', related_name='issues', on_delete=models.CASCADE)
     space = models.ForeignKey('core.Space', related_name='issues', on_delete=models.CASCADE, blank=True, null=True)
+    vehicle = models.ForeignKey(
+        'fleet_management.Vehicle',
+        related_name='issues',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Vehicle associated with this issue (optional)"
+    )
+    workshop = models.ForeignKey(
+        'fleet_management.Workshop',
+        related_name='issues',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Workshop where this issue should be reported"
+    )
     issue_id = models.CharField(max_length=20, unique=True, help_text="Unique identifier for the issue")
     slug = models.SlugField(unique=True)
      

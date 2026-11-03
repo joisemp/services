@@ -23,7 +23,7 @@ class RedirectLoggedinUsers(AccessMixin):
         "is_maintainer": "issue_management:maintainer:work_task_list",
         "is_reviewer": "issue_management:reviewer:issue_list",
         "is_driver": "home",
-        "is_transport_incharge": "home",
+        "is_transport_incharge": "dashboard:transport_incharge_dashboard",
         "is_general_user": "home",
     }
 
@@ -105,6 +105,26 @@ class CentralAdminOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_central_admin"
 
 
+class IssueManagementStaffAccessMixin(LoginRequiredMixin):
+    """Allow access to issue management staff roles that share the same screens."""
+
+    allowed_role_properties = ("is_central_admin", "is_transport_incharge")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if not any(getattr(request.user, role_property, False) for role_property in self.allowed_role_properties):
+            logout(request)
+            messages.error(
+                request,
+                "You do not have permission to access this page. Please log in with the correct account."
+            )
+            return redirect("core:login")
+
+        return super().dispatch(request, *args, **kwargs)
+
+
 class SpaceAdminOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_space_admin"
 
@@ -144,6 +164,10 @@ class SupervisorOnlyAccessMixin(BaseRoleAccessMixin):
 
 class ReviewerOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_reviewer"
+
+
+class TransportInchargeOnlyAccessMixin(BaseRoleAccessMixin):
+    role_property = "is_transport_incharge"
 
 
 class GeneralUserOnlyAccessMixin(BaseRoleAccessMixin):

@@ -1,4 +1,4 @@
-﻿from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
@@ -9,8 +9,12 @@ from ..models import Issue, IssueImage, WorkTask, IssueComment, SiteVisit, SiteV
 from ..forms import IssueForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, IssueCommentForm, AdditionalImageUploadForm, VoiceUploadForm, IssueUpdateForm, IssueAssignmentForm, SiteVisitForm
 from ..forms_reports import PerformanceReportForm
 from ..utils.performance_report import PerformanceReportGenerator
-from config.mixins.access_mixin import CentralAdminOnlyAccessMixin
+from ..utils.issue_filters import apply_issue_list_filters, annotate_and_order, describe_filters
+from ..utils.issue_list_report import build_issue_list_excel, build_issue_list_pdf
+from config.mixins.access_mixin import IssueManagementStaffAccessMixin as CentralAdminOnlyAccessMixin
 from core.models import Space
+from fleet_management.models import Vehicle
+from fleet_management.models import Workshop
 
 
 class IssueListView(CentralAdminOnlyAccessMixin, ListView):
@@ -19,70 +23,17 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
     model = Issue
     
     def get_queryset(self):
-        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to').all()
-        
-        # Filter by reporter if provided (slug or ID)
-        reporter_filter = self.request.GET.get('reporter')
-        if reporter_filter:
-            # Try slug first, fallback to ID
-            if reporter_filter.isdigit():
-                queryset = queryset.filter(reporter_id=reporter_filter)
-            else:
-                queryset = queryset.filter(reporter__slug=reporter_filter)
-        
-        # Filter by assignee if provided (slug or ID)
-        assignee_filter = self.request.GET.get('assignee')
-        if assignee_filter:
-            # Try slug first, fallback to ID
-            if assignee_filter.isdigit():
-                queryset = queryset.filter(assigned_to_id=assignee_filter)
-            else:
-                queryset = queryset.filter(assigned_to__slug=assignee_filter)
-        
-        # Filter by status if provided
-        status_filter = self.request.GET.get('status')
-        if status_filter:
-            if status_filter == 'not_resolved':
-                # Filter for issues that are not resolved (open, assigned, in_progress, escalated)
-                queryset = queryset.exclude(status='resolved')
-            elif status_filter == 'critical':
-                queryset = queryset.filter(priority='critical')
-            elif status_filter in ['open', 'assigned', 'in_progress', 'resolved', 'escalated', 'closed', 'cancelled']:
-                queryset = queryset.filter(status=status_filter)
-        
-        # Filter by space if provided
-        space_filter = self.request.GET.get('space')
-        if space_filter:
-            if space_filter == 'no_space':
-                # Filter issues with no space assigned
-                queryset = queryset.filter(space__isnull=True)
-            else:
-                # Filter by specific space slug
-                queryset = queryset.filter(space__slug=space_filter)
-        
-        # Order by status (open/assigned/in_progress first, then resolved/escalated, then closed/cancelled)
-        # Then by priority (criticalâ†’highâ†’mediumâ†’low), then by creation date
-        return queryset.annotate(
-            status_order=Case(
-                When(status='open', then=1),
-                When(status='assigned', then=2),
-                When(status='in_progress', then=3),
-                When(status='resolved', then=4),
-                When(status='escalated', then=5),
-                When(status='closed', then=6),
-                When(status='cancelled', then=7),
-                default=8,
-                output_field=IntegerField(),
-            ),
-            priority_order=Case(
-                When(priority='critical', then=1),
-                When(priority='high', then=2),
-                When(priority='medium', then=3),
-                When(priority='low', then=4),
-                default=5,
-                output_field=IntegerField(),
-            )
-        ).order_by('status_order', 'priority_order', '-created_at')
+        queryset = Issue.objects.prefetch_related('images').select_related('org', 'space', 'reporter', 'assigned_to', 'vehicle', 'workshop').all()
+
+        queryset = apply_issue_list_filters(
+            queryset,
+            status_filter=self.request.GET.get('status'),
+            space_filter=self.request.GET.get('space'),
+            reporter_filter=self.request.GET.get('reporter'),
+            assignee_filter=self.request.GET.get('assignee'),
+        )
+
+        return annotate_and_order(queryset)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,11 +43,77 @@ class IssueListView(CentralAdminOnlyAccessMixin, ListView):
         context['spaces'] = Space.objects.select_related('org').all().order_by('org__name', 'name')
         return context
 
+
+class VehicleIssueListView(CentralAdminOnlyAccessMixin, ListView):
+    """List issues for a specific vehicle"""
+    template_name = "central_admin/issue_management/vehicle_issue_list.html"
+    context_object_name = "issues"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.vehicle = get_object_or_404(Vehicle, slug=kwargs.get('vehicle_slug'))
+        # Ensure organization scoping
+        if request.user.organization and self.vehicle.org != request.user.organization:
+            return redirect(reverse('issue_management:central_admin:issue_list'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.vehicle.issues.prefetch_related('images').select_related('reporter', 'assigned_to', 'org').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['vehicle'] = self.vehicle
+        return context
+
+
+class IssueWorkshopTransferView(CentralAdminOnlyAccessMixin, UpdateView):
+    """Allow transferring an issue to a different workshop."""
+    model = Issue
+    slug_field = 'slug'
+    slug_url_kwarg = 'issue_slug'
+    fields = ['workshop']
+    template_name = 'central_admin/issue_management/issue_change_workshop.html'
+
+    def get_queryset(self):
+        return Issue.objects.select_related('org', 'vehicle').all()
+
+    def form_valid(self, form):
+        # Track who changed the workshop
+        form.instance._changed_by = self.request.user
+        old_workshop = None
+        if self.object and self.object.workshop:
+            old_workshop = self.object.workshop
+        response = super().form_valid(form)
+        # Log activity
+        try:
+            IssueActivity.objects.create(
+                issue=self.object,
+                activity_type='workshop_changed',
+                user=self.request.user,
+                description=f'Workshop changed from {old_workshop.name if old_workshop else "None"} to {self.object.workshop.name if self.object.workshop else "None"}'
+            )
+        except Exception:
+            pass
+        messages.success(self.request, 'Workshop assignment updated.')
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('issue_management:central_admin:issue_detail', kwargs={'issue_slug': self.object.slug})
+
     
 class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     template_name = "central_admin/issue_management/issue_create.html"
     form_class = IssueForm
     success_url = reverse_lazy('issue_management:central_admin:issue_list')
+
+    def _get_vehicle_from_query(self):
+        vehicle_slug = self.request.GET.get('vehicle')
+        if not vehicle_slug or not self.request.user.organization:
+            return None
+
+        try:
+            return Vehicle.objects.get(slug=vehicle_slug, org=self.request.user.organization)
+        except Vehicle.DoesNotExist:
+            return None
     
     def get_form_kwargs(self):
         """Pass current_user to form"""
@@ -111,7 +128,29 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
             form.fields['space'].queryset = Space.objects.filter(
                 org=self.request.user.organization
             ).order_by('name')
+
+        vehicle = self._get_vehicle_from_query()
+        self.vehicle_context = vehicle
+
+        if 'vehicle' in form.fields:
+            form.fields['vehicle'].required = False
+            form.fields['vehicle'].queryset = Vehicle.objects.filter(
+                org=self.request.user.organization
+            ).order_by('registration_number')
+            if vehicle:
+                form.initial['vehicle'] = vehicle.pk
+
+        if 'workshop' in form.fields:
+            form.fields['workshop'].required = bool(vehicle)
+            form.fields['workshop'].queryset = Workshop.objects.filter(
+                org=self.request.user.organization
+            ).order_by('name')
         return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_workshop_field'] = bool(self._get_vehicle_from_query())
+        return context
     
     def post(self, request, *args, **kwargs):
         """Override post to prevent duplicate submissions"""
@@ -129,6 +168,9 @@ class IssueCreateView(CentralAdminOnlyAccessMixin, CreateView):
     def form_valid(self, form):
         # Set the reporter to the current user before saving
         form.instance.reporter = self.request.user
+        vehicle = self._get_vehicle_from_query()
+        if vehicle:
+            form.instance.vehicle = vehicle
         
         # Save the issue first
         response = super().form_valid(form)
@@ -174,11 +216,15 @@ class IssueDetailView(CentralAdminOnlyAccessMixin, DetailView):
             'site_visits__created_by',
             'site_visits__assigned_to',
             'site_visits__images',
-            'activities__user'
-        ).select_related('org', 'space')
+            'activities__user',
+            'purchase_requests__requested_by',
+            'purchase_requests__reviewed_by',
+        ).select_related('org', 'space', 'reporter', 'assigned_to', 'assigned_by', 'reviewed_by', 'vehicle', 'workshop')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['sidebar_template'] = 'central_admin/sidebar.html'
+        context['back_url'] = reverse('issue_management:central_admin:issue_list')
         # Add work tasks to context sorted by completion status and issue priority
         work_tasks = self.object.work_tasks.select_related('issue').prefetch_related('resolution_images').all().annotate(
             priority_order=Case(
@@ -1124,6 +1170,68 @@ class PerformanceReportView(CentralAdminOnlyAccessMixin, View):
             }
             return render(request, self.template_name, context)
 
+
+
+
+class IssueListReportView(CentralAdminOnlyAccessMixin, View):
+    """Download a PDF or Excel report of issues matching the current list filters."""
+
+    def get(self, request):
+        report_format = request.GET.get('format', 'xlsx')
+
+        # Build filtered queryset (same logic as IssueListView)
+        queryset = Issue.objects.select_related(
+            'org', 'space', 'reporter', 'assigned_to'
+        ).prefetch_related('images')
+
+        status_filter = request.GET.get('status')
+        space_filter = request.GET.get('space')
+        reporter_filter = request.GET.get('reporter')
+        assignee_filter = request.GET.get('assignee')
+
+        queryset = apply_issue_list_filters(
+            queryset,
+            status_filter=status_filter,
+            space_filter=space_filter,
+            reporter_filter=reporter_filter,
+            assignee_filter=assignee_filter,
+        )
+        queryset = annotate_and_order(queryset)
+
+        filter_descriptions = describe_filters(
+            status_filter=status_filter,
+            space_filter=space_filter,
+            reporter_filter=reporter_filter,
+            assignee_filter=assignee_filter,
+        )
+
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+
+        if report_format == 'pdf':
+            try:
+                buf = build_issue_list_pdf(queryset, filter_descriptions)
+                response = HttpResponse(buf.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = (
+                    f'attachment; filename="issue_report_{timestamp}.pdf"'
+                )
+                return response
+            except Exception as e:
+                messages.error(request, f'Failed to generate PDF report: {str(e)}')
+                return redirect('issue_management:central_admin:issue_list')
+        else:
+            try:
+                buf = build_issue_list_excel(queryset, filter_descriptions)
+                response = HttpResponse(
+                    buf.getvalue(),
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                )
+                response['Content-Disposition'] = (
+                    f'attachment; filename="issue_report_{timestamp}.xlsx"'
+                )
+                return response
+            except Exception as e:
+                messages.error(request, f'Failed to generate Excel report: {str(e)}')
+                return redirect('issue_management:central_admin:issue_list')
 
 class PurchaseRequestListView(CentralAdminOnlyAccessMixin, ListView):
     """List all purchase requests for central admin"""

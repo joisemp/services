@@ -1,0 +1,166 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Expense{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/fleet_management/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="mb-3">
+    <a class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" href="{% url 'fleet_management:transport_incharge:expense_list' %}">
+      <span class="material-symbols-outlined fs-6">arrow_back</span>
+      Back
+    </a>
+  </div>
+
+  <div class="mb-4">
+    <h1 class="h3 mb-1">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Expense</h1>
+  </div>
+
+  <div class="card border rounded-3">
+    <div class="card-body p-4">
+      <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Error!</strong>
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <!-- Vehicle Selection -->
+          <div class="col-12 col-md-6">
+            <label for="{{ form.vehicle.id_for_label }}" class="form-label">Vehicle <span class="text-danger">*</span></label>
+            {{ form.vehicle }}
+            {% if form.vehicle.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.vehicle.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Amount -->
+          <div class="col-12 col-md-6">
+            <label for="{{ form.amount.id_for_label }}" class="form-label">Amount <span class="text-danger">*</span></label>
+            {{ form.amount }}
+            {% if form.amount.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.amount.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Expense Date -->
+          <div class="col-12 col-md-6">
+            <label for="{{ form.expense_date.id_for_label }}" class="form-label">Date <span class="text-danger">*</span></label>
+            {{ form.expense_date }}
+            {% if form.expense_date.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.expense_date.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Category -->
+          <div class="col-12 col-md-6">
+            <label for="{{ form.category.id_for_label }}" class="form-label">Category <span class="text-danger">*</span></label>
+            {{ form.category }}
+            {% if form.category.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.category.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Description -->
+          <div class="col-12">
+            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.description.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Receipt -->
+          <div class="col-12">
+            <label for="{{ form.receipt.id_for_label }}" class="form-label">Receipt (PDF, JPG, PNG, XLSX - Max 5MB)</label>
+            {{ form.receipt }}
+            {% if form.instance.receipt %}
+              <div class="mt-2">
+                <p class="text-muted small">Current file: <a href="{{ form.instance.receipt.url }}" target="_blank">{{ form.instance.receipt.name }}</a></p>
+                <label>
+                  <input type="checkbox" name="receipt-clear"> Remove current receipt
+                </label>
+              </div>
+            {% endif %}
+            {% if form.receipt.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in form.receipt.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+            <span class="material-symbols-outlined">save</span>
+            {% if form.instance.pk %}Save Changes{% else %}Create Expense{% endif %}
+          </button>
+          <a href="{% url 'fleet_management:transport_incharge:expense_list' %}" class="btn btn-secondary">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Bootstrap form validation
+  (function () {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+</script>
+{% endblock %}
