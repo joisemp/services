@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────
+# Production image — multi-stage build
+# Deployed on Railway via GHCR
+# ─────────────────────────────────────────────
+
+# ── Stage 1: Builder ──────────────────────────
+FROM python:3.13-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/ /tmp/requirements/
+RUN pip install --upgrade pip && pip wheel --no-cache-dir --wheel-dir /wheels -r /tmp/requirements/production.txt
+
+# ── Stage 2: Runtime ──────────────────────────
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=config.settings
+
+WORKDIR /app
+
+# Runtime system dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy wheels from builder and install
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
+
+# Copy Django project (src/ → /app)
+COPY src/ .
+
+# Entrypoint — strip Windows CRLF line endings if present
+COPY docker/api/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Non-root user for security
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 8000
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Railway injects $PORT; gunicorn reads it at runtime
+CMD ["sh", "-c", "gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -"]

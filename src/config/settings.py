@@ -15,13 +15,15 @@ from datetime import timedelta
 from pathlib import Path
 from environ import Env
 
-env = Env()
-Env.read_env()
-
-ENVIRONMENT = env('ENVIRONMENT', default="development")
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = Env()
+# Prefer repo-root .env (Docker / CI), then legacy src/config/.env
+Env.read_env(BASE_DIR.parent / '.env')
+Env.read_env(BASE_DIR / 'config' / '.env')
+
+ENVIRONMENT = env('ENVIRONMENT', default="development")
 
 
 # Quick-start development settings - unsuitable for production
@@ -106,11 +108,11 @@ if ENVIRONMENT == 'development':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'postgres',
-            'USER': 'postgres',
-            'PASSWORD': 'postgres',
-            'HOST': 'postgres',
-            'PORT': 5432,
+            'NAME': env('POSTGRES_DB', default='services'),
+            'USER': env('POSTGRES_USER', default='services'),
+            'PASSWORD': env('POSTGRES_PASSWORD', default='services'),
+            'HOST': env('POSTGRES_HOST', default='db'),
+            'PORT': env('POSTGRES_PORT', default='5432'),
         }
     }
 else:
@@ -216,17 +218,25 @@ LOGIN_REDIRECT_URL = '/core/people/'
 LOGOUT_REDIRECT_URL = '/core/login/'
 
 # Email Configuration
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@services.local')
+SERVER_EMAIL = env('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
+
 if ENVIRONMENT == 'development':
-    # For development - use console backend or configure SMTP
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'noreply@services.local'
-    SERVER_EMAIL = 'server@services.local'
+    # Mailpit (or other SMTP) when EMAIL_HOST is set; otherwise console.
+    if env('EMAIL_HOST', default=''):
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = env('EMAIL_HOST')
+        EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
+        EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+        EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+        EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
-    # For production - configure your email backend
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-    EMAIL_PORT = env('EMAIL_PORT', default=587)
-    EMAIL_USE_TLS = env('EMAIL_USE_TLS', default=True)
+    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
     EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
     EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
     DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@services.com')
@@ -269,6 +279,9 @@ if ENVIRONMENT == 'development':
 else:
     # In production, use CDN URL from static files
     NOTIFICATION_ICON_URL = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/static/images/logo-icon.svg"
+
+# Frontend URL — used in password-reset emails and API clients
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
