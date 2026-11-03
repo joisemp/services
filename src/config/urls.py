@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAdminUser
 
 from core.api.health import HealthView
 from core.api.openapi import error_responses
+from dashboard.api import DashboardAPIView
 from .views import HomePageView, ServiceWorkerView
 
 
@@ -75,6 +76,8 @@ urlpatterns = [
     # API
     path('api/auth/', include('core.api.auth.urls')),
     path('api/health/', HealthView.as_view(), name='api-health'),
+    path('api/dashboard/', DashboardAPIView.as_view(), name='api-dashboard'),
+    path('api/', include('core.api.urls')),
     path('api/schema/', DocumentedSchemaView.as_view(), name='schema'),
     path('api/docs/', DocumentedSwaggerView.as_view(), name='swagger-ui'),
     path('api/redoc/', DocumentedRedocView.as_view(), name='redoc'),
