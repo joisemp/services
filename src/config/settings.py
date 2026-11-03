@@ -19,9 +19,12 @@ from environ import Env
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = Env()
-# Prefer repo-root .env (Docker / CI), then legacy src/config/.env
-Env.read_env(BASE_DIR.parent / '.env')
-Env.read_env(BASE_DIR / 'config' / '.env')
+# Load file-based env without overriding process env (Docker Compose / CI win).
+# Skip legacy src/config/.env when Compose already injected POSTGRES_HOST —
+# that file often points at Railway and can confuse local Docker.
+Env.read_env(BASE_DIR.parent / '.env', overwrite=False)
+if not os.environ.get('POSTGRES_HOST'):
+    Env.read_env(BASE_DIR / 'config' / '.env', overwrite=False)
 
 ENVIRONMENT = env('ENVIRONMENT', default="development")
 
