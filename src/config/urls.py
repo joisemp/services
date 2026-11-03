@@ -78,6 +78,7 @@ urlpatterns = [
     path('api/health/', HealthView.as_view(), name='api-health'),
     path('api/dashboard/', DashboardAPIView.as_view(), name='api-dashboard'),
     path('api/', include('core.api.urls')),
+    path('api/', include('issue_management.api.urls')),
     path('api/schema/', DocumentedSchemaView.as_view(), name='schema'),
     path('api/docs/', DocumentedSwaggerView.as_view(), name='swagger-ui'),
     path('api/redoc/', DocumentedRedocView.as_view(), name='redoc'),
