@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from core.models import Space
 from fleet_management.models import Vehicle, Workshop
 from issue_management.models import (
     Issue,
@@ -84,13 +85,22 @@ class IssueDetailSerializer(IssueListSerializer):
 
 class IssueCreateUpdateSerializer(serializers.ModelSerializer):
     space = serializers.SlugRelatedField(
-        slug_field='slug', queryset=None, required=False, allow_null=True
+        slug_field='slug',
+        queryset=Space.objects.none(),
+        required=False,
+        allow_null=True,
     )
     vehicle = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Vehicle.objects.all(), required=False, allow_null=True
+        slug_field='slug',
+        queryset=Vehicle.objects.none(),
+        required=False,
+        allow_null=True,
     )
     workshop = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Workshop.objects.all(), required=False, allow_null=True
+        slug_field='slug',
+        queryset=Workshop.objects.none(),
+        required=False,
+        allow_null=True,
     )
 
     class Meta:
@@ -107,12 +117,12 @@ class IssueCreateUpdateSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from core.models import Space
+        from core.models import Space as SpaceModel
 
         request = self.context.get('request')
         org = getattr(request.user, 'organization', None) if request else None
-        self.fields['space'].queryset = Space.objects.filter(org=org) if org else Space.objects.none()
         if org:
+            self.fields['space'].queryset = SpaceModel.objects.filter(org=org)
             self.fields['vehicle'].queryset = Vehicle.objects.filter(org=org)
             self.fields['workshop'].queryset = Workshop.objects.filter(org=org)
 
