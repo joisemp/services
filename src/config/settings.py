@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from environ import Env
 
@@ -28,6 +29,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
+
+# Optional dedicated HMAC key for JWTs. If unset, SECRET_KEY is used.
+JWT_SIGNING_KEY = env('JWT_SIGNING_KEY', default='') or SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if ENVIRONMENT == 'development':
@@ -47,6 +51,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    'django_filters',
+    'drf_spectacular',
+    # Local
     'core.apps.CoreConfig',
     'issue_management.apps.IssueManagementConfig',
     'inventory.apps.InventoryConfig',
@@ -57,6 +69,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -261,3 +274,96 @@ else:
 CSRF_TRUSTED_ORIGINS = [
     url.strip() for url in env('CSRF_TRUSTED_ORIGINS', default='https://example.com').split(',')
 ]
+
+# ---------------------------------------------------------------------------
+# Django REST Framework
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth': '10/min',
+    },
+}
+
+# ---------------------------------------------------------------------------
+# JWT Settings
+# ---------------------------------------------------------------------------
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': JWT_SIGNING_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_OBTAIN_SERIALIZER': 'core.api.auth.serializers.CustomTokenObtainPairSerializer',
+}
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = env.list(
+    'CORS_ALLOWED_ORIGINS',
+    default=[
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173',
+    ],
+)
+CORS_ALLOW_CREDENTIALS = True
+
+# ---------------------------------------------------------------------------
+# HttpOnly refresh cookie (login / refresh / logout)
+# ---------------------------------------------------------------------------
+REFRESH_TOKEN_COOKIE_NAME = env('REFRESH_COOKIE_NAME', default='services_refresh')
+REFRESH_TOKEN_COOKIE_PATH = '/api/auth/'
+REFRESH_TOKEN_COOKIE_SAMESITE = env('REFRESH_COOKIE_SAMESITE', default='Lax')
+REFRESH_TOKEN_COOKIE_SECURE = ENVIRONMENT != 'development'
+
+# ---------------------------------------------------------------------------
+# drf-spectacular (API Docs)
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': env('PROJECT_NAME', default='Services API'),
+    'DESCRIPTION': (
+        'REST API for auth, people, spaces, dashboards, and issues.\n\n'
+        '### Authentication\n'
+        'Obtain an access token from `POST /api/auth/login/` '
+        '(refresh is an httpOnly cookie). Click **Authorize** and enter:\n'
+        '```\nBearer <access_token>\n```'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        'filter': True,
+        'displayRequestDuration': True,
+        'docExpansion': 'list',
+    },
+}
