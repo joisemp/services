@@ -53,7 +53,7 @@ Add `data-loading-text` attribute to button:
 
 ```html
 <button type="submit" class="btn btn-primary" data-loading-text="Saving...">
-    Save Issue
+    Save Ticket
 </button>
 ```
 
@@ -93,15 +93,15 @@ FormSubmitHandler.config({
 
 ## Examples
 
-### Example 1: Issue Create Form
+### Example 1: Ticket Create Form
 
 ```html
-<form method="post" action="{% url 'issue_management:central_admin:issue_create' %}">
+<form method="post" action="{% url 'ticket_management:central_admin:ticket_create' %}">
     {% csrf_token %}
     {{ form.as_p }}
     
-    <button type="submit" class="btn btn-success" data-loading-text="Creating Issue...">
-        Create Issue
+    <button type="submit" class="btn btn-success" data-loading-text="Creating Ticket...">
+        Create Ticket
     </button>
 </form>
 ```
@@ -109,7 +109,7 @@ FormSubmitHandler.config({
 ### Example 2: Work Task Complete Form
 
 ```html
-<form method="post" action="{% url 'issue_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}">
+<form method="post" action="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}">
     {% csrf_token %}
     {{ form.as_p }}
     
@@ -122,11 +122,11 @@ FormSubmitHandler.config({
 ### Example 3: Delete Confirmation
 
 ```html
-<form method="post" action="{% url 'issue_management:central_admin:issue_delete' issue_slug=issue.slug %}">
+<form method="post" action="{% url 'ticket_management:central_admin:ticket_delete' ticket_slug=ticket.slug %}">
     {% csrf_token %}
     
     <button type="submit" class="btn btn-danger" data-loading-text="Deleting...">
-        Delete Issue
+        Delete Ticket
     </button>
 </form>
 ```

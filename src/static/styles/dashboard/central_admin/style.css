@@ -182,20 +182,20 @@ tr {
 }
 
 @media (max-width: 575.98px) {
-  #issue-card .card {
+  #ticket-card .card {
     width: 100% !important;
   }
 }
-#issue-card .card-link-wrapper {
+#ticket-card .card-link-wrapper {
   display: block;
   color: inherit;
 }
-#issue-card .card-link-wrapper:hover .card {
+#ticket-card .card-link-wrapper:hover .card {
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2509803922);
   border-color: #0d6efd;
   transition: box-shadow 0.2s, border-color 0.2s;
 }
-#issue-card .card-link-wrapper:focus {
+#ticket-card .card-link-wrapper:focus {
   outline: none;
 }
 

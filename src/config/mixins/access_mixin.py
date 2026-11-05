@@ -19,9 +19,9 @@ class RedirectLoggedinUsers(AccessMixin):
     role_redirects = {
         "is_central_admin": "dashboard:central_admin_dashboard",
         "is_space_admin": "core:switch_space",  # Netflix-style: always go to space selection first
-        "is_supervisor": "issue_management:supervisor:issue_list",
-        "is_maintainer": "issue_management:maintainer:work_task_list",
-        "is_reviewer": "issue_management:reviewer:issue_list",
+        "is_supervisor": "ticket_management:supervisor:ticket_list",
+        "is_maintainer": "ticket_management:maintainer:work_task_list",
+        "is_reviewer": "ticket_management:reviewer:ticket_list",
         "is_driver": "home",
         "is_transport_incharge": "dashboard:transport_incharge_dashboard",
         "is_general_user": "home",
@@ -105,8 +105,8 @@ class CentralAdminOnlyAccessMixin(BaseRoleAccessMixin):
     role_property = "is_central_admin"
 
 
-class IssueManagementStaffAccessMixin(LoginRequiredMixin):
-    """Allow access to issue management staff roles that share the same screens."""
+class TicketManagementStaffAccessMixin(LoginRequiredMixin):
+    """Allow access to ticket management staff roles that share the same screens."""
 
     allowed_role_properties = ("is_central_admin", "is_transport_incharge")
 

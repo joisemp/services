@@ -1,0 +1,69 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Assign Ticket - {{ ticket.title }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/ticket_management/forms/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'space_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+
+            <h3 class="mb-3">Assign Ticket - {{ ticket.title }}</h3>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <!-- Current Assignment Status -->
+                {% if ticket.assigned_to %}
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Current Assignment:</strong>
+                    This ticket is currently assigned to
+                    <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+                    {% if ticket.assigned_at %}on {{ ticket.assigned_at|date:"M d, Y \a\t g:i A" }}{% endif %}
+                    {% if ticket.requires_review %}
+                    <br><small class="text-muted">
+                        <i class="fas fa-eye me-1"></i>Review is required for this ticket
+                    </small>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {{ form.as_p|safe }}
+                
+                <!-- Info message for review requirement -->
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    If you check "Requires Review", you will be redirected to select reviewers in the next step.
+                </div>
+
+                <!-- Form Actions -->
+                <hr>
+
+                <a href="{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug %}"
+                    class="btn btn-dark">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check me-1"></i>
+                    {% if ticket.assigned_to %}Update Assignment{% else %}Assign Ticket{% endif %}
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

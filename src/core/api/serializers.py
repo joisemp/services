@@ -40,12 +40,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 class PeopleListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    total_reported_issues = serializers.IntegerField(read_only=True)
-    total_assigned_issues = serializers.IntegerField(read_only=True)
-    open_issues_count = serializers.IntegerField(read_only=True)
-    in_progress_issues_count = serializers.IntegerField(read_only=True)
-    resolved_issues_count = serializers.IntegerField(read_only=True)
-    closed_issues_count = serializers.IntegerField(read_only=True)
+    total_reported_tickets = serializers.IntegerField(read_only=True)
+    total_assigned_tickets = serializers.IntegerField(read_only=True)
+    open_tickets_count = serializers.IntegerField(read_only=True)
+    in_progress_tickets_count = serializers.IntegerField(read_only=True)
+    resolved_tickets_count = serializers.IntegerField(read_only=True)
+    closed_tickets_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
@@ -62,12 +62,12 @@ class PeopleListSerializer(serializers.ModelSerializer):
             'allow_phone_login',
             'is_active',
             'date_joined',
-            'total_reported_issues',
-            'total_assigned_issues',
-            'open_issues_count',
-            'in_progress_issues_count',
-            'resolved_issues_count',
-            'closed_issues_count',
+            'total_reported_tickets',
+            'total_assigned_tickets',
+            'open_tickets_count',
+            'in_progress_tickets_count',
+            'resolved_tickets_count',
+            'closed_tickets_count',
         )
         read_only_fields = fields
 
@@ -212,7 +212,7 @@ class UpdateSerializer(serializers.ModelSerializer):
             'content',
             'created_at',
             'updated_at',
-            'related_issue',
+            'related_ticket',
             'space',
         )
         read_only_fields = fields
@@ -229,31 +229,31 @@ class FCMTokenSerializer(serializers.Serializer):
 
 
 def people_annotated_queryset(organization):
-    """People list queryset with the same issue counts as the HTML page."""
+    """People list queryset with the same ticket counts as the HTML page."""
     return User.objects.filter(
         organization=organization,
         is_active=True,
     ).select_related('organization').prefetch_related('spaces').annotate(
-        total_reported_issues=Count('reported_issues', distinct=True),
-        total_assigned_issues=Count('assigned_issues', distinct=True),
-        open_issues_count=Count(
-            'assigned_issues',
-            filter=Q(assigned_issues__status='open'),
+        total_reported_tickets=Count('reported_tickets', distinct=True),
+        total_assigned_tickets=Count('assigned_tickets', distinct=True),
+        open_tickets_count=Count(
+            'assigned_tickets',
+            filter=Q(assigned_tickets__status='open'),
             distinct=True,
         ),
-        in_progress_issues_count=Count(
-            'assigned_issues',
-            filter=Q(assigned_issues__status='in_progress'),
+        in_progress_tickets_count=Count(
+            'assigned_tickets',
+            filter=Q(assigned_tickets__status='in_progress'),
             distinct=True,
         ),
-        resolved_issues_count=Count(
-            'assigned_issues',
-            filter=Q(assigned_issues__status='resolved'),
+        resolved_tickets_count=Count(
+            'assigned_tickets',
+            filter=Q(assigned_tickets__status='resolved'),
             distinct=True,
         ),
-        closed_issues_count=Count(
-            'assigned_issues',
-            filter=Q(assigned_issues__status='closed'),
+        closed_tickets_count=Count(
+            'assigned_tickets',
+            filter=Q(assigned_tickets__status='closed'),
             distinct=True,
         ),
     )

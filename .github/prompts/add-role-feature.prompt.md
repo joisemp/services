@@ -1,5 +1,5 @@
 ---
-description: "Scaffold a role-specific feature for issue_management or inventory with URL, view, template, and query optimization following services project conventions."
+description: "Scaffold a role-specific feature for ticket_management or inventory with URL, view, template, and query optimization following services project conventions."
 name: "Add Role Feature"
 argument-hint: "App + role + feature, e.g. inventory maintainer stock alert list"
 agent: "agent"
@@ -7,7 +7,7 @@ agent: "agent"
 Implement one role-specific feature in this repository using the provided request.
 
 Requirements:
-- Accept app target as `issue_management` or `inventory` and keep all changes inside that app.
+- Accept app target as `ticket_management` or `inventory` and keep all changes inside that app.
 - Place routing in `src/{app}/role_urls/{role}.py`.
 - Place view logic in `src/{app}/views/{role}.py`.
 - Place templates in `src/templates/{role}/{app}/`.

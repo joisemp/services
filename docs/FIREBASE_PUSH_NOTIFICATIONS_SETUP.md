@@ -1,7 +1,7 @@
 # Firebase Push Notifications Setup Guide
 
 ## Overview
-This guide will help you set up Firebase Cloud Messaging (FCM) for push notifications when issues are created in the system. Central admins in the organization will receive push notifications on their devices.
+This guide will help you set up Firebase Cloud Messaging (FCM) for push notifications when tickets are created in the system. Central admins in the organization will receive push notifications on their devices.
 
 ## Prerequisites
 1. A Firebase account (free tier is sufficient)
@@ -12,7 +12,7 @@ This guide will help you set up Firebase Cloud Messaging (FCM) for push notifica
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Click "Add Project" or "Create a project"
-3. Enter a project name (e.g., "Services Issue Tracker")
+3. Enter a project name (e.g., "Services Ticket Tracker")
 4. Disable Google Analytics (optional for push notifications)
 5. Click "Create Project"
 
@@ -135,9 +135,9 @@ docker exec -it sfs-services-dev-container pip install firebase-admin==6.6.0
 ### 8.3 Test Push Notification
 
 1. As a central admin user, make sure you're logged in
-2. Have another user create a new issue in your organization
+2. Have another user create a new ticket in your organization
 3. You should receive a push notification with:
-   - Title: "New Issue: [Issue Title]"
+   - Title: "New Ticket: [Ticket Title]"
    - Body: Priority and reporter information
 
 ## Step 9: Additional Configuration (Optional)
@@ -225,7 +225,7 @@ You can test notifications using Firebase Console:
 5. Backend stores token in `User.fcm_token` field
 
 ### Backend Flow:
-1. Issue created → `post_save` signal triggered
+1. Ticket created → `post_save` signal triggered
 2. Signal queries central admins in organization
 3. For each admin with `fcm_token`, send notification via Firebase Admin SDK
 4. Firebase delivers notification to user's device
@@ -233,19 +233,19 @@ You can test notifications using Firebase Console:
 ### Notification Display:
 - **Foreground (app open)**: Notification API shows notification
 - **Background (app closed)**: Service worker shows notification
-- **Click handler**: Opens issue detail page
+- **Click handler**: Opens ticket detail page
 
 ## Files Modified/Created
 
 ### Created:
-- `src/issue_management/utils/firebase_notifications.py` - FCM utility functions
+- `src/ticket_management/utils/firebase_notifications.py` - FCM utility functions
 - `src/static/js/firebase-messaging-sw.js` - Service worker for background notifications
 - `src/static/js/fcm-token-manager.js` - Frontend FCM initialization and token management
 - `docs/FIREBASE_PUSH_NOTIFICATIONS_SETUP.md` - This file
 
 ### Modified:
 - `src/core/models.py` - Added `fcm_token` field to User model
-- `src/issue_management/signals.py` - Added push notification on issue creation
+- `src/ticket_management/signals.py` - Added push notification on ticket creation
 - `src/core/views.py` - Added `RegisterFCMTokenView` API endpoint
 - `src/core/urls.py` - Added URL for FCM token registration
 - `src/templates/sidebar_base.html` - Added Firebase CDN scripts
@@ -271,7 +271,7 @@ You can test notifications using Firebase Console:
 
 ## Support
 
-For issues or questions:
+For tickets or questions:
 - Check Firebase Console logs
 - Review Django application logs
 - Check browser console for JavaScript errors

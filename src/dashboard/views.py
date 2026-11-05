@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from issue_management.models import Issue, WorkTask
+from ticket_management.models import Ticket, WorkTask
 from config.mixins.access_mixin import (
     CentralAdminOnlyAccessMixin,
     SpaceAdminOnlyAccessMixin,
@@ -66,9 +66,9 @@ class DashboardDataMixin:
         org = getattr(user, 'organization', None)
 
         if not org and not user.is_superuser:
-            return Issue.objects.none()
+            return Ticket.objects.none()
 
-        queryset = Issue.objects.all()
+        queryset = Ticket.objects.all()
         if org:
             queryset = queryset.filter(org=org)
 
@@ -81,44 +81,44 @@ class DashboardDataMixin:
                 if spaces.exists():
                     queryset = queryset.filter(space__in=spaces)
                 else:
-                    return Issue.objects.none()
+                    return Ticket.objects.none()
 
         return queryset.select_related('reporter', 'assigned_to', 'org', 'space')
 
-    def get_recent_issues(self, queryset):
+    def get_recent_tickets(self, queryset):
         recent_queryset = queryset.order_by('-created_at')[: self.recent_issue_limit]
-        issues = []
-        status_labels = dict(Issue.STATUS_CHOICES)
-        priority_labels = dict(Issue.PRIORITY_CHOICES)
+        tickets = []
+        status_labels = dict(Ticket.STATUS_CHOICES)
+        priority_labels = dict(Ticket.PRIORITY_CHOICES)
 
-        for issue in recent_queryset:
-            reporter = issue.reporter.get_full_name() or issue.reporter.email or issue.reporter.phone_number
-            issues.append(
+        for ticket in recent_queryset:
+            reporter = ticket.reporter.get_full_name() or ticket.reporter.email or ticket.reporter.phone_number
+            tickets.append(
                 {
-                    'title': issue.title,
-                    'created_at': issue.created_at,
-                    'priority': issue.priority,
-                    'priority_display': priority_labels.get(issue.priority, issue.priority.title()),
-                    'priority_class': self.priority_style_map.get(issue.priority, 'text-bg-secondary'),
+                    'title': ticket.title,
+                    'created_at': ticket.created_at,
+                    'priority': ticket.priority,
+                    'priority_display': priority_labels.get(ticket.priority, ticket.priority.title()),
+                    'priority_class': self.priority_style_map.get(ticket.priority, 'text-bg-secondary'),
                     'reporter': reporter,
-                    'status': issue.status,
-                    'status_display': status_labels.get(issue.status, issue.status.title()),
-                    'status_class': self.status_style_map.get(issue.status, 'text-bg-secondary'),
-                    'url': self.get_issue_detail_url(issue),
+                    'status': ticket.status,
+                    'status_display': status_labels.get(ticket.status, ticket.status.title()),
+                    'status_class': self.status_style_map.get(ticket.status, 'text-bg-secondary'),
+                    'url': self.get_ticket_detail_url(ticket),
                 }
             )
-        return issues
+        return tickets
 
-    def get_issue_detail_url(self, issue):
-        return reverse(self.get_issue_detail_route_name(), kwargs={'issue_slug': issue.slug})
+    def get_ticket_detail_url(self, ticket):
+        return reverse(self.get_ticket_detail_route_name(), kwargs={'ticket_slug': ticket.slug})
 
     def get_view_all_url(self):
-        return reverse(self.get_issue_list_route_name())
+        return reverse(self.get_ticket_list_route_name())
 
-    def get_issue_list_route_name(self):
+    def get_ticket_list_route_name(self):
         raise NotImplementedError
 
-    def get_issue_detail_route_name(self):
+    def get_ticket_detail_route_name(self):
         raise NotImplementedError
 
     def get_summary_cards(self, queryset):
@@ -133,9 +133,9 @@ class DashboardDataMixin:
             updated_at__gte=month_start,
         ).count()
 
-        issue_ids = list(queryset.values_list('pk', flat=True))
-        if issue_ids:
-            work_tasks = WorkTask.objects.filter(issue__in=issue_ids)
+        ticket_ids = list(queryset.values_list('pk', flat=True))
+        if ticket_ids:
+            work_tasks = WorkTask.objects.filter(ticket__in=ticket_ids)
             pending_tasks = work_tasks.filter(completed=False).count()
             overdue_tasks = work_tasks.filter(
                 completed=False,
@@ -147,8 +147,8 @@ class DashboardDataMixin:
             overdue_tasks = 0
 
         summary = [
-            {'label': 'Total Issues', 'value': total_issues, 'variant': 'primary', 'icon': 'insights'},
-            {'label': 'Active Issues', 'value': active_issues, 'variant': 'info', 'icon': 'pending'},
+            {'label': 'Total Tickets', 'value': total_issues, 'variant': 'primary', 'icon': 'insights'},
+            {'label': 'Active Tickets', 'value': active_issues, 'variant': 'info', 'icon': 'pending'},
             {'label': 'Resolved This Month', 'value': resolved_this_month, 'variant': 'success', 'icon': 'task_alt'},
             {'label': 'Overdue Tasks', 'value': overdue_tasks, 'variant': 'danger', 'icon': 'warning'},
             {'label': 'Pending Tasks', 'value': pending_tasks, 'variant': 'warning', 'icon': 'assignment'},
@@ -204,7 +204,7 @@ class DashboardDataMixin:
                 'labels': labels,
                 'datasets': [
                     {
-                        'label': 'New Issues',
+                        'label': 'New Tickets',
                         'data': created_data,
                         'borderColor': 'rgba(54, 162, 235, 1)',
                         'backgroundColor': 'rgba(54, 162, 235, 0.2)',
@@ -220,7 +220,7 @@ class DashboardDataMixin:
                         'tension': 0.3,
                     },
                     {
-                        'label': 'Issues Resolved',
+                        'label': 'Tickets Resolved',
                         'data': resolved_data,
                         'borderColor': 'rgba(75, 192, 192, 1)',
                         'backgroundColor': 'rgba(75, 192, 192, 0.2)',
@@ -243,7 +243,7 @@ class DashboardDataMixin:
         count_map = {item['status']: item['count'] for item in status_counts}
 
         breakdown = []
-        for key, label in Issue.STATUS_CHOICES:
+        for key, label in Ticket.STATUS_CHOICES:
             breakdown.append(
                 {
                     'status': key,
@@ -258,7 +258,7 @@ class DashboardDataMixin:
         priority_counts = queryset.values('priority').annotate(count=Count('id'))
         count_map = {item['priority']: item['count'] for item in priority_counts}
         breakdown = []
-        for key, label in Issue.PRIORITY_CHOICES:
+        for key, label in Ticket.PRIORITY_CHOICES:
             breakdown.append(
                 {
                     'priority': key,
@@ -277,7 +277,7 @@ class DashboardDataMixin:
             {
                 'summary_cards': self.get_summary_cards(issue_queryset),
                 'chart_config': self.get_trend_config(issue_queryset),
-                'recent_issues': self.get_recent_issues(issue_queryset),
+                'recent_tickets': self.get_recent_tickets(issue_queryset),
                 'status_breakdown': self.get_status_breakdown(issue_queryset),
                 'priority_breakdown': self.get_priority_breakdown(issue_queryset),
                 'view_all_issues_url': self.get_view_all_url(),
@@ -293,21 +293,21 @@ class DashboardDataMixin:
 class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
     template_name = 'central_admin/dashboard.html'
 
-    def get_issue_list_route_name(self):
-        return 'issue_management:central_admin:issue_list'
+    def get_ticket_list_route_name(self):
+        return 'ticket_management:central_admin:ticket_list'
 
-    def get_issue_detail_route_name(self):
-        return 'issue_management:central_admin:issue_detail'
+    def get_ticket_detail_route_name(self):
+        return 'ticket_management:central_admin:ticket_detail'
 
 
 class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin, TemplateView):
     template_name = 'space_admin/dashboard.html'
 
-    def get_issue_list_route_name(self):
-        return 'issue_management:space_admin:issue_list'
+    def get_ticket_list_route_name(self):
+        return 'ticket_management:space_admin:ticket_list'
 
-    def get_issue_detail_route_name(self):
-        return 'issue_management:space_admin:issue_detail'
+    def get_ticket_detail_route_name(self):
+        return 'ticket_management:space_admin:ticket_detail'
 
 
 class TransportInchargeDashboardView(TransportInchargeOnlyAccessMixin, TemplateView):

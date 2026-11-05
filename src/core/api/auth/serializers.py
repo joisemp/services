@@ -25,7 +25,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 def tokens_for_user(user) -> dict:
-    """Issue a refresh/access pair with custom claims for ``user``."""
+    """Ticket a refresh/access pair with custom claims for ``user``."""
     refresh = CustomTokenObtainPairSerializer.get_token(user)
     return {
         'refresh': str(refresh),

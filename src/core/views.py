@@ -87,13 +87,13 @@ class PeopleListView(CentralAdminOnlyAccessMixin, ListView):
             organization=admin_organization,
             is_active=True
         ).select_related('organization').prefetch_related('spaces').annotate(
-            total_reported_issues=Count('reported_issues', distinct=True),
-            total_assigned_issues=Count('assigned_issues', distinct=True),
-            resolved_reported_issues_count=Count('reported_issues', filter=Q(reported_issues__status='resolved'), distinct=True),
-            open_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='open'), distinct=True),
-            in_progress_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='in_progress'), distinct=True),
-            resolved_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='resolved'), distinct=True),
-            closed_issues_count=Count('assigned_issues', filter=Q(assigned_issues__status='closed'), distinct=True),
+            total_reported_tickets=Count('reported_tickets', distinct=True),
+            total_assigned_tickets=Count('assigned_tickets', distinct=True),
+            resolved_reported_tickets_count=Count('reported_tickets', filter=Q(reported_tickets__status='resolved'), distinct=True),
+            open_tickets_count=Count('assigned_tickets', filter=Q(assigned_tickets__status='open'), distinct=True),
+            in_progress_tickets_count=Count('assigned_tickets', filter=Q(assigned_tickets__status='in_progress'), distinct=True),
+            resolved_tickets_count=Count('assigned_tickets', filter=Q(assigned_tickets__status='resolved'), distinct=True),
+            closed_tickets_count=Count('assigned_tickets', filter=Q(assigned_tickets__status='closed'), distinct=True),
         )
 
         if search_query:
@@ -305,11 +305,11 @@ class SetPinView(FormView):
         elif user.is_space_admin:
             return 'core:switch_space'
         elif user.is_supervisor:
-            return 'issue_management:supervisor:issue_list'
+            return 'ticket_management:supervisor:ticket_list'
         elif user.is_maintainer:
-            return 'issue_management:maintainer:work_task_list'
+            return 'ticket_management:maintainer:work_task_list'
         elif user.is_reviewer:
-            return 'issue_management:reviewer:issue_list'
+            return 'ticket_management:reviewer:ticket_list'
         elif user.is_driver:
             return 'home'
         elif user.is_transport_incharge:
@@ -441,10 +441,10 @@ class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Get related issues for this space
-        issues = self.object.issues.select_related('reporter').prefetch_related('images').order_by('-created_at')
-        context['issues'] = issues
-        context['issues_count'] = issues.count()
+        # Get related tickets for this space
+        tickets = self.object.tickets.select_related('reporter').prefetch_related('images').order_by('-created_at')
+        context['tickets'] = tickets
+        context['tickets_count'] = tickets.count()
         
         # Get users associated with this space
         users = self.object.users.all().order_by('first_name', 'last_name')
@@ -454,10 +454,10 @@ class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
         # Add user addition form
         context['user_add_form'] = SpaceUserAddForm(space=self.object)
         
-        # Get issue statistics
-        context['open_issues_count'] = issues.filter(status='open').count()
-        context['resolved_issues_count'] = issues.filter(status='resolved').count()
-        context['in_progress_issues_count'] = issues.filter(status='in_progress').count()
+        # Get ticket statistics
+        context['open_tickets_count'] = tickets.filter(status='open').count()
+        context['resolved_tickets_count'] = tickets.filter(status='resolved').count()
+        context['in_progress_tickets_count'] = tickets.filter(status='in_progress').count()
         
         return context
 
@@ -543,9 +543,9 @@ class SpaceDeleteView(CentralAdminOnlyAccessMixin, DeleteView):
         User.objects.filter(active_space=self.object).update(active_space=None)
         
         # Django's CASCADE will automatically delete:
-        # - Issues (related via space)
-        # - IssueImage instances (related via issues)
-        # - IssueComment instances (related via issues)
+        # - Tickets (related via space)
+        # - TicketImage instances (related via issues)
+        # - TicketComment instances (related via issues)
         # - WorkTask instances (related via issues)
         # - WorkTaskShare instances (related via work_tasks)
         
@@ -559,16 +559,16 @@ class SpaceDeleteView(CentralAdminOnlyAccessMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add counts of related objects that will be deleted
-        from issue_management.models import WorkTask
+        from ticket_management.models import WorkTask
         
-        issues = self.object.issues.all()
-        all_work_tasks = WorkTask.objects.filter(issue__in=issues)
+        tickets = self.object.tickets.all()
+        all_work_tasks = WorkTask.objects.filter(ticket__in=tickets)
         
         context['related_counts'] = {
             'users': self.object.users.count(),
-            'issues': issues.count(),
-            'images': sum(issue.images.count() for issue in issues),
-            'comments': sum(issue.comments.count() for issue in issues),
+            'tickets': tickets.count(),
+            'images': sum(ticket.images.count() for ticket in tickets),
+            'comments': sum(ticket.comments.count() for ticket in tickets),
             'work_tasks': all_work_tasks.count(),
             'work_task_shares': sum(task.shares.count() for task in all_work_tasks),
         }

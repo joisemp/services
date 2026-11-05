@@ -1,19 +1,19 @@
 {% load core_tags %}
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-        <a class="navlink {% is_active 'issue_management:supervisor:issue_list,issue_management:supervisor:issue_detail,issue_management:supervisor:issue_create' %}" href="{% url 'issue_management:supervisor:issue_list' %}">
+        <a class="navlink {% is_active 'ticket_management:supervisor:ticket_list,ticket_management:supervisor:ticket_detail,ticket_management:supervisor:ticket_create' %}" href="{% url 'ticket_management:supervisor:ticket_list' %}">
             <span class="material-symbols-outlined me-2">
                 report
             </span>
-            <span class="menu-text">Issues</span>
+            <span class="menu-text">Tickets</span>
         </a>
-        <a class="navlink {% is_active 'issue_management:supervisor:work_task_list,issue_management:supervisor:work_task_detail' %}" href="{% url 'issue_management:supervisor:work_task_list' %}">
+        <a class="navlink {% is_active 'ticket_management:supervisor:work_task_list,ticket_management:supervisor:work_task_detail' %}" href="{% url 'ticket_management:supervisor:work_task_list' %}">
             <span class="material-symbols-outlined me-2">
                 task
             </span>
             <span class="menu-text">Tasks</span>
         </a>
-        <a class="navlink {% is_active 'issue_management:supervisor:site_visit_list,issue_management:supervisor:site_visit_detail' %}" href="{% url 'issue_management:supervisor:site_visit_list' %}">
+        <a class="navlink {% is_active 'ticket_management:supervisor:site_visit_list,ticket_management:supervisor:site_visit_detail' %}" href="{% url 'ticket_management:supervisor:site_visit_list' %}">
             <span class="material-symbols-outlined me-2">
                 location_on
             </span>

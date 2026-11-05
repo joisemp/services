@@ -1,0 +1,128 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Ticket Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_list/style.css' %}">
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<section id="alert">
+  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
+    <div class="message flex-grow-1 mb-2 mb-md-0">
+      <h3 class="mb-1">My Assigned Tickets</h3>
+      <span class="alert-text text-body-secondary">View and manage tickets assigned to you.</span>
+    </div>
+    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
+      <a href="{% url 'ticket_management:supervisor:ticket_create' %}" class="btn btn-primary d-flex w-100 w-md-auto"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Ticket</span></a>
+    </div>
+  </div>
+</section>
+<section id="options-bar">
+  <div class="container-nav">
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:ticket_list' %}{% if space_filter %}?space={{ space_filter }}{% endif %}">All</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:ticket_list' %}?status=open{% if space_filter %}&space={{ space_filter }}{% endif %}">Open</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:ticket_list' %}?status=assigned{% if space_filter %}&space={{ space_filter }}{% endif %}">Assigned</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:ticket_list' %}?status=in_progress{% if space_filter %}&space={{ space_filter }}{% endif %}">In progress</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:ticket_list' %}?status=critical{% if space_filter %}&space={{ space_filter }}{% endif %}">Critical</a>
+      </li>
+    </ul>
+  </div>
+</section>
+<section id="filter-bar">
+  <div class="container-fluid mt-3">
+    <div class="row">
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="mb-3">
+          <label for="spaceFilter" class="form-label text-body-secondary">Filter by Space</label>
+          <select id="spaceFilter" class="form-select" onchange="filterBySpace(this.value)">
+            <option value="">All Spaces</option>
+            <option value="no_space" {% if space_filter == 'no_space' %}selected{% endif %}>No Space Assigned</option>
+            {% for space in spaces %}
+              <option value="{{ space.slug }}" {% if space_filter == space.slug %}selected{% endif %}>
+                {{ space.name }} ({{ space.org.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="ticket-list">
+  <div class="container-fluid mt-3">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
+      {% for ticket in tickets %}
+      <div class="col mt-2">
+        <a href="{% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug %}" class="text-decoration-none card-link-wrapper">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">{{ ticket.title }}</h5>
+                <span class="badge rounded-pill border border-dark text-dark ms-2">{{ ticket.ticket_id }}</span>
+              </div>
+              <hr>
+              <div class="d-flex justify-content-between mt-4">
+                <h6 class="card-subtitle mb-2 text-body-secondary">{{ ticket.created_at|date:"M d, Y" }}</h6>
+                <span class="badge badge-{{ ticket.priority }} rounded-pill">{{ ticket.get_priority_display }}</span>
+              </div>
+              <div class="d-flex justify-content-between mt-4">
+                <h6 class="card-text me-2">Reporter</h6>
+                <h6 class="card-text ms-2">Status</h6>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h6 class="card-text text-body-secondary me-2">
+                  {{ ticket.reporter.get_full_name|default:ticket.reporter.phone_number|default:ticket.reporter.email|default:"Mello Hello" }}
+                </h6>
+                <span class="badge badge-{{ ticket.status }} rounded-pill d-flex align-items-center">{{ ticket.get_status_display }}</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function filterBySpace(spaceSlug) {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (spaceSlug) {
+    urlParams.set('space', spaceSlug);
+  } else {
+    urlParams.delete('space');
+  }
+  
+  // Construct the new URL with updated parameters
+  const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+  window.location.href = newUrl;
+}
+</script>
+{% endblock %}

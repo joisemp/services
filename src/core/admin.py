@@ -105,7 +105,7 @@ class SpaceAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related('org').prefetch_related('issues')
+        return qs.select_related('org').prefetch_related('tickets')
 
 
 class UserCreationForm(forms.ModelForm):
@@ -269,7 +269,7 @@ class UpdateAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
     fieldsets = (
         ('Update Information', {
-            'fields': ('title', 'content', 'related_issue', 'space', 'org')
+            'fields': ('title', 'content', 'related_ticket', 'space', 'org')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

@@ -58,8 +58,8 @@ class IsTransportIncharge(BasePermission):
         )
 
 
-class IsIssueStaff(BasePermission):
-    """Central admin or transport incharge (shared issue staff screens)."""
+class IsTicketStaff(BasePermission):
+    """Central admin or transport incharge (shared ticket staff screens)."""
 
     def has_permission(self, request, view):
         user = request.user
@@ -86,7 +86,7 @@ class IsCentralOrSpaceAdmin(BasePermission):
         )
 
 
-class IsIssueCreatorRole(BasePermission):
+class IsTicketCreatorRole(BasePermission):
     """Roles allowed to create issues on the web."""
 
     def has_permission(self, request, view):

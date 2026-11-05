@@ -201,36 +201,36 @@ tr {
 .list-group-item:not(:last-child) {
   border-bottom: 1px solid #f1f3f4 !important;
 }
-.list-group-item .issue-info h6 a {
+.list-group-item .ticket-info h6 a {
   color: #2563EB;
   text-decoration: none;
 }
-.list-group-item .issue-info h6 a:hover {
+.list-group-item .ticket-info h6 a:hover {
   text-decoration: underline !important;
 }
-.list-group-item .issue-info .badge {
+.list-group-item .ticket-info .badge {
   font-size: 0.75rem;
 }
-.list-group-item .issue-info .badge.bg-open {
+.list-group-item .ticket-info .badge.bg-open {
   background-color: #ffc107 !important;
   color: #000;
 }
-.list-group-item .issue-info .badge.bg-in_progress {
+.list-group-item .ticket-info .badge.bg-in_progress {
   background-color: #0dcaf0 !important;
 }
-.list-group-item .issue-info .badge.bg-resolved {
+.list-group-item .ticket-info .badge.bg-resolved {
   background-color: #198754 !important;
 }
-.list-group-item .issue-info .badge.bg-low {
+.list-group-item .ticket-info .badge.bg-low {
   background-color: #6c757d !important;
 }
-.list-group-item .issue-info .badge.bg-medium {
+.list-group-item .ticket-info .badge.bg-medium {
   background-color: #fd7e14 !important;
 }
-.list-group-item .issue-info .badge.bg-high {
+.list-group-item .ticket-info .badge.bg-high {
   background-color: #dc3545 !important;
 }
-.list-group-item .issue-info .badge.bg-critical {
+.list-group-item .ticket-info .badge.bg-critical {
   background-color: #6f42c1 !important;
 }
 

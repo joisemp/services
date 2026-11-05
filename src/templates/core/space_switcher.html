@@ -182,7 +182,7 @@ body {
                     {% if space == user.active_space %}check_circle{% else %}domain{% endif %}
                 </span>
                 <h5>{{ space.name }}</h5>
-                <p class="space-description">{{ space.description|default:"Issues, tasks, and updates for this space." }}</p>
+                <p class="space-description">{{ space.description|default:"Tickets, tasks, and updates for this space." }}</p>
                 <span class="badge">
                     <span class="material-symbols-outlined" aria-hidden="true">
                         {% if space == user.active_space %}check{% else %}arrow_forward{% endif %}

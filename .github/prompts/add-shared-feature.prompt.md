@@ -1,15 +1,15 @@
 ---
-description: "Scaffold a shared cross-role issue-management feature in common views with correct routing and tenant-safe behavior."
+description: "Scaffold a shared cross-role ticket-management feature in common views with correct routing and tenant-safe behavior."
 name: "Add Shared Feature"
-argument-hint: "Shared feature request, e.g. common issue watch/unwatch toggle"
+argument-hint: "Shared feature request, e.g. common ticket watch/unwatch toggle"
 agent: "agent"
 ---
 Implement one shared feature for all authenticated roles in this repository using the provided request.
 
 Requirements:
-- Place view logic in `src/issue_management/views/common.py`.
-- Register routes in `src/issue_management/urls.py` (not in role URL modules).
-- Use templates under `src/templates/common/issue_management/` (and `partials/` when HTMX swaps are used).
+- Place view logic in `src/ticket_management/views/common.py`.
+- Register routes in `src/ticket_management/urls.py` (not in role URL modules).
+- Use templates under `src/templates/common/ticket_management/` (and `partials/` when HTMX swaps are used).
 - Use Django CBVs where appropriate and enforce authenticated access.
 - Preserve organization-scoped behavior for non-superusers.
 - Use `select_related()` / `prefetch_related()` for related data shown in list/detail contexts.

@@ -1,0 +1,150 @@
+@use '../../sidebar_base';
+@use '../../colors' as colors;
+@use '../../components/comments';
+
+#breadcrumb{
+  display: flex;
+  justify-content: right;
+  margin:5px;
+}
+
+#alert-details {
+  .alert {
+    margin-bottom: 15px;
+    border: 0.5px solid colors.$primary !important;
+    background-color: #e2eefd !important;
+  }
+  .alert .alert-buttons {
+    width: fit-content;
+  }
+  .resolved-alert{
+    padding: 12px;
+    border-radius: 5px;
+    border: 0.5px solid #104920 !important;
+    background-color: #edffec !important;
+  }
+}
+  #ticket-work .card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+  }
+  
+  #ticket-work .card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  
+  #ticket-work .btn {
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  
+  #ticket-work .comments-section,
+  #ticket-work .tasks-section {
+    border: 1px dashed #dee2e6;
+  }
+  
+ 
+  .background-danger {
+    background-color: #fdd9dd;
+  }
+
+   .border-danger {
+    border-color: #ffb1b1 !important;
+  }
+  .background-secondary{
+    background-color: #f5f5f5;
+  }
+  
+  #ticket-work .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+// Assignment Styles
+.assignment-alert {
+  padding: 12px;
+  border-radius: 5px;
+  border: 0.5px solid colors.$primary !important;
+  background-color: #e7f1ff !important;
+  margin-bottom: 15px;
+
+  .assignment-actions {
+    width: fit-content;
+  }
+
+  .badge {
+    font-size: 0.875rem;
+    padding: 0.5em 0.75em;
+  }
+
+  h5 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .alert-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+}
+
+// Activity History Styles
+#activity-history {
+  .card {
+    border: 0.5px solid #e3e6f0;
+    border-radius: 12px;
+  }
+
+  .card-header {
+    border-bottom: 1px solid #e3e6f0;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .activity-timeline {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .activity-item {
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+  }
+
+  .activity-icon {
+    .badge {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+  }
+
+  .activity-details {
+    .activity-type {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .activity-description {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .activity-changes {
+      .badge {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+      }
+    }
+  }
+}
+  

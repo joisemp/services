@@ -1,7 +1,7 @@
 # Performance Report Feature - Quick Start Guide
 
 ## What is it?
-A PDF report generation feature that provides performance insights and ratings (0-100) for Supervisors and Maintainers based on their work with issues and tasks.
+A PDF report generation feature that provides performance insights and ratings (0-100) for Supervisors and Maintainers based on their work with tickets and tasks.
 
 ## How to Access
 1. Log in as a **Central Admin**
@@ -33,12 +33,12 @@ Select which user types to include:
 ## What's in the Report?
 
 ### For Supervisors:
-- **Issues assigned, resolved, in-progress, pending**
+- **Tickets assigned, resolved, in-progress, pending**
 - **Work tasks created** (shows proactive management)
 - **Site visits coordinated**
 - **Average resolution time** (in hours)
 - **Performance rating (0-100)** based on:
-  - How many issues they resolve (40%)
+  - How many tickets they resolve (40%)
   - How quickly they resolve them (30%)
   - How many tasks they create (20%)
   - Site visit coordination (10%)
@@ -47,12 +47,12 @@ Select which user types to include:
 - **Tasks assigned, completed, pending**
 - **Site visits assigned, completed, pending**
 - **Average task completion time** (in hours)
-- **Issues contributed to** (breadth of work)
+- **Tickets contributed to** (breadth of work)
 - **Performance rating (0-100)** based on:
   - Task completion rate (50%)
   - Speed of completion (30%)
   - Site visit participation (15%)
-  - Issue contribution (5%)
+  - Ticket contribution (5%)
 
 ### Rating Scale:
 - **90-100**: 🟢 Excellent
@@ -124,14 +124,14 @@ Quick snapshot of recent team activity.
 ### Empty Report
 - Users may have no activity in the selected period
 - Try a longer date range
-- Verify that issues and tasks exist in the system
+- Verify that tickets and tasks exist in the system
 
 ## Technical Notes
 
 - Reports are generated on-demand (not cached)
 - Generation typically takes 1-3 seconds
 - PDF filename format: `performance_report_YYYYMMDD_HHMMSS.pdf`
-- Reports use data from the Issue Management system only
+- Reports use data from the Ticket Management system only
 
 ## Need Help?
 

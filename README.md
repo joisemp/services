@@ -1,19 +1,19 @@
 # Services
 
-A Django 5.2-based issue management system with role-based access control and multi-tenant organization support.
+A Django 5.2-based ticket management system with role-based access control and multi-tenant organization support.
 
 ## Overview
 
-This project provides a comprehensive issue tracking platform featuring:
+This project provides a comprehensive ticket tracking platform featuring:
 
 - **Two-Tier Authentication System**: 
   - **General Users**: Passwordless phone-only authentication (just enter phone number to login)
   - **Admin Roles**: Email + password authentication for central_admin, space_admin, maintainer, supervisor, and reviewer roles
 - **Role-Based Access Control**: Six distinct user roles with specialized workflows and URL namespaces
-- **Multi-Tenant Architecture**: Organization and space-based issue management with hierarchical access controls
+- **Multi-Tenant Architecture**: Organization and space-based ticket management with hierarchical access controls
 - **Work Task Management**: Detailed task tracking with assignment, progress monitoring, completion notes, and external sharing via secure tokens
-- **Media Support**: Issue documentation with voice recordings and multiple image uploads (up to 3 per issue)
-- **Issue Status Flow**: `open` → `assigned` → `in_progress` → `resolved`/`escalated` → `closed`/`cancelled`
+- **Media Support**: Ticket documentation with voice recordings and multiple image uploads (up to 3 per ticket)
+- **Ticket Status Flow**: `open` → `assigned` → `in_progress` → `resolved`/`escalated` → `closed`/`cancelled`
 
 ## Tech Stack
 
@@ -39,9 +39,9 @@ services/
 │   │   ├── backends.py      # DualAuthBackend (phone + email auth)
 │   │   ├── forms.py         # Authentication forms
 │   │   └── views.py         # Auth views
-│   ├── issue_management/    # Issue tracking system
-│   │   ├── models.py        # Issue, WorkTask, IssueImage, etc.
-│   │   ├── forms.py         # Issue and task forms
+│   ├── ticket_management/    # Ticket tracking system
+│   │   ├── models.py        # Ticket, WorkTask, TicketImage, etc.
+│   │   ├── forms.py         # Ticket and task forms
 │   │   ├── views/           # Role-specific view modules
 │   │   └── role_urls/       # Role-based URL patterns
 │   ├── dashboard/           # Dashboard views
@@ -76,29 +76,29 @@ The project uses a dual authentication system via `DualAuthBackend`:
 **User Types**:
 - `central_admin` - System-wide administration
 - `space_admin` - Space-level administration
-- `maintainer` - Issue maintenance and resolution
-- `supervisor` - Issue oversight and escalation
-- `reviewer` - Issue review and approval
-- `general_user` - Issue reporting (phone-only auth)
+- `maintainer` - Ticket maintenance and resolution
+- `supervisor` - Ticket oversight and escalation
+- `reviewer` - Ticket review and approval
+- `general_user` - Ticket reporting (phone-only auth)
 
 ### Role-Based URL Structure
 
 URLs are organized by user role with parallel structures:
 
 ```
-/issues/central-admin/    → Central admin workflows
-/issues/space-admin/      → Space admin workflows
-/issues/maintainer/       → Maintainer workflows
-/issues/supervisor/       → Supervisor workflows
-/issues/reviewer/         → Reviewer workflows
+/tickets/central-admin/    → Central admin workflows
+/tickets/space-admin/      → Space admin workflows
+/tickets/maintainer/       → Maintainer workflows
+/tickets/supervisor/       → Supervisor workflows
+/tickets/reviewer/         → Reviewer workflows
 ```
 
 Each role has its own URL namespace, view module, and template directory.
 
-### Issue Workflow
+### Ticket Workflow
 
-1. **Creation**: Users create issues with title, description, location, images, and voice recordings
-2. **Assignment**: Issues are assigned to maintainers
+1. **Creation**: Users create tickets with title, description, location, images, and voice recordings
+2. **Assignment**: Tickets are assigned to maintainers
 3. **Work Tasks**: Maintainers create work tasks with assignees and due dates
 4. **Progress Tracking**: Tasks move through status updates
 5. **Completion**: Tasks are completed with resolution notes
@@ -108,8 +108,8 @@ Each role has its own URL namespace, view module, and template directory.
 
 - **Development**: Files stored locally in `src/media/public/`
 - **Production**: Files uploaded to DigitalOcean Spaces (S3-compatible)
-- **Image Uploads**: Up to 3 images per issue via form fields `image1`, `image2`, `image3`
-- **Voice Recordings**: Audio files attached to issues
+- **Image Uploads**: Up to 3 images per ticket via form fields `image1`, `image2`, `image3`
+- **Voice Recordings**: Audio files attached to tickets
 
 ## Development Conventions
 
@@ -132,13 +132,13 @@ Each role has its own URL namespace, view module, and template directory.
 
 ### Templates
 
-- Template paths follow: `{role}/issue_management/{action}.html`
+- Template paths follow: `{role}/ticket_management/{action}.html`
 - Base templates: `base.html` (basic) and `sidebar_base.html` (with sidebar)
 
 ### CSS/SCSS
 
 - **Always create SCSS files** for page-specific styles (not raw CSS)
-- **Page-specific folders**: Each page gets its own folder (e.g., `issue_list/`, `issue_detail/`)
+- **Page-specific folders**: Each page gets its own folder (e.g., `ticket_list/`, `ticket_detail/`)
 - **Compilation**: SCSS files must be manually compiled to CSS in the same folder
 - **Import base styles**:
   - `@use '../_base'` for basic navbar/header styles

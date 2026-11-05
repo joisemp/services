@@ -481,7 +481,7 @@ class Space(models.Model):
 class Update(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
-    related_issue = models.ForeignKey('issue_management.Issue', related_name='updates', on_delete=models.CASCADE, null=True, blank=True)
+    related_ticket = models.ForeignKey('ticket_management.Ticket', related_name='updates', on_delete=models.CASCADE, null=True, blank=True)
     org = models.ForeignKey(Organization, related_name='updates', on_delete=models.CASCADE)
     space = models.ForeignKey(Space, related_name='updates', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

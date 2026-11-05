@@ -3,17 +3,17 @@
 ## Changes Made
 
 ### 1. Fixed Firebase Configuration Access
-- **Issue**: `FIREBASE_PROJECT_ID` was not accessible as a direct setting
+- **Ticket**: `FIREBASE_PROJECT_ID` was not accessible as a direct setting
 - **Fix**: Added `FIREBASE_PROJECT_ID` as a standalone setting in `settings.py`
 - **Status**: ✅ FIXED - API endpoint now returns proper config
 
 ### 2. Fixed Service Worker Scope
-- **Issue**: Service worker was served from `/static/js/` which limits its scope
+- **Ticket**: Service worker was served from `/static/js/` which limits its scope
 - **Fix**: Created `ServiceWorkerView` to serve from root path `/firebase-messaging-sw.js`
 - **Status**: ✅ FIXED - Service worker now has full site scope
 
 ### 3. Updated Service Worker Registration
-- **Issue**: FCM token manager was looking for service worker in wrong scope
+- **Ticket**: FCM token manager was looking for service worker in wrong scope
 - **Fix**: Updated registration paths from `/static/js/` to `/` (root)
 - **Status**: ✅ FIXED
 
@@ -51,11 +51,11 @@ FCM initialization complete!
 ```
 
 ### 5. Test Notification
-Create a new issue or trigger any notification event. You should receive a notification.
+Create a new ticket or trigger any notification event. You should receive a notification.
 
-## Common Issues & Solutions
+## Common Tickets & Solutions
 
-### Issue: "Failed to fetch Firebase configuration"
+### Ticket: "Failed to fetch Firebase configuration"
 **Check**:
 - `.env` file has all Firebase variables set
 - Django server is running
@@ -69,7 +69,7 @@ docker exec -it sfs-services-dev-container python manage.py shell
 'sfs-services'  # Should show your project ID
 ```
 
-### Issue: "Service worker registration not found"
+### Ticket: "Service worker registration not found"
 **Check**:
 - Service worker registered successfully
 - Browser DevTools → Application → Service Workers shows active worker
@@ -79,7 +79,7 @@ docker exec -it sfs-services-dev-container python manage.py shell
 2. Hard reload page
 3. Check if `/firebase-messaging-sw.js` is accessible
 
-### Issue: "No FCM token available"
+### Ticket: "No FCM token available"
 **Causes**:
 - Notification permission denied
 - Service worker not active
@@ -90,7 +90,7 @@ docker exec -it sfs-services-dev-container python manage.py shell
 2. Verify VAPID key in `.env` matches Firebase Console
 3. Ensure service worker is active
 
-### Issue: Notifications not received
+### Ticket: Notifications not received
 **Check**:
 1. FCM token saved in user profile:
    ```python
@@ -131,7 +131,7 @@ Send a test notification from Django shell:
 docker exec -it sfs-services-dev-container python manage.py shell
 
 # In shell:
-from issue_management.utils.firebase_notifications import send_push_notification
+from ticket_management.utils.firebase_notifications import send_push_notification
 from core.models import User
 
 # Get a user with FCM token
@@ -168,7 +168,7 @@ print(f"Result: {result}")
 3. ✅ Service worker registration updated
 4. 🔄 **ACTION REQUIRED**: Clear browser cache and test
 5. 🔄 **ACTION REQUIRED**: Grant notification permission when prompted
-6. 🔄 **ACTION REQUIRED**: Create test issue to verify notifications
+6. 🔄 **ACTION REQUIRED**: Create test ticket to verify notifications
 
 ## Files Modified
 

@@ -5,7 +5,7 @@ from django.utils.timezone import now
 
 from core.models import Organization
 from fleet_management.models import Vehicle, Workshop, VehicleExpense, VehicleActivity
-from issue_management.models import Issue
+from ticket_management.models import Ticket
 
 
 User = get_user_model()
@@ -461,11 +461,11 @@ class TransportInchargeWorkshopViewTests(TestCase):
 		self.assertEqual(delete_response.status_code, 302)
 		self.assertFalse(Workshop.objects.filter(pk=created.pk).exists())
 
-	def test_workshop_detail_lists_reported_issues(self):
+	def test_workshop_detail_lists_reported_tickets(self):
 		self.client.force_login(self.transport_incharge)
 
-		issue = Issue.objects.create(
-			title='Workshop Issue',
+		ticket= Ticket.objects.create(
+			title='Workshop Ticket',
 			description='Reported to workshop',
 			reporter=self.transport_incharge,
 			org=self.org,
@@ -478,9 +478,9 @@ class TransportInchargeWorkshopViewTests(TestCase):
 		)
 
 		self.assertEqual(response.status_code, 200)
-		self.assertContains(response, 'Reported Issues')
-		self.assertContains(response, issue.title)
-		self.assertContains(response, reverse('issue_management:transport_incharge:issue_detail', kwargs={'issue_slug': issue.slug}))
+		self.assertContains(response, 'Reported Tickets')
+		self.assertContains(response, ticket.title)
+		self.assertContains(response, reverse('ticket_management:transport_incharge:ticket_detail', kwargs={'ticket_slug': ticket.slug}))
 
 
 class TransportInchargeExpenseViewTests(TestCase):

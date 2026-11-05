@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Local
     'core.apps.CoreConfig',
-    'issue_management.apps.IssueManagementConfig',
+    'ticket_management.apps.TicketManagementConfig',
     'inventory.apps.InventoryConfig',
     'dashboard.apps.DashboardConfig',
     'fleet_management.apps.FleetManagementConfig',
