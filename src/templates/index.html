@@ -30,13 +30,13 @@
             <div class="hero-text">
                 <div class="hero-badge">
                     <span class="hero-badge__dot"></span>
-                    SFS INSTITUTIONS, BENGALURU
+                    Facility &amp; Operations Management
                 </div>
                 <h1>Operations<br>management,<br><em>simplified</em></h1>
                 <p>Report, track, and resolve service tickets across your organisation — with media attachments, role-based workflows, and a complete audit trail.</p>
                 <div class="hero-actions">
                     <a href="{% url 'core:login' %}" class="btn-solid">
-                        Get started <i class="fa-solid fa-arrow-right"></i>
+                        Get started <span class="material-symbols-outlined btn-icon">arrow_forward</span>
                     </a>
                 </div>
             </div>
@@ -49,15 +49,19 @@
                     </div>
                     <div class="tc-title">Broken AC unit — Block C, Floor 2</div>
                     <div class="tc-meta">
-                        <i class="fa-solid fa-user-gear"></i>
+                        <span class="material-symbols-outlined tc-icon">manage_accounts</span>
                         Assigned to Ravi M. &nbsp;·&nbsp; Due tomorrow
                     </div>
                     <div class="tc-progress-bar">
                         <div class="tc-progress-fill" style="width: 65%;"></div>
                     </div>
                     <div class="tc-tags">
-                        <span class="tc-tag"><i class="fa-solid fa-camera"></i> 2 photos</span>
-                        <span class="tc-tag"><i class="fa-solid fa-microphone"></i> Voice note</span>
+                        <span class="tc-tag">
+                            <span class="material-symbols-outlined tc-icon">photo_camera</span> 2 photos
+                        </span>
+                        <span class="tc-tag">
+                            <span class="material-symbols-outlined tc-icon">mic</span> Voice note
+                        </span>
                     </div>
                 </div>
                 <div class="ticket-card ticket-card--sm">
@@ -90,25 +94,33 @@
         </div>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon"><i class="fa-solid fa-ticket"></i></div>
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">confirmation_number</span>
+                </div>
                 <span class="feature-num">01</span>
                 <h5>Ticket Reporting</h5>
                 <p>Staff raise tickets with photos, voice recordings, and location details. Phone-only sign-in keeps it frictionless for general users.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">checklist</span>
+                </div>
                 <span class="feature-num">02</span>
                 <h5>Work-Task Tracking</h5>
                 <p>Break tickets into tasks, assign team members, set due dates, and share progress links with contractors — no account needed.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon"><i class="fa-solid fa-users-gear"></i></div>
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">manage_accounts</span>
+                </div>
                 <span class="feature-num">03</span>
                 <h5>Role-Based Workflows</h5>
                 <p>Six roles, six focused views. Each team member sees exactly what they need — no clutter, no confusion.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon"><i class="fa-solid fa-building"></i></div>
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">apartment</span>
+                </div>
                 <span class="feature-num">04</span>
                 <h5>Multi-Tenant Spaces</h5>
                 <p>Organisations with multiple sites run independently under one platform. Fleet and inventory management included.</p>
@@ -133,7 +145,9 @@
                     <p>A general user opens a ticket — attaches photos, adds a voice note, and pins the location. Takes under two minutes from any device.</p>
                 </div>
             </div>
-            <div class="step-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></div>
+            <div class="step-arrow" aria-hidden="true">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </div>
             <div class="step-item">
                 <div class="step-num">02</div>
                 <div class="step-body">
@@ -141,7 +155,9 @@
                     <p>A maintainer creates work tasks, assigns team members, and monitors progress. Supervisors escalate or reassign at any point.</p>
                 </div>
             </div>
-            <div class="step-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></div>
+            <div class="step-arrow" aria-hidden="true">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </div>
             <div class="step-item">
                 <div class="step-num">03</div>
                 <div class="step-body">
@@ -163,17 +179,23 @@
         </div>
         <div class="roles-grid">
             <div class="role-card">
-                <div class="role-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">security</span>
+                </div>
                 <h5>Central Admins</h5>
                 <p>Full platform visibility. Manage organisations, spaces, users, and performance reports from one centralised dashboard.</p>
             </div>
             <div class="role-card">
-                <div class="role-icon"><i class="fa-solid fa-hard-hat"></i></div>
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">construction</span>
+                </div>
                 <h5>Operations Teams</h5>
                 <p>Maintainers, supervisors, and reviewers each work in their own focused view — assign, escalate, and close without getting in each other's way.</p>
             </div>
             <div class="role-card">
-                <div class="role-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">smartphone</span>
+                </div>
                 <h5>General Users</h5>
                 <p>Raise tickets with just a phone number — no password, no complexity. Get notified as work progresses without needing to follow up.</p>
             </div>
@@ -283,7 +305,7 @@
                 <p>Your team can be up and running today. Contact your administrator to get access.</p>
             </div>
             <a href="{% url 'core:login' %}" class="btn-cta-white">
-                Sign in <i class="fa-solid fa-arrow-right"></i>
+                Sign in <span class="material-symbols-outlined btn-icon">arrow_forward</span>
             </a>
         </div>
     </div>
