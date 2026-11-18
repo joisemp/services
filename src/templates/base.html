@@ -15,17 +15,19 @@
     {% block styles %}{% endblock styles %}
 </head>
 
-<body class="bg-light">
+<body class="bg-light {% block body_class %}{% endblock body_class %}">
     <div class="initial-wrap">
         
         <!-- Navbar -->
         {% block navbar %}{% endblock navbar %}
 
         <!-- Main Content -->
-        <section class="main-content">
+        <section class="main-content {% block main_content_class %}{% endblock main_content_class %}">
+            {% block content_outer %}
             <div class="container">
                 {% block content %}{% endblock content %}
             </div>
+            {% endblock content_outer %}
         </section>
 
     </div>

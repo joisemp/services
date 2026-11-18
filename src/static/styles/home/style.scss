@@ -1,45 +1,870 @@
-@use '../base';
+@use '../colors' as c;
 
-.main-content{
-    margin-top: 0 !important;
+// ─────────────────────────────────────────────────────────────────────────────
+// COLOR SYSTEM — all blues come from _colors.scss, nothing from other projects
+// ─────────────────────────────────────────────────────────────────────────────
+$blue:         c.$primary;        // #2563EB  ← the ONLY brand blue
+$blue-dark:    #1d4ed8;           // hover darken
+$blue-xlight:  #eff6ff;           // very pale blue tint
+$blue-nav:     c.$nav-bg;         // #f0f5ff  ← secondary surface
+$white:        c.$base-white;     // #ffffff
+$border:       c.$base-border;    // #e5e5e5
+$slate-900:    #0f172a;
+$slate-700:    #334155;
+$slate-500:    #64748b;
+$slate-200:    #e2e8f0;
+$slate-100:    #f1f5f9;
+$slate-50:     #f8fafc;
+$success:      #16a34a;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPOGRAPHY
+// ─────────────────────────────────────────────────────────────────────────────
+$font-display: 'Sora', system-ui, sans-serif;
+$font-body:    'Inter', system-ui, sans-serif;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+$r-sm:  6px;
+$r-md:  10px;
+$r-lg:  16px;
+$r-xl:  20px;
+$shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+$shadow-md: 0 4px 20px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
+$shadow-lg: 0 8px 40px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.07);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESET
+// ─────────────────────────────────────────────────────────────────────────────
+.landing-main { margin-top: 0 !important; }
+
+// No gap before the hero or after the footer at page edges
+body.landing-page { padding-top: 0; padding-bottom: 0; }
+#footer { margin-bottom: 0; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL BASE
+// ─────────────────────────────────────────────────────────────────────────────
+.landing-page {
+    font-family: $font-body;
+    color: $slate-700;
+    // No global section padding — each section owns its own vertical spacing
 }
 
-body{
-   background-image: url('https://images.unsplash.com/photo-1593436878396-e943a3cac98f?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-   background-image: linear-gradient(to right, rgba(21, 56, 133, 0.8), rgba(37, 99, 235, 0.8)), url('https://images.unsplash.com/photo-1593436878396-e943a3cac98f?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-    background-size: cover;
-    background-repeat: no-repeat;
-    height:100vh;
+.section-eyebrow {
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: $blue;
+    margin-bottom: .5rem;
+}
 
-    #home{
-        color:aliceblue;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        .container{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 10%;
-            .content{
-                text-align: center;
-                h1{
-                    font-size: 3rem;
-                    font-weight: 700;
-                    margin-bottom: 1rem;
-                }
-                p{
-                    font-size: 1.2rem;
-                    margin-bottom: 2rem;
-                }
-            }
-            .button-container{
-                align-items: center;
-                display: flex;
-                justify-content: center;
-            }
-        }
+.section-heading {
+    margin-bottom: 3.5rem;
+
+    h2 {
+        font-family: $font-display;
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: $slate-900;
+        line-height: 1.15;
+        margin-bottom: .625rem;
+
+        @media (min-width: 992px) { font-size: 2.75rem; }
+    }
+
+    .section-sub {
+        font-size: 1.0625rem;
+        color: $slate-500;
+        max-width: 540px;
+        margin: 0;
+        line-height: 1.65;
+    }
+}
+
+// Shared primary button (white text on blue)
+.btn-solid {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .875rem 1.875rem;
+    border-radius: $r-md;
+    background: $blue;
+    color: $white;
+    font-family: $font-body;
+    font-size: .9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid $blue;
+    transition: background .18s, border-color .18s, transform .15s;
+
+    i { transition: transform .2s; }
+
+    &:hover {
+        background: $blue-dark;
+        border-color: $blue-dark;
+        color: $white;
+        i { transform: translateX(3px); }
+    }
+    &:active { transform: scale(.98); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NAVBAR
+// ─────────────────────────────────────────────────────────────────────────────
+.home-header {
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    z-index: 1000;
+    transition: background .22s, box-shadow .22s, border-color .22s;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+
+    &.nav-scrolled {
+        background: $white;
+        border-bottom-color: $border;
+        box-shadow: 0 1px 12px rgba(0,0,0,.07);
+
+        .home-nav-name { color: $slate-900; }
+
+        // Over dark hero: show light logo (white shape, blue S)
+        // On white nav:   show dark logo (blue shape, white S)
+        .home-nav-logo--light { display: none; }
+        .home-nav-logo--dark  { display: block; }
+
+        .btn-nav-cta {
+            background: $blue;
+            color: $white;
+            border-color: $blue;
+            &:hover { background: $blue-dark; border-color: $blue-dark; color: $white; }
         }
     }
 
+    .container {
+        height: 68px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+.home-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.home-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    text-decoration: none;
+}
+
+.home-nav-logo {
+    width: 30px;
+    height: 30px;
+    display: block;
+    flex-shrink: 0;
+}
+
+// Default (transparent nav over dark hero): show light logo, hide dark logo
+.home-nav-logo--light { display: block; }
+.home-nav-logo--dark  { display: none; }
+
+.home-nav-name {
+    font-family: $font-display;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: $white;
+    transition: color .22s;
+}
+
+.btn-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    padding: .5rem 1.125rem;
+    border-radius: $r-md;
+    background: rgba($white, .15);
+    border: 1px solid rgba($white, .28);
+    color: $white;
+    font-size: .875rem;
+    font-weight: 600;
+    text-decoration: none;
+    font-family: $font-body;
+    transition: background .18s, border-color .18s, color .18s;
+
+    &:hover { background: rgba($white, .25); color: $white; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO — CSS-only, no background photo
+// Dark navy/blue gradient + decorative orbs + dot grid + two-column layout
+// ─────────────────────────────────────────────────────────────────────────────
+#hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 8rem 0 5rem;
+    // Dark brand gradient — navy to rich blue
+    background: linear-gradient(145deg, #07163a 0%, #0d2461 45%, #1a3a8f 100%);
+
+    @media (min-width: 992px) { padding: 10rem 0 6rem; }
+}
+
+// Decorative elements
+.hero-deco {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+
+    &__orb {
+        position: absolute;
+        border-radius: 50%;
+
+        // Large glowing orb top-right
+        &--1 {
+            width: 700px; height: 700px;
+            top: -280px; right: -200px;
+            background: radial-gradient(circle, rgba($blue, .32) 0%, transparent 68%);
+        }
+
+        // Smaller soft orb bottom-left
+        &--2 {
+            width: 450px; height: 450px;
+            bottom: -120px; left: 5%;
+            background: radial-gradient(circle, rgba($blue, .18) 0%, transparent 68%);
+        }
+    }
+
+    // Subtle dot grid, fading toward the right (where ticket cards are)
+    &__dots {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba($white, .07) 1px, transparent 1px);
+        background-size: 32px 32px;
+        -webkit-mask-image: radial-gradient(ellipse 60% 80% at 30% 50%, black 0%, transparent 80%);
+        mask-image: radial-gradient(ellipse 60% 80% at 30% 50%, black 0%, transparent 80%);
+    }
+}
+
+// Two-column layout
+.hero-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+    position: relative;
+    z-index: 1;
+
+    @media (min-width: 992px) {
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 4rem;
+    }
+}
+
+.hero-text { position: relative; z-index: 1; }
+
+// Eyebrow pill badge
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .375rem .875rem;
+    border-radius: 999px;
+    border: 1px solid rgba($white, .2);
+    background: rgba($white, .07);
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba($white, .65);
+    margin-bottom: 1.5rem;
+
+    &__dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #4ade80;   // green "live" indicator
+        flex-shrink: 0;
+    }
+}
+
+#hero h1 {
+    font-family: $font-display;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: $white;
+    margin-bottom: 1.25rem;
+    animation: heroIn .65s ease both;
+
+    // The italic keyword gets a blue gradient treatment
+    em {
+        font-style: normal;
+        background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    @media (min-width: 992px)  { font-size: 3.75rem; }
+    @media (min-width: 1200px) { font-size: 4.25rem; }
+}
+
+@keyframes heroIn {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+#hero > .container .hero-text p {
+    font-size: 1.125rem;
+    color: rgba($white, .72);
+    line-height: 1.7;
+    max-width: 480px;
+    margin-bottom: 2.25rem;
+    animation: heroIn .65s .12s ease both;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    animation: heroIn .65s .22s ease both;
+
+    // Override btn-solid in hero context: white bg, blue text
+    .btn-solid {
+        background: $white;
+        color: $blue;
+        border-color: $white;
+
+        &:hover {
+            background: $blue-xlight;
+            border-color: $blue-xlight;
+            color: $blue-dark;
+        }
+    }
+}
+
+// ── Ticket Card Mockups (right column) ──────────────────────────────────────
+.hero-visual {
+    display: none;
+    flex-direction: column;
+    gap: .875rem;
+    position: relative;
+    z-index: 1;
+
+    @media (min-width: 992px) { display: flex; }
+}
+
+.ticket-card {
+    background: $white;
+    border-radius: $r-xl;
+    box-shadow: $shadow-lg;
+    padding: 1.375rem 1.5rem;
+    animation: heroIn .65s ease both;
+
+    &--main { animation-delay: .1s; }
+    &--sm {
+        width: 82%;
+        margin-left: auto;
+        padding: 1.125rem 1.25rem;
+        opacity: .92;
+        animation-delay: .2s;
+    }
+    &--xs {
+        width: 66%;
+        margin-left: auto;
+        padding: 1rem 1.125rem;
+        opacity: .78;
+        animation-delay: .3s;
+    }
+}
+
+.tc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .625rem;
+}
+
+.tc-id {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: $slate-500;
+    font-family: $font-body;
+}
+
+.tc-badge {
+    display: inline-block;
+    padding: .2rem .625rem;
+    border-radius: 999px;
+    font-size: .6875rem;
+    font-weight: 600;
+
+    &--progress { background: #dbeafe; color: #1d4ed8; }
+    &--resolved { background: #dcfce7; color: #15803d; }
+    &--open     { background: #fef9c3; color: #854d0e; }
+}
+
+.tc-title {
+    font-size: .9375rem;
+    font-weight: 600;
+    color: $slate-900;
+    line-height: 1.4;
+    margin-bottom: .5rem;
+}
+
+.tc-meta {
+    font-size: .8125rem;
+    color: $slate-500;
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    margin-bottom: .875rem;
+
+    i { font-size: .75rem; }
+}
+
+.tc-progress-bar {
+    height: 4px;
+    background: $slate-100;
+    border-radius: 999px;
+    margin-bottom: .875rem;
+    overflow: hidden;
+}
+
+.tc-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, $blue 0%, #60a5fa 100%);
+    border-radius: 999px;
+}
+
+.tc-tags {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.tc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .2rem .625rem;
+    border-radius: 999px;
+    background: $slate-100;
+    color: $slate-500;
+    font-size: .6875rem;
+    font-weight: 500;
+
+    i { font-size: .625rem; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURES
+// ─────────────────────────────────────────────────────────────────────────────
+#features {
+    background: $slate-50;
+    padding: 5rem 0;
+
+    @media (max-width: 991px) { padding: 3.5rem 0; }
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+
+    @media (min-width: 768px)  { grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 1200px) { grid-template-columns: repeat(4, 1fr); }
+}
+
+.feature-card {
+    background: $white;
+    border: 1px solid $border;
+    border-radius: $r-xl;
+    padding: 2rem 1.75rem;
+    position: relative;
+    transition: box-shadow .2s, border-color .2s;
+
+    &:hover {
+        box-shadow: $shadow-md;
+        border-color: rgba($blue, .2);
+    }
+}
+
+.feature-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: $r-md;
+    background: $blue-nav;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $blue;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.feature-num {
+    position: absolute;
+    top: 1.75rem;
+    right: 1.75rem;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: $slate-200;
+}
+
+.feature-card h5 {
+    font-family: $font-display;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: $slate-900;
+    margin-bottom: .5rem;
+}
+
+.feature-card p {
+    font-size: .9rem;
+    color: $slate-500;
+    line-height: 1.65;
+    margin: 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOW IT WORKS
+// ─────────────────────────────────────────────────────────────────────────────
+#how-it-works {
+    background: $white;
+    padding: 5rem 0;
+
+    @media (max-width: 991px) { padding: 3.5rem 0; }
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+
+    @media (min-width: 992px) {
+        grid-template-columns: 1fr auto 1fr auto 1fr;
+        align-items: start;
+    }
+}
+
+.step-item {
+    background: $slate-50;
+    border: 1px solid $border;
+    border-radius: $r-xl;
+    padding: 2.25rem 2rem;
+}
+
+.step-num {
+    font-family: $font-display;
+    font-size: 3.25rem;
+    font-weight: 800;
+    color: $blue;
+    line-height: 1;
+    margin-bottom: 1rem;
+    // Make the zero slightly lighter than the digit for visual depth
+    opacity: .9;
+}
+
+.step-body h5 {
+    font-family: $font-display;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: $slate-900;
+    margin-bottom: .5rem;
+}
+
+.step-body p {
+    font-size: .9rem;
+    color: $slate-500;
+    line-height: 1.65;
+    margin: 0;
+}
+
+.step-arrow {
+    display: none;
+    align-self: center;
+    color: $slate-200;
+    font-size: 1.125rem;
+    padding-top: .5rem;
+
+    @media (min-width: 992px) { display: flex; align-items: center; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHO IT'S FOR
+// ─────────────────────────────────────────────────────────────────────────────
+#who-its-for {
+    background: $blue-nav;   // the project's #f0f5ff
+    padding: 5rem 0;
+
+    @media (max-width: 991px) { padding: 3.5rem 0; }
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+
+    @media (min-width: 768px) { grid-template-columns: repeat(3, 1fr); }
+}
+
+.role-card {
+    background: $white;
+    border: 1px solid $border;
+    border-radius: $r-xl;
+    padding: 2.25rem 2rem;
+    transition: box-shadow .2s;
+
+    &:hover { box-shadow: $shadow-md; }
+}
+
+.role-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: $r-lg;
+    background: $blue-nav;
+    border: 1px solid rgba($blue, .15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $blue;
+    font-size: 1.375rem;
+    margin-bottom: 1.375rem;
+}
+
+.role-card h5 {
+    font-family: $font-display;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: $slate-900;
+    margin-bottom: .5rem;
+}
+
+.role-card p {
+    font-size: .9rem;
+    color: $slate-500;
+    line-height: 1.65;
+    margin: 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAQ — two-column sticky layout
+// ─────────────────────────────────────────────────────────────────────────────
+#faq {
+    background: $white;
+    padding: 5rem 0;
+
+    @media (max-width: 991px) { padding: 3.5rem 0; }
+}
+
+.faq-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+
+    @media (min-width: 992px) {
+        grid-template-columns: 300px 1fr;
+        gap: 5rem;
+        align-items: start;
+    }
+}
+
+.faq-heading {
+    @media (min-width: 992px) {
+        position: sticky;
+        top: 6rem;
+    }
+
+    h2 {
+        font-family: $font-display;
+        font-size: 2rem;
+        font-weight: 700;
+        color: $slate-900;
+        line-height: 1.2;
+        margin-bottom: .625rem;
+    }
+
+    .section-sub { font-size: 1rem; color: $slate-500; margin: 0; line-height: 1.6; }
+}
+
+#faq .accordion-item {
+    background: $white;
+    border: 1px solid $border !important;
+    border-radius: $r-lg !important;
+    margin-bottom: .75rem;
+    overflow: hidden;
+
+    &:first-of-type,
+    &:last-of-type { border-radius: $r-lg !important; }
+}
+
+#faq .accordion-button {
+    font-family: $font-body;
+    font-size: .9375rem;
+    font-weight: 600;
+    color: $slate-900;
+    background: $white;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 !important;
+    box-shadow: none;
+
+    &:not(.collapsed) {
+        color: $blue;
+        background: $blue-xlight;
+        box-shadow: none;
+    }
+
+    // Recolour Bootstrap's chevron to the brand blue
+    &::after {
+        filter: invert(27%) sepia(96%) saturate(1414%) hue-rotate(205deg) brightness(97%) contrast(96%);
+    }
+}
+
+#faq .accordion-body {
+    padding: .75rem 1.5rem 1.5rem;
+    font-size: .9rem;
+    color: $slate-500;
+    line-height: 1.7;
+    background: $white;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CTA BAND — solid #2563EB, horizontal layout
+// ─────────────────────────────────────────────────────────────────────────────
+#cta-band {
+    background: $blue;
+    padding: 5rem 0;
+}
+
+.cta-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+
+    @media (max-width: 767px) { flex-direction: column; align-items: flex-start; }
+}
+
+.cta-text {
+    h2 {
+        font-family: $font-display;
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: $white;
+        margin-bottom: .5rem;
+        line-height: 1.25;
+
+        @media (min-width: 992px) { font-size: 2.25rem; }
+    }
+
+    p {
+        font-size: 1.0625rem;
+        color: rgba($white, .72);
+        margin: 0;
+    }
+}
+
+.btn-cta-white {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .875rem 1.875rem;
+    border-radius: $r-md;
+    background: $white;
+    color: $blue;
+    font-family: $font-body;
+    font-size: .9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 2px solid $white;
+    transition: background .18s, color .18s;
+
+    i { transition: transform .2s; }
+
+    &:hover {
+        background: $blue-xlight;
+        color: $blue-dark;
+        i { transform: translateX(3px); }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FOOTER
+// ─────────────────────────────────────────────────────────────────────────────
+#footer {
+    background: $slate-900;
+    padding: 2.25rem 0;
+}
+
+.footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+}
+
+.footer-logo {
+    width: 26px;
+    height: 26px;
+    opacity: .65;
+}
+
+.footer-name {
+    font-family: $font-display;
+    font-size: .9375rem;
+    font-weight: 700;
+    color: rgba($white, .55);
+}
+
+.footer-right {
+    text-align: right;
+
+    @media (max-width: 575px) { text-align: left; }
+
+    p {
+        font-size: .8125rem;
+        color: rgba($white, .38);
+        margin: 0 0 .2rem;
+    }
+
+    a {
+        font-size: .8125rem;
+        color: rgba($white, .45);
+        text-decoration: none;
+
+        &:hover { color: rgba($white, .8); }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCROLL REVEAL  (JS adds .reveal / .reveal-visible)
+// ─────────────────────────────────────────────────────────────────────────────
+.reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity .5s ease, transform .5s ease;
+}
+
+.reveal-visible {
+    opacity: 1;
+    transform: none;
+}
