@@ -1,95 +1,62 @@
 {% load core_tags %}
 <section class="sidebar sidebar-collapsed">
     <div class="nav">
-        <a class="navlink {% is_active 'dashboard:central_admin_dashboard' %}" href="{% url 'dashboard:central_admin_dashboard' %}">
-            <span class="material-symbols-outlined me-2">
-                dashboard
-            </span>
-            <span class="menu-text">Dashboard</span>
-        </a>
-        <a class="navlink {% is_active 'core:people_list,core:people_create,core:people_update,core:people_detail' %}" href="{% url 'core:people_list' %}">
-            <span class="material-symbols-outlined me-2">
-                groups
-            </span>
-            <span class="menu-text">People</span>
-        </a>
 
-        <!-- <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                tile_medium
-            </span>
-            <span class="menu-text">Departments</span>
-        </a> -->
+        <div class="nav-section">
+            <div class="nav-section__label">Overview</div>
+            <a class="navlink {% is_active 'dashboard:central_admin_dashboard' %}" href="{% url 'dashboard:central_admin_dashboard' %}">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span class="menu-text">Dashboard</span>
+            </a>
+        </div>
 
-        <!-- <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                door_open
-            </span>
-            <span class="menu-text">Rooms</span>
-        </a> -->
+        <div class="nav-section">
+            <div class="nav-section__label">Organization</div>
+            <a class="navlink {% is_active 'core:people_list,core:people_create,core:people_update,core:people_detail' %}" href="{% url 'core:people_list' %}">
+                <span class="material-symbols-outlined">groups</span>
+                <span class="menu-text">People</span>
+            </a>
+            <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">
+                <span class="material-symbols-outlined">apartment</span>
+                <span class="menu-text">Spaces</span>
+            </a>
+        </div>
 
-        <!-- <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                storefront
-            </span>
-            <span class="menu-text">Vendors</span>
-        </a> -->
+        <div class="nav-section">
+            <div class="nav-section__label">Operations</div>
+            <a class="navlink {% is_active 'ticket_management:central_admin:ticket_list,ticket_management:central_admin:ticket_detail,ticket_management:central_admin:ticket_create,ticket_management:central_admin:ticket_update,ticket_management:central_admin:ticket_assign,ticket_management:central_admin:ticket_select_reviewers,ticket_management:central_admin:ticket_resolve,ticket_management:central_admin:ticket_reopen,ticket_management:central_admin:ticket_start_work,ticket_management:central_admin:ticket_delete,ticket_management:central_admin:work_task_create,ticket_management:central_admin:work_task_update,ticket_management:central_admin:work_task_complete,ticket_management:central_admin:work_task_toggle_complete,ticket_management:central_admin:work_task_delete,ticket_management:central_admin:image_delete,ticket_management:central_admin:image_upload,ticket_management:central_admin:voice_delete,ticket_management:central_admin:voice_upload,ticket_management:central_admin:resolution_image_delete' %}" href="{% url 'ticket_management:central_admin:ticket_list' %}">
+                <span class="material-symbols-outlined">report</span>
+                <span class="menu-text">Tickets</span>
+            </a>
+            <a class="navlink {% is_active 'ticket_management:central_admin:site_visit_list,ticket_management:central_admin:site_visit_detail,ticket_management:central_admin:site_visit_create,ticket_management:central_admin:site_visit_update,ticket_management:central_admin:site_visit_delete' %}" href="{% url 'ticket_management:central_admin:site_visit_list' %}">
+                <span class="material-symbols-outlined">location_on</span>
+                <span class="menu-text">Site Visits</span>
+            </a>
+        </div>
 
-        <!-- <a class="navlink" href="#">
-            <span class="material-symbols-outlined me-2">
-                shopping_cart
-            </span>
-            <span class="menu-text">Purchases</span>
-        </a> -->
+        <div class="nav-section">
+            <div class="nav-section__label">Supply</div>
+            <a class="navlink {% is_active 'ticket_management:central_admin:purchase_request_list,ticket_management:central_admin:purchase_request_detail,ticket_management:central_admin:purchase_request_approve,ticket_management:central_admin:purchase_request_reject' %}" href="{% url 'ticket_management:central_admin:purchase_request_list' %}">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                <span class="menu-text">Purchases</span>
+            </a>
+            <a class="navlink {% is_active 'ticket_management:central_admin:shopping_list_list,ticket_management:central_admin:shopping_list_detail' %}" href="{% url 'ticket_management:central_admin:shopping_list_list' %}">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span class="menu-text">Shopping Lists</span>
+            </a>
+            <a class="navlink {% is_active 'inventory:central_admin:inventory_dashboard' %}" href="{% url 'inventory:central_admin:inventory_dashboard' %}">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span class="menu-text">Inventory</span>
+            </a>
+        </div>
 
-        <a class="navlink {% is_active 'ticket_management:central_admin:ticket_list,ticket_management:central_admin:ticket_detail,ticket_management:central_admin:ticket_create,ticket_management:central_admin:ticket_update,ticket_management:central_admin:ticket_assign,ticket_management:central_admin:ticket_select_reviewers,ticket_management:central_admin:ticket_resolve,ticket_management:central_admin:ticket_reopen,ticket_management:central_admin:ticket_start_work,ticket_management:central_admin:ticket_delete,ticket_management:central_admin:work_task_create,ticket_management:central_admin:work_task_update,ticket_management:central_admin:work_task_complete,ticket_management:central_admin:work_task_toggle_complete,ticket_management:central_admin:work_task_delete,ticket_management:central_admin:image_delete,ticket_management:central_admin:image_upload,ticket_management:central_admin:voice_delete,ticket_management:central_admin:voice_upload,ticket_management:central_admin:resolution_image_delete' %}" href="{% url 'ticket_management:central_admin:ticket_list' %}">
-            <span class="material-symbols-outlined me-2">
-                report
-            </span>
-            <span class="menu-text">Tickets</span>
-        </a>
-
-        <a class="navlink {% is_active 'ticket_management:central_admin:site_visit_list,ticket_management:central_admin:site_visit_detail,ticket_management:central_admin:site_visit_create,ticket_management:central_admin:site_visit_update,ticket_management:central_admin:site_visit_delete' %}" href="{% url 'ticket_management:central_admin:site_visit_list' %}">
-            <span class="material-symbols-outlined me-2">
-                location_on
-            </span>
-            <span class="menu-text">Site Visits</span>
-        </a>
-
-        <a class="navlink {% is_active 'ticket_management:central_admin:purchase_request_list,ticket_management:central_admin:purchase_request_detail,ticket_management:central_admin:purchase_request_approve,ticket_management:central_admin:purchase_request_reject' %}" href="{% url 'ticket_management:central_admin:purchase_request_list' %}">
-            <span class="material-symbols-outlined me-2">
-                shopping_cart
-            </span>
-            <span class="menu-text">Purchases</span>
-        </a>
-
-        <a class="navlink {% is_active 'ticket_management:central_admin:shopping_list_list,ticket_management:central_admin:shopping_list_detail' %}" href="{% url 'ticket_management:central_admin:shopping_list_list' %}">
-            <span class="material-symbols-outlined me-2">
-                receipt_long
-            </span>
-            <span class="menu-text">Shopping Lists</span>
-        </a>
-
-        <a class="navlink {% is_active 'core:space_list,core:space_create,core:space_update,core:space_detail' %}" href="{% url 'core:space_list' %}">
-            <span class="material-symbols-outlined">
-                apartment
-            </span>
-            <span class="menu-text ms-2">Spaces</span>
-        </a>
-
-        <a class="navlink {% is_active 'inventory:central_admin:inventory_dashboard' %}" href="{% url 'inventory:central_admin:inventory_dashboard' %}">
-            <span class="material-symbols-outlined">
-                inventory_2
-            </span>
-            <span class="menu-text ms-2">Inventory</span>
-        </a>
-
-        <a class="navlink {% is_active 'fleet_management:central_admin:vehicle_list,fleet_management:central_admin:fleet_list,fleet_management:central_admin:workshop_list,fleet_management:central_admin:workshop_detail,fleet_management:central_admin:workshop_create,fleet_management:central_admin:workshop_update,fleet_management:central_admin:workshop_delete' %}" href="{% url 'fleet_management:central_admin:vehicle_list' %}">
-            <span class="material-symbols-outlined">
-                local_shipping
-            </span>
-            <span class="menu-text ms-2">Transport</span>
-        </a>
+        <div class="nav-section">
+            <div class="nav-section__label">Fleet</div>
+            <a class="navlink {% is_active 'fleet_management:central_admin:vehicle_list,fleet_management:central_admin:fleet_list,fleet_management:central_admin:workshop_list,fleet_management:central_admin:workshop_detail,fleet_management:central_admin:workshop_create,fleet_management:central_admin:workshop_update,fleet_management:central_admin:workshop_delete' %}" href="{% url 'fleet_management:central_admin:vehicle_list' %}">
+                <span class="material-symbols-outlined">local_shipping</span>
+                <span class="menu-text">Transport</span>
+            </a>
+        </div>
 
     </div>
 </section>

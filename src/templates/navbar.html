@@ -3,28 +3,39 @@
 <header class="header">
     <div class="header-content w-100">
         <div class="logo d-flex align-items-center">
-            <button class="menu btn me-2 d-flex d-sm-none">
-                <span class="material-symbols-outlined">
-                    menu
-                </span>
+            <button type="button" class="menu btn me-2 d-flex d-sm-none" aria-label="Toggle menu">
+                <span class="material-symbols-outlined">menu</span>
             </button>
-            <img src="{% static 'images/logo.svg' %}" alt="">
+            <img src="{% static 'images/logo.svg' %}" alt="Services">
         </div>
+
         <div class="profile">
             <div class="dropdown">
                 <div class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="https://images.unsplash.com/photo-1605106702734-205df224ecce?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        height="40px" width="40px"
-                        style="border-radius: 50%; object-fit: cover; border: 3px solid #013198;" alt="">
+                    <div class="profile-meta">
+                        <span class="profile-name">{{ user.get_full_name|default:user.get_short_name|default:user.email }}</span>
+                        <span class="profile-role">{{ user.get_user_type_display }}</span>
+                    </div>
+                    <span class="user-avatar" aria-hidden="true">
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name|make_list|first|upper }}{{ user.last_name|make_list|first|upper }}
+                        {% elif user.first_name %}
+                            {{ user.first_name|slice:":2"|upper }}
+                        {% elif user.email %}
+                            {{ user.email|slice:":1"|upper }}
+                        {% else %}
+                            U
+                        {% endif %}
+                    </span>
                 </div>
-                <ul class="dropdown-menu" style="width:100%; min-width: 300px;">
+                <ul class="dropdown-menu dropdown-menu-end">
                     <li class="dropdown-item">
                         <strong>{{ user.get_full_name }}</strong><br>
                         <small class="text-muted">{{ user.email }}</small>
                         <small class="text-primary d-block">{{ user.get_user_type_display }}</small>
                         {% if user.is_space_admin and user.active_space %}
                         <small class="text-success d-block mt-1">
-                            <span class="material-symbols-outlined" style="font-size: 0.9rem; vertical-align: middle;">workspaces</span>
+                            <span class="material-symbols-outlined">workspaces</span>
                             {{ user.active_space.name }}
                         </small>
                         {% endif %}
@@ -32,8 +43,8 @@
                     {% if user.is_space_admin %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item p-3" href="{% url 'core:switch_space' %}">
-                            <span class="material-symbols-outlined me-2" style="vertical-align: middle;">swap_horiz</span>
+                        <a class="dropdown-item" href="{% url 'core:switch_space' %}">
+                            <span class="material-symbols-outlined me-2">swap_horiz</span>
                             Switch Space
                         </a>
                     </li>
@@ -47,8 +58,8 @@
                         {% if not user.is_superuser or user.is_central_admin %}
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item p-3" href="{% url 'core:set_pin' %}">
-                                <span class="material-symbols-outlined me-2" style="vertical-align: middle;">pin</span>
+                            <a class="dropdown-item" href="{% url 'core:set_pin' %}">
+                                <span class="material-symbols-outlined me-2">pin</span>
                                 {% if user.has_pin %}Change PIN{% else %}Set up PIN{% endif %}
                             </a>
                         </li>
@@ -56,8 +67,8 @@
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item p-3 text-danger d-flex align-items-center" href="{% url 'core:logout' %}">
-                            <span class="material-symbols-outlined me-2" style="vertical-align: middle;">logout</span>
+                        <a class="dropdown-item text-danger d-flex align-items-center" href="{% url 'core:logout' %}">
+                            <span class="material-symbols-outlined me-2">logout</span>
                             Logout
                         </a>
                     </li>
