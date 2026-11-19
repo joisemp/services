@@ -24,8 +24,12 @@ done
 echo "==> Running migrations..."
 python manage.py migrate --noinput
 
-echo "==> Collecting static files..."
-python manage.py collectstatic --noinput --clear
+if [ "${ENVIRONMENT:-development}" = "development" ]; then
+  echo "==> Skipping collectstatic (dev: WhiteNoise finders + autorefresh)"
+else
+  echo "==> Collecting static files..."
+  python manage.py collectstatic --noinput --clear
+fi
 
 echo "==> Starting server..."
 exec "$@"
