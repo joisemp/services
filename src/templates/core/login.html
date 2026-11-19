@@ -125,11 +125,16 @@
                         {% endif %}
                     </div>
                     <div class="login-field">
-                        <label for="{{ form.pin.id_for_label }}" class="login-label">4-Digit PIN</label>
-                        {{ form.pin }}
-                        {% if form.pin.help_text %}
-                            <small class="login-hint">{{ form.pin.help_text }}</small>
-                        {% endif %}
+                        <label class="login-label">4-Digit PIN</label>
+                        {# Hidden real input submitted with the form #}
+                        <input type="hidden" name="{{ form.pin.html_name }}" id="{{ form.pin.id_for_label }}" class="pin-hidden-input">
+                        {# OTP-style 4-box UI #}
+                        <div class="pin-otp-wrap" aria-label="Enter your 4-digit PIN">
+                            <input type="password" class="pin-otp-box" inputmode="numeric" pattern="\d" maxlength="1" autocomplete="off" aria-label="PIN digit 1">
+                            <input type="password" class="pin-otp-box" inputmode="numeric" pattern="\d" maxlength="1" autocomplete="off" aria-label="PIN digit 2">
+                            <input type="password" class="pin-otp-box" inputmode="numeric" pattern="\d" maxlength="1" autocomplete="off" aria-label="PIN digit 3">
+                            <input type="password" class="pin-otp-box" inputmode="numeric" pattern="\d" maxlength="1" autocomplete="off" aria-label="PIN digit 4">
+                        </div>
                         {% if form.pin.errors %}
                             <div class="login-field-error">
                                 {% for error in form.pin.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
@@ -175,4 +180,77 @@
     </div>
 
 </div>
+
+<script>
+(function () {
+    const boxes = document.querySelectorAll('.pin-otp-box');
+    const hidden = document.querySelector('.pin-hidden-input');
+    if (!boxes.length || !hidden) return;
+
+    function sync() {
+        hidden.value = Array.from(boxes).map(b => b.dataset.digit || '').join('');
+    }
+
+    boxes.forEach(function (box, i) {
+        // Keydown — handle backspace / arrow navigation
+        box.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace') {
+                if (box.dataset.digit) {
+                    box.dataset.digit = '';
+                    box.value = '';
+                    box.classList.remove('pin-otp-box--filled');
+                } else if (i > 0) {
+                    boxes[i - 1].focus();
+                }
+                sync();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft' && i > 0) {
+                boxes[i - 1].focus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight' && i < boxes.length - 1) {
+                boxes[i + 1].focus();
+                e.preventDefault();
+            }
+        });
+
+        // Input — capture a typed digit
+        box.addEventListener('input', function (e) {
+            const raw = box.value.replace(/\D/g, '');
+            if (!raw) { box.value = ''; return; }
+            const digit = raw[raw.length - 1]; // last digit typed
+            box.dataset.digit = digit;
+            box.value = '•'; // show bullet
+            box.classList.add('pin-otp-box--filled');
+            sync();
+            if (i < boxes.length - 1) boxes[i + 1].focus();
+        });
+
+        // Paste — distribute digits across boxes
+        box.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            text.split('').slice(0, boxes.length - i).forEach(function (d, j) {
+                const target = boxes[i + j];
+                target.dataset.digit = d;
+                target.value = '•';
+                target.classList.add('pin-otp-box--filled');
+            });
+            sync();
+            const next = Math.min(i + text.length, boxes.length - 1);
+            boxes[next].focus();
+        });
+
+        // Focus — select so a new digit replaces it
+        box.addEventListener('focus', function () {
+            box.select && box.select();
+        });
+    });
+
+    // On form submit, make sure hidden value is current
+    const form = document.querySelector('.login-form-panel form');
+    if (form) {
+        form.addEventListener('submit', sync);
+    }
+})();
+</script>
 {% endblock content_outer %}

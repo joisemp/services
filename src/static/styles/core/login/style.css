@@ -265,6 +265,39 @@
   margin-top: 0.3rem;
 }
 
+.pin-otp-wrap {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.pin-otp-box {
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 2px solid #e5e5e5;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-family: "Inter", system-ui, sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  caret-color: transparent;
+}
+.pin-otp-box:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.pin-otp-box.pin-otp-box--filled {
+  border-color: #2563EB;
+  background: rgba(37, 99, 235, 0.04);
+}
+.pin-otp-box[data-filled=true] {
+  letter-spacing: 0;
+}
+
 .login-field-error {
   font-size: 0.8125rem;
   color: #b91c1c;
