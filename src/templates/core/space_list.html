@@ -5,9 +5,10 @@
 {% block title %}Spaces{% endblock %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/core/space_list/style.css' %}">
-<link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 {% endblock %}
 
 {% block navbar %}
@@ -19,75 +20,130 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <section id="alert-details" class="mb-3">
-        <div class="alert alert-primary  d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center"
-            role="alert">
-            <div class="message flex-grow-1">
-                <h3 class="mb-1">Spaces</h3>
-                <span class="alert-text text-body-secondary">Manage all the spaces in your organisation</span>
-            </div>
-            <div class="alert-buttons">
-                <a href="{% url 'core:space_create' %}"
-                    class="btn btn-primary d-flex align-items-center justify-content-center w-100 w-md-auto  mt-2">
-                    <span class="material-symbols-outlined">add</span>
-                    <span class="ms-2">Create Space</span>
-                </a>
-            </div>
+<div class="space-page">
+
+    <header class="space-header">
+        <div class="space-header__text">
+            <h1 class="space-header__title">Spaces</h1>
+            <p class="space-header__sub">Manage all the spaces in your organisation</p>
+        </div>
+        <div class="space-header__actions">
+            <a href="{% url 'core:space_create' %}" class="space-btn space-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Create Space
+            </a>
+        </div>
+    </header>
+
+    {% if spaces %}
+    <section class="space-toolbar">
+        <div class="space-view-toggle" role="group" aria-label="View mode">
+            <button type="button" class="space-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+                <span class="material-symbols-outlined">view_list</span>
+            </button>
+            <button type="button" class="space-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+                <span class="material-symbols-outlined">grid_view</span>
+            </button>
         </div>
     </section>
 
-    {% if spaces %}
-    <section id="space-cards">
-        <div class="row">
+    <section id="space-results" class="space-view space-view--list">
+        <div class="space-results-grid">
             {% for space in spaces %}
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
-                <div class="card">
-                    <a href="{% url 'core:space_detail' space_slug=space.slug %}" class="text-decoration-none text-dark">
-                        <div class="card-body">
-                            <div class="content">
-                                <h5 class="card-title">{{ space.name }}</h5>
-                                <p class="card-text text-muted mb-0">{{ space.org.name }}</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    {% with users=space.users.all|slice:":2" %}
-                                        <p class="card-text text-muted">
-                                            {% if users %}
-                                                {% for user in users %}{{ user.first_name|default:user.email|default:user.phone_number }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if space.users.count > 2 %}...{% endif %}
-                                            {% else %}
-                                                No users assigned
-                                            {% endif %}
-                                        </p>
-                                    {% endwith %}
-                                    {% if space.label %}
-                                    <span class="badge rounded-pill text-bg-primary">{{ space.label }}</span>
-                                    {% else %}
-                                    <span class="badge rounded-pill text-bg-primary">Space</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+            <a
+                href="{% url 'core:space_detail' space_slug=space.slug %}"
+                class="space-item"
+            >
+                <div class="space-item__icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">apartment</span>
                 </div>
-            </div>
+                <div class="space-item__body">
+                    <span class="space-item__name">{{ space.name }}</span>
+                    <span class="space-item__meta">
+                        {{ space.org.name }}
+                        ·
+                        {% with users=space.users.all|slice:":2" %}
+                            {% if users %}
+                                {% for user in users %}{{ user.first_name|default:user.email|default:user.phone_number }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if space.users.count > 2 %}…{% endif %}
+                            {% else %}
+                                No users assigned
+                            {% endif %}
+                        {% endwith %}
+                    </span>
+                </div>
+                <span class="space-item__badge">
+                    {% if space.label %}{{ space.label }}{% else %}Space{% endif %}
+                </span>
+                <span class="material-symbols-outlined space-item__chevron">chevron_right</span>
+            </a>
             {% endfor %}
         </div>
     </section>
-
     {% else %}
-    <section id="no-data">
-        <div class="container d-flex">
-            <div class="content">
-                <h2><span class="material-symbols-outlined">apartment</span></h2>
-                <p>No spaces found</p>
-                <div class="button-div">
-                    <a href="{% url 'core:space_create' %}" class="btn btn-primary btn-sm d-flex" id="button">
-                        <span class="material-symbols-outlined">add</span>
-                        <span>Create Space</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+    <section class="space-empty">
+        <span class="material-symbols-outlined space-empty__icon">apartment</span>
+        <h2 class="space-empty__title">No spaces yet</h2>
+        <p class="space-empty__sub">Create the first space to get started.</p>
+        <a href="{% url 'core:space_create' %}" class="space-btn space-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Create Space
+        </a>
     </section>
     {% endif %}
+
 </div>
+
+{% if spaces %}
+<script>
+(function () {
+    const results = document.getElementById('space-results');
+    const buttons = document.querySelectorAll('.space-view-toggle__btn');
+    if (!results || !buttons.length) return;
+
+    const STORAGE_KEY = 'spaceListView';
+    const mq = window.matchMedia('(min-width: 992px)');
+
+    function responsiveDefault() {
+        return mq.matches ? 'list' : 'cards';
+    }
+
+    function applyView(mode, persist) {
+        const view = mode === 'cards' ? 'cards' : 'list';
+        results.classList.remove('space-view--list', 'space-view--cards');
+        results.classList.add('space-view--' + view);
+        buttons.forEach((btn) => {
+            const active = btn.getAttribute('data-view') === view;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        if (persist) {
+            try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+        }
+    }
+
+    function resolveView() {
+        let stored = null;
+        try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+        if (stored === 'list' || stored === 'cards') return stored;
+        return responsiveDefault();
+    }
+
+    applyView(resolveView(), false);
+
+    buttons.forEach((btn) => {
+        btn.addEventListener('click', () => applyView(btn.getAttribute('data-view'), true));
+    });
+
+    const onBreakpoint = () => {
+        let stored = null;
+        try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+        if (stored !== 'list' && stored !== 'cards') {
+            applyView(responsiveDefault(), false);
+        }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+    else if (mq.addListener) mq.addListener(onBreakpoint);
+})();
+</script>
+{% endif %}
 {% endblock %}
