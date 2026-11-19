@@ -66,6 +66,7 @@ class DashboardAPIView(DashboardDataMixin, APIView):
                 'summary_cards': self.get_summary_cards(issue_queryset),
                 'chart_config': self.get_trend_config(issue_queryset),
                 'recent_tickets': self.get_recent_tickets(issue_queryset),
+                'overdue_tasks': self.get_overdue_tasks(issue_queryset),
                 'status_breakdown': self.get_status_breakdown(issue_queryset),
                 'priority_breakdown': self.get_priority_breakdown(issue_queryset),
                 'active_space': (

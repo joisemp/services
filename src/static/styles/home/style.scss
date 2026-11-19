@@ -190,8 +190,8 @@ body.landing-page { padding-top: 0; padding-bottom: 0; }
 }
 
 .home-nav-brand {
-    display: flex;
-    align-items: center;
+            display: flex;
+            align-items: center;
     gap: .625rem;
     text-decoration: none;
 }
@@ -217,7 +217,7 @@ body.landing-page { padding-top: 0; padding-bottom: 0; }
 
 .btn-nav-cta {
     display: inline-flex;
-    align-items: center;
+                align-items: center;
     gap: .375rem;
     padding: .5rem 1.125rem;
     border-radius: $r-md;
@@ -241,7 +241,7 @@ body.landing-page { padding-top: 0; padding-bottom: 0; }
     position: relative;
     overflow: hidden;
     min-height: 100vh;
-    display: flex;
+                display: flex;
     align-items: center;
     padding: 8rem 0 5rem;
     // Dark brand gradient — navy to rich blue

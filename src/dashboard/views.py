@@ -18,6 +18,7 @@ class DashboardDataMixin:
 
     template_name = ''
     recent_issue_limit = 6
+    overdue_task_limit = 6
     trend_months = 6
 
     status_style_map = {
@@ -204,28 +205,46 @@ class DashboardDataMixin:
                 'labels': labels,
                 'datasets': [
                     {
-                        'label': 'New Tickets',
+                        'label': 'New',
                         'data': created_data,
-                        'borderColor': 'rgba(54, 162, 235, 1)',
-                        'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                        'borderColor': '#2563EB',
+                        'backgroundColor': 'rgba(37, 99, 235, 0.07)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#2563EB',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                     {
                         'label': 'In Progress',
                         'data': in_progress_data,
-                        'borderColor': 'rgba(255, 159, 64, 1)',
-                        'backgroundColor': 'rgba(255, 159, 64, 0.2)',
+                        'borderColor': '#7c3aed',
+                        'backgroundColor': 'rgba(124, 58, 237, 0.05)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#7c3aed',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                     {
-                        'label': 'Tickets Resolved',
+                        'label': 'Resolved',
                         'data': resolved_data,
-                        'borderColor': 'rgba(75, 192, 192, 1)',
-                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'borderColor': '#16a34a',
+                        'backgroundColor': 'rgba(22, 163, 74, 0.06)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#16a34a',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                 ],
             },
@@ -233,22 +252,72 @@ class DashboardDataMixin:
                 'responsive': True,
                 'maintainAspectRatio': False,
                 'interaction': {'mode': 'index', 'intersect': False},
-                'plugins': {'legend': {'position': 'top'}},
-                'scales': {'y': {'beginAtZero': True, 'precision': 0}},
+                'plugins': {
+                    'legend': {
+                        'position': 'top',
+                        'align': 'end',
+                        'labels': {
+                            'usePointStyle': True,
+                            'pointStyle': 'circle',
+                            'boxWidth': 7,
+                            'boxHeight': 7,
+                            'padding': 20,
+                            'color': '#6b7280',
+                            'font': {'size': 12, 'family': 'Inter, system-ui, sans-serif'},
+                        },
+                    },
+                    'tooltip': {
+                        'backgroundColor': '#fff',
+                        'borderColor': '#e5e7eb',
+                        'borderWidth': 1,
+                        'titleColor': '#111827',
+                        'bodyColor': '#6b7280',
+                        'titleFont': {'size': 13, 'weight': '600', 'family': 'Inter, system-ui, sans-serif'},
+                        'bodyFont': {'size': 12, 'family': 'Inter, system-ui, sans-serif'},
+                        'padding': 12,
+                        'cornerRadius': 8,
+                        'boxPadding': 4,
+                    },
+                },
+                'scales': {
+                    'y': {
+                        'beginAtZero': True,
+                        'ticks': {
+                            'precision': 0,
+                            'color': '#9ca3af',
+                            'font': {'size': 11, 'family': 'Inter, system-ui, sans-serif'},
+                            'maxTicksLimit': 5,
+                        },
+                        'grid': {'color': '#f3f4f6'},
+                        'border': {'display': False, 'dash': [4, 4]},
+                    },
+                    'x': {
+                        'ticks': {
+                            'color': '#9ca3af',
+                            'font': {'size': 11, 'family': 'Inter, system-ui, sans-serif'},
+                            'maxRotation': 0,
+                        },
+                        'grid': {'display': False},
+                        'border': {'display': False},
+                    },
+                },
             },
         }
 
     def get_status_breakdown(self, queryset):
         status_counts = queryset.values('status').annotate(count=Count('id'))
         count_map = {item['status']: item['count'] for item in status_counts}
+        total = sum(count_map.values()) or 1
 
         breakdown = []
         for key, label in Ticket.STATUS_CHOICES:
+            count = count_map.get(key, 0)
             breakdown.append(
                 {
                     'status': key,
                     'label': label,
-                    'count': count_map.get(key, 0),
+                    'count': count,
+                    'percent': round((count / total) * 100),
                     'badge_class': self.status_style_map.get(key, 'text-bg-secondary'),
                 }
             )
@@ -257,17 +326,55 @@ class DashboardDataMixin:
     def get_priority_breakdown(self, queryset):
         priority_counts = queryset.values('priority').annotate(count=Count('id'))
         count_map = {item['priority']: item['count'] for item in priority_counts}
+        total = sum(count_map.values()) or 1
         breakdown = []
         for key, label in Ticket.PRIORITY_CHOICES:
+            count = count_map.get(key, 0)
             breakdown.append(
                 {
                     'priority': key,
                     'label': label,
-                    'count': count_map.get(key, 0),
+                    'count': count,
+                    'percent': round((count / total) * 100),
                     'badge_class': self.priority_style_map.get(key, 'text-bg-secondary'),
                 }
             )
         return breakdown
+
+    def get_overdue_tasks(self, queryset):
+        now = timezone.now()
+        ticket_ids = list(queryset.values_list('pk', flat=True))
+        if not ticket_ids:
+            return []
+
+        overdue_qs = (
+            WorkTask.objects.filter(
+                ticket__in=ticket_ids,
+                completed=False,
+                due_date__isnull=False,
+                due_date__lt=now,
+            )
+            .select_related('ticket', 'assigned_to')
+            .order_by('due_date')[: self.overdue_task_limit]
+        )
+
+        tasks = []
+        for task in overdue_qs:
+            assignee = (
+                task.assigned_to.get_full_name()
+                or task.assigned_to.email
+                or task.assigned_to.phone_number
+            )
+            tasks.append(
+                {
+                    'title': task.title,
+                    'ticket_title': task.ticket.title,
+                    'due_date': task.due_date,
+                    'assigned_to': assignee,
+                    'url': self.get_ticket_detail_url(task.ticket),
+                }
+            )
+        return tasks
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -278,6 +385,7 @@ class DashboardDataMixin:
                 'summary_cards': self.get_summary_cards(issue_queryset),
                 'chart_config': self.get_trend_config(issue_queryset),
                 'recent_tickets': self.get_recent_tickets(issue_queryset),
+                'overdue_tasks': self.get_overdue_tasks(issue_queryset),
                 'status_breakdown': self.get_status_breakdown(issue_queryset),
                 'priority_breakdown': self.get_priority_breakdown(issue_queryset),
                 'view_all_issues_url': self.get_view_all_url(),
@@ -298,6 +406,30 @@ class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin,
 
     def get_ticket_detail_route_name(self):
         return 'ticket_management:central_admin:ticket_detail'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['quick_links'] = [
+            {
+                'label': 'People',
+                'url': reverse('core:people_list'),
+                'icon': 'group',
+                'hint': 'Manage users & roles',
+            },
+            {
+                'label': 'Spaces',
+                'url': reverse('core:space_list'),
+                'icon': 'apartment',
+                'hint': 'Sites & locations',
+            },
+            {
+                'label': 'Inventory',
+                'url': reverse('inventory:central_admin:inventory_dashboard'),
+                'icon': 'inventory_2',
+                'hint': 'Stock & assets',
+            },
+        ]
+        return context
 
 
 class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin, TemplateView):
