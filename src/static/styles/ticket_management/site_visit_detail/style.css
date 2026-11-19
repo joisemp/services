@@ -190,7 +190,6 @@ tr {
   background-color: #e2eefd !important;
 }
 #visit-details .alert .alert-buttons {
-  width: -moz-fit-content;
   width: fit-content;
 }
 #visit-details .completed-alert {
@@ -312,4 +311,4 @@ tr {
 
 .text-success {
   color: #198754 !important;
-}/*# sourceMappingURL=style.css.map */
+}

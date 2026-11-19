@@ -188,7 +188,6 @@ tr {
   background-color: #e2eefd !important;
 }
 #task-details .alert .alert-buttons {
-  width: -moz-fit-content;
   width: fit-content;
 }
 #task-details .resolved-alert {
@@ -277,4 +276,4 @@ tr {
 audio {
   width: 100%;
   max-width: 500px;
-}/*# sourceMappingURL=style.css.map */
+}

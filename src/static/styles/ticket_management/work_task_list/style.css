@@ -182,7 +182,6 @@ tr {
   background-color: #e2eefd !important;
 }
 #alert .alert .alert-buttons {
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -190,7 +189,6 @@ tr {
   background-color: #f1f7ff;
   padding: 5px;
   border-radius: 5px;
-  width: -moz-fit-content;
   width: fit-content;
 }
 #options-bar .container-nav .nav .nav-item .nav-active {
@@ -272,4 +270,4 @@ tr {
     width: 100%;
     justify-content: center;
   }
-}/*# sourceMappingURL=style.css.map */
+}

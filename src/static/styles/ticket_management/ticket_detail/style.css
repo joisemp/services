@@ -428,7 +428,6 @@ tr {
   background-color: #e2eefd !important;
 }
 #alert-details .alert .alert-buttons {
-  width: -moz-fit-content;
   width: fit-content;
 }
 #alert-details .resolved-alert {
@@ -482,7 +481,6 @@ tr {
   margin-bottom: 15px;
 }
 .assignment-alert .assignment-actions {
-  width: -moz-fit-content;
   width: fit-content;
 }
 .assignment-alert .badge {
@@ -538,4 +536,4 @@ tr {
 #activity-history .activity-details .activity-changes .badge {
   font-size: 0.8rem;
   padding: 0.35em 0.65em;
-}/*# sourceMappingURL=style.css.map */
+}

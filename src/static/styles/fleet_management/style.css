@@ -191,8 +191,7 @@ tr {
 
 .inventory-card-carousel-image {
   height: 132px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .inventory-card-image-placeholder {
@@ -207,14 +206,12 @@ tr {
 
 .inventory-detail-carousel-image {
   height: 320px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .inventory-image-grid-thumb {
   height: 140px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .inventory-product-card .card-body {
@@ -248,4 +245,4 @@ tr {
   .inventory-detail-image-placeholder {
     height: 240px;
   }
-}/*# sourceMappingURL=style.css.map */
+}

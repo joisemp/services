@@ -181,7 +181,6 @@ tr {
   background-color: #e2eefd !important;
 }
 #alert-details .alert .alert-buttons {
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -298,4 +297,4 @@ tr {
     padding-right: 0.25rem;
     margin-bottom: 0.75rem;
   }
-}/*# sourceMappingURL=style.css.map */
+}
