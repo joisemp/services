@@ -2,140 +2,177 @@
 {% load static %}
 
 {% block title %}Login{% endblock title %}
+{% block body_class %}login-page{% endblock body_class %}
+{% block main_content_class %}login-main{% endblock main_content_class %}
 
-{% block content %}
-<div class="row justify-content-center py-5">
-    <div class="col-lg-5 col-md-7">
-    <div class="card border-0">
-            <div class="card-body p-4 p-lg-5">
-                <div class="text-center mb-4">
-                    <img src="{% static 'images/logo-icon.svg' %}" alt="Services logo" class="img-fluid" style="max-width: 50px;">
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/core/login/style.css' %}">
+{% endblock styles %}
+
+{% block content_outer %}
+<div class="login-layout">
+
+    {# ── LEFT BRAND PANEL ───────────────────────────────────────────────────── #}
+    <div class="login-brand">
+        <div class="login-brand__inner">
+            <a href="{% url 'home' %}" class="login-brand__logo-wrap">
+                <img src="{% static 'images/logo-icon-light.svg' %}" alt="Services logo" class="login-brand__logo">
+                <span class="login-brand__name">Services</span>
+            </a>
+            <div class="login-brand__copy">
+                <h2>Manage every service request.<br>From report to resolution.</h2>
+                <p>Role-based workflows, media attachments, and a complete audit trail — all in one place.</p>
+            </div>
+            <div class="login-brand__deco" aria-hidden="true">
+                <div class="login-deco__orb login-deco__orb--1"></div>
+                <div class="login-deco__orb login-deco__orb--2"></div>
+                <div class="login-deco__dots"></div>
+            </div>
+        </div>
+    </div>
+
+    {# ── RIGHT FORM PANEL ───────────────────────────────────────────────────── #}
+    <div class="login-form-panel">
+        <div class="login-form-wrap">
+
+            {# Back to landing #}
+            <a href="{% url 'home' %}" class="login-back-btn">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to home
+            </a>
+
+            {# Mobile-only brand strip #}
+            <div class="login-mobile-brand">
+                <img src="{% static 'images/logo-icon.svg' %}" alt="Services logo" class="login-mobile-logo">
+                <span class="login-mobile-name">Services</span>
+            </div>
+
+            <h1 class="login-title">{{ form_title }}</h1>
+            <p class="login-subtitle">
+                {% if user_type == 'phone' %}
+                    General users sign in with their phone number only — no password needed.
+                {% elif user_type == 'pin' %}
+                    Quick login with your email and 4-digit PIN.
+                {% else %}
+                    Team members sign in with their email and password.
+                {% endif %}
+            </p>
+
+            {# ── Method switcher ──────────────────────────────────────────── #}
+            <div class="login-switcher" role="group" aria-label="Sign-in method">
+                <a href="?type=phone" class="login-switcher__btn {% if user_type == 'phone' %}active{% endif %}">
+                    <span class="material-symbols-outlined">smartphone</span>
+                    Phone
+                </a>
+                <a href="?type=email" class="login-switcher__btn {% if user_type == 'email' %}active{% endif %}">
+                    <span class="material-symbols-outlined">mail</span>
+                    Email
+                </a>
+                <a href="?type=pin" class="login-switcher__btn {% if user_type == 'pin' %}active{% endif %}">
+                    <span class="material-symbols-outlined">pin</span>
+                    PIN
+                </a>
+            </div>
+
+            {# ── Django messages ──────────────────────────────────────────── #}
+            {% if messages %}
+                <div class="login-messages">
+                    {% for message in messages %}
+                        <div class="login-alert login-alert--{% if 'error' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
                 </div>
-                <h1 class="h4 fw-bold text-center mb-1">{{ form_title }}</h1>
-                <p class="text-muted text-center mb-2">
-                    {% if user_type == 'phone' %}
-                        General users can sign in with their phone number only.
-                    {% elif user_type == 'pin' %}
-                        Quick login with your email and 4-digit PIN.
-                    {% else %}
-                        Team members sign in with their email and password.
-                    {% endif %}
-                </p>
+            {% endif %}
 
-                <div class="btn-group w-100 mb-4" role="group">
-                    <a href="?type=phone" class="btn btn-outline-primary {% if user_type == 'phone' %}active{% endif %}">
-                        <i class="bi bi-phone"></i> Phone
-                    </a>
-                    <a href="?type=email" class="btn btn-outline-primary {% if user_type == 'email' %}active{% endif %}">
-                        <i class="bi bi-envelope"></i> Email
-                    </a>
-                    <a href="?type=pin" class="btn btn-outline-primary {% if user_type == 'pin' %}active{% endif %}">
-                        <i class="bi bi-lock"></i> PIN
-                    </a>
-                </div>
+            {# ── Form ─────────────────────────────────────────────────────── #}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-                {% if messages %}
-                    <div class="mb-4">
-                        {% for message in messages %}
-                            <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
+                {% if form.non_field_errors %}
+                    <div class="login-alert login-alert--danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}{% if not forloop.last %}<br>{% endif %}
                         {% endfor %}
                     </div>
                 {% endif %}
 
-                <form method="post" novalidate>
-                    {% csrf_token %}
+                {% if user_type == 'phone' %}
+                    <div class="login-field">
+                        <label for="{{ form.phone_number.id_for_label }}" class="login-label">Phone Number</label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.help_text %}
+                            <small class="login-hint">{{ form.phone_number.help_text }}</small>
+                        {% endif %}
+                        {% if form.phone_number.errors %}
+                            <div class="login-field-error">
+                                {% for error in form.phone_number.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
 
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {% for error in form.non_field_errors %}
-                                {{ error }}{% if not forloop.last %}<br>{% endif %}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                {% elif user_type == 'pin' %}
+                    <div class="login-field">
+                        <label for="{{ form.email.id_for_label }}" class="login-label">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="login-field-error">
+                                {% for error in form.email.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="login-field">
+                        <label for="{{ form.pin.id_for_label }}" class="login-label">4-Digit PIN</label>
+                        {{ form.pin }}
+                        {% if form.pin.help_text %}
+                            <small class="login-hint">{{ form.pin.help_text }}</small>
+                        {% endif %}
+                        {% if form.pin.errors %}
+                            <div class="login-field-error">
+                                {% for error in form.pin.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="login-alt-link">
+                        <a href="?type=email">Use password instead</a>
+                    </div>
 
-                    {% if user_type == 'phone' %}
-                        <div class="mb-3">
-                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
-                            {{ form.phone_number }}
-                            {% if form.phone_number.help_text %}
-                                <small class="text-muted d-block mt-1">{{ form.phone_number.help_text }}</small>
-                            {% endif %}
-                            {% if form.phone_number.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.phone_number.errors %}
-                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% elif user_type == 'pin' %}
-                        <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.email.errors %}
-                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label for="{{ form.pin.id_for_label }}" class="form-label">4-Digit PIN</label>
-                            {{ form.pin }}
-                            {% if form.pin.help_text %}
-                                <small class="text-muted d-block mt-1">{{ form.pin.help_text }}</small>
-                            {% endif %}
-                            {% if form.pin.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.pin.errors %}
-                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="text-end mb-4">
-                            <a href="?type=email" class="link-primary">Login with password instead</a>
-                        </div>
-                    {% else %}
-                        <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.email.errors %}
-                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
-                            {{ form.password }}
-                            {% if form.password.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.password.errors %}
-                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="text-end mb-4">
-                            <a href="{% url 'core:password_reset' %}" class="link-primary">Forgot your password?</a>
-                        </div>
-                    {% endif %}
+                {% else %}
+                    <div class="login-field">
+                        <label for="{{ form.email.id_for_label }}" class="login-label">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="login-field-error">
+                                {% for error in form.email.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="login-field">
+                        <label for="{{ form.password.id_for_label }}" class="login-label">Password</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="login-field-error">
+                                {% for error in form.password.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="login-alt-link">
+                        <a href="{% url 'core:password_reset' %}">Forgot your password?</a>
+                    </div>
+                {% endif %}
 
-                    <button type="submit" class="btn btn-primary w-100 py-2">Sign In</button>
-                </form>
+                <button type="submit" class="login-submit">Sign in</button>
+            </form>
 
-                <div class="border-top mt-4 pt-3 text-center">
-                    <p class="mb-0 text-muted">Don't have an account? Contact your administrator to create one.</p>
-                </div>
-            </div>
+            <p class="login-footer-note">
+                Don't have an account? Contact your administrator to create one.
+            </p>
+
         </div>
     </div>
+
 </div>
-{% endblock content %}
+{% endblock content_outer %}
