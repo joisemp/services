@@ -1,0 +1,208 @@
+@use '../../sidebar_base';
+@use '../../colors' as c;
+
+$blue:   c.$primary;
+$border: #e5e7eb;
+$text:   #111827;
+$muted:  #6b7280;
+$r:      0.5rem;
+$font:   'Inter', ui-sans-serif, system-ui, sans-serif;
+
+.space-form-page {
+  font-family: $font;
+  color: $text;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 2.5rem;
+}
+
+.space-form-wrap {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+// ─── Back link ────────────────────────────────────────────────────────────────
+.space-form-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+  transition: color 0.15s;
+
+  .material-symbols-outlined {
+    font-size: 1.05rem;
+  }
+
+  &:hover {
+    color: $blue;
+  }
+}
+
+// ─── Panel ────────────────────────────────────────────────────────────────────
+.space-form-panel {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 0.75rem;
+  padding: 1.5rem 1.35rem 1.75rem;
+
+  @media (min-width: 768px) {
+    padding: 1.75rem 1.75rem 2rem;
+  }
+}
+
+.space-form-header {
+  margin-bottom: 1.25rem;
+}
+
+.space-form-header__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+.space-form-header__sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $muted;
+  line-height: 1.5;
+}
+
+// ─── Form fields ──────────────────────────────────────────────────────────────
+.space-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.space-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.space-form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+}
+
+.space-form-req {
+  color: #dc2626;
+}
+
+.space-form-hint {
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.space-form-error {
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.space-form-page {
+  .form-control,
+  .form-select,
+  select,
+  textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"] {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid $border;
+    border-radius: $r;
+    font-size: 0.875rem;
+    font-family: $font;
+    color: $text;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus {
+      outline: none;
+      border-color: $blue;
+      box-shadow: 0 0 0 3px rgba($blue, 0.12);
+    }
+  }
+
+  textarea,
+  textarea.form-control {
+    min-height: 5.5rem;
+    resize: vertical;
+  }
+}
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
+.space-form-alert {
+  padding: 0.75rem 0.95rem;
+  border-radius: $r;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+
+  &--danger {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+.space-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.space-form-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: $r;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &--primary {
+    background: $blue;
+    color: #fff;
+    border-color: $blue;
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+  }
+
+  &--outline {
+    background: #fff;
+    color: $text;
+    border-color: $border;
+
+    &:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      color: $text;
+    }
+  }
+}
