@@ -515,7 +515,7 @@ class TicketReviewerSelectionForm(BootstrapFormMixin, forms.Form):
         queryset=None,
         required=True,
         widget=forms.CheckboxSelectMultiple(attrs={
-            'class': 'form-check-input'
+            'class': 'tr-check__input'
         }),
         label="Select Reviewers",
         help_text="Choose one or more reviewers for this ticket"
@@ -537,6 +537,9 @@ class TicketReviewerSelectionForm(BootstrapFormMixin, forms.Form):
             # Set initial values if ticket already has reviewers
             if self.ticket.reviewers.exists():
                 self.initial['reviewers'] = self.ticket.reviewers.all()
+
+        # Prefer select-reviewers page classes over BootstrapFormMixin defaults
+        self.fields['reviewers'].widget.attrs['class'] = 'tr-check__input'
     
     def clean_reviewers(self):
         """Validate that at least one reviewer is selected"""
