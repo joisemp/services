@@ -111,53 +111,7 @@ $header-h:  60px;
       }
     }
 
-    .dropdown-menu {
-      min-width: 260px;
-      margin-top: 0.5rem !important;
-      padding: 0.5rem 0;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-      background: #fff;
-
-      .dropdown-item {
-        font-size: 0.875rem;
-        color: #111827;
-        padding: 0.65rem 1rem;
-
-        strong {
-          font-size: 0.875rem;
-        }
-
-        small {
-          font-size: 0.75rem;
-        }
-
-        .material-symbols-outlined {
-          font-size: 1.1rem;
-          vertical-align: middle;
-        }
-
-        &:hover,
-        &:focus {
-          background: #f3f4f6;
-          color: #111827;
-        }
-
-        &.text-danger {
-          color: #dc2626 !important;
-
-          &:hover {
-            background: #fef2f2;
-          }
-        }
-      }
-
-      .dropdown-divider {
-        margin: 0.35rem 0;
-        border-color: #e5e7eb;
-      }
-    }
+    // Profile dropdown visuals live in components/navbar.css (np-* classes)
   }
 
   @media screen and (max-width: 430px) {
