@@ -1398,15 +1398,30 @@ body.td-drawer-open .td-card--manage {
 
 .td-file-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.55rem;
 
   @media (min-width: 640px) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
 
-  .form-control {
-    font-size: 0.8125rem;
-  }
+.td-modal .tf-media-slot__drop {
+  min-height: 6.5rem;
+  padding: 0.75rem 0.5rem;
+}
+
+.td-modal .tf-media-slot__icon {
+  font-size: 1.45rem;
+}
+
+.td-modal .tf-media-slot__hint {
+  display: none;
+}
+
+.td-modal input[type="file"].tf-media-slot__input {
+  min-height: 0;
+  padding: 0;
+  border: 0;
 }
 
 // ─── Context (lean) ───────────────────────────────────────────────────────────
