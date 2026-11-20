@@ -31,6 +31,7 @@ class TicketListView(CentralAdminOnlyAccessMixin, ListView):
             space_filter=self.request.GET.get('space'),
             reporter_filter=self.request.GET.get('reporter'),
             assignee_filter=self.request.GET.get('assignee'),
+            search_query=self.request.GET.get('q'),
         )
 
         return annotate_and_order(queryset)
@@ -39,6 +40,9 @@ class TicketListView(CentralAdminOnlyAccessMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['current_filter'] = self.request.GET.get('status', 'all')
         context['space_filter'] = self.request.GET.get('space', '')
+        context['search_query'] = self.request.GET.get('q', '').strip()
+        context['reporter_filter'] = self.request.GET.get('reporter', '')
+        context['assignee_filter'] = self.request.GET.get('assignee', '')
         # Get all spaces for the filter dropdown
         context['spaces'] = Space.objects.select_related('org').all().order_by('org__name', 'name')
         return context
@@ -1188,6 +1192,7 @@ class TicketListReportView(CentralAdminOnlyAccessMixin, View):
         space_filter = request.GET.get('space')
         reporter_filter = request.GET.get('reporter')
         assignee_filter = request.GET.get('assignee')
+        search_query = request.GET.get('q')
 
         queryset = apply_ticket_list_filters(
             queryset,
@@ -1195,6 +1200,7 @@ class TicketListReportView(CentralAdminOnlyAccessMixin, View):
             space_filter=space_filter,
             reporter_filter=reporter_filter,
             assignee_filter=assignee_filter,
+            search_query=search_query,
         )
         queryset = annotate_and_order(queryset)
 
@@ -1203,6 +1209,7 @@ class TicketListReportView(CentralAdminOnlyAccessMixin, View):
             space_filter=space_filter,
             reporter_filter=reporter_filter,
             assignee_filter=assignee_filter,
+            search_query=search_query,
         )
 
         timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')

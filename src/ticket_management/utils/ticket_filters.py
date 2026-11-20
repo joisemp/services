@@ -4,7 +4,7 @@ Shared queryset filter helper for the central-admin ticket list.
 Used by both the list view and the report view so the two never drift.
 """
 
-from django.db.models import Case, When, IntegerField
+from django.db.models import Case, Q, When, IntegerField
 
 
 # All status values that map directly to Ticket.status
@@ -15,7 +15,8 @@ VALID_STATUS_VALUES = [
 
 
 def apply_ticket_list_filters(queryset, *, status_filter=None, space_filter=None,
-                              reporter_filter=None, assignee_filter=None):
+                              reporter_filter=None, assignee_filter=None,
+                              search_query=None):
     """
     Apply the standard central-admin ticket list filters to *queryset* and
     return the (un-ordered) filtered queryset.
@@ -29,7 +30,18 @@ def apply_ticket_list_filters(queryset, *, status_filter=None, space_filter=None
     space_filter   : value of ?space= param ('no_space' or a space slug)
     reporter_filter: value of ?reporter= param (user slug or numeric id)
     assignee_filter: value of ?assignee= param (user slug or numeric id)
+    search_query   : value of ?q= param (matches title, ticket_id, description)
     """
+
+    # --- search ---------------------------------------------------------
+    if search_query:
+        q = search_query.strip()
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q)
+                | Q(ticket_id__icontains=q)
+                | Q(description__icontains=q)
+            )
 
     # --- reporter -------------------------------------------------------
     if reporter_filter:
@@ -96,7 +108,8 @@ def annotate_and_order(queryset):
 
 
 def describe_filters(*, status_filter=None, space_filter=None,
-                     reporter_filter=None, assignee_filter=None):
+                     reporter_filter=None, assignee_filter=None,
+                     search_query=None):
     """
     Return a human-readable list of strings describing the active filters,
     e.g. ['Status: Open', 'Space: No Space Assigned'].
@@ -134,5 +147,8 @@ def describe_filters(*, status_filter=None, space_filter=None,
 
     if assignee_filter:
         parts.append(f"Assignee: {assignee_filter}")
+
+    if search_query and search_query.strip():
+        parts.append(f"Search: {search_query.strip()}")
 
     return parts
