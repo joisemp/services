@@ -1,95 +1,189 @@
-{% extends 'sidebar_base.html' %}
-
+{% extends "sidebar_base.html" %}
 {% load static %}
 
-{% block title %}Ticket Management{% endblock %}
+{% block title %}Create Ticket{% endblock title %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'styles/ticket_management/forms/style.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_create/style.css' %}">
 <link rel="stylesheet" href="{% static 'styles/components/voice-recorder.css' %}">
 <link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-{% endblock %}
+{% endblock styles %}
 
 {% block navbar %}
-{% include 'navbar.html' %}
-{% endblock %}
+{% include "navbar.html" %}
+{% endblock navbar %}
 
 {% block sidebar %}
-{% include 'central_admin/sidebar.html' %}
-{% endblock %}
+{% include "central_admin/sidebar.html" %}
+{% endblock sidebar %}
 
 {% block content %}
-<div class="container-fluid">
-  <h3>Create Ticket</h3>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="hidden" name="form_token" value="{{ request.session.session_key }}-{{ request.user.id }}-{% now 'U' %}">
-    <div class="mb-3">
-      <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
-      {{ form.title }}
-    </div>
-    <div class="mb-3">
-      <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
-      {{ form.description }}
-    </div>
-    <div class="mb-3">
-      <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
-      {{ form.priority }}
-    </div>
-    <div class="mb-3">
-      <label for="{{ form.space.id_for_label }}" class="form-label">Space (Optional)</label>
-      {{ form.space }}
-    </div>
-    {% if show_workshop_field and form.workshop %}
-    <div class="mb-3">
-      <label for="{{ form.workshop.id_for_label }}" class="form-label">Workshop</label>
-      {{ form.workshop }}
-      {% if form.workshop.errors %}
-      <div class="text-danger small mt-1">{{ form.workshop.errors }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-    <div class="mb-3 image-upload-section">
-      <label class="form-label">
-        <span class="material-symbols-outlined me-1" style="font-size: 20px; vertical-align: middle;">image</span>
-        Attach Images (Optional - Max 3)
-      </label>
-      <div class="row">
-        <div class="col-md-4">
-          <label for="{{ form.image1.id_for_label }}" class="form-label">Image 1</label>
-          {{ form.image1 }}
+<div class="ticket-form-page">
+    <div class="ticket-form-wrap">
+
+        <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="ticket-form-back">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Back to Tickets
+        </a>
+
+        <div class="ticket-form-panel">
+            <header class="ticket-form-header">
+                <h1 class="ticket-form-header__title">Create Ticket</h1>
+                <p class="ticket-form-header__sub">Report a new issue</p>
+                {% if vehicle %}
+                <dl class="ticket-form-meta">
+                    <div class="ticket-form-meta__item">
+                        <dt>Vehicle</dt>
+                        <dd>{{ vehicle.registration_number }} · {{ vehicle.manufacturer }} {{ vehicle.model }}</dd>
+                    </div>
+                </dl>
+                {% endif %}
+            </header>
+
+            {% if form.non_field_errors %}
+            <div class="ticket-form-alert ticket-form-alert--danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate class="ticket-form">
+                {% csrf_token %}
+                <input type="hidden" name="form_token" value="{{ request.session.session_key }}-{{ request.user.id }}-{% now 'U' %}">
+
+                <div class="ticket-form-field">
+                    <label for="{{ form.title.id_for_label }}" class="ticket-form-label">
+                        Title <span class="ticket-form-req">*</span>
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="ticket-form-field">
+                    <label for="{{ form.description.id_for_label }}" class="ticket-form-label">
+                        Description <span class="ticket-form-req">*</span>
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.description.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="ticket-form-field">
+                    <label for="{{ form.priority.id_for_label }}" class="ticket-form-label">
+                        Priority <span class="ticket-form-req">*</span>
+                    </label>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.priority.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="ticket-form-field">
+                    <label for="{{ form.space.id_for_label }}" class="ticket-form-label">Space</label>
+                    {{ form.space }}
+                    <small class="ticket-form-hint">Optional — link this ticket to a space</small>
+                    {% if form.space.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.space.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if show_workshop_field and form.workshop %}
+                <div class="ticket-form-field">
+                    <label for="{{ form.workshop.id_for_label }}" class="ticket-form-label">
+                        Workshop <span class="ticket-form-req">*</span>
+                    </label>
+                    {{ form.workshop }}
+                    {% if form.workshop.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.workshop.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="ticket-form-section">
+                    <div class="ticket-form-section__head">
+                        <span class="material-symbols-outlined">image</span>
+                        <div>
+                            <p class="ticket-form-section__title">Images</p>
+                            <p class="ticket-form-section__sub">Optional — up to 3 images (JPG, PNG, GIF · max 10MB each)</p>
+                        </div>
+                    </div>
+                    <div class="ticket-form-images">
+                        <div class="tf-media-slot">
+                            {{ form.image1 }}
+                            {% if form.image1.errors %}
+                            <div class="ticket-form-error">
+                                {% for error in form.image1.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="tf-media-slot">
+                            {{ form.image2 }}
+                            {% if form.image2.errors %}
+                            <div class="ticket-form-error">
+                                {% for error in form.image2.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="tf-media-slot">
+                            {{ form.image3 }}
+                            {% if form.image3.errors %}
+                            <div class="ticket-form-error">
+                                {% for error in form.image3.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ticket-form-section">
+                    <div class="ticket-form-section__head">
+                        <span class="material-symbols-outlined">mic</span>
+                        <div>
+                            <p class="ticket-form-section__title">Voice recording</p>
+                            <p class="ticket-form-section__sub">Optional — hold the mic button to record, release to stop</p>
+                        </div>
+                    </div>
+                    <div id="voiceRecorderContainer"></div>
+                    {{ form.voice }}
+                    {% if form.voice.errors %}
+                    <div class="ticket-form-error">
+                        {% for error in form.voice.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="ticket-form-actions">
+                    <button type="submit" class="ticket-form-btn ticket-form-btn--primary" data-loading-text="Creating Ticket...">
+                        Create Ticket
+                    </button>
+                    <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="ticket-form-btn ticket-form-btn--outline">Cancel</a>
+                </div>
+            </form>
         </div>
-        <div class="col-md-4">
-          <label for="{{ form.image2.id_for_label }}" class="form-label">Image 2</label>
-          {{ form.image2 }}
-        </div>
-        <div class="col-md-4">
-          <label for="{{ form.image3.id_for_label }}" class="form-label">Image 3</label>
-          {{ form.image3 }}
-        </div>
-      </div>
-      <small class="form-text text-muted">You can upload up to 3 images. Supported formats: JPG, PNG, GIF. Max size: 10MB per image.</small>
+
     </div>
-    <div class="mb-3">
-      <label class="form-label">
-        <span class="material-symbols-outlined me-1" style="font-size: 20px; vertical-align: middle;">mic</span>
-        Voice Recording (Optional)
-      </label>
-      <div id="voiceRecorderContainer">
-        <!-- Voice recorder will be initialized here by JavaScript -->
-      </div>
-      {{ form.voice }}
-    </div>
-    <div class="d-flex">
-      <button type="submit" class="btn btn-primary" data-loading-text="Creating Ticket...">Create Ticket</button>
-      <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="btn btn-secondary ms-2">Cancel</a>
-    </div>
-  </form>
 </div>
-{% endblock %}
+{% endblock content %}
 
 {% block scripts %}
+{{ block.super }}
 <script src="{% static 'js/components/voice-recorder.js' %}"></script>
 <script src="{% static 'js/components/image-upload.js' %}"></script>
-{% endblock %}
+{% endblock scripts %}

@@ -153,7 +153,9 @@ class TicketCreateView(CentralAdminOnlyAccessMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['show_workshop_field'] = bool(self._get_vehicle_from_query())
+        vehicle = self._get_vehicle_from_query()
+        context['show_workshop_field'] = bool(vehicle)
+        context['vehicle'] = vehicle
         return context
     
     def post(self, request, *args, **kwargs):

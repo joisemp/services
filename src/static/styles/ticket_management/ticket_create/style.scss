@@ -1,0 +1,309 @@
+@use '../../sidebar_base';
+@use '../../colors' as c;
+
+$blue:   c.$primary;
+$border: #e5e7eb;
+$text:   #111827;
+$muted:  #6b7280;
+$r:      0.5rem;
+$font:   'Inter', ui-sans-serif, system-ui, sans-serif;
+
+.ticket-form-page {
+  font-family: $font;
+  color: $text;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 2.5rem;
+}
+
+.ticket-form-wrap {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+// ─── Back link ────────────────────────────────────────────────────────────────
+.ticket-form-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+  transition: color 0.15s;
+
+  .material-symbols-outlined {
+    font-size: 1.05rem;
+  }
+
+  &:hover {
+    color: $blue;
+  }
+}
+
+// ─── Panel ────────────────────────────────────────────────────────────────────
+.ticket-form-panel {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 0.75rem;
+  padding: 1.5rem 1.35rem 1.75rem;
+
+  @media (min-width: 768px) {
+    padding: 1.75rem 1.75rem 2rem;
+  }
+}
+
+.ticket-form-header {
+  margin-bottom: 1.25rem;
+}
+
+.ticket-form-header__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+.ticket-form-header__sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $muted;
+  line-height: 1.5;
+}
+
+.ticket-form-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.5rem;
+  margin: 0.9rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid $border;
+}
+
+.ticket-form-meta__item {
+  min-width: 0;
+
+  dt {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9ca3af;
+  }
+
+  dd {
+    margin: 0.2rem 0 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: $text;
+  }
+}
+
+// ─── Form fields ──────────────────────────────────────────────────────────────
+.ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ticket-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ticket-form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+}
+
+.ticket-form-req {
+  color: #dc2626;
+}
+
+.ticket-form-hint {
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.ticket-form-error {
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.ticket-form-page {
+  .form-control,
+  .form-select,
+  select,
+  textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="file"] {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid $border;
+    border-radius: $r;
+    font-size: 0.875rem;
+    font-family: $font;
+    color: $text;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus {
+      outline: none;
+      border-color: $blue;
+      box-shadow: 0 0 0 3px rgba($blue, 0.12);
+    }
+  }
+
+  textarea,
+  textarea.form-control {
+    min-height: 5.5rem;
+    resize: vertical;
+  }
+
+  select.form-control,
+  .form-select,
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.25rem;
+  }
+
+  input[type="file"] {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.8125rem;
+  }
+}
+
+// ─── Sections (images / voice) ────────────────────────────────────────────────
+.ticket-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ticket-form-section__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  > .material-symbols-outlined {
+    font-size: 1.2rem;
+    color: $muted;
+    margin-top: 0.1rem;
+  }
+}
+
+.ticket-form-section__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $text;
+}
+
+.ticket-form-section__sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: $muted;
+  line-height: 1.4;
+}
+
+.ticket-form-images {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ticket-form-section #voiceRecorderContainer {
+  width: 100%;
+}
+
+.ticket-form-page input[type="file"].tf-media-slot__input {
+  /* override page-level file input styles; input stays visually hidden */
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
+.ticket-form-alert {
+  padding: 0.75rem 0.95rem;
+  border-radius: $r;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+
+  &--danger {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+.ticket-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.ticket-form-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: $r;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: $font;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &--primary {
+    background: $blue;
+    color: #fff;
+    border-color: $blue;
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+  }
+
+  &--outline {
+    background: #fff;
+    color: $text;
+    border-color: $border;
+
+    &:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      color: $text;
+    }
+  }
+}
