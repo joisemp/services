@@ -434,8 +434,8 @@ class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
     def get_queryset(self):
         return Space.objects.select_related('org').prefetch_related(
             'users',
-            'issues__reporter',
-            'issues__images'
+            'tickets__reporter',
+            'tickets__images'
         )
 
     def get_context_data(self, **kwargs):
@@ -455,10 +455,17 @@ class SpaceDetailView(CentralAdminOnlyAccessMixin, DetailView):
         context['user_add_form'] = SpaceUserAddForm(space=self.object)
         
         # Get ticket statistics
-        context['open_tickets_count'] = tickets.filter(status='open').count()
-        context['resolved_tickets_count'] = tickets.filter(status='resolved').count()
-        context['in_progress_tickets_count'] = tickets.filter(status='in_progress').count()
-        
+        open_count = tickets.filter(status='open').count()
+        in_progress_count = tickets.filter(status='in_progress').count()
+        resolved_count = tickets.filter(status='resolved').count()
+        context['open_tickets_count'] = open_count
+        context['in_progress_tickets_count'] = in_progress_count
+        context['resolved_tickets_count'] = resolved_count
+        context['other_tickets_count'] = max(
+            context['tickets_count'] - open_count - in_progress_count - resolved_count,
+            0,
+        )
+
         return context
 
 
@@ -528,10 +535,10 @@ class SpaceDeleteView(CentralAdminOnlyAccessMixin, DeleteView):
 
     def get_queryset(self):
         return Space.objects.select_related('org').prefetch_related(
-            'users', 
-            'issues__images', 
-            'issues__comments', 
-            'issues__work_tasks__shares'
+            'users',
+            'tickets__images',
+            'tickets__comments',
+            'tickets__work_tasks__shares'
         )
 
     def delete(self, request, *args, **kwargs):
