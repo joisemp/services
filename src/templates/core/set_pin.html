@@ -1,109 +1,134 @@
 {% extends 'sidebar_base.html' %}
 {% load static %}
 
-{% block title %}{{ has_pin|yesno:"Change,Set" }} PIN{% endblock %}
+{% block title %}{% if has_pin %}Change PIN{% else %}Set up PIN{% endif %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/core/set_pin/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% if request.user.is_central_admin %}
+{% include 'central_admin/sidebar.html' %}
+{% elif request.user.is_space_admin %}
+{% include 'space_admin/sidebar.html' %}
+{% elif request.user.is_supervisor %}
+{% include 'supervisor/sidebar.html' %}
+{% elif request.user.is_maintainer %}
+{% include 'maintainer/sidebar.html' %}
+{% elif request.user.is_reviewer %}
+{% include 'reviewer/sidebar.html' %}
+{% elif request.user.is_transport_incharge %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-lock"></i>
-                        {% if has_pin %}
-                            Change Your PIN
-                        {% else %}
-                            Set Up Your PIN
-                        {% endif %}
-                    </h4>
-                </div>
-                <div class="card-body">
-                    {% if has_pin %}
-                        <div class="alert alert-info mb-3">
-                            <i class="bi bi-info-circle"></i>
-                            You already have a PIN set. You can change it by entering a new one below.
-                        </div>
-                    {% else %}
-                        <div class="alert alert-success mb-3">
-                            <i class="bi bi-check-circle"></i>
-                            Set up a 4-digit PIN for quick login access!
-                        </div>
-                    {% endif %}
+<div class="pin-page">
+  <button type="button" class="pin-back" onclick="window.history.back()">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back
+  </button>
 
-                    <div class="mb-4">
-                        <h6 class="text-muted mb-2">What is a PIN?</h6>
-                        <p class="text-muted mb-0">
-                            Your PIN provides a convenient way to login without typing your full password. 
-                            Choose 4 digits that you'll remember easily but others won't guess.
-                        </p>
-                    </div>
+  <header class="pin-identity">
+    <h1 class="pin-identity__name">{% if has_pin %}Change PIN{% else %}Set up PIN{% endif %}</h1>
+    <p class="pin-identity__meta">
+      {% if has_pin %}
+      Update the 4-digit PIN you use for quick login.
+      {% else %}
+      Create a 4-digit PIN for faster email + PIN login.
+      {% endif %}
+    </p>
+  </header>
 
-                    {% if not has_pin %}
-                    <div class="alert alert-light border mb-4">
-                        <h6 class="mb-2"><i class="bi bi-lightbulb"></i> How to use your PIN:</h6>
-                        <ol class="mb-0 small ps-3">
-                            <li>Set up your 4-digit PIN below</li>
-                            <li>Go to the login page and click the "PIN" tab</li>
-                            <li>Enter your email and PIN to login quickly</li>
-                            <li>You can still use your password anytime</li>
-                        </ol>
-                    </div>
-                    {% endif %}
+  <section class="pin-card" aria-labelledby="pin-form-heading">
+    <header class="pin-card__head">
+      <h2 id="pin-form-heading" class="pin-card__title">
+        <span class="material-symbols-outlined pin-card__icon">pin</span>
+        {% if has_pin %}New PIN{% else %}Your PIN{% endif %}
+      </h2>
+      <p class="pin-card__desc">
+        Enter the same 4 digits twice. You can still sign in with your password anytime.
+      </p>
+    </header>
 
-                    <form method="post" class="needs-validation" novalidate>
-                        {% csrf_token %}
-                        
-                        {{ form.non_field_errors }}
-                        
-                        <div class="mb-3">
-                            {{ form.pin.label_tag }}
-                            {{ form.pin }}
-                            {% if form.pin.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.pin.errors.0 }}
-                                </div>
-                            {% endif %}
-                            <small class="form-text text-muted">{{ form.pin.help_text }}</small>
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.confirm_pin.label_tag }}
-                            {{ form.confirm_pin }}
-                            {% if form.confirm_pin.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.confirm_pin.errors.0 }}
-                                </div>
-                            {% endif %}
-                            <small class="form-text text-muted">{{ form.confirm_pin.help_text }}</small>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle"></i>
-                                {% if has_pin %}Change PIN{% else %}Set PIN{% endif %}
-                            </button>
-                            <button type="button" onclick="window.history.back()" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i>
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-
-                    <hr class="my-4">
-
-                    <div class="alert alert-warning">
-                        <h6><i class="bi bi-shield-exclamation"></i> Security Tips:</h6>
-                        <ul class="mb-0 small">
-                            <li>Don't use obvious PINs like 1234, 0000, or your birth year</li>
-                            <li>Don't share your PIN with anyone</li>
-                            <li>Your PIN is stored securely and cannot be recovered if forgotten</li>
-                            <li>You can always login with your email and password if you forget your PIN</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
+    {% if form.non_field_errors %}
+    <div class="pin-alert pin-alert--error" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
     </div>
+    {% endif %}
+
+    <form method="post" novalidate class="pin-form">
+      {% csrf_token %}
+
+      <div class="pin-field">
+        <label for="{{ form.pin.id_for_label }}" class="pin-label">
+          {{ form.pin.label }} <span class="pin-req">*</span>
+        </label>
+        {{ form.pin }}
+        {% if form.pin.help_text %}
+        <p class="pin-help">{{ form.pin.help_text }}</p>
+        {% endif %}
+        {% if form.pin.errors %}
+        <div class="pin-error">
+          {% for error in form.pin.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="pin-field">
+        <label for="{{ form.confirm_pin.id_for_label }}" class="pin-label">
+          {{ form.confirm_pin.label }} <span class="pin-req">*</span>
+        </label>
+        {{ form.confirm_pin }}
+        {% if form.confirm_pin.help_text %}
+        <p class="pin-help">{{ form.confirm_pin.help_text }}</p>
+        {% endif %}
+        {% if form.confirm_pin.errors %}
+        <div class="pin-error">
+          {% for error in form.confirm_pin.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="pin-actions">
+        <button type="button" class="pin-btn pin-btn--outline" onclick="window.history.back()">Cancel</button>
+        <button type="submit" class="pin-btn pin-btn--primary">
+          <span class="material-symbols-outlined">check</span>
+          {% if has_pin %}Save PIN{% else %}Set PIN{% endif %}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  {% if not has_pin %}
+  <section class="pin-card pin-card--soft" aria-labelledby="pin-howto-heading">
+    <h2 id="pin-howto-heading" class="pin-card__title">How to use it</h2>
+    <ol class="pin-steps">
+      <li>Choose a 4-digit PIN above</li>
+      <li>On the login page, open the PIN tab</li>
+      <li>Sign in with your email and PIN</li>
+      <li>Password login still works anytime</li>
+    </ol>
+  </section>
+  {% endif %}
+
+  <section class="pin-card pin-card--soft" aria-labelledby="pin-tips-heading">
+    <h2 id="pin-tips-heading" class="pin-card__title">
+      <span class="material-symbols-outlined pin-card__icon">shield</span>
+      Security tips
+    </h2>
+    <ul class="pin-tips">
+      <li>Avoid obvious codes like 1234, 0000, or your birth year</li>
+      <li>Don’t share your PIN with anyone</li>
+      <li>Forgotten PINs can’t be recovered — use password login, then set a new one</li>
+    </ul>
+  </section>
 </div>
 {% endblock %}
