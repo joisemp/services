@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = e.target.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Posting...';
+                submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span> Posting…';
             }
         }
     });
@@ -46,7 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = e.target.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i><span class="d-none d-sm-inline">Post Comment</span><span class="d-inline d-sm-none">Post</span>';
+                submitBtn.innerHTML = submitBtn.dataset.originalHtml
+                    || '<span class="material-symbols-outlined">send</span> Post';
             }
         }
     });
