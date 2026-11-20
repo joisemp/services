@@ -473,6 +473,29 @@ class TicketUpdateForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Ticket
         fields = ['title', 'description', 'status', 'priority']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'tue-input',
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 5,
+                'class': 'tue-textarea',
+            }),
+            'status': forms.Select(attrs={
+                'class': 'tue-select',
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'tue-select',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ticket-update classes (+ Bootstrap for shared other-role templates)
+        self.fields['title'].widget.attrs['class'] = 'form-control tue-input'
+        self.fields['description'].widget.attrs['class'] = 'form-control tue-textarea'
+        self.fields['status'].widget.attrs['class'] = 'form-control form-select tue-select'
+        self.fields['priority'].widget.attrs['class'] = 'form-control form-select tue-select'
 
 
 class TicketAssignmentForm(BootstrapFormMixin, forms.ModelForm):
