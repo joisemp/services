@@ -288,15 +288,15 @@ class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
     """Form for completing work tasks - resolution notes and images"""
     # Add image fields for up to 3 images
     image1 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
-        'class': 'form-control',
+        'id': 'id_image1',
         'accept': 'image/*'
     }))
     image2 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
-        'class': 'form-control',
+        'id': 'id_image2',
         'accept': 'image/*'
     }))
     image3 = forms.ImageField(required=False, widget=forms.FileInput(attrs={
-        'class': 'form-control',
+        'id': 'id_image3',
         'accept': 'image/*'
     }))
     
@@ -307,7 +307,7 @@ class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
             'resolution_notes': forms.Textarea(attrs={
                 'rows': 4,
                 'placeholder': 'Describe how this task was completed...',
-                'class': 'form-control'
+                'class': 'wtd-textarea'
             })
         }
     
@@ -317,6 +317,12 @@ class WorkTaskCompleteForm(BootstrapFormMixin, forms.ModelForm):
         # Make resolution_notes required for completion
         self.fields['resolution_notes'].required = True
         self.fields['resolution_notes'].help_text = "Please provide details about how the task was completed"
+
+        # Work-task-complete classes (+ Bootstrap for shared other-role templates)
+        self.fields['resolution_notes'].widget.attrs['class'] = 'form-control wtd-textarea'
+        for field_name in ('image1', 'image2', 'image3'):
+            self.fields[field_name].widget.attrs['class'] = ''
+            self.fields[field_name].widget.attrs['accept'] = 'image/*'
 
 
 class TicketResolveForm(BootstrapFormMixin, forms.ModelForm):

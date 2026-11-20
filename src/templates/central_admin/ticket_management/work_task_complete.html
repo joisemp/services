@@ -1,142 +1,118 @@
-{% extends "sidebar_base.html" %}
+{% extends 'sidebar_base.html' %}
 {% load static %}
 
-{% block title %}Complete Work Task{% endblock %}
+{% block title %}Complete work task — {{ work_task.title }}{% endblock %}
 
 {% block styles %}
-<link href="{% static 'styles/ticket_management/forms/style.css' %}" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_complete/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">Complete Work Task</h1>
-                    <p class="text-muted">{{ work_task.title }}</p>
-                </div>
-                <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}" 
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Ticket
-                </a>
-            </div>
+{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
 
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-check-circle me-2"></i>Mark Task as Complete
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Please provide details about how this task was completed. You can also attach up to 3 images showing the completed work (optional).
-                            </div>
+<div class="wtd-page">
+  <a href="{{ detail_url }}" class="wtd-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
 
-                            <form method="post" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                
-                                <div class="mb-3">
-                                    <label for="{{ form.resolution_notes.id_for_label }}" class="form-label">Resolution Notes</label>
-                                    {{ form.resolution_notes }}
-                                    {% if form.resolution_notes.errors %}
-                                        <div class="text-danger">{{ form.resolution_notes.errors }}</div>
-                                    {% endif %}
-                                    {% if form.resolution_notes.help_text %}
-                                        <small class="form-text text-muted">{{ form.resolution_notes.help_text }}</small>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-3 image-upload-section">
-                                    <label class="form-label">
-                                        <i class="fas fa-image me-1"></i>
-                                        Attach Resolution Images (Optional - Max 3)
-                                    </label>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <label for="{{ form.image1.id_for_label }}" class="form-label">Image 1</label>
-                                            {{ form.image1 }}
-                                            {% if form.image1.errors %}
-                                                <div class="text-danger">{{ form.image1.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="{{ form.image2.id_for_label }}" class="form-label">Image 2</label>
-                                            {{ form.image2 }}
-                                            {% if form.image2.errors %}
-                                                <div class="text-danger">{{ form.image2.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="{{ form.image3.id_for_label }}" class="form-label">Image 3</label>
-                                            {{ form.image3 }}
-                                            {% if form.image3.errors %}
-                                                <div class="text-danger">{{ form.image3.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <small class="form-text text-muted">You can upload up to 3 images. Supported formats: JPG, PNG, GIF. Max size: 10MB per image.</small>
-                                </div>
-                                
-                                <div class="d-flex gap-2 mt-4">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-check me-2"></i>Complete Task
-                                    </button>
-                                    <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}" 
-                                       class="btn btn-secondary">
-                                        Cancel
-                                    </a>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">Task Details</h6>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row">
-                                <dt class="col-sm-5">Title:</dt>
-                                <dd class="col-sm-7">{{ work_task.title }}</dd>
-                                
-                                <dt class="col-sm-5">Ticket:</dt>
-                                <dd class="col-sm-7">
-                                    <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}">
-                                        {{ ticket.title }}
-                                    </a>
-                                </dd>
-                                
-                                <dt class="col-sm-5">Assigned to:</dt>
-                                <dd class="col-sm-7">{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to }}</dd>
-                                
-                                {% if work_task.due_date %}
-                                <dt class="col-sm-5">Due Date:</dt>
-                                <dd class="col-sm-7">{{ work_task.due_date|date:"M d, Y H:i" }}</dd>
-                                {% endif %}
-                                
-                                <dt class="col-sm-5">Created:</dt>
-                                <dd class="col-sm-7">{{ work_task.created_at|date:"M d, Y H:i" }}</dd>
-                            </dl>
-                            
-                            {% if work_task.description %}
-                            <div class="mt-3">
-                                <h6>Description:</h6>
-                                <p class="text-muted small">{{ work_task.description }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <header class="wtd-identity">
+    <h1 class="wtd-identity__name">{{ work_task.title }}</h1>
+    <div class="wtd-identity__pills">
+      <span class="wtd-pill wtd-pill--id">{{ ticket.ticket_id }}</span>
+      {% if work_task.completed %}
+      <span class="wtd-pill wtd-pill--done">Done</span>
+      {% else %}
+      <span class="wtd-pill wtd-pill--pending">Pending</span>
+      {% endif %}
     </div>
+    <p class="wtd-identity__meta">
+      Ticket: {{ ticket.title }}
+      · Assigned to <strong>{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to }}</strong>
+      {% if work_task.due_date %}
+      · Due {{ work_task.due_date|date:"M d, Y" }}
+      {% endif %}
+    </p>
+    {% if work_task.description %}
+    <p class="wtd-identity__desc">{{ work_task.description }}</p>
+    {% endif %}
+  </header>
+
+  <section class="wtd-card" aria-labelledby="wtd-form-heading">
+    <header class="wtd-card__head">
+      <h2 id="wtd-form-heading" class="wtd-card__title">Mark task complete</h2>
+      <p class="wtd-card__desc">Add resolution notes and optional photos of the completed work.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="wtd-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="wtd-form">
+      {% csrf_token %}
+
+      <div class="wtd-field">
+        <label for="{{ form.resolution_notes.id_for_label }}" class="wtd-label">
+          Resolution notes <span class="wtd-req">*</span>
+        </label>
+        {{ form.resolution_notes }}
+        {% if form.resolution_notes.help_text %}
+        <p class="wtd-help">{{ form.resolution_notes.help_text }}</p>
+        {% endif %}
+        {% if form.resolution_notes.errors %}
+        <div class="wtd-error">
+          {% for error in form.resolution_notes.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtd-field">
+        <span class="wtd-label">Images <span class="wtd-opt">(optional, max 3)</span></span>
+        <div class="wtd-file-grid">
+          <div class="tf-media-slot">
+            {{ form.image1 }}
+          </div>
+          <div class="tf-media-slot">
+            {{ form.image2 }}
+          </div>
+          <div class="tf-media-slot">
+            {{ form.image3 }}
+          </div>
+        </div>
+        {% if form.image1.errors or form.image2.errors or form.image3.errors %}
+        <div class="wtd-error">
+          {% for error in form.image1.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          {% for error in form.image2.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          {% for error in form.image3.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtd-actions">
+        <a href="{{ detail_url }}" class="wtd-btn wtd-btn--outline">Cancel</a>
+        <button type="submit" class="wtd-btn wtd-btn--primary">
+          <span class="material-symbols-outlined">check_circle</span>
+          Complete task
+        </button>
+      </div>
+    </form>
+  </section>
 </div>
 {% endblock %}
 
