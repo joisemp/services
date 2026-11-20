@@ -72,6 +72,44 @@ $font:   'Inter', ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
 }
 
+.space-form-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.5rem;
+  margin: 0.9rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid $border;
+}
+
+.space-form-meta__item {
+  min-width: 0;
+
+  dt {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9ca3af;
+  }
+
+  dd {
+    margin: 0.2rem 0 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: $text;
+
+    code {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #4b5563;
+      background: #f3f4f6;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+    }
+  }
+}
+
 // ─── Form fields ──────────────────────────────────────────────────────────────
 .space-form {
   display: flex;
