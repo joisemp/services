@@ -95,9 +95,8 @@
     {% endif %}
   </header>
 
-  {% if ticket.assigned_to or ticket.status == 'resolved' and ticket.resolution_notes %}
-  <section class="td-context" aria-label="Status">
-    {% if ticket.assigned_to %}
+  {% if ticket.assigned_to %}
+  <section class="td-context" aria-label="Assignment">
     <p class="td-context__line">
       <span class="td-context__key">Assigned</span>
       {{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}
@@ -105,13 +104,19 @@
       {% if ticket.requires_review %} · <span class="td-pill td-pill--prio-high">Review required</span>{% endif %}
       <a href="{% url 'ticket_management:central_admin:ticket_assign' ticket_slug=ticket.slug %}" class="td-text-link">Reassign</a>
     </p>
-    {% endif %}
-    {% if ticket.status == 'resolved' and ticket.resolution_notes %}
-    <p class="td-context__line">
-      <span class="td-context__key td-context__key--done">Resolved</span>
-      {{ ticket.resolution_notes|truncatewords:36 }}
-      <span class="td-context__when">{{ ticket.updated_at|date:"M d, Y" }}</span>
-    </p>
+  </section>
+  {% endif %}
+
+  {% if ticket.status == 'resolved' and ticket.resolution_notes %}
+  <section class="td-resolution" aria-labelledby="td-resolution-heading">
+    <header class="td-resolution__head">
+      <h2 id="td-resolution-heading" class="td-resolution__title">
+        <span class="material-symbols-outlined">check_circle</span>
+        Resolution notes
+      </h2>
+      <span class="td-resolution__when">{{ ticket.updated_at|date:"M d, Y" }}</span>
+    </header>
+    <p class="td-resolution__body">{{ ticket.resolution_notes|linebreaksbr }}</p>
     {% if ticket.resolution_images.all %}
     <div class="td-thumbs td-thumbs--sm">
       {% for res_image in ticket.resolution_images.all %}
@@ -120,7 +125,6 @@
       </a>
       {% endfor %}
     </div>
-    {% endif %}
     {% endif %}
   </section>
   {% endif %}
