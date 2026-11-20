@@ -466,10 +466,10 @@ class TicketAssignmentForm(BootstrapFormMixin, forms.ModelForm):
         fields = ['assigned_to', 'requires_review']
         widgets = {
             'assigned_to': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'ta-select'
             }),
             'requires_review': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'ta-check__input'
             })
         }
     
@@ -493,6 +493,10 @@ class TicketAssignmentForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['assigned_to'].required = True
         self.fields['requires_review'].label = "Requires Review"
         self.fields['requires_review'].help_text = "Check this if the ticket requires review before being marked as resolved"
+
+        # Prefer assign-page classes over BootstrapFormMixin defaults
+        self.fields['assigned_to'].widget.attrs['class'] = 'ta-select'
+        self.fields['requires_review'].widget.attrs['class'] = 'ta-check__input'
     
     def clean_assigned_to(self):
         """Validate that assigned user is a supervisor"""
