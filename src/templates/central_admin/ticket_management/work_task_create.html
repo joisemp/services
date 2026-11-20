@@ -1,10 +1,13 @@
 {% extends 'sidebar_base.html' %}
 {% load static %}
 
-{% block title %}Create Work Task - {{ ticket.title }}{% endblock title %}
+{% block title %}Create work task — {{ ticket.title }}{% endblock title %}
 
 {% block styles %}
-<link href="{% static 'styles/ticket_management/forms/style.css' %}" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_create/style.css' %}">
 {% endblock styles %}
 
 {% block navbar %}
@@ -16,54 +19,114 @@
 {% endblock sidebar %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="row gy-4">
-                <div class="col-12">
-                    <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}"
-                        class="btn btn-dark btn-sm">
-                        <i class="fas fa-arrow-left"></i> Back to Ticket
-                    </a>
-                </div>
-                <div class="col-12">
-                    <div class="alert alert-primary" role="alert">
-                        Create a work task for the ticket <strong>{{ ticket.title }}</strong>
-                    </div>
-                </div>
-            </div>
+{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
 
-            <!-- Form -->
-            <div class="row">
-                <div class="col-lg-12">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
+<div class="wtc-page">
+  <a href="{{ detail_url }}" class="wtc-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
 
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ form.non_field_errors }}
-                        </div>
-                        {% endif %}
-
-                        {{ form.as_p | safe }}
-
-                        <div class="row mt-4">
-                            <div class="col">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Create Work Task
-                                </button>
-                                <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}"
-                                    class="btn btn-outline-secondary ms-2">
-                                    Cancel
-                                </a>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-            </div>
-        </div>
+  <header class="wtc-identity">
+    <h1 class="wtc-identity__name">{{ ticket.title }}</h1>
+    <div class="wtc-identity__pills">
+      <span class="wtc-pill wtc-pill--id">{{ ticket.ticket_id }}</span>
+      <span class="wtc-pill wtc-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+      <span class="wtc-pill wtc-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
     </div>
+    <p class="wtc-identity__meta">
+      Add a work task for this ticket
+      {% if ticket.assigned_to %}
+      · Assigned to <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+      {% endif %}
+    </p>
+  </header>
+
+  <section class="wtc-card" aria-labelledby="wtc-form-heading">
+    <header class="wtc-card__head">
+      <h2 id="wtc-form-heading" class="wtc-card__title">Create work task</h2>
+      <p class="wtc-card__desc">Define the task, who should do it, and an optional due date.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="wtc-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="wtc-form">
+      {% csrf_token %}
+
+      <div class="wtc-field">
+        <label for="{{ form.title.id_for_label }}" class="wtc-label">
+          Title <span class="wtc-req">*</span>
+        </label>
+        {{ form.title }}
+        {% if form.title.help_text %}
+        <p class="wtc-help">{{ form.title.help_text }}</p>
+        {% endif %}
+        {% if form.title.errors %}
+        <div class="wtc-error">
+          {% for error in form.title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtc-field">
+        <label for="{{ form.description.id_for_label }}" class="wtc-label">
+          Description{% if form.description.field.required %} <span class="wtc-req">*</span>{% endif %}
+        </label>
+        {{ form.description }}
+        {% if form.description.help_text %}
+        <p class="wtc-help">{{ form.description.help_text }}</p>
+        {% endif %}
+        {% if form.description.errors %}
+        <div class="wtc-error">
+          {% for error in form.description.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtc-field">
+        <label for="{{ form.assigned_to.id_for_label }}" class="wtc-label">
+          Assign to{% if form.assigned_to.field.required %} <span class="wtc-req">*</span>{% endif %}
+        </label>
+        {{ form.assigned_to }}
+        {% if form.assigned_to.help_text %}
+        <p class="wtc-help">{{ form.assigned_to.help_text }}</p>
+        {% endif %}
+        {% if form.assigned_to.errors %}
+        <div class="wtc-error">
+          {% for error in form.assigned_to.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtc-field">
+        <label for="{{ form.due_date.id_for_label }}" class="wtc-label">
+          Due date <span class="wtc-opt">(optional)</span>
+        </label>
+        {{ form.due_date }}
+        {% if form.due_date.help_text %}
+        <p class="wtc-help">{{ form.due_date.help_text }}</p>
+        {% endif %}
+        {% if form.due_date.errors %}
+        <div class="wtc-error">
+          {% for error in form.due_date.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtc-actions">
+        <a href="{{ detail_url }}" class="wtc-btn wtc-btn--outline">Cancel</a>
+        <button type="submit" class="wtc-btn wtc-btn--primary">
+          <span class="material-symbols-outlined">add_task</span>
+          Create work task
+        </button>
+      </div>
+    </form>
+  </section>
 </div>
 {% endblock content %}

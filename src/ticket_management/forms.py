@@ -120,16 +120,21 @@ class WorkTaskForm(BootstrapFormMixin, forms.ModelForm):
         model = WorkTask
         fields = ['title', 'description', 'assigned_to', 'due_date']
         widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'wtc-input',
+                'placeholder': 'e.g. Replace AC filter'
+            }),
             'description': forms.Textarea(attrs={
                 'rows': 4,
+                'class': 'wtc-textarea',
                 'placeholder': 'Describe the work task...'
             }),
             'due_date': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control'
+                'class': 'wtc-input'
             }),
             'assigned_to': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'wtc-select'
             })
         }
     
@@ -153,6 +158,12 @@ class WorkTaskForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['assigned_to'].label = "Assign to"
         self.fields['assigned_to'].help_text = "Tasks can only be assigned to supervisors or maintainers"
         self.fields['due_date'].help_text = "When should this task be completed?"
+
+        # Work-task-create classes (+ Bootstrap for shared other-role templates)
+        self.fields['title'].widget.attrs['class'] = 'form-control wtc-input'
+        self.fields['description'].widget.attrs['class'] = 'form-control wtc-textarea'
+        self.fields['due_date'].widget.attrs['class'] = 'form-control wtc-input'
+        self.fields['assigned_to'].widget.attrs['class'] = 'form-control form-select wtc-select'
     
     def clean_assigned_to(self):
         """Validate that the assigned user is a supervisor or maintainer from the same organization"""
