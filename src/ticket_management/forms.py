@@ -558,20 +558,25 @@ class SiteVisitForm(BootstrapFormMixin, forms.ModelForm):
         model = SiteVisit
         fields = ['title', 'description', 'location', 'assigned_to', 'scheduled_date']
         widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'svc-input',
+                'placeholder': 'e.g. Inspect AC unit on Floor 2'
+            }),
             'description': forms.Textarea(attrs={
                 'rows': 4,
+                'class': 'svc-textarea',
                 'placeholder': 'Describe what needs to be done during this visit...'
             }),
             'location': forms.TextInput(attrs={
                 'placeholder': 'Enter the address or location for the site visit...',
-                'class': 'form-control'
+                'class': 'svc-input'
             }),
             'scheduled_date': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control'
+                'class': 'svc-input'
             }),
             'assigned_to': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'svc-select'
             })
         }
     
@@ -594,6 +599,13 @@ class SiteVisitForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['assigned_to'].label = "Assign to"
         self.fields['assigned_to'].help_text = "Site visits can be assigned to supervisors or maintainers"
         self.fields['scheduled_date'].help_text = "When should this site visit occur?"
+
+        # Site-visit-create classes (+ Bootstrap for shared update/other-role templates)
+        self.fields['title'].widget.attrs['class'] = 'form-control svc-input'
+        self.fields['description'].widget.attrs['class'] = 'form-control svc-textarea'
+        self.fields['location'].widget.attrs['class'] = 'form-control svc-input'
+        self.fields['scheduled_date'].widget.attrs['class'] = 'form-control svc-input'
+        self.fields['assigned_to'].widget.attrs['class'] = 'form-control form-select svc-select'
     
     def clean_assigned_to(self):
         """Validate that the assigned user is a supervisor or maintainer from the same organization"""
