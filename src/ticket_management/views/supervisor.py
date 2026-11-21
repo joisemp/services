@@ -51,12 +51,13 @@ class WorkTaskDetailView(SupervisorOnlyAccessMixin, DetailView):
     
     def get_queryset(self):
         return WorkTask.objects.filter(assigned_to=self.request.user).select_related(
-            'ticket', 
-            'ticket__org', 
+            'ticket',
+            'ticket__org',
             'ticket__space',
-            'ticket__reporter'
-        ).prefetch_related('ticket__images')
-    
+            'ticket__reporter',
+            'assigned_to',
+        ).prefetch_related('ticket__images', 'resolution_images')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['ticket'] = self.object.ticket
