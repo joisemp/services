@@ -441,6 +441,27 @@ class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin
     def get_ticket_detail_route_name(self):
         return 'ticket_management:space_admin:ticket_detail'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['quick_links'] = [
+            {
+                'label': 'Tickets',
+                'url': reverse('ticket_management:space_admin:ticket_list'),
+                'icon': 'confirmation_number',
+            },
+            {
+                'label': 'Site visits',
+                'url': reverse('ticket_management:space_admin:site_visit_list'),
+                'icon': 'location_on',
+            },
+            {
+                'label': 'Switch space',
+                'url': reverse('core:switch_space'),
+                'icon': 'swap_horiz',
+            },
+        ]
+        return context
+
 
 class TransportInchargeDashboardView(TransportInchargeOnlyAccessMixin, TemplateView):
     template_name = 'transport_incharge/dashboard.html'
