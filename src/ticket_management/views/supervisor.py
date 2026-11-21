@@ -9,6 +9,7 @@ from .. models import Ticket, WorkTask, SiteVisit, SiteVisitImage, TicketImage
 from django.shortcuts import redirect
 from config.mixins.access_mixin import SupervisorOnlyAccessMixin
 from core.models import Space
+from ..utils.ticket_filters import apply_ticket_list_filters, annotate_and_order
 
 
 class WorkTaskListView(SupervisorOnlyAccessMixin, ListView):
@@ -68,55 +69,23 @@ class SupervisorTicketListView(SupervisorOnlyAccessMixin, ListView):
     context_object_name = "tickets"
 
     def get_queryset(self):
-        # Start with issues assigned to the supervisor
-        queryset = Ticket.objects.filter(assigned_to=self.request.user)
-        
-        # Filter by status if provided
-        status_filter = self.request.GET.get('status')
-        if status_filter and status_filter in ['open', 'assigned', 'in_progress', 'critical']:
-            if status_filter == 'critical':
-                queryset = queryset.filter(priority='critical')
-            else:
-                queryset = queryset.filter(status=status_filter)
-        
-        # Filter by space if provided
-        space_filter = self.request.GET.get('space')
-        if space_filter:
-            if space_filter == 'no_space':
-                # Filter issues with no space assigned
-                queryset = queryset.filter(space__isnull=True)
-            else:
-                # Filter by specific space slug
-                queryset = queryset.filter(space__slug=space_filter)
-        
-        # Order by status (open/assigned/in_progress first), then priority (critical first, low last), then creation date
-        return queryset.annotate(
-            status_order=Case(
-                When(status='open', then=1),
-                When(status='assigned', then=2),
-                When(status='in_progress', then=3),
-                When(status='resolved', then=4),
-                When(status='escalated', then=5),
-                When(status='closed', then=6),
-                When(status='cancelled', then=7),
-                default=8,
-                output_field=IntegerField(),
-            ),
-            priority_order=Case(
-                When(priority='critical', then=1),
-                When(priority='high', then=2),
-                When(priority='medium', then=3),
-                When(priority='low', then=4),
-                default=5,
-                output_field=IntegerField(),
-            )
-        ).order_by('status_order', 'priority_order', '-created_at')
-    
+        queryset = Ticket.objects.filter(assigned_to=self.request.user).select_related(
+            'org', 'space', 'reporter', 'assigned_to'
+        ).prefetch_related('images')
+
+        queryset = apply_ticket_list_filters(
+            queryset,
+            status_filter=self.request.GET.get('status'),
+            space_filter=self.request.GET.get('space'),
+            search_query=self.request.GET.get('q'),
+        )
+        return annotate_and_order(queryset)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_filter'] = self.request.GET.get('status', 'all')
         context['space_filter'] = self.request.GET.get('space', '')
-        # Get all spaces in the supervisor's organization
+        context['search_query'] = self.request.GET.get('q', '').strip()
         if self.request.user.organization:
             context['spaces'] = Space.objects.filter(
                 org=self.request.user.organization
