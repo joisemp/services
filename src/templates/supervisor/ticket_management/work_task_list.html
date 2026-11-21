@@ -1,13 +1,13 @@
 {% extends 'sidebar_base.html' %}
-
 {% load static %}
 
-{% block title %}My Tasks{% endblock %}
+{% block title %}Tasks{% endblock %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_list/style.css' %}">
-<link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 {% endblock %}
 
 {% block navbar %}
@@ -19,100 +19,96 @@
 {% endblock %}
 
 {% block content %}
-<section id="alert">
-  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
-    <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h3 class="mb-1">My Work Tasks</h3>
-      <span class="alert-text text-body-secondary">View and manage all work tasks assigned to you.</span>
+{% url 'ticket_management:supervisor:work_task_list' as list_url %}
+{% with status=request.GET.status %}
+
+<div class="wtl-page">
+  <header class="wtl-header">
+    <div class="wtl-header__text">
+      <h1 class="wtl-header__title">Tasks</h1>
+      <p class="wtl-header__sub">View and manage work tasks assigned to you</p>
     </div>
-    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
-      <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="btn btn-primary d-flex w-100 w-md-auto">
-        <span class="material-symbols-outlined">view_list</span>
-        <span class="ms-2">View Tickets</span>
+    <div class="wtl-header__actions">
+      <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="wtl-btn wtl-btn--outline">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
       </a>
     </div>
-  </div>
-</section>
+  </header>
 
-<section id="options-bar">
-  <div class="container-nav">
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link {% if not request.GET.status %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:work_task_list' %}">All</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.GET.status == 'pending' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:work_task_list' %}?status=pending">Pending</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.GET.status == 'completed' %}nav-active{% endif %}" href="{% url 'ticket_management:supervisor:work_task_list' %}?status=completed">Completed</a>
-      </li>
-    </ul>
-  </div>
-</section>
+  <section class="wtl-filters" aria-label="Status filters">
+    <div class="wtl-filter-track">
+      <ul class="wtl-filter-tabs">
+        <li>
+          <a class="wtl-filter-tab{% if not status %} is-active{% endif %}" href="{{ list_url }}">All</a>
+        </li>
+        <li>
+          <a class="wtl-filter-tab{% if status == 'pending' %} is-active{% endif %}" href="{{ list_url }}?status=pending">Pending</a>
+        </li>
+        <li>
+          <a class="wtl-filter-tab{% if status == 'completed' %} is-active{% endif %}" href="{{ list_url }}?status=completed">Completed</a>
+        </li>
+      </ul>
+    </div>
+  </section>
 
-<section id="task-list">
-  <div class="container-fluid mt-3">
+  <section class="wtl-results" aria-label="Task results">
     {% if work_tasks %}
-      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
-        {% for task in work_tasks %}
-        <div class="col mt-2">
-          <a href="{% url 'ticket_management:supervisor:work_task_detail' work_task_slug=task.slug %}" class="text-decoration-none card-link-wrapper">
-            <div class="card h-100 {% if task.completed %}task-completed{% endif %}">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h5 class="card-title flex-grow-1">{{ task.title }}</h5>
-                  {% if task.completed %}
-                    <span class="badge bg-success rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">check_circle</span>
-                      Completed
-                    </span>
-                  {% else %}
-                    <span class="badge bg-warning rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">schedule</span>
-                      Pending
-                    </span>
-                  {% endif %}
-                </div>
-                <p class="card-text text-body-secondary task-description">{{ task.description|truncatewords:20 }}</p>
-                <hr>
-                <div class="task-meta">
-                  <div class="d-flex justify-content-between mt-3">
-                    <h6 class="card-subtitle text-body-secondary">
-                      <span class="material-symbols-outlined icon-small">calendar_today</span>
-                      Created: {{ task.created_at|date:"M d, Y" }}
-                    </h6>
-                  </div>
-                  {% if task.due_date %}
-                  <div class="d-flex justify-content-between mt-2">
-                    <h6 class="card-subtitle text-body-secondary">
-                      <span class="material-symbols-outlined icon-small">event</span>
-                      Due: {{ task.due_date|date:"M d, Y" }}
-                    </h6>
-                  </div>
-                  {% endif %}
-                  <div class="d-flex justify-content-between mt-3 pt-2 border-top">
-                    <div class="ticket-info">
-                      <h6 class="mb-1 fw-bold">Related Ticket</h6>
-                      <h6 class="text-body-secondary mb-0">{{ task.ticket.title|truncatewords:8 }}</h6>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a>
+    <div class="wtl-list">
+      {% for task in work_tasks %}
+      <a href="{% url 'ticket_management:supervisor:work_task_detail' work_task_slug=task.slug %}"
+         class="wtl-item{% if task.completed %} wtl-item--done{% endif %}">
+        <div class="wtl-item__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">{% if task.completed %}check{% else %}checklist{% endif %}</span>
         </div>
-        {% endfor %}
-      </div>
+        <div class="wtl-item__body">
+          <span class="wtl-item__name">{{ task.title }}</span>
+          <span class="wtl-item__meta">
+            {% if task.due_date %}
+              Due {{ task.due_date|date:"M d, Y" }}
+            {% else %}
+              Created {{ task.created_at|date:"M d, Y" }}
+            {% endif %}
+            {% if task.ticket.space %}
+              · {{ task.ticket.space.name }}
+            {% endif %}
+          </span>
+          <span class="wtl-item__ticket">
+            {{ task.ticket.ticket_id }}
+            · {{ task.ticket.title|truncatechars:48 }}
+          </span>
+        </div>
+        <div class="wtl-item__pills">
+          {% if task.completed %}
+          <span class="wtl-pill wtl-pill--completed">Completed</span>
+          {% else %}
+          <span class="wtl-pill wtl-pill--pending">Pending</span>
+          {% endif %}
+          <span class="wtl-pill wtl-pill--prio-{{ task.ticket.priority }}">{{ task.ticket.get_priority_display }}</span>
+        </div>
+        <span class="material-symbols-outlined wtl-item__chevron">chevron_right</span>
+      </a>
+      {% endfor %}
+    </div>
     {% else %}
-      <div class="empty-state text-center py-5">
-        <span class="material-symbols-outlined empty-icon">task_alt</span>
-        <h4 class="mt-3">No Work Tasks Found</h4>
-        <p class="text-body-secondary">You don't have any work tasks assigned to you yet.</p>
-        <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="btn btn-primary mt-3">
-          View Tickets
-        </a>
-      </div>
+    <div class="wtl-empty">
+      <span class="material-symbols-outlined wtl-empty__icon">task_alt</span>
+      {% if status %}
+      <h2 class="wtl-empty__title">No matching tasks</h2>
+      <p class="wtl-empty__sub">Try a different status filter, or open tickets to create work tasks.</p>
+      <a href="{{ list_url }}" class="wtl-btn wtl-btn--outline">Clear filter</a>
+      {% else %}
+      <h2 class="wtl-empty__title">No tasks assigned</h2>
+      <p class="wtl-empty__sub">Work tasks assigned to you will show up here.</p>
+      <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="wtl-btn wtl-btn--primary">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+      {% endif %}
+    </div>
     {% endif %}
-  </div>
-</section>
+  </section>
+</div>
+
+{% endwith %}
 {% endblock %}
