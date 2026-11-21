@@ -1043,6 +1043,12 @@ class SiteVisitDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
         
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ticket'] = self.object.ticket
+        return context
+
+
 
 class PurchaseRequestCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
     """Create a purchase request for a ticket"""
