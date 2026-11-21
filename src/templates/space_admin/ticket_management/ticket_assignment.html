@@ -1,10 +1,13 @@
 {% extends 'sidebar_base.html' %}
 {% load static %}
 
-{% block title %}Assign Ticket - {{ ticket.title }}{% endblock %}
+{% block title %}{% if ticket.assigned_to %}Reassign{% else %}Assign{% endif %} — {{ ticket.title }}{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'styles/ticket_management/forms/style.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_assignment/style.css' %}">
 {% endblock %}
 
 {% block navbar %}
@@ -16,54 +19,97 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
 
-            <h3 class="mb-3">Assign Ticket - {{ ticket.title }}</h3>
+<div class="ta-page">
+  <a href="{{ detail_url }}" class="ta-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
 
-            <form method="post" novalidate>
-                {% csrf_token %}
-
-                <!-- Current Assignment Status -->
-                {% if ticket.assigned_to %}
-                <div class="alert alert-info mb-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Current Assignment:</strong>
-                    This ticket is currently assigned to
-                    <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
-                    {% if ticket.assigned_at %}on {{ ticket.assigned_at|date:"M d, Y \a\t g:i A" }}{% endif %}
-                    {% if ticket.requires_review %}
-                    <br><small class="text-muted">
-                        <i class="fas fa-eye me-1"></i>Review is required for this ticket
-                    </small>
-                    {% endif %}
-                </div>
-                {% endif %}
-
-                {{ form.as_p|safe }}
-                
-                <!-- Info message for review requirement -->
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    If you check "Requires Review", you will be redirected to select reviewers in the next step.
-                </div>
-
-                <!-- Form Actions -->
-                <hr>
-
-                <a href="{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug %}"
-                    class="btn btn-dark">
-                    <i class="fas fa-times me-1"></i>Cancel
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-check me-1"></i>
-                    {% if ticket.assigned_to %}Update Assignment{% else %}Assign Ticket{% endif %}
-                </button>
-
-            </form>
-
-        </div>
+  <header class="ta-identity">
+    <div class="ta-identity__mark" aria-hidden="true">
+      <span class="material-symbols-outlined">confirmation_number</span>
     </div>
+    <div class="ta-identity__body">
+      <h1 class="ta-identity__name">{{ ticket.title }}</h1>
+      <div class="ta-identity__pills">
+        <span class="ta-pill ta-pill--id">{{ ticket.ticket_id }}</span>
+        <span class="ta-pill ta-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+        <span class="ta-pill ta-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+      </div>
+      <p class="ta-identity__meta">
+        {% if ticket.assigned_to %}
+        Currently assigned to
+        <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+        {% if ticket.assigned_at %} · {{ ticket.assigned_at|date:"M d, Y" }}{% endif %}
+        {% if ticket.requires_review %} · Review required{% endif %}
+        {% else %}
+        Currently unassigned
+        {% endif %}
+      </p>
+    </div>
+  </header>
+
+  <section class="ta-card" aria-labelledby="ta-form-heading">
+    <header class="ta-card__head">
+      <h2 id="ta-form-heading" class="ta-card__title">
+        {% if ticket.assigned_to %}Update assignment{% else %}Assign ticket{% endif %}
+      </h2>
+      <p class="ta-card__desc">Choose a supervisor to handle this ticket. You can also require a review before it is marked resolved.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="ta-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" novalidate class="ta-form">
+      {% csrf_token %}
+
+      <div class="ta-field">
+        <label for="{{ form.assigned_to.id_for_label }}" class="ta-label">
+          Assign to supervisor <span class="ta-req">*</span>
+        </label>
+        {{ form.assigned_to }}
+        {% if form.assigned_to.help_text %}
+        <p class="ta-help">{{ form.assigned_to.help_text }}</p>
+        {% endif %}
+        {% if form.assigned_to.errors %}
+        <div class="ta-error">
+          {% for error in form.assigned_to.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="ta-field">
+        <label class="ta-check">
+          {{ form.requires_review }}
+          <span class="ta-check__body">
+            <span class="ta-check__label">Requires review</span>
+            <span class="ta-check__help">
+              If checked, you will select reviewers in the next step before the assignment is complete.
+            </span>
+          </span>
+        </label>
+        {% if form.requires_review.errors %}
+        <div class="ta-error">
+          {% for error in form.requires_review.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="ta-actions">
+        <a href="{{ detail_url }}" class="ta-btn ta-btn--outline">Cancel</a>
+        <button type="submit" class="ta-btn ta-btn--primary">
+          <span class="material-symbols-outlined">person_add</span>
+          {% if ticket.assigned_to %}Update assignment{% else %}Assign ticket{% endif %}
+        </button>
+      </div>
+    </form>
+  </section>
 </div>
 {% endblock %}
