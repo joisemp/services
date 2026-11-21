@@ -5,6 +5,7 @@ app_name = "space_admin"
 
 urlpatterns = [
     path('', space_admin.TicketListView.as_view(), name='ticket_list'),
+    path('ticket-report/', space_admin.TicketListReportView.as_view(), name='ticket_list_report'),
     path('create/', space_admin.TicketCreateView.as_view(), name='ticket_create'),
     path('site-visits/', space_admin.SiteVisitListView.as_view(), name='site_visit_list'),
     path('<slug:ticket_slug>/edit/', space_admin.TicketUpdateView.as_view(), name='ticket_update'),

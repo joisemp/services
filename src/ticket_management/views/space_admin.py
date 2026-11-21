@@ -1,5 +1,5 @@
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView, View
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.db.models import Case, When, IntegerField
 from ..models import Ticket, TicketImage, WorkTask, TicketComment, SiteVisit, SiteVisitImage, PurchaseRequest, TicketActivity
 from ..forms import TicketForm, SpaceAdminTicketForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, TicketCommentForm, AdditionalImageUploadForm, VoiceUploadForm, TicketUpdateForm, TicketAssignmentForm, SiteVisitForm, PurchaseRequestForm
+from ..utils.ticket_filters import apply_ticket_list_filters, annotate_and_order, describe_filters
+from ..utils.ticket_list_report import build_ticket_list_excel, build_ticket_list_pdf
 from config.mixins.access_mixin import SpaceAdminOnlyAccessMixin, SpaceAdminWithActiveSpaceMixin
 
 class TicketListView(SpaceAdminWithActiveSpaceMixin, ListView):
@@ -15,48 +17,86 @@ class TicketListView(SpaceAdminWithActiveSpaceMixin, ListView):
     model = Ticket
     
     def get_queryset(self):
-        queryset = Ticket.objects.prefetch_related('images').select_related('org', 'space', 'reporter').all()
-        
-        # Filter by active space for space admins
+        queryset = Ticket.objects.prefetch_related('images').select_related(
+            'org', 'space', 'reporter', 'assigned_to'
+        ).all()
+
+        # Always scope to the active space for space admins
         if self.request.user.is_space_admin and self.request.user.active_space:
             queryset = queryset.filter(space=self.request.user.active_space)
-        
-        # Filter by status if provided
-        status_filter = self.request.GET.get('status')
-        if status_filter and status_filter in ['open', 'assigned', 'in_progress', 'critical']:
-            if status_filter == 'critical':
-                queryset = queryset.filter(priority='critical')
-            else:
-                queryset = queryset.filter(status=status_filter)
-        
-        # Order by status groups, then priority, then creation date
-        # Active issues (open/assigned/in_progress) first, then resolved/escalated, then closed/cancelled
-        return queryset.annotate(
-            status_order=Case(
-                When(status='open', then=1),
-                When(status='assigned', then=2),
-                When(status='in_progress', then=3),
-                When(status='resolved', then=4),
-                When(status='escalated', then=5),
-                When(status='closed', then=6),
-                When(status='cancelled', then=7),
-                default=8,
-                output_field=IntegerField(),
-            ),
-            priority_order=Case(
-                When(priority='critical', then=1),
-                When(priority='high', then=2),
-                When(priority='medium', then=3),
-                When(priority='low', then=4),
-                default=5,
-                output_field=IntegerField(),
-            )
-        ).order_by('status_order', 'priority_order', '-created_at')
+        else:
+            return Ticket.objects.none()
+
+        queryset = apply_ticket_list_filters(
+            queryset,
+            status_filter=self.request.GET.get('status'),
+            search_query=self.request.GET.get('q'),
+        )
+        return annotate_and_order(queryset)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_filter'] = self.request.GET.get('status', 'all')
+        context['search_query'] = self.request.GET.get('q', '').strip()
         return context
+
+
+class TicketListReportView(SpaceAdminWithActiveSpaceMixin, View):
+    """Download Excel/PDF ticket list report scoped to the active space."""
+
+    def get(self, request):
+        if not request.user.active_space:
+            messages.error(request, 'Select a space before generating a report.')
+            return redirect('core:switch_space')
+
+        report_format = request.GET.get('format', 'xlsx')
+        queryset = Ticket.objects.select_related(
+            'org', 'space', 'reporter', 'assigned_to'
+        ).prefetch_related('images').filter(space=request.user.active_space)
+
+        status_filter = request.GET.get('status')
+        search_query = request.GET.get('q')
+
+        queryset = apply_ticket_list_filters(
+            queryset,
+            status_filter=status_filter,
+            search_query=search_query,
+        )
+        queryset = annotate_and_order(queryset)
+
+        filter_descriptions = describe_filters(
+            status_filter=status_filter,
+            space_filter=request.user.active_space.slug,
+            search_query=search_query,
+        )
+
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+
+        if report_format == 'pdf':
+            try:
+                buf = build_ticket_list_pdf(queryset, filter_descriptions)
+                response = HttpResponse(buf.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = (
+                    f'attachment; filename="ticket_report_{timestamp}.pdf"'
+                )
+                return response
+            except Exception as e:
+                messages.error(request, f'Failed to generate PDF report: {str(e)}')
+                return redirect('ticket_management:space_admin:ticket_list')
+
+        try:
+            buf = build_ticket_list_excel(queryset, filter_descriptions)
+            response = HttpResponse(
+                buf.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            response['Content-Disposition'] = (
+                f'attachment; filename="ticket_report_{timestamp}.xlsx"'
+            )
+            return response
+        except Exception as e:
+            messages.error(request, f'Failed to generate Excel report: {str(e)}')
+            return redirect('ticket_management:space_admin:ticket_list')
     
 
 class TicketCreateView(SpaceAdminWithActiveSpaceMixin, CreateView):
@@ -133,48 +173,49 @@ class TicketDetailView(SpaceAdminWithActiveSpaceMixin, DetailView):
     
     def get_queryset(self):
         queryset = Ticket.objects.prefetch_related(
-            'images', 
-            'comments', 
+            'images',
+            'comments',
             'work_tasks__assigned_to',
+            'work_tasks__resolution_images',
             'site_visits__created_by',
             'site_visits__assigned_to',
-            'site_visits__images'
-        ).select_related('org', 'space')
-        
-        # Filter by active space for space admins
+            'site_visits__images',
+            'activities__user',
+            'purchase_requests__requested_by',
+            'purchase_requests__reviewed_by',
+        ).select_related(
+            'org', 'space', 'reporter', 'assigned_to', 'assigned_by',
+            'reviewed_by', 'vehicle', 'workshop',
+        )
+
         if self.request.user.is_space_admin and self.request.user.active_space:
             queryset = queryset.filter(space=self.request.user.active_space)
-            
+
         return queryset
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add work tasks to context sorted by completion status, then by ticket priority
-        # Incomplete tasks first, ordered by ticket's priority (critical to low)
-        issue_priority_order = Case(
-            When(ticket__priority='critical', then=1),
-            When(ticket__priority='high', then=2),
-            When(ticket__priority='medium', then=3),
-            When(ticket__priority='low', then=4),
-            default=5,
-            output_field=IntegerField(),
-        )
-        work_tasks = self.object.work_tasks.select_related('ticket').annotate(
-            priority_order=issue_priority_order
+        context['sidebar_template'] = 'space_admin/sidebar.html'
+        context['back_url'] = reverse('ticket_management:space_admin:ticket_list')
+        work_tasks = self.object.work_tasks.select_related('ticket').prefetch_related('resolution_images').all().annotate(
+            priority_order=Case(
+                When(ticket__priority='critical', then=1),
+                When(ticket__priority='high', then=2),
+                When(ticket__priority='medium', then=3),
+                When(ticket__priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
         ).order_by('completed', 'priority_order', 'due_date')
         context['work_tasks'] = work_tasks
-        # Check if there are any incomplete work tasks
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
-        # Add comment form to context
         context['comment_form'] = TicketCommentForm()
-        # Add site visits to context
         site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
         context['site_visits'] = site_visits
-        # Add purchase requests to context
         purchase_requests = self.object.purchase_requests.select_related('requested_by', 'reviewed_by').all()
         context['purchase_requests'] = purchase_requests
-        # Add purchase request form to context
         context['purchase_request_form'] = PurchaseRequestForm()
+        context['activities'] = self.object.activities.select_related('user').all()
         return context
 
 

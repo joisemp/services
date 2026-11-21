@@ -1,115 +1,277 @@
-{% extends 'sidebar_base.html' %}
-
+{% extends "sidebar_base.html" %}
 {% load static %}
 
-{% block title %}Ticket Management{% endblock %}
+{% block title %}Tickets{% endblock title %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_list/style.css' %}">
-<link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-{% endblock %}
+{% endblock styles %}
 
 {% block navbar %}
-{% include 'navbar.html' %}
-{% endblock %}
+{% include "navbar.html" %}
+{% endblock navbar %}
 
 {% block sidebar %}
-{% include 'space_admin/sidebar.html' %}
-{% endblock %}
+{% include "space_admin/sidebar.html" %}
+{% endblock sidebar %}
 
 {% block content %}
-<section id="alert">
-  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
-    <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h3 class="mb-1">Tickets</h3>
-      <span class="alert-text text-body-secondary">View and manage all reported tickets across the platform.</span>
+<div class="ticket-page">
+
+  <header class="ticket-header">
+    <div class="ticket-header__text">
+      <h1 class="ticket-header__title">Tickets</h1>
+      <p class="ticket-header__sub">
+        {% if user.active_space %}
+        View and manage tickets in <strong>{{ user.active_space.name }}</strong>
+        {% else %}
+        Select a space to view tickets
+        {% endif %}
+      </p>
     </div>
-    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
-      <a href="{% url 'ticket_management:space_admin:ticket_create' %}" class="btn btn-primary d-flex w-100 w-md-auto"><span class="material-symbols-outlined">add</span><span class="ms-2">Create Ticket</span></a>
+    <div class="ticket-header__actions">
+      <div class="dropdown">
+        <button class="ticket-btn ticket-btn--outline dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="material-symbols-outlined">download</span>
+          Generate Report
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="reportDropdown">
+          <li>
+            <a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('xlsx'); return false;">
+              <span class="material-symbols-outlined" style="font-size:18px;">table_view</span>
+              Excel (.xlsx)
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('pdf'); return false;">
+              <span class="material-symbols-outlined" style="font-size:18px;">picture_as_pdf</span>
+              PDF
+            </a>
+          </li>
+        </ul>
+      </div>
+      <a href="{% url 'ticket_management:space_admin:ticket_create' %}" class="ticket-btn ticket-btn--primary">
+        <span class="material-symbols-outlined">add</span>
+        Create Ticket
+      </a>
     </div>
+  </header>
+
+  {% if not user.active_space %}
+  <div class="ticket-empty">
+    <span class="material-symbols-outlined ticket-empty__icon">workspaces</span>
+    <h2 class="ticket-empty__title">No active space selected</h2>
+    <p class="ticket-empty__sub">Choose a space to view and manage its tickets.</p>
+    <a href="{% url 'core:switch_space' %}" class="ticket-btn ticket-btn--primary">
+      <span class="material-symbols-outlined">swap_horiz</span>
+      Select space
+    </a>
   </div>
-</section>
-<section id="options-bar">
-  <div class="container-nav">
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'all' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:ticket_list' %}">All</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'open' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:ticket_list' %}?status=open">Open</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'assigned' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:ticket_list' %}?status=assigned">Assigned</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'in_progress' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:ticket_list' %}?status=in_progress">In progress</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'critical' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:ticket_list' %}?status=critical">Critical</a>
-      </li>
-    </ul>
-  </div>
-</section>
-<section id="ticket-list">
-  <div class="container-fluid mt-3">
-    {% if not user.active_space %}
-    <div class="alert alert-info d-flex align-items-center" role="alert">
-      <span class="material-symbols-outlined me-3" style="font-size: 2rem;">info</span>
-      <div>
-        <h5 class="mb-1">No Active Space Selected</h5>
-        <p class="mb-2">You need to select a space to view tickets specific to that space context.</p>
-        <a href="{% url 'core:switch_space' %}" class="btn btn-primary btn-sm">
-          <span class="material-symbols-outlined me-1" style="font-size: 1rem;">workspaces</span>
-          Select Space
-        </a>
+  {% else %}
+
+  <section class="ticket-toolbar">
+    <form method="get" class="ticket-search-form" role="search" aria-label="Ticket search">
+      <span class="material-symbols-outlined ticket-search-form__icon">search</span>
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Search by title, ID or description..."
+        class="ticket-search-form__input"
+      >
+      {% if current_filter and current_filter != 'all' %}
+      <input type="hidden" name="status" value="{{ current_filter }}">
+      {% endif %}
+      <button type="submit" class="ticket-btn ticket-btn--primary ticket-search-form__btn">Search</button>
+    </form>
+
+    <div class="ticket-toolbar__right">
+      <div class="ticket-view-toggle" role="group" aria-label="View mode">
+        <button type="button" class="ticket-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+          <span class="material-symbols-outlined">view_list</span>
+        </button>
+        <button type="button" class="ticket-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+          <span class="material-symbols-outlined">grid_view</span>
+        </button>
       </div>
     </div>
-    {% elif not tickets %}
-    <div class="alert alert-secondary d-flex align-items-center" role="alert">
-      <span class="material-symbols-outlined me-3" style="font-size: 2rem;">task_alt</span>
-      <div>
-        <h5 class="mb-1">No Tickets Found</h5>
-        <p class="mb-2">There are no tickets in the "{{ user.active_space.name }}" space yet.</p>
-        <a href="{% url 'ticket_management:space_admin:ticket_create' %}" class="btn btn-primary btn-sm">
-          <span class="material-symbols-outlined me-1" style="font-size: 1rem;">add</span>
-          Create First Ticket
-        </a>
+  </section>
+
+  <section class="ticket-status-bar" id="options-bar" aria-label="Status filters">
+    <div class="ticket-filter-scroll">
+      <button type="button" class="ticket-filter-scroll__btn" id="ticketScrollLeft" aria-label="Scroll filters left">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <div class="ticket-filter-track" id="ticketFilterContainer">
+        <ul class="ticket-filter-tabs">
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'all' %}is-active{% endif %}"
+               href="?{% if search_query %}q={{ search_query|urlencode }}{% endif %}">
+              All
+            </a>
+          </li>
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'open' %}is-active{% endif %}"
+               href="?status=open{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+              Open
+            </a>
+          </li>
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'assigned' %}is-active{% endif %}"
+               href="?status=assigned{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+              Assigned
+            </a>
+          </li>
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'unassigned' %}is-active{% endif %}"
+               href="?status=unassigned{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+              Unassigned
+            </a>
+          </li>
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'in_progress' %}is-active{% endif %}"
+               href="?status=in_progress{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+              In progress
+            </a>
+          </li>
+          <li>
+            <a class="ticket-filter-tab {% if current_filter == 'critical' %}is-active{% endif %}"
+               href="?status=critical{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+              Critical
+            </a>
+          </li>
+        </ul>
       </div>
+      <button type="button" class="ticket-filter-scroll__btn" id="ticketScrollRight" aria-label="Scroll filters right">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
     </div>
-    {% else %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
+  </section>
+
+  <section id="ticket-results" class="ticket-view ticket-view--list">
+    {% if tickets %}
+    <div class="ticket-results-grid">
       {% for ticket in tickets %}
-      <div class="col mt-2">
-        <a href="{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug %}" class="text-decoration-none card-link-wrapper">
-          <div class="card h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="card-title mb-0">{{ ticket.title }}</h5>
-                <span class="badge rounded-pill border border-dark text-dark ms-2">{{ ticket.ticket_id }}</span>
-              </div>
-              <hr>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-subtitle mb-2 text-body-secondary">{{ ticket.created_at|date:"M d, Y" }}</h6>
-                <span class="badge badge-{{ ticket.priority }} rounded-pill">{{ ticket.get_priority_display }}</span>
-              </div>
-              <div class="d-flex justify-content-between mt-4">
-                <h6 class="card-text me-2">Reporter</h6>
-                <h6 class="card-text ms-2">Status</h6>
-              </div>
-              <div class="d-flex justify-content-between">
-                <h6 class="card-text text-body-secondary me-2">
-                  {{ ticket.reporter.get_full_name|default:ticket.reporter.phone_number|default:ticket.reporter.email|default:"Mello Hello" }}
-                </h6>
-                <span class="badge badge-{{ ticket.status }} rounded-pill d-flex align-items-center">{{ ticket.get_status_display }}</span>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+      <a href="{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug %}" class="ticket-item">
+        <div class="ticket-item__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">confirmation_number</span>
+        </div>
+        <div class="ticket-item__body">
+          <span class="ticket-item__name">{{ ticket.title }}</span>
+          <span class="ticket-item__meta">
+            {{ ticket.ticket_id }}
+            ·
+            {{ ticket.reporter.get_full_name|default:ticket.reporter.get_short_name|default:ticket.reporter.phone_number|default:ticket.reporter.email|default:"Unknown" }}
+            ·
+            {{ ticket.created_at|timesince }} ago
+          </span>
+        </div>
+        <div class="ticket-item__pills">
+          <span class="ticket-pill ticket-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+          <span class="ticket-pill ticket-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+        </div>
+        <span class="material-symbols-outlined ticket-item__chevron">chevron_right</span>
+      </a>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="ticket-empty">
+      <span class="material-symbols-outlined ticket-empty__icon">confirmation_number</span>
+      {% if search_query or current_filter != 'all' %}
+      <h2 class="ticket-empty__title">No matching tickets</h2>
+      <p class="ticket-empty__sub">Try a different search or clear your filters.</p>
+      <a href="{% url 'ticket_management:space_admin:ticket_list' %}" class="ticket-btn ticket-btn--outline">Clear filters</a>
+      {% else %}
+      <h2 class="ticket-empty__title">No tickets yet</h2>
+      <p class="ticket-empty__sub">Create the first ticket for this space.</p>
+      <a href="{% url 'ticket_management:space_admin:ticket_create' %}" class="ticket-btn ticket-btn--primary">
+        <span class="material-symbols-outlined">add</span>
+        Create Ticket
+      </a>
+      {% endif %}
+    </div>
     {% endif %}
-  </div>
-</section>
-{% endblock %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function downloadReport(format) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const reportParams = new URLSearchParams();
+  ['status', 'q'].forEach(function (key) {
+    if (urlParams.has(key)) {
+      reportParams.set(key, urlParams.get(key));
+    }
+  });
+  reportParams.set('format', format);
+  window.location.href = "{% url 'ticket_management:space_admin:ticket_list_report' %}" + '?' + reportParams.toString();
+}
+
+(function () {
+  const results = document.getElementById('ticket-results');
+  const buttons = document.querySelectorAll('.ticket-view-toggle__btn');
+  if (!results || !buttons.length) return;
+
+  const STORAGE_KEY = 'ticketListView';
+  const mq = window.matchMedia('(min-width: 992px)');
+
+  function responsiveDefault() {
+    return mq.matches ? 'list' : 'cards';
+  }
+
+  function applyView(mode, persist) {
+    const view = mode === 'cards' ? 'cards' : 'list';
+    results.classList.remove('ticket-view--list', 'ticket-view--cards');
+    results.classList.add('ticket-view--' + view);
+    buttons.forEach((btn) => {
+      const active = btn.getAttribute('data-view') === view;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (persist) {
+      try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function resolveView() {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored === 'list' || stored === 'cards') return stored;
+    return responsiveDefault();
+  }
+
+  applyView(resolveView(), false);
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => applyView(btn.getAttribute('data-view'), true));
+  });
+
+  const onBreakpoint = () => {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored !== 'list' && stored !== 'cards') {
+      applyView(responsiveDefault(), false);
+    }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+  else if (mq.addListener) mq.addListener(onBreakpoint);
+
+  const track = document.getElementById('ticketFilterContainer');
+  const leftBtn = document.getElementById('ticketScrollLeft');
+  const rightBtn = document.getElementById('ticketScrollRight');
+  if (track && leftBtn && rightBtn) {
+    const scrollBy = 160;
+    leftBtn.addEventListener('click', () => track.scrollBy({ left: -scrollBy, behavior: 'smooth' }));
+    rightBtn.addEventListener('click', () => track.scrollBy({ left: scrollBy, behavior: 'smooth' }));
+  }
+})();
+</script>
+{% endblock scripts %}
