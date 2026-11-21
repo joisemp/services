@@ -22,7 +22,7 @@
 {% url 'ticket_management:supervisor:work_task_list' as list_url %}
 {% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug as ticket_url %}
 
-<div class="wtd-page">
+<div class="wtd-page{% if not work_task.completed %} wtd-page--has-dock{% endif %}">
   <a href="{{ list_url }}" class="wtd-back">
     <span class="material-symbols-outlined">arrow_back</span>
     Tasks
@@ -58,7 +58,7 @@
         Edit
       </a>
       <a href="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}?next=task_detail"
-         class="wtd-btn wtd-btn--primary">
+         class="wtd-btn wtd-btn--primary wtd-action--desktop">
         <span class="material-symbols-outlined">check_circle</span>
         Mark complete
       </a>
@@ -81,6 +81,13 @@
       </p>
     </div>
   </header>
+
+  <div class="wtd-toolbar">
+    <button type="button" class="wtd-btn wtd-btn--outline" data-wtd-drawer="comments">
+      <span class="material-symbols-outlined">chat</span>
+      Comments
+    </button>
+  </div>
 
   {% if work_task.completed %}
   <section class="wtd-card wtd-card--done" aria-labelledby="wtd-complete-heading">
@@ -152,7 +159,7 @@
       {% if work_task.description %}
       <p class="wtd-prose">{{ work_task.description|linebreaksbr }}</p>
       {% else %}
-      <p class="wtd-prose" style="color:#6b7280">No description</p>
+      <p class="wtd-prose wtd-prose--muted">No description</p>
       {% endif %}
     </div>
   </section>
@@ -211,42 +218,62 @@
     {% endif %}
   </section>
 
-  <section class="wtd-card" aria-labelledby="wtd-comments-heading">
-    <header class="wtd-card__head">
-      <h2 id="wtd-comments-heading" class="wtd-card__title">Ticket comments</h2>
-    </header>
-    <div class="wtd-comments comments-container">
-      <div id="comments-list-area" class="wtd-comments__list comments-list-scrollable">
-        <div hx-get="{% url 'ticket_management:comment_list' ticket_slug=ticket.slug %}"
-             hx-trigger="load"
-             hx-swap="innerHTML">
-          <p class="wtd-prose" style="color:#6b7280;text-align:center;padding:2rem 1rem">Loading comments…</p>
-        </div>
-      </div>
-      <div class="wtd-comments__form">
-        <form hx-post="{% url 'ticket_management:comment_create' ticket_slug=ticket.slug %}"
-              hx-target="#comments-list-area"
-              hx-swap="innerHTML"
-              class="comment-form">
-          {% csrf_token %}
-          <div class="wtd-comments__row">
-            <div class="wtd-comments__avatar" aria-hidden="true">
-              {{ request.user.get_full_name|default:request.user.email|slice:":2"|upper }}
-            </div>
-            <div class="wtd-comments__input">
-              <textarea name="comment" class="wtd-textarea" rows="2" placeholder="Add a comment…" required></textarea>
-              <div class="wtd-comments__actions">
-                <button type="submit" class="wtd-btn wtd-btn--primary wtd-btn--sm">
-                  <span class="material-symbols-outlined">send</span>
-                  Post
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
+  {% if not work_task.completed %}
+  <section class="wtd-dock" aria-label="Task actions">
+    <div class="wtd-dock__actions">
+      <a href="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}?next=task_detail"
+         class="wtd-btn wtd-btn--primary">
+        <span class="material-symbols-outlined">check_circle</span>
+        Mark complete
+      </a>
     </div>
   </section>
+  {% endif %}
+
+  <div class="wtd-drawer-backdrop" data-wtd-drawer-close hidden></div>
+
+  <aside id="wtd-drawer-comments" class="wtd-drawer" aria-hidden="true" role="dialog" aria-labelledby="wtd-drawer-comments-title">
+    <div class="wtd-drawer__head">
+      <h2 id="wtd-drawer-comments-title" class="wtd-drawer__title">Comments</h2>
+      <button type="button" class="wtd-icon-btn" data-wtd-drawer-close aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="wtd-drawer__body wtd-drawer__body--comments">
+      <div class="wtd-comments comments-container">
+        <div id="comments-list-area" class="comments-list-scrollable">
+          <div hx-get="{% url 'ticket_management:comment_list' ticket_slug=ticket.slug %}"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+            <div class="wtd-loading">Loading comments…</div>
+          </div>
+        </div>
+        <div id="comment-form-sticky" class="comment-form-sticky">
+          {% if ticket.status == 'resolved' or ticket.status == 'closed' or ticket.status == 'cancelled' %}
+          <p class="wtd-quiet wtd-quiet--pad">Comments disabled</p>
+          {% else %}
+          <form hx-post="{% url 'ticket_management:comment_create' ticket_slug=ticket.slug %}"
+                hx-target="#comments-list-area" hx-swap="innerHTML" class="comment-form">
+            {% csrf_token %}
+            <div class="wtd-comment-form">
+              <div class="wtd-avatar" aria-hidden="true">{{ request.user.get_full_name|default:request.user.email|slice:":2"|upper }}</div>
+              <div class="wtd-comment-form__input">
+                <textarea name="comment" class="wtd-textarea" rows="2" placeholder="Add a comment…" required></textarea>
+                <div class="wtd-comment-form__actions">
+                  <span class="wtd-hint">Ctrl+Enter</span>
+                  <button type="submit" class="wtd-btn wtd-btn--sm wtd-btn--primary">
+                    <span class="material-symbols-outlined">send</span>
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </aside>
 </div>
 {% endblock content %}
 
@@ -269,5 +296,52 @@ function deleteByUrl(url, message) {
   document.body.appendChild(form);
   form.submit();
 }
+
+(function () {
+  const backdrop = document.querySelector('.wtd-drawer-backdrop');
+  const drawers = {
+    comments: document.getElementById('wtd-drawer-comments'),
+  };
+
+  function closeAll() {
+    Object.values(drawers).forEach(function (el) {
+      if (!el) return;
+      el.classList.remove('is-open');
+      el.setAttribute('aria-hidden', 'true');
+    });
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.classList.remove('is-open');
+    }
+    document.body.classList.remove('wtd-drawer-open');
+  }
+
+  function openDrawer(name) {
+    const el = drawers[name];
+    if (!el) return;
+    closeAll();
+    el.classList.add('is-open');
+    el.setAttribute('aria-hidden', 'false');
+    if (backdrop) {
+      backdrop.hidden = false;
+      backdrop.classList.add('is-open');
+    }
+    document.body.classList.add('wtd-drawer-open');
+  }
+
+  document.querySelectorAll('[data-wtd-drawer]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openDrawer(btn.getAttribute('data-wtd-drawer'));
+    });
+  });
+
+  document.querySelectorAll('[data-wtd-drawer-close]').forEach(function (btn) {
+    btn.addEventListener('click', closeAll);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+})();
 </script>
 {% endblock scripts %}
