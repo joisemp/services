@@ -30,7 +30,6 @@
         Organization-wide overview — tickets, tasks, and trends in one place.
       </p>
     </div>
-    {% if quick_links %}
     <div class="ca-dash-header__actions">
       {% for link in quick_links %}
       <a href="{{ link.url }}" class="ca-dash-icon-btn" title="{{ link.label }}">
@@ -38,8 +37,11 @@
         <span class="ca-dash-icon-btn__label">{{ link.label }}</span>
       </a>
       {% endfor %}
+      <a href="{% url 'ticket_management:central_admin:ticket_create' %}" class="ca-dash-icon-btn ca-dash-icon-btn--primary">
+        <span class="material-symbols-outlined">add</span>
+        <span class="ca-dash-icon-btn__label">Create ticket</span>
+      </a>
     </div>
-    {% endif %}
   </header>
 
   <section class="ca-dash-kpis" aria-label="Key metrics">

@@ -35,7 +35,6 @@
         {% endif %}
       </p>
     </div>
-    {% if quick_links %}
     <div class="sa-dash-header__actions">
       {% for link in quick_links %}
       <a href="{{ link.url }}" class="sa-dash-icon-btn" title="{{ link.label }}">
@@ -43,8 +42,11 @@
         <span class="sa-dash-icon-btn__label">{{ link.label }}</span>
       </a>
       {% endfor %}
+      <a href="{% url 'ticket_management:space_admin:ticket_create' %}" class="sa-dash-icon-btn sa-dash-icon-btn--primary">
+        <span class="material-symbols-outlined">add</span>
+        <span class="sa-dash-icon-btn__label">Create ticket</span>
+      </a>
     </div>
-    {% endif %}
   </header>
 
   {# ── KPI row ─────────────────────────────────────────────────────────────── #}

@@ -81,6 +81,26 @@ $font:   'Inter', ui-sans-serif, system-ui, sans-serif;
     border-color: #d1d5db;
     color: $text;
   }
+
+  &--primary {
+    background: $blue;
+    border-color: $blue;
+    color: #fff;
+
+    .material-symbols-outlined {
+      color: #fff;
+    }
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+
+      .material-symbols-outlined {
+        color: #fff;
+      }
+    }
+  }
 }
 
 // ─── KPI cards ────────────────────────────────────────────────────────────────

@@ -391,6 +391,22 @@ tr {
   border-color: #d1d5db;
   color: #111827;
 }
+.sa-dash-icon-btn--primary {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #fff;
+}
+.sa-dash-icon-btn--primary .material-symbols-outlined {
+  color: #fff;
+}
+.sa-dash-icon-btn--primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.sa-dash-icon-btn--primary:hover .material-symbols-outlined {
+  color: #fff;
+}
 
 .sa-dash-kpis {
   display: grid;
