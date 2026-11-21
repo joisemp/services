@@ -411,6 +411,47 @@ tr {
   color: #111827;
 }
 
+.wtl-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.wtl-view-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.2rem;
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.wtl-view-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: none;
+  border-radius: calc(0.5rem - 2px);
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+.wtl-view-toggle__btn .material-symbols-outlined {
+  font-size: 1.2rem;
+}
+.wtl-view-toggle__btn:hover {
+  color: #111827;
+}
+.wtl-view-toggle__btn.is-active {
+  background: #fff;
+  color: #2563EB;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
 .wtl-filters {
   margin-bottom: 1.15rem;
 }
@@ -459,7 +500,7 @@ tr {
   color: #2563EB;
 }
 
-.wtl-list {
+.wtl-view--list .wtl-results-grid {
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -467,25 +508,71 @@ tr {
   border-radius: 0.75rem;
   overflow: hidden;
 }
+.wtl-view--cards .wtl-results-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 576px) {
+  .wtl-view--cards .wtl-results-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .wtl-view--cards .wtl-results-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
 
 .wtl-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.95rem 1.15rem;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid #e5e7eb;
   background: #fff;
-  transition: background 0.12s;
+  transition: background 0.12s, border-color 0.12s;
 }
-.wtl-item:last-child {
+.wtl-view--list .wtl-item {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.wtl-view--list .wtl-item:last-child {
   border-bottom: none;
 }
-.wtl-item:hover {
+.wtl-view--list .wtl-item:hover {
   background: #f9fafb;
   color: inherit;
+}
+.wtl-view--cards .wtl-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icon body" "pills pills";
+  align-items: center;
+  column-gap: 0.85rem;
+  row-gap: 0.75rem;
+  padding: 1.15rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+.wtl-view--cards .wtl-item:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: #fafbff;
+  color: inherit;
+}
+.wtl-view--cards .wtl-item .wtl-item__icon {
+  grid-area: icon;
+}
+.wtl-view--cards .wtl-item .wtl-item__body {
+  grid-area: body;
+  min-width: 0;
+}
+.wtl-view--cards .wtl-item .wtl-item__pills {
+  grid-area: pills;
+  justify-self: start;
+}
+.wtl-view--cards .wtl-item .wtl-item__chevron {
+  display: none;
 }
 .wtl-item--done .wtl-item__name {
   color: #6b7280;
@@ -514,6 +601,7 @@ tr {
 
 .wtl-item__body {
   min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -638,26 +726,34 @@ tr {
   .wtl-header__actions .wtl-btn {
     width: 100%;
   }
-  .wtl-item {
+  .wtl-toolbar {
+    justify-content: stretch;
+  }
+  .wtl-toolbar .wtl-view-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  .wtl-view--list .wtl-item {
+    display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "icon body chevron" "pills pills pills";
     row-gap: 0.65rem;
     column-gap: 0.75rem;
     padding: 0.9rem 0.95rem;
   }
-  .wtl-item__icon {
+  .wtl-view--list .wtl-item .wtl-item__icon {
     grid-area: icon;
     width: 2.25rem;
     height: 2.25rem;
   }
-  .wtl-item__body {
+  .wtl-view--list .wtl-item .wtl-item__body {
     grid-area: body;
   }
-  .wtl-item__pills {
+  .wtl-view--list .wtl-item .wtl-item__pills {
     grid-area: pills;
     justify-content: flex-start;
   }
-  .wtl-item__chevron {
+  .wtl-view--list .wtl-item .wtl-item__chevron {
     grid-area: chevron;
   }
   .wtl-item__name {
@@ -676,7 +772,7 @@ tr {
   }
 }
 @media (max-width: 479.98px) {
-  .wtl-item__ticket {
+  .wtl-view--list .wtl-item__ticket {
     display: none;
   }
 }

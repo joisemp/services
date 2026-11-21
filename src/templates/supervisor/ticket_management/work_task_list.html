@@ -36,6 +36,17 @@
     </div>
   </header>
 
+  <section class="wtl-toolbar">
+    <div class="wtl-view-toggle" role="group" aria-label="View mode">
+      <button type="button" class="wtl-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+        <span class="material-symbols-outlined">view_list</span>
+      </button>
+      <button type="button" class="wtl-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+        <span class="material-symbols-outlined">grid_view</span>
+      </button>
+    </div>
+  </section>
+
   <section class="wtl-filters" aria-label="Status filters">
     <div class="wtl-filter-track">
       <ul class="wtl-filter-tabs">
@@ -52,9 +63,9 @@
     </div>
   </section>
 
-  <section class="wtl-results" aria-label="Task results">
+  <section id="wtl-results" class="wtl-view wtl-view--list" aria-label="Task results">
     {% if work_tasks %}
-    <div class="wtl-list">
+    <div class="wtl-results-grid">
       {% for task in work_tasks %}
       <a href="{% url 'ticket_management:supervisor:work_task_detail' work_task_slug=task.slug %}"
          class="wtl-item{% if task.completed %} wtl-item--done{% endif %}">
@@ -112,3 +123,60 @@
 
 {% endwith %}
 {% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+(function () {
+  const results = document.getElementById('wtl-results');
+  const buttons = document.querySelectorAll('.wtl-view-toggle__btn');
+  if (!results || !buttons.length) return;
+
+  const STORAGE_KEY = 'workTaskListView';
+  const mq = window.matchMedia('(min-width: 992px)');
+
+  function responsiveDefault() {
+    return mq.matches ? 'list' : 'cards';
+  }
+
+  function applyView(mode, persist) {
+    const view = mode === 'cards' ? 'cards' : 'list';
+    results.classList.remove('wtl-view--list', 'wtl-view--cards');
+    results.classList.add('wtl-view--' + view);
+    buttons.forEach(function (btn) {
+      const active = btn.getAttribute('data-view') === view;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (persist) {
+      try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function resolveView() {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored === 'list' || stored === 'cards') return stored;
+    return responsiveDefault();
+  }
+
+  applyView(resolveView(), false);
+
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      applyView(btn.getAttribute('data-view'), true);
+    });
+  });
+
+  const onBreakpoint = function () {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored !== 'list' && stored !== 'cards') {
+      applyView(responsiveDefault(), false);
+    }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+  else if (mq.addListener) mq.addListener(onBreakpoint);
+})();
+</script>
+{% endblock scripts %}
