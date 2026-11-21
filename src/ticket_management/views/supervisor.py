@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.db.models import Case, When, IntegerField
 from django.utils import timezone
 from .. forms import TicketCommentForm, WorkTaskForm, WorkTaskUpdateForm, WorkTaskCompleteForm, SiteVisitForm, SiteVisitCompleteForm, TicketForm
@@ -103,19 +103,25 @@ class TicketDetailView(SupervisorOnlyAccessMixin, DetailView):
     slug_url_kwarg = 'ticket_slug'
     
     def get_queryset(self):
-        return Ticket.objects.prefetch_related(
-            'images', 
-            'comments', 
+        return Ticket.objects.filter(assigned_to=self.request.user).prefetch_related(
+            'images',
+            'comments',
             'work_tasks__assigned_to',
+            'work_tasks__resolution_images',
             'site_visits__created_by',
             'site_visits__assigned_to',
-            'site_visits__images'
-        ).select_related('org', 'space')
-    
+            'site_visits__images',
+            'activities__user',
+            'resolution_images',
+        ).select_related(
+            'org', 'space', 'reporter', 'assigned_to', 'assigned_by',
+            'reviewed_by', 'vehicle', 'workshop',
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add work tasks to context sorted by completion status and ticket priority
-        work_tasks = self.object.work_tasks.select_related('ticket').all().annotate(
+        context['back_url'] = reverse('ticket_management:supervisor:ticket_list')
+        work_tasks = self.object.work_tasks.select_related('ticket').prefetch_related('resolution_images').all().annotate(
             priority_order=Case(
                 When(ticket__priority='critical', then=1),
                 When(ticket__priority='high', then=2),
@@ -126,14 +132,14 @@ class TicketDetailView(SupervisorOnlyAccessMixin, DetailView):
             )
         ).order_by('completed', 'priority_order', 'due_date')
         context['work_tasks'] = work_tasks
-        # Check if there are any incomplete work tasks
         context['has_incomplete_tasks'] = work_tasks.filter(completed=False).exists()
-        # Add comment form to context
         context['comment_form'] = TicketCommentForm()
-        # Add site visits to context
-        site_visits = self.object.site_visits.select_related('created_by', 'assigned_to').prefetch_related('images').all()
-        context['site_visits'] = site_visits
+        context['site_visits'] = self.object.site_visits.select_related(
+            'created_by', 'assigned_to'
+        ).prefetch_related('images').all()
+        context['activities'] = self.object.activities.select_related('user').all()
         return context
+
 
 
 class TicketCreateView(SupervisorOnlyAccessMixin, CreateView):
