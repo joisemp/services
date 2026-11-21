@@ -1,13 +1,13 @@
 {% extends 'sidebar_base.html' %}
-
 {% load static %}
 
-{% block title %}Site Visits{% endblock %}
+{% block title %}Site visits{% endblock %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/ticket_management/site_visit_list/style.css' %}">
-<link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 {% endblock %}
 
 {% block navbar %}
@@ -19,138 +19,109 @@
 {% endblock %}
 
 {% block content %}
-<section id="alert">
-  <div class="alert custom-alert d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center" role="alert">
-    <div class="message flex-grow-1 mb-2 mb-md-0">
-      <h3 class="mb-1">Site Visits</h3>
-      <span class="alert-text text-body-secondary">View and manage all site visits in your space.</span>
+{% url 'ticket_management:space_admin:site_visit_list' as list_url %}
+{% with status=request.GET.status %}
+
+<div class="svl-page">
+  <header class="svl-header">
+    <div class="svl-header__text">
+      <h1 class="svl-header__title">Site visits</h1>
+      <p class="svl-header__sub">
+        {% if user.active_space %}
+        View and manage site visits in <strong>{{ user.active_space.name }}</strong>
+        {% else %}
+        Select a space to view site visits
+        {% endif %}
+      </p>
     </div>
-    <div class="alert-buttons ms-md-3 w-fit-content w-md-auto">
-      <a href="{% url 'ticket_management:space_admin:ticket_list' %}" class="btn btn-primary d-flex w-100 w-md-auto">
-        <span class="material-symbols-outlined">view_list</span>
-        <span class="ms-2">View Tickets</span>
+    <div class="svl-header__actions">
+      <a href="{% url 'ticket_management:space_admin:ticket_list' %}" class="svl-btn svl-btn--outline">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
       </a>
     </div>
-  </div>
-</section>
+  </header>
 
-<section id="options-bar">
-  <div class="container-nav">
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link {% if not request.GET.status %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:site_visit_list' %}">All</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.GET.status == 'scheduled' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:site_visit_list' %}?status=scheduled">Scheduled</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.GET.status == 'in_progress' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:site_visit_list' %}?status=in_progress">In Progress</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.GET.status == 'completed' %}nav-active{% endif %}" href="{% url 'ticket_management:space_admin:site_visit_list' %}?status=completed">Completed</a>
-      </li>
-    </ul>
-  </div>
-</section>
+  <section class="svl-filters" aria-label="Status filters">
+    <div class="svl-filter-track">
+      <ul class="svl-filter-tabs">
+        <li>
+          <a class="svl-filter-tab{% if not status %} is-active{% endif %}" href="{{ list_url }}">All</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'scheduled' %} is-active{% endif %}" href="{{ list_url }}?status=scheduled">Scheduled</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'in_progress' %} is-active{% endif %}" href="{{ list_url }}?status=in_progress">In progress</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'completed' %} is-active{% endif %}" href="{{ list_url }}?status=completed">Completed</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'cancelled' %} is-active{% endif %}" href="{{ list_url }}?status=cancelled">Cancelled</a>
+        </li>
+      </ul>
+    </div>
+  </section>
 
-<section id="site-visit-list">
-  <div class="container-fluid mt-3">
+  <section class="svl-results" aria-label="Site visit results">
     {% if site_visits %}
-      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
-        {% for visit in site_visits %}
-        <div class="col mt-2">
-          <a href="{% url 'ticket_management:space_admin:site_visit_detail' site_visit_slug=visit.slug %}" class="text-decoration-none card-link-wrapper">
-            <div class="card h-100 {% if visit.status == 'completed' %}visit-completed{% elif visit.is_overdue %}visit-overdue{% endif %}">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h5 class="card-title flex-grow-1">{{ visit.title }}</h5>
-                  {% if visit.status == 'scheduled' %}
-                    <span class="badge bg-primary rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">schedule</span>
-                      Scheduled
-                    </span>
-                  {% elif visit.status == 'in_progress' %}
-                    <span class="badge bg-warning rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">work</span>
-                      In Progress
-                    </span>
-                  {% elif visit.status == 'completed' %}
-                    <span class="badge bg-success rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">check_circle</span>
-                      Completed
-                    </span>
-                  {% elif visit.status == 'cancelled' %}
-                    <span class="badge bg-secondary rounded-pill ms-2">
-                      <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">cancel</span>
-                      Cancelled
-                    </span>
-                  {% endif %}
-                </div>
-                <p class="card-text text-body-secondary visit-description">{{ visit.description|truncatewords:20 }}</p>
-                <hr>
-                <div class="visit-meta">
-                  <div class="d-flex justify-content-between mt-3">
-                    <h6 class="card-subtitle text-body-secondary">
-                      <span class="material-symbols-outlined icon-small">location_on</span>
-                      {{ visit.location|truncatewords:6 }}
-                    </h6>
-                  </div>
-                  <div class="d-flex justify-content-between mt-2">
-                    <h6 class="card-subtitle text-body-secondary {% if visit.is_overdue and visit.status == 'scheduled' %}text-danger{% endif %}">
-                      <span class="material-symbols-outlined icon-small">event</span>
-                      {% if visit.is_overdue and visit.status == 'scheduled' %}
-                        Overdue: {{ visit.scheduled_date|date:"M d, Y - g:i A" }}
-                      {% else %}
-                        Scheduled: {{ visit.scheduled_date|date:"M d, Y - g:i A" }}
-                      {% endif %}
-                    </h6>
-                  </div>
-                  {% if visit.completed_at %}
-                  <div class="d-flex justify-content-between mt-2">
-                    <h6 class="card-subtitle text-body-secondary">
-                      <span class="material-symbols-outlined icon-small">check_circle</span>
-                      Completed: {{ visit.completed_at|date:"M d, Y - g:i A" }}
-                    </h6>
-                  </div>
-                  {% endif %}
-                  <div class="d-flex justify-content-between mt-3 pt-2 border-top">
-                    <div class="ticket-info flex-grow-1">
-                      <h6 class="mb-1 fw-bold">Related Ticket</h6>
-                      <h6 class="text-body-secondary mb-0">{{ visit.ticket.title|truncatewords:8 }}</h6>
-                    </div>
-                    <div class="text-end ms-2">
-                      <span class="badge badge-{{ visit.ticket.priority }} rounded-pill">{{ visit.ticket.get_priority_display }}</span>
-                    </div>
-                  </div>
-                  <div class="d-flex justify-content-between mt-2">
-                    <h6 class="card-subtitle text-body-secondary">
-                      <span class="material-symbols-outlined icon-small">person</span>
-                      Assigned to: {{ visit.assigned_to.get_full_name|default:visit.assigned_to.email|truncatewords:3 }}
-                    </h6>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a>
+    <div class="svl-list">
+      {% for visit in site_visits %}
+      <a href="{% url 'ticket_management:space_admin:site_visit_detail' site_visit_slug=visit.slug %}"
+         class="svl-item{% if visit.is_overdue and visit.status == 'scheduled' %} svl-item--overdue{% endif %}">
+        <div class="svl-item__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">location_on</span>
         </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state text-center py-5">
-        <span class="material-symbols-outlined empty-icon">location_off</span>
-        <h4 class="mt-3">No Site Visits Found</h4>
-        <p class="text-body-secondary">
-          {% if request.GET.status %}
-            No {{ request.GET.status }} site visits found.
-          {% else %}
-            No site visits have been created yet.
+        <div class="svl-item__body">
+          <span class="svl-item__name">{{ visit.title }}</span>
+          <span class="svl-item__meta">
+            {{ visit.assigned_to.get_full_name|default:visit.assigned_to.email }}
+            · {{ visit.location|truncatechars:40 }}
+            ·
+            {% if visit.is_overdue and visit.status == 'scheduled' %}
+              Overdue {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+            {% elif visit.status == 'completed' and visit.completed_at %}
+              Completed {{ visit.completed_at|date:"M d, Y" }}
+            {% else %}
+              {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+            {% endif %}
+          </span>
+          <span class="svl-item__ticket">
+            {{ visit.ticket.ticket_id }}
+            · {{ visit.ticket.title|truncatechars:48 }}
+          </span>
+        </div>
+        <div class="svl-item__pills">
+          <span class="svl-pill svl-pill--{{ visit.status }}">{{ visit.get_status_display }}</span>
+          {% if visit.is_overdue and visit.status == 'scheduled' %}
+          <span class="svl-pill svl-pill--overdue">Overdue</span>
           {% endif %}
-        </p>
-        <a href="{% url 'ticket_management:space_admin:ticket_list' %}" class="btn btn-primary mt-3">
-          View Tickets
-        </a>
-      </div>
+          <span class="svl-pill svl-pill--prio-{{ visit.ticket.priority }}">{{ visit.ticket.get_priority_display }}</span>
+        </div>
+        <span class="material-symbols-outlined svl-item__chevron">chevron_right</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="svl-empty">
+      <span class="material-symbols-outlined svl-empty__icon">location_off</span>
+      {% if status %}
+      <h2 class="svl-empty__title">No matching site visits</h2>
+      <p class="svl-empty__sub">Try a different status filter, or open tickets to schedule a visit.</p>
+      <a href="{{ list_url }}" class="svl-btn svl-btn--outline">Clear filter</a>
+      {% else %}
+      <h2 class="svl-empty__title">No site visits yet</h2>
+      <p class="svl-empty__sub">Site visits are created from a ticket’s detail page.</p>
+      <a href="{% url 'ticket_management:space_admin:ticket_list' %}" class="svl-btn svl-btn--primary">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+      {% endif %}
+    </div>
     {% endif %}
-  </div>
-</section>
+  </section>
+</div>
+
+{% endwith %}
 {% endblock %}
