@@ -21,6 +21,9 @@ print('Database is ready.')
   sleep 2
 done
 
+echo "==> Relabeling issue_management → ticket_management if needed..."
+python manage.py relabel_issue_to_ticket_app
+
 echo "==> Running migrations..."
 python manage.py migrate --noinput
 
