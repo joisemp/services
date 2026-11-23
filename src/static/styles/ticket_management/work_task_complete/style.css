@@ -388,6 +388,15 @@ tr {
   line-height: 1.5;
 }
 
+.wtd-text-link {
+  color: #2563EB;
+  text-decoration: none;
+  font-weight: 500;
+}
+.wtd-text-link:hover {
+  text-decoration: underline;
+}
+
 .wtd-pill {
   display: inline-flex;
   align-items: center;
