@@ -156,17 +156,15 @@ $font:   'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 
   .svd-toolbar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     gap: 0.5rem;
 
     .svd-btn {
-      width: 100%;
+      width: auto;
+      flex: 0 0 auto;
       min-height: 2.4rem;
-    }
-
-    &:has(> :only-child) {
-      grid-template-columns: 1fr;
     }
   }
 
@@ -283,6 +281,49 @@ $font:   'Inter', ui-sans-serif, system-ui, sans-serif;
       color: $text;
     }
   }
+
+  &--danger {
+    background: #fff;
+    color: #b91c1c;
+    border-color: #fecaca;
+
+    &:hover {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &--call {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.85rem;
+  }
+}
+
+.svd-btn__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.svd-btn__role {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: $muted;
+  line-height: 1.2;
+  padding-left: 1.35rem;
+}
+
+.svd-btn--primary .svd-btn__role {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .svd-text-link {
@@ -471,5 +512,136 @@ $font:   'Inter', ui-sans-serif, system-ui, sans-serif;
   &:hover {
     border-color: #93c5fd;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+}
+
+// ─── Modal / fields ───────────────────────────────────────────────────────────
+.svd-modal {
+  border: none;
+  border-radius: 0.75rem;
+  font-family: $font;
+
+  .modal-header {
+    border-bottom: 1px solid $border;
+    padding: 1rem 1.15rem;
+  }
+
+  .modal-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  .modal-body {
+    padding: 1.15rem;
+  }
+
+  .modal-footer {
+    border-top: 1px solid $border;
+    padding: 0.85rem 1.15rem;
+    gap: 0.5rem;
+  }
+}
+
+.svd-field {
+  margin-bottom: 0.95rem;
+}
+
+.svd-field__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text;
+}
+
+.svd-field__opt {
+  font-weight: 500;
+  color: $muted;
+}
+
+.svd-field__help {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: $muted;
+}
+
+.svd-req {
+  color: #dc2626;
+}
+
+.svd-textarea {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $font;
+  font-size: 0.875rem;
+  color: $text;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.12);
+  }
+}
+
+.svd-file-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+// ─── Mobile action dock ───────────────────────────────────────────────────────
+.svd-dock {
+  display: none;
+}
+
+@media screen and (max-width: 767.98px) {
+  .svd-page--has-dock {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .svd-action--desktop {
+    display: none !important;
+  }
+
+  .svd-dock {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    display: block;
+    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    border-radius: 0.85rem 0.85rem 0 0;
+    border-top: 1px solid $border;
+    background: #fff;
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .svd-dock__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+
+    &--split {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .svd-btn {
+      width: 100%;
+      min-height: 2.65rem;
+    }
+
+    form {
+      margin: 0;
+      min-width: 0;
+    }
   }
 }

@@ -40,13 +40,6 @@
       <span class="svd-pill">{{ site_visit.created_at|date:"M d, Y" }}</span>
     </div>
     <div class="svd-identity__actions">
-      {% if site_visit.assigned_to != request.user and site_visit.assigned_to.phone_number %}
-      <a href="tel:{{ site_visit.assigned_to.phone_number }}" class="svd-btn svd-btn--primary"
-         title="Call {{ site_visit.assigned_to.get_full_name|default:'Assignee' }}">
-        <span class="material-symbols-outlined">call</span>
-        Call
-      </a>
-      {% endif %}
       {% if site_visit.status == 'scheduled' %}
         {% if site_visit.created_by == request.user or request.user.user_type == 'space_admin' %}
         <a href="{% url 'ticket_management:space_admin:site_visit_update' site_visit_slug=site_visit.slug %}"
@@ -74,20 +67,36 @@
     </div>
   </header>
 
-  {% if site_visit.created_by != request.user and site_visit.created_by.phone_number or ticket.reporter != request.user and ticket.reporter.phone_number %}
+  {% if site_visit.assigned_to != request.user and site_visit.assigned_to.phone_number or site_visit.created_by != request.user and site_visit.created_by.phone_number or ticket.reporter != request.user and ticket.reporter.phone_number %}
   <div class="svd-toolbar">
+    {% if site_visit.assigned_to != request.user and site_visit.assigned_to.phone_number %}
+    <a href="tel:{{ site_visit.assigned_to.phone_number }}" class="svd-btn svd-btn--outline svd-btn--call"
+       title="Call {{ site_visit.assigned_to.get_full_name|default:'Assignee' }}">
+      <span class="svd-btn__row">
+        <span class="material-symbols-outlined">call</span>
+        Call {{ site_visit.assigned_to.first_name|default:site_visit.assigned_to.email|truncatechars:12 }}
+      </span>
+      <span class="svd-btn__role">Assignee</span>
+    </a>
+    {% endif %}
     {% if site_visit.created_by != request.user and site_visit.created_by.phone_number %}
-    <a href="tel:{{ site_visit.created_by.phone_number }}" class="svd-btn svd-btn--outline"
+    <a href="tel:{{ site_visit.created_by.phone_number }}" class="svd-btn svd-btn--outline svd-btn--call"
        title="Call {{ site_visit.created_by.get_full_name|default:site_visit.created_by.email }}">
-      <span class="material-symbols-outlined">call</span>
-      Call creator
+      <span class="svd-btn__row">
+        <span class="material-symbols-outlined">call</span>
+        Call {{ site_visit.created_by.first_name|default:site_visit.created_by.email|truncatechars:12 }}
+      </span>
+      <span class="svd-btn__role">Creator</span>
     </a>
     {% endif %}
     {% if ticket.reporter != request.user and ticket.reporter.phone_number %}
-    <a href="tel:{{ ticket.reporter.phone_number }}" class="svd-btn svd-btn--outline"
+    <a href="tel:{{ ticket.reporter.phone_number }}" class="svd-btn svd-btn--outline svd-btn--call"
        title="Call {{ ticket.reporter.get_full_name|default:ticket.reporter.email }}">
-      <span class="material-symbols-outlined">call</span>
-      Call reporter
+      <span class="svd-btn__row">
+        <span class="material-symbols-outlined">call</span>
+        Call {{ ticket.reporter.first_name|default:ticket.reporter.email|truncatechars:12 }}
+      </span>
+      <span class="svd-btn__role">Reporter</span>
     </a>
     {% endif %}
   </div>
