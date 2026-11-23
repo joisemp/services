@@ -61,7 +61,11 @@ class Command(BaseCommand):
                     [OLD_APP],
                 )
                 old_mig_count = cursor.fetchone()[0]
-                if old_mig_count == 0 and NEW_APP + '_issue' in tables or NEW_APP + '_ticket' in tables:
+                has_intermediate = f'{NEW_APP}_issue' in tables
+                has_final = f'{NEW_APP}_ticket' in tables
+                # Only skip when old app rows are gone AND ticket tables already exist
+                # under the new app label (intermediate Issue* or final Ticket*).
+                if old_mig_count == 0 and (has_intermediate or has_final):
                     self.stdout.write(self.style.SUCCESS('Already relabeled; nothing to do.'))
                     return
 
