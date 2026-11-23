@@ -1,6 +1,8 @@
 # Data-preserving rename: Issue* → Ticket*, issue fields → ticket fields.
-# For existing DBs that still have issue_management_* tables / migration rows,
-# run `python manage.py relabel_issue_to_ticket_app` before this migration.
+# Existing DBs with issue_management_* tables/rows are relabeled automatically
+# via pre_migrate (and docker entrypoint); or run:
+#   python manage.py relabel_issue_to_ticket_app
+# before migrate.
 
 import django.db.models.deletion
 from django.conf import settings
