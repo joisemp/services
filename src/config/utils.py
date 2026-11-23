@@ -39,7 +39,7 @@ def generate_unique_image_filename(upload_path='', length=16, extension='webp', 
     Generates a unique alphanumeric filename that doesn't exist in storage.
     
     Args:
-        upload_path (str): The upload path where the file will be stored (e.g., 'public/issue_images/')
+        upload_path (str): The upload path where the file will be stored (e.g., 'public/ticket_images/')
         length (int): Length of the alphanumeric name. Defaults to 16.
         extension (str): File extension to use. Defaults to 'webp'.
         max_attempts (int): Maximum attempts to generate a unique name. Defaults to 100.

@@ -1,0 +1,152 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Create site visit — {{ ticket.title }}{% endblock title %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/site_visit_create/style.css' %}">
+{% endblock styles %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock navbar %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock sidebar %}
+
+{% block content %}
+{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
+
+<div class="svc-page">
+  <a href="{{ detail_url }}" class="svc-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
+
+  <header class="svc-identity">
+    <div class="svc-identity__mark" aria-hidden="true">
+      <span class="material-symbols-outlined">location_on</span>
+    </div>
+    <div class="svc-identity__body">
+      <h1 class="svc-identity__name">{{ ticket.title }}</h1>
+      <div class="svc-identity__pills">
+        <span class="svc-pill svc-pill--id">{{ ticket.ticket_id }}</span>
+        <span class="svc-pill svc-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+        <span class="svc-pill svc-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+      </div>
+      <p class="svc-identity__meta">
+        Schedule an on-site visit for this ticket
+        {% if ticket.assigned_to %}
+        · Assigned to <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+        {% endif %}
+      </p>
+    </div>
+  </header>
+
+  <section class="svc-card" aria-labelledby="svc-form-heading">
+    <header class="svc-card__head">
+      <h2 id="svc-form-heading" class="svc-card__title">Create site visit</h2>
+      <p class="svc-card__desc">Set the purpose, place, assignee, and schedule for the visit.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="svc-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="svc-form">
+      {% csrf_token %}
+
+      <div class="svc-field">
+        <label for="{{ form.title.id_for_label }}" class="svc-label">
+          Title <span class="svc-req">*</span>
+        </label>
+        {{ form.title }}
+        {% if form.title.help_text %}
+        <p class="svc-help">{{ form.title.help_text }}</p>
+        {% endif %}
+        {% if form.title.errors %}
+        <div class="svc-error">
+          {% for error in form.title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="svc-field">
+        <label for="{{ form.description.id_for_label }}" class="svc-label">
+          Description{% if form.description.field.required %} <span class="svc-req">*</span>{% endif %}
+        </label>
+        {{ form.description }}
+        {% if form.description.help_text %}
+        <p class="svc-help">{{ form.description.help_text }}</p>
+        {% endif %}
+        {% if form.description.errors %}
+        <div class="svc-error">
+          {% for error in form.description.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="svc-field">
+        <label for="{{ form.location.id_for_label }}" class="svc-label">
+          Location{% if form.location.field.required %} <span class="svc-req">*</span>{% endif %}
+        </label>
+        {{ form.location }}
+        {% if form.location.help_text %}
+        <p class="svc-help">{{ form.location.help_text }}</p>
+        {% endif %}
+        {% if form.location.errors %}
+        <div class="svc-error">
+          {% for error in form.location.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="svc-field">
+        <label for="{{ form.assigned_to.id_for_label }}" class="svc-label">
+          Assign to{% if form.assigned_to.field.required %} <span class="svc-req">*</span>{% endif %}
+        </label>
+        {{ form.assigned_to }}
+        {% if form.assigned_to.help_text %}
+        <p class="svc-help">{{ form.assigned_to.help_text }}</p>
+        {% endif %}
+        {% if form.assigned_to.errors %}
+        <div class="svc-error">
+          {% for error in form.assigned_to.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="svc-field">
+        <label for="{{ form.scheduled_date.id_for_label }}" class="svc-label">
+          Scheduled date{% if form.scheduled_date.field.required %} <span class="svc-req">*</span>{% endif %}
+        </label>
+        {{ form.scheduled_date }}
+        {% if form.scheduled_date.help_text %}
+        <p class="svc-help">{{ form.scheduled_date.help_text }}</p>
+        {% endif %}
+        {% if form.scheduled_date.errors %}
+        <div class="svc-error">
+          {% for error in form.scheduled_date.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="svc-actions">
+        <a href="{{ detail_url }}" class="svc-btn svc-btn--outline">Cancel</a>
+        <button type="submit" class="svc-btn svc-btn--primary">
+          <span class="material-symbols-outlined">add_location</span>
+          Create site visit
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock content %}

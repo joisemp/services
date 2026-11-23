@@ -1,0 +1,306 @@
+@use '../../sidebar_base';
+@use '../../colors' as c;
+
+$blue:   c.$primary;
+$border: #e5e7eb;
+$text:   #111827;
+$muted:  #6b7280;
+$r:      0.5rem;
+$font:   'Inter', ui-sans-serif, system-ui, sans-serif;
+
+.svc-page {
+  font-family: $font;
+  color: $text;
+  -webkit-font-smoothing: antialiased;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-bottom: 2.5rem;
+}
+
+// ─── Back ─────────────────────────────────────────────────────────────────────
+.svc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+  margin-bottom: 1.1rem;
+  transition: color 0.15s;
+
+  .material-symbols-outlined { font-size: 1.05rem; }
+
+  &:hover { color: $blue; }
+}
+
+// ─── Identity ─────────────────────────────────────────────────────────────────
+.svc-identity {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.svc-identity__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  flex-shrink: 0;
+  border-radius: 0.65rem;
+  background: #ecfdf5;
+  color: #047857;
+
+  .material-symbols-outlined { font-size: 1.35rem; }
+}
+
+.svc-identity__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.svc-identity__name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.svc-identity__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.svc-identity__meta {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  color: $muted;
+  line-height: 1.45;
+
+  strong {
+    color: $text;
+    font-weight: 600;
+  }
+}
+
+// ─── Pills ────────────────────────────────────────────────────────────────────
+.svc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  background: #f3f4f6;
+  color: #4b5563;
+
+  &--id {
+    background: #fff;
+    color: $text;
+    border: 1px solid $border;
+  }
+
+  &--open { background: #fffbeb; color: #b45309; }
+  &--assigned,
+  &--in_progress { background: #eff6ff; color: #1d4ed8; }
+  &--resolved,
+  &--closed { background: #ecfdf5; color: #047857; }
+  &--escalated,
+  &--cancelled { background: #f3f4f6; color: #4b5563; }
+
+  &--prio-low { background: #f3f4f6; color: #4b5563; }
+  &--prio-medium { background: #eff6ff; color: #1d4ed8; }
+  &--prio-high { background: #fff7ed; color: #c2410c; }
+  &--prio-critical { background: #fef2f2; color: #b91c1c; }
+}
+
+// ─── Card / form ──────────────────────────────────────────────────────────────
+.svc-card {
+  border: 1px solid $border;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1.25rem 1.15rem 1.35rem;
+
+  @media (min-width: 640px) {
+    padding: 1.4rem 1.35rem 1.5rem;
+  }
+}
+
+.svc-card__head {
+  margin-bottom: 1.15rem;
+}
+
+.svc-card__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.svc-card__desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: $muted;
+}
+
+.svc-alert {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: $r;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.svc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.svc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.svc-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.svc-req { color: #dc2626; }
+
+.svc-help {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $muted;
+  line-height: 1.4;
+}
+
+.svc-error {
+  font-size: 0.75rem;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
+.svc-input,
+.svc-textarea,
+.svc-select {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $font;
+  font-size: 0.875rem;
+  color: $text;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  &::placeholder { color: #9ca3af; }
+}
+
+.svc-input,
+.svc-select {
+  min-height: 2.5rem;
+}
+
+.svc-textarea {
+  resize: vertical;
+  min-height: 6.5rem;
+  line-height: 1.5;
+}
+
+.svc-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem;
+}
+
+// ─── Actions / buttons ────────────────────────────────────────────────────────
+.svc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid $border;
+  margin-top: 0.15rem;
+}
+
+.svc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: $r;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: $font;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  color: $text;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  .material-symbols-outlined { font-size: 1.05rem; }
+
+  &--primary {
+    background: $blue;
+    color: #fff;
+    border-color: $blue;
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+  }
+
+  &--outline {
+    background: #fff;
+    color: $text;
+    border-color: $border;
+
+    &:hover {
+      background: #f9fafb;
+      color: $text;
+    }
+  }
+}
+
+@media (max-width: 639.98px) {
+  .svc-identity__name {
+    font-size: 1.125rem;
+  }
+
+  .svc-actions {
+    flex-direction: column-reverse;
+
+    .svc-btn { width: 100%; }
+  }
+}

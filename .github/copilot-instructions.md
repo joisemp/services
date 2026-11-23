@@ -9,15 +9,15 @@
 
 ## Architecture
 - Core authentication and user domain live in `src/core/`.
-- Issue workflows live in `src/issue_management/` with role-segmented routing:
-  - role URLs: `src/issue_management/role_urls/`
-  - role views: `src/issue_management/views/{role}.py`
-  - role templates: `src/templates/{role}/issue_management/`
+- Ticket workflows live in `src/ticket_management/` with role-segmented routing:
+  - role URLs: `src/ticket_management/role_urls/`
+  - role views: `src/ticket_management/views/{role}.py`
+  - role templates: `src/templates/{role}/ticket_management/`
 - Inventory workflows live in `src/inventory/` with the same role-segmented routing pattern:
   - role URLs: `src/inventory/role_urls/`
   - role views: `src/inventory/views/{role}.py`
   - role templates: `src/templates/{role}/inventory/`
-- Shared issue features for all authenticated roles belong in `src/issue_management/views/common.py` and are routed from `src/issue_management/urls.py` (not `role_urls`).
+- Shared ticket features for all authenticated roles belong in `src/ticket_management/views/common.py` and are routed from `src/ticket_management/urls.py` (not `role_urls`).
 - The system is multi-tenant: non-superusers are organization-scoped.
 
 ## Build and Test
@@ -41,7 +41,7 @@
 - User creation must follow `UserManager.create_user()` invariants in `src/core/models.py`:
   - org and phone required for non-superusers
   - `auth_method` derived from role
-- Issue/task entities should preserve slug and activity-tracking patterns used in `src/issue_management/models.py` and `src/issue_management/signals.py`.
+- Ticket/task entities should preserve slug and activity-tracking patterns used in `src/ticket_management/models.py` and `src/ticket_management/signals.py`.
 - Public media paths should remain under `media/public/` so storage ACL behavior in `src/config/storages.py` remains correct.
 
 ## Pitfalls
@@ -63,5 +63,5 @@
 ## Key Files
 - Settings/env/storage: `src/config/settings.py`, `src/config/storages.py`, `src/config/utils.py`
 - Auth and user model: `src/core/backends.py`, `src/core/models.py`
-- Issue domain and shared views: `src/issue_management/models.py`, `src/issue_management/views/common.py`, `src/issue_management/signals.py`
+- Ticket domain and shared views: `src/ticket_management/models.py`, `src/ticket_management/views/common.py`, `src/ticket_management/signals.py`
 - Base templates/layout: `src/templates/base.html`, `src/templates/sidebar_base.html`

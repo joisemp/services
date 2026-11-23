@@ -1,28 +1,28 @@
 # Performance Report Feature - Documentation
 
 ## Overview
-The Performance Report feature enables Central Admins to generate comprehensive PDF reports that provide insights into the activities and performance ratings of Supervisors and Maintainers. The reports are minimal, focused, and calculated based on issues and tasks assigned to them.
+The Performance Report feature enables Central Admins to generate comprehensive PDF reports that provide insights into the activities and performance ratings of Supervisors and Maintainers. The reports are minimal, focused, and calculated based on tickets and tasks assigned to them.
 
 ## Feature Components
 
-### 1. Report Generator (`issue_management/utils/performance_report.py`)
+### 1. Report Generator (`ticket_management/utils/performance_report.py`)
 **Purpose**: Core logic for calculating metrics and generating PDF reports using ReportLab.
 
 **Key Metrics Tracked**:
 
 #### Supervisor Metrics:
-- Total issues assigned
-- Issues resolved
-- Issues in progress
-- Issues pending
+- Total tickets assigned
+- Tickets resolved
+- Tickets in progress
+- Tickets pending
 - Work tasks created
 - Site visits coordinated
 - Average resolution time (in hours)
 - Priority breakdown
 - Status breakdown
 - **Performance Rating (0-100)** calculated based on:
-  - Resolution rate (40%): Percentage of assigned issues that were resolved
-  - Speed (30%): How quickly issues are resolved (48 hours = excellent, 168 hours = poor)
+  - Resolution rate (40%): Percentage of assigned tickets that were resolved
+  - Speed (30%): How quickly tickets are resolved (48 hours = excellent, 168 hours = poor)
   - Task creation (20%): Proactive management through work task creation
   - Site visit coordination (10%): Effective site visit management
 
@@ -34,15 +34,15 @@ The Performance Report feature enables Central Admins to generate comprehensive 
 - Site visits completed
 - Site visits pending
 - Average task completion time (in hours)
-- Issues contributed to (unique issues)
+- Tickets contributed to (unique tickets)
 - Priority breakdown
 - **Performance Rating (0-100)** calculated based on:
   - Completion rate (50%): Percentage of assigned tasks completed
   - Speed (30%): How quickly tasks are completed (24 hours = excellent, 72 hours = poor)
   - Site visits (15%): Site visit completion
-  - Issue contribution (5%): Breadth of work across different issues
+  - Ticket contribution (5%): Breadth of work across different tickets
 
-### 2. Report Form (`issue_management/forms_reports.py`)
+### 2. Report Form (`ticket_management/forms_reports.py`)
 **Purpose**: Configuration form for report generation with Bootstrap styling.
 
 **Configuration Options**:
@@ -51,7 +51,7 @@ The Performance Report feature enables Central Admins to generate comprehensive 
 - **Specific Users**: Optional filter to generate reports for specific users only
 - **Date Range Validation**: Ensures valid date ranges and prevents future dates
 
-### 3. Report View (`issue_management/views/central_admin.py`)
+### 3. Report View (`ticket_management/views/central_admin.py`)
 **Purpose**: Handle GET and POST requests for report configuration and generation.
 
 **Features**:
@@ -60,7 +60,7 @@ The Performance Report feature enables Central Admins to generate comprehensive 
 - Error handling with user-friendly messages
 - Automatic filename with timestamp
 
-### 4. Template (`templates/central_admin/issue_management/performance_report.html`)
+### 4. Template (`templates/central_admin/ticket_management/performance_report.html`)
 **Purpose**: Beautiful, user-friendly interface for report configuration.
 
 **Design Features**:
@@ -155,7 +155,7 @@ The ratings are designed to be:
 ## File Structure
 ```
 src/
-├── issue_management/
+├── ticket_management/
 │   ├── forms_reports.py                    # Report configuration form
 │   ├── utils/
 │   │   ├── __init__.py
@@ -167,7 +167,7 @@ src/
 ├── templates/
 │   └── central_admin/
 │       ├── sidebar.html                    # Navigation link added
-│       └── issue_management/
+│       └── ticket_management/
 │           └── performance_report.html     # Report form template
 └── requirements.txt                        # reportlab==4.2.5 added
 ```
@@ -180,10 +180,10 @@ src/
 - **Custom Templates**: Allow admins to customize report layouts
 - **Historical Comparison**: Track rating changes over time
 - **Team Averages**: Add organizational benchmarks
-- **Detailed Breakdown**: Add per-issue/per-task details section
+- **Detailed Breakdown**: Add per-ticket/per-task details section
 
 ## Testing Recommendations
-1. Test with empty database (no issues/tasks)
+1. Test with empty database (no tickets/tasks)
 2. Test with users who have no activity in selected period
 3. Test different date ranges
 4. Test with specific user selections

@@ -1,0 +1,313 @@
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.generic import ListView, DetailView, View
+from django.contrib import messages
+from django.db.models import Case, When, IntegerField
+from django.utils import timezone
+from ..models import WorkTask, SiteVisit, SiteVisitImage
+from ..forms import SiteVisitCompleteForm
+from config.mixins.access_mixin import MaintainerOnlyAccessMixin
+
+
+class WorkTaskListView(MaintainerOnlyAccessMixin, ListView):
+    """List all work tasks assigned to the maintainer"""
+    model = WorkTask
+    template_name = "maintainer/ticket_management/work_task_list.html"
+    context_object_name = "work_tasks"
+
+    def get_queryset(self):
+        queryset = WorkTask.objects.filter(
+            assigned_to=self.request.user
+        ).select_related(
+            'ticket', 
+            'ticket__org', 
+            'ticket__space'
+        )
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter == 'pending':
+            queryset = queryset.filter(completed=False)
+        elif status_filter == 'completed':
+            queryset = queryset.filter(completed=True)
+        
+        # Order by completion status, ticket priority (critical first, low last), then due date
+        return queryset.annotate(
+            priority_order=Case(
+                When(ticket__priority='critical', then=1),
+                When(ticket__priority='high', then=2),
+                When(ticket__priority='medium', then=3),
+                When(ticket__priority='low', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('completed', 'priority_order', 'due_date')
+
+
+class WorkTaskDetailView(MaintainerOnlyAccessMixin, DetailView):
+    """View details of a specific work task"""
+    model = WorkTask
+    template_name = "maintainer/ticket_management/work_task_detail.html"
+    context_object_name = "work_task"
+    slug_field = 'slug'
+    slug_url_kwarg = 'work_task_slug'
+    
+    def get_queryset(self):
+        return WorkTask.objects.filter(
+            assigned_to=self.request.user
+        ).select_related(
+            'ticket', 
+            'ticket__org', 
+            'ticket__space',
+            'ticket__reporter'
+        ).prefetch_related('ticket__images')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ticket'] = self.object.ticket
+        return context
+
+
+class WorkTaskToggleCompleteView(MaintainerOnlyAccessMixin, View):
+    """Toggle the completion status of a work task with resolution notes"""
+    
+    def post(self, request, work_task_slug):
+        work_task = get_object_or_404(
+            WorkTask, 
+            slug=work_task_slug,
+            assigned_to=request.user
+        )
+        
+        # Get resolution notes from the form if marking as complete
+        resolution_notes = request.POST.get('resolution_notes', '').strip()
+        
+        if not work_task.completed:
+            # Marking task as complete
+            if not resolution_notes:
+                messages.error(
+                    request, 
+                    'Resolution notes are required to mark the task as completed.'
+                )
+                return redirect(
+                    'ticket_management:maintainer:work_task_detail', 
+                    work_task_slug=work_task.slug
+                )
+            
+            work_task.completed = True
+            work_task.resolution_notes = resolution_notes
+            work_task.save()
+            messages.success(
+                request, 
+                f'Work task "{work_task.title}" marked as completed!'
+            )
+        else:
+            # Reopening completed task
+            from ..models import WorkTaskResolutionImage
+            
+            # Delete all resolution images when marking as pending
+            resolution_images = work_task.resolution_images.all()
+            image_count = resolution_images.count()
+            
+            # Delete image files and database records
+            for res_image in resolution_images:
+                # Delete the actual file from storage
+                if res_image.image:
+                    res_image.image.delete(save=False)
+                # Delete the database record
+                res_image.delete()
+            
+            # Mark task as pending
+            work_task.completed = False
+            work_task.resolution_notes = None  # Clear resolution notes
+            work_task.save()
+            
+            if image_count > 0:
+                messages.success(
+                    request, 
+                    f'Work task "{work_task.title}" marked as pending. {image_count} resolution image(s) deleted.'
+                )
+            else:
+                messages.success(
+                    request, 
+                    f'Work task "{work_task.title}" marked as pending!'
+                )
+        
+        return redirect(
+            'ticket_management:maintainer:work_task_detail', 
+            work_task_slug=work_task.slug
+        )
+
+
+class SiteVisitListView(MaintainerOnlyAccessMixin, ListView):
+    """List all site visits assigned to the maintainer"""
+    model = SiteVisit
+    template_name = "maintainer/ticket_management/site_visit_list.html"
+    context_object_name = "site_visits"
+
+    def get_queryset(self):
+        # Get site visits where the maintainer is assigned
+        queryset = SiteVisit.objects.filter(
+            assigned_to=self.request.user
+        ).select_related('ticket', 'ticket__org', 'ticket__space', 'created_by', 'assigned_to').prefetch_related('images')
+        
+        # Filter by status if provided
+        status_filter = self.request.GET.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Order by status (scheduled first, then in_progress, completed last), then by scheduled date
+        return queryset.annotate(
+            status_order=Case(
+                When(status='scheduled', then=1),
+                When(status='in_progress', then=2),
+                When(status='completed', then=3),
+                When(status='cancelled', then=4),
+                default=5,
+                output_field=IntegerField(),
+            )
+        ).order_by('status_order', 'scheduled_date')
+
+
+class SiteVisitDetailView(MaintainerOnlyAccessMixin, DetailView):
+    """View details of a specific site visit"""
+    model = SiteVisit
+    template_name = "maintainer/ticket_management/site_visit_detail.html"
+    context_object_name = "site_visit"
+    slug_field = 'slug'
+    slug_url_kwarg = 'site_visit_slug'
+    
+    def get_queryset(self):
+        return SiteVisit.objects.filter(
+            assigned_to=self.request.user
+        ).select_related(
+            'ticket',
+            'ticket__org',
+            'ticket__space',
+            'ticket__reporter',
+            'created_by',
+            'assigned_to'
+        ).prefetch_related('images', 'ticket__images')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ticket'] = self.object.ticket
+        context['complete_form'] = SiteVisitCompleteForm()
+        return context
+
+
+class SiteVisitStartView(MaintainerOnlyAccessMixin, View):
+    """Start a site visit by changing status to in_progress"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow starting if status is scheduled
+        if site_visit.status == 'scheduled':
+            site_visit.mark_in_progress()
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been started!'
+            )
+        else:
+            messages.error(
+                request,
+                'Only scheduled site visits can be started.'
+            )
+        
+        return redirect(
+            'ticket_management:maintainer:site_visit_detail',
+            site_visit_slug=site_visit.slug
+        )
+
+
+class SiteVisitCancelView(MaintainerOnlyAccessMixin, View):
+    """Cancel a site visit"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow canceling if status is scheduled or in_progress
+        if site_visit.status in ['scheduled', 'in_progress']:
+            site_visit.cancel()
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been cancelled.'
+            )
+        else:
+            messages.error(
+                request,
+                'Only scheduled or in-progress site visits can be cancelled.'
+            )
+        
+        return redirect(
+            'ticket_management:maintainer:site_visit_detail',
+            site_visit_slug=site_visit.slug
+        )
+
+
+class SiteVisitCompleteView(MaintainerOnlyAccessMixin, View):
+    """Complete a site visit with findings, actions, and recommendations"""
+    
+    def post(self, request, site_visit_slug):
+        site_visit = get_object_or_404(
+            SiteVisit,
+            slug=site_visit_slug,
+            assigned_to=request.user
+        )
+        
+        # Only allow completing if status is scheduled or in_progress
+        if site_visit.status not in ['scheduled', 'in_progress']:
+            messages.error(
+                request,
+                'Only scheduled or in-progress site visits can be completed.'
+            )
+            return redirect(
+                'ticket_management:maintainer:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )
+        
+        form = SiteVisitCompleteForm(request.POST, request.FILES, instance=site_visit)
+        
+        if form.is_valid():
+            # Save the site visit with findings, actions, and recommendations
+            site_visit = form.save(commit=False)
+            site_visit.mark_completed()
+            site_visit.save()
+            
+            # Handle image uploads (up to 3 images)
+            for i in range(1, 4):
+                image_field_name = f'image{i}'
+                image = request.FILES.get(image_field_name)
+                
+                if image:
+                    SiteVisitImage.objects.create(
+                        site_visit=site_visit,
+                        image=image
+                    )
+            
+            messages.success(
+                request,
+                f'Site visit "{site_visit.title}" has been marked as completed!'
+            )
+            
+            return redirect(
+                'ticket_management:maintainer:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )
+        else:
+            # Form is invalid, return to detail page with errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+            
+            return redirect(
+                'ticket_management:maintainer:site_visit_detail',
+                site_visit_slug=site_visit.slug
+            )

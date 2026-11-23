@@ -11,7 +11,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 let messaging = null;
 
 // Debug mode - only log in development
-const DEBUG_MODE = false; // Set to true only for debugging service worker issues
+const DEBUG_MODE = false; // Set to true only for debugging service worker tickets
 
 function debugLog(...args) {
     if (DEBUG_MODE) {
@@ -51,13 +51,13 @@ self.addEventListener('notificationclick', (event) => {
     debugLog('Notification clicked:', event);
     event.notification.close();
     
-    // Get the issue slug from notification data
-    const issueSlug = event.notification.data?.issue_slug;
+    // Get the ticket slug from notification data
+    const issueSlug = event.notification.data?.ticket_slug;
     
     if (issueSlug) {
-        // Navigate to the issue detail page
+        // Navigate to the ticket detail page
         event.waitUntil(
-            clients.openWindow(`/issues/central-admin/${issueSlug}/`)
+            clients.openWindow(`/tickets/central-admin/${issueSlug}/`)
         );
     }
 });

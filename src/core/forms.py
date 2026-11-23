@@ -341,10 +341,12 @@ class SetPinForm(BootstrapFormMixin, forms.Form):
         max_length=4,
         min_length=4,
         widget=forms.PasswordInput(attrs={
+            'class': 'pin-input',
             'autocomplete': 'off',
             'inputmode': 'numeric',
             'pattern': '[0-9]{4}',
-            'maxlength': '4'
+            'maxlength': '4',
+            'placeholder': '••••',
         }),
         label="New PIN",
         help_text="Enter a 4-digit PIN (numbers only)"
@@ -353,14 +355,22 @@ class SetPinForm(BootstrapFormMixin, forms.Form):
         max_length=4,
         min_length=4,
         widget=forms.PasswordInput(attrs={
+            'class': 'pin-input',
             'autocomplete': 'off',
             'inputmode': 'numeric',
             'pattern': '[0-9]{4}',
-            'maxlength': '4'
+            'maxlength': '4',
+            'placeholder': '••••',
         }),
         label="Confirm PIN",
         help_text="Re-enter your 4-digit PIN"
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Prefer pin-page classes over BootstrapFormMixin defaults
+        self.fields['pin'].widget.attrs['class'] = 'pin-input'
+        self.fields['confirm_pin'].widget.attrs['class'] = 'pin-input'
 
     def clean_pin(self):
         pin = self.cleaned_data.get('pin')
@@ -378,11 +388,11 @@ class SetPinForm(BootstrapFormMixin, forms.Form):
         cleaned_data = super().clean()
         pin = cleaned_data.get('pin')
         confirm_pin = cleaned_data.get('confirm_pin')
-        
+
         if pin and confirm_pin:
             if pin != confirm_pin:
                 raise forms.ValidationError("The two PIN fields didn't match.")
-        
+
         return cleaned_data
 
 

@@ -1,226 +1,149 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
-{% block title %}Choose Your Space{% endblock %}
+{% block title %}Choose your space{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-<style>
-body {
-    background-color: var(--bs-body-bg, #f8f9fa);
-}
-
-.space-switcher {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 2.5rem 1.5rem 3rem;
-}
-
-.space-switcher__header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.space-switcher__title {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--bs-heading-color, #212529);
-    margin-bottom: 0.5rem;
-}
-
-.space-switcher__subtitle {
-    color: #6c757d;
-    font-size: 0.95rem;
-}
-
-.space-switcher__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.9rem;
-    color: #6c757d;
-    text-decoration: none;
-    margin-bottom: 1.5rem;
-}
-
-.space-switcher__back:hover,
-.space-switcher__back:focus {
-    color: #343a40;
-    text-decoration: underline;
-}
-
-.space-list {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-}
-
-@media (min-width: 576px) {
-    .space-list {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    }
-}
-
-.space-card {
-    background-color: #fff;
-    border: 1px solid #dfe3e6;
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.space-card:focus-visible {
-    outline: 2px solid #adb5bd;
-    outline-offset: 4px;
-}
-
-.space-card:hover,
-.space-card:focus {
-    border-color: #adb5bd;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
-}
-
-.space-card.active {
-    border-color: #0d6efd;
-    background-color: #e7f1ff;
-    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.12);
-}
-
-.space-card .space-icon {
-    font-size: 2.5rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-}
-
-.space-card.active .space-icon {
-    color: #0d6efd;
-}
-
-.space-card h5 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #212529;
-}
-
-.space-card .space-description {
-    font-size: 0.9rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-}
-
-.space-card .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    background-color: #e9ecef;
-    color: #495057;
-}
-
-.space-card.active .badge {
-    background-color: #0d6efd;
-    color: #fff;
-}
-
-.space-card .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-
-.space-card.active .material-symbols-outlined {
-    font-variation-settings: 'FILL' 1;
-}
-
-.no-spaces {
-    background-color: #fff;
-    border: 1px solid #dfe3e6;
-    border-radius: 0.75rem;
-    padding: 3rem 1.5rem;
-    text-align: center;
-    color: #6c757d;
-}
-
-.no-spaces h3 {
-    font-size: 1.25rem;
-    color: #212529;
-    margin-bottom: 0.75rem;
-}
-
-.no-spaces p {
-    font-size: 0.95rem;
-    margin: 0;
-}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/core/space_switcher/style.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="space-switcher">
-    <a href="{% url 'dashboard:space_admin_dashboard' %}" class="space-switcher__back">
-        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-        Back to dashboard
-    </a>
+{% block body_class %}ss-body{% endblock %}
 
-    <header class="space-switcher__header">
-        <h1 class="space-switcher__title">Choose your space</h1>
-        <p class="space-switcher__subtitle">Switch the active space to keep working in the right context.</p>
+{% block content_outer %}
+<div class="ss-shell">
+  <header class="ss-nav">
+    <div class="ss-nav__inner">
+      <a href="{% if current_space %}{% url 'dashboard:space_admin_dashboard' %}{% else %}#{% endif %}" class="ss-nav__brand" {% if not current_space %}aria-disabled="true"{% endif %}>
+        <img src="{% static 'images/logo.svg' %}" alt="Services" class="ss-nav__logo">
+      </a>
+
+      <div class="ss-nav__actions">
+        <div class="ss-nav__profile" title="{{ user.get_full_name|default:user.email }}">
+          <span class="ss-nav__avatar" aria-hidden="true">
+            {% if user.first_name and user.last_name %}
+              {{ user.first_name|make_list|first|upper }}{{ user.last_name|make_list|first|upper }}
+            {% elif user.first_name %}
+              {{ user.first_name|slice:":2"|upper }}
+            {% elif user.email %}
+              {{ user.email|slice:":1"|upper }}
+            {% else %}
+              U
+            {% endif %}
+          </span>
+          <div class="ss-nav__meta">
+            <span class="ss-nav__name">{{ user.get_full_name|default:user.get_short_name|default:user.email }}</span>
+            <span class="ss-nav__role">{{ user.get_user_type_display }}</span>
+          </div>
+        </div>
+        <a href="{% url 'core:logout' %}" class="ss-nav__logout">
+          <span class="material-symbols-outlined">logout</span>
+          <span class="ss-nav__logout-text">Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="ss-page">
+    {% if current_space %}
+    <a href="{% url 'dashboard:space_admin_dashboard' %}" class="ss-back">
+      <span class="material-symbols-outlined">arrow_back</span>
+      Back to dashboard
+    </a>
+    {% endif %}
+
+    <header class="ss-identity">
+      <h1 class="ss-identity__name">Choose your space</h1>
+      <p class="ss-identity__meta">
+        {% if current_space %}
+        Currently in <strong>{{ current_space.name }}</strong>. Pick another space to switch context.
+        {% else %}
+        Select a space to open your workspace.
+        {% endif %}
+      </p>
     </header>
 
     {% if available_spaces %}
-    <form method="post" id="space-form">
-        {% csrf_token %}
-        <div class="space-list">
-            {% for space in available_spaces %}
-            <div class="space-card {% if space == user.active_space %}active{% endif %}"
-                 role="button" tabindex="0" onclick="selectSpace('{{ space.slug }}')"
-                 onkeydown="handleCardKeydown(event, '{{ space.slug }}')">
-                <span class="material-symbols-outlined space-icon" aria-hidden="true">
-                    {% if space == user.active_space %}check_circle{% else %}domain{% endif %}
-                </span>
-                <h5>{{ space.name }}</h5>
-                <p class="space-description">{{ space.description|default:"Issues, tasks, and updates for this space." }}</p>
-                <span class="badge">
-                    <span class="material-symbols-outlined" aria-hidden="true">
-                        {% if space == user.active_space %}check{% else %}arrow_forward{% endif %}
-                    </span>
-                    {% if space == user.active_space %}Current space{% else %}Switch to this space{% endif %}
-                </span>
-            </div>
-            {% endfor %}
-        </div>
-        {{ form.space.as_hidden }}
+    <form method="post" id="space-form" class="ss-form">
+      {% csrf_token %}
+      {{ form.space }}
+      <div class="ss-grid" role="list">
+        {% for space in available_spaces %}
+        {% if space == current_space %}
+        <a href="{% url 'dashboard:space_admin_dashboard' %}"
+           class="ss-card ss-card--current"
+           role="listitem"
+           aria-current="true">
+          <div class="ss-card__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="ss-card__body">
+            <h2 class="ss-card__name">{{ space.name }}</h2>
+            {% if space.label %}
+            <p class="ss-card__label">{{ space.label }}</p>
+            {% endif %}
+            <p class="ss-card__desc">{{ space.description|default:"Tickets, tasks, and updates for this space."|truncatechars:110 }}</p>
+          </div>
+          <span class="ss-card__badge ss-card__badge--action">
+            Open
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </span>
+        </a>
+        {% else %}
+        <button type="button"
+                class="ss-card"
+                role="listitem"
+                onclick="selectSpace('{{ space.slug }}')"
+                onkeydown="handleCardKeydown(event, '{{ space.slug }}')">
+          <div class="ss-card__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">domain</span>
+          </div>
+          <div class="ss-card__body">
+            <h2 class="ss-card__name">{{ space.name }}</h2>
+            {% if space.label %}
+            <p class="ss-card__label">{{ space.label }}</p>
+            {% endif %}
+            <p class="ss-card__desc">{{ space.description|default:"Tickets, tasks, and updates for this space."|truncatechars:110 }}</p>
+          </div>
+          <span class="ss-card__badge ss-card__badge--action">
+            Switch
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </span>
+        </button>
+        {% endif %}
+        {% endfor %}
+      </div>
     </form>
     {% else %}
-    <div class="no-spaces">
-        <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 2.5rem; margin-bottom: 1rem;">info</span>
-        <h3>No spaces available</h3>
-        <p>You don't have access to any spaces yet. Contact your administrator if you think this is a mistake.</p>
+    <div class="ss-empty">
+      <span class="material-symbols-outlined ss-empty__icon">workspaces</span>
+      <h2 class="ss-empty__title">No spaces available</h2>
+      <p class="ss-empty__sub">You don’t have access to any spaces yet. Contact your administrator if this looks wrong.</p>
     </div>
     {% endif %}
+  </main>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ block.super }}
 <script>
 function selectSpace(spaceSlug) {
-    const spaceInput = document.getElementById('id_space');
-    const spaceForm = document.getElementById('space-form');
-
-    if (spaceInput && spaceForm) {
-        spaceInput.value = spaceSlug;
-        spaceForm.submit();
-    }
+  const spaceInput = document.getElementById('id_space');
+  const spaceForm = document.getElementById('space-form');
+  if (spaceInput && spaceForm) {
+    spaceInput.value = spaceSlug;
+    spaceForm.submit();
+  }
 }
 
 function handleCardKeydown(event, spaceSlug) {
-    if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        selectSpace(spaceSlug);
-    }
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    selectSpace(spaceSlug);
+  }
 }
 </script>
 {% endblock %}

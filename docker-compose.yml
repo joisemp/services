@@ -44,6 +44,17 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # ── SCSS watcher ──────────────────────────────────────────────────────────
+  scss:
+    image: node:22-alpine
+    working_dir: /work/styles
+    volumes:
+      - ./src/static/styles:/work/styles
+    command: >
+      sh -c "npm install -g sass@1.86.0
+      && sass --watch --poll .:. --style=expanded --no-source-map"
+    restart: unless-stopped
+
   # ── Mailpit (dev email inbox) ───────────────────────────────────────────────
   mailpit:
     image: axllent/mailpit:latest

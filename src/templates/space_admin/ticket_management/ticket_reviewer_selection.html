@@ -1,0 +1,127 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Select reviewers — {{ ticket.title }}{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_reviewer_selection/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'space_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:space_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
+
+<div class="tr-page">
+  <a href="{{ detail_url }}" class="tr-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
+
+  <header class="tr-identity">
+    <div class="tr-identity__mark" aria-hidden="true">
+      <span class="material-symbols-outlined">confirmation_number</span>
+    </div>
+    <div class="tr-identity__body">
+      <h1 class="tr-identity__name">{{ ticket.title }}</h1>
+      <div class="tr-identity__pills">
+        <span class="tr-pill tr-pill--id">{{ ticket.ticket_id }}</span>
+        <span class="tr-pill tr-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+        <span class="tr-pill tr-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+        <span class="tr-pill tr-pill--review">Review required</span>
+      </div>
+      <p class="tr-identity__meta">
+        {% if ticket.assigned_to %}
+        Assigned to
+        <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+        {% else %}
+        No assignee yet
+        {% endif %}
+      </p>
+    </div>
+  </header>
+
+  <section class="tr-card" aria-labelledby="tr-form-heading">
+    <header class="tr-card__head">
+      <p class="tr-step">Step 2 of 2</p>
+      <h2 id="tr-form-heading" class="tr-card__title">Select reviewers</h2>
+      <p class="tr-card__desc">Choose one or more reviewers who must approve this ticket before it can be resolved.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="tr-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" novalidate class="tr-form">
+      {% csrf_token %}
+
+      {% if form.reviewers.field.queryset.exists %}
+      <div class="tr-field">
+        <div class="tr-field__label-row">
+          <span class="tr-label">Reviewers <span class="tr-req">*</span></span>
+          <span class="tr-count">{{ form.reviewers.field.queryset.count }} available</span>
+        </div>
+
+        <ul class="tr-reviewer-list">
+          {% for choice in form.reviewers %}
+          <li>
+            <label class="tr-reviewer" for="{{ choice.id_for_label }}">
+              {{ choice.tag }}
+              <span class="tr-reviewer__body">
+                <span class="tr-reviewer__icon" aria-hidden="true">
+                  <span class="material-symbols-outlined">rate_review</span>
+                </span>
+                <span class="tr-reviewer__name">{{ choice.choice_label }}</span>
+              </span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {% if form.reviewers.errors %}
+        <div class="tr-error">
+          {% for error in form.reviewers.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="tr-empty">
+        <span class="tr-empty__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">person_off</span>
+        </span>
+        <p class="tr-empty__title">No reviewers available</p>
+        <p class="tr-empty__text">Add reviewers to this organization before enabling review requirement.</p>
+      </div>
+      {% endif %}
+
+      <div class="tr-actions">
+        <a href="{{ detail_url }}" class="tr-btn tr-btn--outline">Back to ticket</a>
+        {% if form.reviewers.field.queryset.exists %}
+        <button type="submit" class="tr-btn tr-btn--primary">
+          <span class="material-symbols-outlined">check</span>
+          Confirm reviewers
+        </button>
+        {% else %}
+        <button type="button" class="tr-btn tr-btn--primary" disabled>
+          <span class="material-symbols-outlined">check</span>
+          Confirm reviewers
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

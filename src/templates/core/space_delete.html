@@ -37,7 +37,7 @@
             </h5>
             <p class="mb-0 small">
               You are about to permanently delete this space and <strong>all</strong> its related data. 
-              This includes all issues, images, comments, work tasks, and any external shares. All users assigned to this space will lose access.
+              This includes all tickets, images, comments, work tasks, and any external shares. All users assigned to this space will lose access.
             </p>
           </div>
 
@@ -70,8 +70,8 @@
               </div>
               <div class="col-6">
                 <div class="text-center p-2 p-sm-3 bg-light rounded">
-                  <div class="h5 h6-sm text-danger mb-1">{{ related_counts.issues }}</div>
-                  <small class="text-muted d-block">Issue{{ related_counts.issues|pluralize }}</small>
+                  <div class="h5 h6-sm text-danger mb-1">{{ related_counts.tickets }}</div>
+                  <small class="text-muted d-block">Ticket{{ related_counts.tickets|pluralize }}</small>
                 </div>
               </div>
               <div class="col-6">
@@ -140,7 +140,7 @@
   
   // Add additional confirmation on form submit
   document.querySelector('.deletion-form').addEventListener('submit', function(e) {
-    if (!confirm('Are you absolutely sure you want to delete this space? This action cannot be undone and will delete all associated issues.')) {
+    if (!confirm('Are you absolutely sure you want to delete this space? This action cannot be undone and will delete all associated tickets.')) {
       e.preventDefault();
     }
   });

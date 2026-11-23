@@ -93,7 +93,7 @@ def test_image_compression():
         max_height=1920, 
         quality=85, 
         format='WEBP',
-        upload_path='public/issue_images/'
+        upload_path='public/ticket_images/'
     )
     print(f"Compressed image: {compressed.name}")
     print(f"Content type: {compressed.content_type}")
@@ -111,7 +111,7 @@ def test_image_compression():
         max_height=1920,
         quality=85,
         format='WEBP',
-        upload_path='public/issue_images/'
+        upload_path='public/ticket_images/'
     )
     assert compressed.name != compressed2.name, "Multiple compressions should produce unique filenames"
     print(f"Second compression unique name: {compressed2.name}")

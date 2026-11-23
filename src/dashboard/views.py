@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from issue_management.models import Issue, WorkTask
+from ticket_management.models import Ticket, WorkTask
 from config.mixins.access_mixin import (
     CentralAdminOnlyAccessMixin,
     SpaceAdminOnlyAccessMixin,
@@ -18,6 +18,7 @@ class DashboardDataMixin:
 
     template_name = ''
     recent_issue_limit = 6
+    overdue_task_limit = 6
     trend_months = 6
 
     status_style_map = {
@@ -66,9 +67,9 @@ class DashboardDataMixin:
         org = getattr(user, 'organization', None)
 
         if not org and not user.is_superuser:
-            return Issue.objects.none()
+            return Ticket.objects.none()
 
-        queryset = Issue.objects.all()
+        queryset = Ticket.objects.all()
         if org:
             queryset = queryset.filter(org=org)
 
@@ -81,44 +82,44 @@ class DashboardDataMixin:
                 if spaces.exists():
                     queryset = queryset.filter(space__in=spaces)
                 else:
-                    return Issue.objects.none()
+                    return Ticket.objects.none()
 
         return queryset.select_related('reporter', 'assigned_to', 'org', 'space')
 
-    def get_recent_issues(self, queryset):
+    def get_recent_tickets(self, queryset):
         recent_queryset = queryset.order_by('-created_at')[: self.recent_issue_limit]
-        issues = []
-        status_labels = dict(Issue.STATUS_CHOICES)
-        priority_labels = dict(Issue.PRIORITY_CHOICES)
+        tickets = []
+        status_labels = dict(Ticket.STATUS_CHOICES)
+        priority_labels = dict(Ticket.PRIORITY_CHOICES)
 
-        for issue in recent_queryset:
-            reporter = issue.reporter.get_full_name() or issue.reporter.email or issue.reporter.phone_number
-            issues.append(
+        for ticket in recent_queryset:
+            reporter = ticket.reporter.get_full_name() or ticket.reporter.email or ticket.reporter.phone_number
+            tickets.append(
                 {
-                    'title': issue.title,
-                    'created_at': issue.created_at,
-                    'priority': issue.priority,
-                    'priority_display': priority_labels.get(issue.priority, issue.priority.title()),
-                    'priority_class': self.priority_style_map.get(issue.priority, 'text-bg-secondary'),
+                    'title': ticket.title,
+                    'created_at': ticket.created_at,
+                    'priority': ticket.priority,
+                    'priority_display': priority_labels.get(ticket.priority, ticket.priority.title()),
+                    'priority_class': self.priority_style_map.get(ticket.priority, 'text-bg-secondary'),
                     'reporter': reporter,
-                    'status': issue.status,
-                    'status_display': status_labels.get(issue.status, issue.status.title()),
-                    'status_class': self.status_style_map.get(issue.status, 'text-bg-secondary'),
-                    'url': self.get_issue_detail_url(issue),
+                    'status': ticket.status,
+                    'status_display': status_labels.get(ticket.status, ticket.status.title()),
+                    'status_class': self.status_style_map.get(ticket.status, 'text-bg-secondary'),
+                    'url': self.get_ticket_detail_url(ticket),
                 }
             )
-        return issues
+        return tickets
 
-    def get_issue_detail_url(self, issue):
-        return reverse(self.get_issue_detail_route_name(), kwargs={'issue_slug': issue.slug})
+    def get_ticket_detail_url(self, ticket):
+        return reverse(self.get_ticket_detail_route_name(), kwargs={'ticket_slug': ticket.slug})
 
     def get_view_all_url(self):
-        return reverse(self.get_issue_list_route_name())
+        return reverse(self.get_ticket_list_route_name())
 
-    def get_issue_list_route_name(self):
+    def get_ticket_list_route_name(self):
         raise NotImplementedError
 
-    def get_issue_detail_route_name(self):
+    def get_ticket_detail_route_name(self):
         raise NotImplementedError
 
     def get_summary_cards(self, queryset):
@@ -133,9 +134,9 @@ class DashboardDataMixin:
             updated_at__gte=month_start,
         ).count()
 
-        issue_ids = list(queryset.values_list('pk', flat=True))
-        if issue_ids:
-            work_tasks = WorkTask.objects.filter(issue__in=issue_ids)
+        ticket_ids = list(queryset.values_list('pk', flat=True))
+        if ticket_ids:
+            work_tasks = WorkTask.objects.filter(ticket__in=ticket_ids)
             pending_tasks = work_tasks.filter(completed=False).count()
             overdue_tasks = work_tasks.filter(
                 completed=False,
@@ -147,8 +148,8 @@ class DashboardDataMixin:
             overdue_tasks = 0
 
         summary = [
-            {'label': 'Total Issues', 'value': total_issues, 'variant': 'primary', 'icon': 'insights'},
-            {'label': 'Active Issues', 'value': active_issues, 'variant': 'info', 'icon': 'pending'},
+            {'label': 'Total Tickets', 'value': total_issues, 'variant': 'primary', 'icon': 'insights'},
+            {'label': 'Active Tickets', 'value': active_issues, 'variant': 'info', 'icon': 'pending'},
             {'label': 'Resolved This Month', 'value': resolved_this_month, 'variant': 'success', 'icon': 'task_alt'},
             {'label': 'Overdue Tasks', 'value': overdue_tasks, 'variant': 'danger', 'icon': 'warning'},
             {'label': 'Pending Tasks', 'value': pending_tasks, 'variant': 'warning', 'icon': 'assignment'},
@@ -204,28 +205,46 @@ class DashboardDataMixin:
                 'labels': labels,
                 'datasets': [
                     {
-                        'label': 'New Issues',
+                        'label': 'New',
                         'data': created_data,
-                        'borderColor': 'rgba(54, 162, 235, 1)',
-                        'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                        'borderColor': '#2563EB',
+                        'backgroundColor': 'rgba(37, 99, 235, 0.07)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#2563EB',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                     {
                         'label': 'In Progress',
                         'data': in_progress_data,
-                        'borderColor': 'rgba(255, 159, 64, 1)',
-                        'backgroundColor': 'rgba(255, 159, 64, 0.2)',
+                        'borderColor': '#7c3aed',
+                        'backgroundColor': 'rgba(124, 58, 237, 0.05)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#7c3aed',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                     {
-                        'label': 'Issues Resolved',
+                        'label': 'Resolved',
                         'data': resolved_data,
-                        'borderColor': 'rgba(75, 192, 192, 1)',
-                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'borderColor': '#16a34a',
+                        'backgroundColor': 'rgba(22, 163, 74, 0.06)',
                         'fill': True,
-                        'tension': 0.3,
+                        'tension': 0.4,
+                        'pointRadius': 3,
+                        'pointHoverRadius': 5,
+                        'pointBackgroundColor': '#16a34a',
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'borderWidth': 2,
                     },
                 ],
             },
@@ -233,22 +252,72 @@ class DashboardDataMixin:
                 'responsive': True,
                 'maintainAspectRatio': False,
                 'interaction': {'mode': 'index', 'intersect': False},
-                'plugins': {'legend': {'position': 'top'}},
-                'scales': {'y': {'beginAtZero': True, 'precision': 0}},
+                'plugins': {
+                    'legend': {
+                        'position': 'top',
+                        'align': 'end',
+                        'labels': {
+                            'usePointStyle': True,
+                            'pointStyle': 'circle',
+                            'boxWidth': 7,
+                            'boxHeight': 7,
+                            'padding': 20,
+                            'color': '#6b7280',
+                            'font': {'size': 12, 'family': 'Inter, system-ui, sans-serif'},
+                        },
+                    },
+                    'tooltip': {
+                        'backgroundColor': '#fff',
+                        'borderColor': '#e5e7eb',
+                        'borderWidth': 1,
+                        'titleColor': '#111827',
+                        'bodyColor': '#6b7280',
+                        'titleFont': {'size': 13, 'weight': '600', 'family': 'Inter, system-ui, sans-serif'},
+                        'bodyFont': {'size': 12, 'family': 'Inter, system-ui, sans-serif'},
+                        'padding': 12,
+                        'cornerRadius': 8,
+                        'boxPadding': 4,
+                    },
+                },
+                'scales': {
+                    'y': {
+                        'beginAtZero': True,
+                        'ticks': {
+                            'precision': 0,
+                            'color': '#9ca3af',
+                            'font': {'size': 11, 'family': 'Inter, system-ui, sans-serif'},
+                            'maxTicksLimit': 5,
+                        },
+                        'grid': {'color': '#f3f4f6'},
+                        'border': {'display': False, 'dash': [4, 4]},
+                    },
+                    'x': {
+                        'ticks': {
+                            'color': '#9ca3af',
+                            'font': {'size': 11, 'family': 'Inter, system-ui, sans-serif'},
+                            'maxRotation': 0,
+                        },
+                        'grid': {'display': False},
+                        'border': {'display': False},
+                    },
+                },
             },
         }
 
     def get_status_breakdown(self, queryset):
         status_counts = queryset.values('status').annotate(count=Count('id'))
         count_map = {item['status']: item['count'] for item in status_counts}
+        total = sum(count_map.values()) or 1
 
         breakdown = []
-        for key, label in Issue.STATUS_CHOICES:
+        for key, label in Ticket.STATUS_CHOICES:
+            count = count_map.get(key, 0)
             breakdown.append(
                 {
                     'status': key,
                     'label': label,
-                    'count': count_map.get(key, 0),
+                    'count': count,
+                    'percent': round((count / total) * 100),
                     'badge_class': self.status_style_map.get(key, 'text-bg-secondary'),
                 }
             )
@@ -257,17 +326,55 @@ class DashboardDataMixin:
     def get_priority_breakdown(self, queryset):
         priority_counts = queryset.values('priority').annotate(count=Count('id'))
         count_map = {item['priority']: item['count'] for item in priority_counts}
+        total = sum(count_map.values()) or 1
         breakdown = []
-        for key, label in Issue.PRIORITY_CHOICES:
+        for key, label in Ticket.PRIORITY_CHOICES:
+            count = count_map.get(key, 0)
             breakdown.append(
                 {
                     'priority': key,
                     'label': label,
-                    'count': count_map.get(key, 0),
+                    'count': count,
+                    'percent': round((count / total) * 100),
                     'badge_class': self.priority_style_map.get(key, 'text-bg-secondary'),
                 }
             )
         return breakdown
+
+    def get_overdue_tasks(self, queryset):
+        now = timezone.now()
+        ticket_ids = list(queryset.values_list('pk', flat=True))
+        if not ticket_ids:
+            return []
+
+        overdue_qs = (
+            WorkTask.objects.filter(
+                ticket__in=ticket_ids,
+                completed=False,
+                due_date__isnull=False,
+                due_date__lt=now,
+            )
+            .select_related('ticket', 'assigned_to')
+            .order_by('due_date')[: self.overdue_task_limit]
+        )
+
+        tasks = []
+        for task in overdue_qs:
+            assignee = (
+                task.assigned_to.get_full_name()
+                or task.assigned_to.email
+                or task.assigned_to.phone_number
+            )
+            tasks.append(
+                {
+                    'title': task.title,
+                    'ticket_title': task.ticket.title,
+                    'due_date': task.due_date,
+                    'assigned_to': assignee,
+                    'url': self.get_ticket_detail_url(task.ticket),
+                }
+            )
+        return tasks
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -277,7 +384,8 @@ class DashboardDataMixin:
             {
                 'summary_cards': self.get_summary_cards(issue_queryset),
                 'chart_config': self.get_trend_config(issue_queryset),
-                'recent_issues': self.get_recent_issues(issue_queryset),
+                'recent_tickets': self.get_recent_tickets(issue_queryset),
+                'overdue_tasks': self.get_overdue_tasks(issue_queryset),
                 'status_breakdown': self.get_status_breakdown(issue_queryset),
                 'priority_breakdown': self.get_priority_breakdown(issue_queryset),
                 'view_all_issues_url': self.get_view_all_url(),
@@ -293,21 +401,66 @@ class DashboardDataMixin:
 class CentralAdminDashboardView(CentralAdminOnlyAccessMixin, DashboardDataMixin, TemplateView):
     template_name = 'central_admin/dashboard.html'
 
-    def get_issue_list_route_name(self):
-        return 'issue_management:central_admin:issue_list'
+    def get_ticket_list_route_name(self):
+        return 'ticket_management:central_admin:ticket_list'
 
-    def get_issue_detail_route_name(self):
-        return 'issue_management:central_admin:issue_detail'
+    def get_ticket_detail_route_name(self):
+        return 'ticket_management:central_admin:ticket_detail'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['quick_links'] = [
+            {
+                'label': 'People',
+                'url': reverse('core:people_list'),
+                'icon': 'group',
+                'hint': 'Manage users & roles',
+            },
+            {
+                'label': 'Spaces',
+                'url': reverse('core:space_list'),
+                'icon': 'apartment',
+                'hint': 'Sites & locations',
+            },
+            {
+                'label': 'Inventory',
+                'url': reverse('inventory:central_admin:inventory_dashboard'),
+                'icon': 'inventory_2',
+                'hint': 'Stock & assets',
+            },
+        ]
+        return context
 
 
 class SpaceAdminDashboardView(SpaceAdminWithActiveSpaceMixin, DashboardDataMixin, TemplateView):
     template_name = 'space_admin/dashboard.html'
 
-    def get_issue_list_route_name(self):
-        return 'issue_management:space_admin:issue_list'
+    def get_ticket_list_route_name(self):
+        return 'ticket_management:space_admin:ticket_list'
 
-    def get_issue_detail_route_name(self):
-        return 'issue_management:space_admin:issue_detail'
+    def get_ticket_detail_route_name(self):
+        return 'ticket_management:space_admin:ticket_detail'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['quick_links'] = [
+            {
+                'label': 'Tickets',
+                'url': reverse('ticket_management:space_admin:ticket_list'),
+                'icon': 'confirmation_number',
+            },
+            {
+                'label': 'Site visits',
+                'url': reverse('ticket_management:space_admin:site_visit_list'),
+                'icon': 'location_on',
+            },
+            {
+                'label': 'Switch space',
+                'url': reverse('core:switch_space'),
+                'icon': 'swap_horiz',
+            },
+        ]
+        return context
 
 
 class TransportInchargeDashboardView(TransportInchargeOnlyAccessMixin, TemplateView):

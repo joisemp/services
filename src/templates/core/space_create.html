@@ -1,28 +1,97 @@
-{% extends 'sidebar_base.html' %}
-
+{% extends "sidebar_base.html" %}
 {% load static %}
 
-{% block title %}Create Space{% endblock %}
+{% block title %}Create Space{% endblock title %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'styles/issue_management/forms/style.css' %}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-{% endblock %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/core/space_create/style.css' %}">
+{% endblock styles %}
 
 {% block navbar %}
-{% include 'navbar.html' %}
-{% endblock %}
+{% include "navbar.html" %}
+{% endblock navbar %}
 
 {% block sidebar %}
-{% include 'central_admin/sidebar.html' %}
-{% endblock %}
+{% include "central_admin/sidebar.html" %}
+{% endblock sidebar %}
 
 {% block content %}
-<div class="container-fluid">
- <form method="post">
-    {% csrf_token %}
-    {{ form.as_p | safe }}
-    <button type="submit" class="btn btn-primary">Create Space</button>
- </form>
+<div class="space-form-page">
+    <div class="space-form-wrap">
+
+        <a href="{% url 'core:space_list' %}" class="space-form-back">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Back to Spaces
+        </a>
+
+        <div class="space-form-panel">
+            <header class="space-form-header">
+                <h1 class="space-form-header__title">Create Space</h1>
+                <p class="space-form-header__sub">Add a new space to your organisation</p>
+            </header>
+
+            {% if form.non_field_errors %}
+            <div class="space-form-alert space-form-alert--danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post" novalidate class="space-form">
+                {% csrf_token %}
+
+                <div class="space-form-field">
+                    <label for="{{ form.name.id_for_label }}" class="space-form-label">
+                        Space name <span class="space-form-req">*</span>
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.help_text %}
+                        <small class="space-form-hint">{{ form.name.help_text }}</small>
+                    {% endif %}
+                    {% if form.name.errors %}
+                        <div class="space-form-error">
+                            {% for error in form.name.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-form-field">
+                    <label for="{{ form.label.id_for_label }}" class="space-form-label">Label</label>
+                    {{ form.label }}
+                    {% if form.label.help_text %}
+                        <small class="space-form-hint">{{ form.label.help_text }}</small>
+                    {% endif %}
+                    {% if form.label.errors %}
+                        <div class="space-form-error">
+                            {% for error in form.label.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-form-field">
+                    <label for="{{ form.description.id_for_label }}" class="space-form-label">Description</label>
+                    {{ form.description }}
+                    {% if form.description.help_text %}
+                        <small class="space-form-hint">{{ form.description.help_text }}</small>
+                    {% endif %}
+                    {% if form.description.errors %}
+                        <div class="space-form-error">
+                            {% for error in form.description.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-form-actions">
+                    <button type="submit" class="space-form-btn space-form-btn--primary">Create Space</button>
+                    <a href="{% url 'core:space_list' %}" class="space-form-btn space-form-btn--outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+    </div>
 </div>
-{% endblock %}
+{% endblock content %}

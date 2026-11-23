@@ -1,0 +1,850 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}{{ ticket.ticket_id }} — {{ ticket.title }}{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_detail/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="td-page">
+
+  <a href="{{ back_url }}" class="td-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Tickets
+  </a>
+
+  <header class="td-identity">
+    <div class="td-identity__mark" aria-hidden="true">
+      <span class="material-symbols-outlined">confirmation_number</span>
+    </div>
+    <div class="td-identity__main">
+      <h1 class="td-identity__name">{{ ticket.title }}</h1>
+    </div>
+    <div class="td-identity__pills">
+      <span class="td-pill td-pill--id">{{ ticket.ticket_id }}</span>
+      <span class="td-pill td-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+      <span class="td-pill td-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+      <span class="td-pill">{{ ticket.created_at|date:"M d, Y" }}</span>
+    </div>
+    <div class="td-identity__actions">
+      {% if ticket.reporter.phone_number %}
+      <a href="tel:{{ ticket.reporter.phone_number }}" class="td-btn td-btn--primary"
+         title="Call {{ ticket.reporter.get_full_name|default:'Reporter' }}">
+        <span class="material-symbols-outlined">call</span>
+        Call
+      </a>
+      {% else %}
+      <button type="button" class="td-btn td-btn--primary" disabled title="No phone number">
+        <span class="material-symbols-outlined">call</span>
+        Call
+      </button>
+      {% endif %}
+    </div>
+    <p class="td-identity__meta">
+      Reported by {{ ticket.reporter.get_full_name }}
+      · {% if ticket.space %}{{ ticket.space.name }}{% else %}Organization wide{% endif %}
+      · {{ ticket.reporter.phone_number|default:"No phone" }}
+    </p>
+    {% if ticket.vehicle or ticket.workshop %}
+    <p class="td-identity__meta">
+      {% if ticket.vehicle %}
+      Vehicle:
+      <a href="{% url 'fleet_management:central_admin:vehicle_detail' slug=ticket.vehicle.slug %}" class="td-text-link">{{ ticket.vehicle.registration_number }}</a>
+      ({{ ticket.vehicle.get_vehicle_type_display }})
+      {% endif %}
+      {% if ticket.vehicle and ticket.workshop %} · {% endif %}
+      {% if ticket.workshop %}
+      Workshop:
+      <a href="{% url 'fleet_management:central_admin:workshop_detail' slug=ticket.workshop.slug %}" class="td-text-link">{{ ticket.workshop.name }}</a>
+      {% endif %}
+    </p>
+    {% endif %}
+  </header>
+
+  {% if ticket.assigned_to %}
+  <section class="td-context" aria-label="Assignment">
+    <p class="td-context__line">
+      <span class="td-context__key">Assigned</span>
+      {{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}
+      {% if ticket.assigned_at %} · {{ ticket.assigned_at|date:"M d, Y" }}{% endif %}
+      {% if ticket.requires_review %} · <span class="td-pill td-pill--prio-high">Review required</span>{% endif %}
+    </p>
+  </section>
+  {% endif %}
+
+  {% if ticket.status == 'resolved' and ticket.resolution_notes %}
+  <section class="td-resolution" aria-labelledby="td-resolution-heading">
+    <header class="td-resolution__head">
+      <h2 id="td-resolution-heading" class="td-resolution__title">
+        <span class="material-symbols-outlined">check_circle</span>
+        Resolution notes
+      </h2>
+      <span class="td-resolution__when">{{ ticket.updated_at|date:"M d, Y" }}</span>
+    </header>
+    <p class="td-resolution__body">{{ ticket.resolution_notes|linebreaksbr }}</p>
+    {% if ticket.resolution_images.all %}
+    <div class="td-thumbs td-thumbs--sm">
+      {% for res_image in ticket.resolution_images.all %}
+      <a href="{{ res_image.image.url }}" target="_blank" class="td-thumb">
+        <img src="{{ res_image.image.url }}" alt="Resolution image">
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <div class="td-toolbar">
+    <button type="button" class="td-btn td-btn--outline" data-td-drawer="comments">
+      <span class="material-symbols-outlined">chat</span>
+      Comments
+    </button>
+    <button type="button" class="td-btn td-btn--outline" data-td-drawer="work">
+      <span class="material-symbols-outlined">checklist</span>
+      Tasks &amp; visits
+    </button>
+  </div>
+
+  <section class="td-card" aria-labelledby="td-overview-heading">
+    <div class="td-card__head">
+      <h2 id="td-overview-heading" class="td-card__title">Overview</h2>
+    </div>
+    <div class="td-overview">
+      <div class="td-overview__gallery">
+        <div class="td-media-head">
+          <h3 class="td-label">Images <span class="td-count">{{ ticket.images.count }}</span></h3>
+        </div>
+        {% if ticket.images.exists %}
+        <div class="td-carousel" data-td-carousel>
+          <button type="button" class="td-carousel__nav td-carousel__nav--prev" data-td-carousel-prev aria-label="Previous image" hidden>
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <div class="td-carousel__track" data-td-carousel-track>
+            {% for image in ticket.images.all %}
+            <div class="td-carousel__slide">
+              <a href="{{ image.image.url }}" target="_blank" class="td-carousel__frame">
+                <img src="{{ image.image.url }}" alt="Ticket image {{ forloop.counter }}">
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="td-carousel__nav td-carousel__nav--next" data-td-carousel-next aria-label="Next image" {% if ticket.images.count < 2 %}hidden{% endif %}>
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+          {% if ticket.images.count > 1 %}
+          <div class="td-carousel__dots" data-td-carousel-dots aria-hidden="true">
+            {% for image in ticket.images.all %}
+            <span class="td-carousel__dot{% if forloop.first %} is-active{% endif %}"></span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="td-thumbs" data-td-carousel-thumbs>
+          {% for image in ticket.images.all %}
+          <div class="td-thumb-wrap">
+            <button type="button" class="td-thumb{% if forloop.first %} is-active{% endif %}"
+                    data-td-carousel-goto="{{ forloop.counter0 }}"
+                    aria-label="Show image {{ forloop.counter }}">
+              <img src="{{ image.image.url }}" alt="">
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="td-quiet">No images yet</p>
+        {% endif %}
+      </div>
+
+      <div class="td-overview__detail">
+        <div class="td-overview__desc">
+          <h3 class="td-label">Description</h3>
+          {% if ticket.description %}
+          <p class="td-prose">{{ ticket.description|linebreaksbr }}</p>
+          {% else %}
+          <p class="td-quiet">No description</p>
+          {% endif %}
+        </div>
+
+        <div class="td-overview__voice">
+          <div class="td-media-head">
+            <h3 class="td-label">Voice</h3>
+          </div>
+          {% if ticket.voice %}
+          <div class="td-audio" data-td-audio>
+            <audio preload="metadata" src="{{ ticket.voice.url }}">
+              <source src="{{ ticket.voice.url }}" type="audio/mpeg">
+            </audio>
+            <button type="button" class="td-audio__play" data-td-audio-play aria-label="Play">
+              <span class="material-symbols-outlined" data-td-audio-icon>play_arrow</span>
+            </button>
+            <div class="td-audio__track">
+              <div class="td-audio__scrub" data-td-audio-scrub style="--td-pct: 0%">
+                <div class="td-audio__rail" aria-hidden="true">
+                  <div class="td-audio__fill"></div>
+                  <div class="td-audio__dot"></div>
+                </div>
+                <input type="range" class="td-audio__range" data-td-audio-seek min="0" max="1" value="0" step="any" aria-label="Seek">
+              </div>
+              <div class="td-audio__times">
+                <span data-td-audio-current>0:00</span>
+                <span data-td-audio-duration>0:00</span>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <p class="td-quiet">No voice recording</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if ticket.review_comments.all %}
+  <section class="td-card" aria-labelledby="td-review-heading">
+    <div class="td-card__head">
+      <h2 id="td-review-heading" class="td-card__title">Review comments</h2>
+      <span class="td-count">{{ ticket.review_comments.count }}</span>
+    </div>
+    <ul class="td-review-list">
+      {% for review_comment in ticket.review_comments.all %}
+      <li class="td-review-item">
+        <div class="td-avatar" aria-hidden="true">{{ review_comment.user.get_full_name|default:review_comment.user.email|slice:":2"|upper }}</div>
+        <div class="td-review-item__body">
+          <div class="td-review-item__head">
+            <strong>{{ review_comment.user.get_full_name|default:review_comment.user.email }}</strong>
+            <time>{{ review_comment.created_at|timesince }} ago</time>
+          </div>
+          <p class="td-prose">{{ review_comment.comment|linebreaksbr }}</p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if ticket.status != 'resolved' and ticket.status != 'closed' and ticket.status != 'cancelled' %}
+  <section class="td-card td-card--manage" aria-labelledby="td-manage-heading">
+    <div class="td-card__head">
+      <h2 id="td-manage-heading" class="td-card__title">Work</h2>
+    </div>
+    <p class="td-card__desc">Start working on this ticket or mark it resolved when everything is done.</p>
+    <div class="td-manage">
+      <div class="td-manage__actions">
+        <form method="post" action="{% url 'ticket_management:supervisor:ticket_start_work' ticket_slug=ticket.slug %}">
+          {% csrf_token %}
+          <button type="submit" class="td-btn td-btn--outline"
+                  {% if ticket.status == 'in_progress' %}disabled title="Work is already in progress"{% endif %}>
+            <span class="material-symbols-outlined">play_arrow</span>
+            {% if ticket.status == 'in_progress' %}Work in progress{% else %}Start work{% endif %}
+          </button>
+        </form>
+        {% if ticket.status == 'in_progress' %}
+        <button type="button" class="td-btn td-btn--primary"
+                data-bs-toggle="modal" data-bs-target="#markResolvedModal"
+                {% if has_incomplete_tasks %}disabled title="Cannot resolve while tasks incomplete"{% endif %}>
+          <span class="material-symbols-outlined">check_circle</span>
+          Mark resolved
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% include 'central_admin/ticket_management/partials/activity_history.html' %}
+
+  {# ─── Drawers ────────────────────────────────────────────────────────────── #}
+  <div class="td-drawer-backdrop" data-td-drawer-close hidden></div>
+
+  <aside id="td-drawer-comments" class="td-drawer" aria-hidden="true" role="dialog" aria-labelledby="td-drawer-comments-title">
+    <div class="td-drawer__head">
+      <h2 id="td-drawer-comments-title" class="td-drawer__title">Comments</h2>
+      <button type="button" class="td-icon-btn" data-td-drawer-close aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="td-drawer__body td-drawer__body--comments">
+      <div class="td-comments comments-container">
+        <div id="comments-list-area" class="comments-list-scrollable">
+          <div hx-get="{% url 'ticket_management:comment_list' ticket_slug=ticket.slug %}"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+            <div class="td-loading">Loading comments…</div>
+          </div>
+        </div>
+        <div id="comment-form-sticky" class="comment-form-sticky">
+          {% if ticket.status == 'resolved' or ticket.status == 'closed' or ticket.status == 'cancelled' %}
+          <p class="td-quiet td-quiet--pad">Comments disabled</p>
+          {% else %}
+          <form hx-post="{% url 'ticket_management:comment_create' ticket_slug=ticket.slug %}"
+                hx-target="#comments-list-area" hx-swap="innerHTML" class="comment-form">
+            {% csrf_token %}
+            <div class="td-comment-form">
+              <div class="td-avatar" aria-hidden="true">{{ request.user.get_full_name|default:request.user.email|slice:":2"|upper }}</div>
+              <div class="td-comment-form__input">
+                <textarea name="comment" class="td-textarea" rows="2" placeholder="Add a comment…" required></textarea>
+                <div class="td-comment-form__actions">
+                  <span class="td-hint">Ctrl+Enter</span>
+                  <button type="submit" class="td-btn td-btn--sm td-btn--primary">
+                    <span class="material-symbols-outlined">send</span>
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="td-drawer-work" class="td-drawer td-drawer--work" aria-hidden="true" role="dialog" aria-labelledby="td-drawer-work-title">
+    <div class="td-drawer__head">
+      <div class="td-drawer__heading">
+        <h2 id="td-drawer-work-title" class="td-drawer__title">Tasks &amp; visits</h2>
+        <p class="td-drawer__subtitle">Track work items and scheduled site visits for this ticket.</p>
+      </div>
+      <button type="button" class="td-icon-btn" data-td-drawer-close aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="td-drawer__body td-drawer__body--work">
+
+      <section class="td-work-section">
+        <div class="td-work-section__head">
+          <div class="td-work-section__title">
+            <span class="td-work-section__icon" aria-hidden="true">
+              <span class="material-symbols-outlined">checklist</span>
+            </span>
+            <div>
+              <h3>Work tasks</h3>
+              <p>{% if work_tasks %}{{ work_tasks|length }} task{{ work_tasks|length|pluralize }}{% else %}None yet{% endif %}</p>
+            </div>
+          </div>
+          {% if ticket.status != 'resolved' and ticket.status != 'closed' and ticket.status != 'cancelled' %}
+          <a href="{% url 'ticket_management:supervisor:work_task_create' ticket_slug=ticket.slug %}" class="td-btn td-btn--sm td-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Add
+          </a>
+          {% else %}
+          <button type="button" class="td-btn td-btn--sm td-btn--outline" disabled>Add</button>
+          {% endif %}
+        </div>
+
+        {% if work_tasks %}
+        <ul class="td-work-list">
+          {% for task in work_tasks %}
+          <li class="td-work-item {% if task.completed %}td-work-item--done{% endif %}">
+            <div class="td-work-item__icon {% if task.completed %}is-done{% else %}is-pending{% endif %}" aria-hidden="true">
+              <span class="material-symbols-outlined">{% if task.completed %}check{% else %}radio_button_unchecked{% endif %}</span>
+            </div>
+            <div class="td-work-item__body">
+              <div class="td-work-item__top">
+                <h4 class="td-work-item__title {% if task.completed %}is-done{% endif %}">{{ task.title }}</h4>
+                {% if task.completed %}
+                <span class="td-pill td-pill--resolved">Done</span>
+                {% else %}
+                <span class="td-pill td-pill--prio-high">Pending</span>
+                {% endif %}
+              </div>
+              <p class="td-work-item__meta">
+                <span class="material-symbols-outlined">person</span>
+                {{ task.assigned_to.get_full_name|default:task.assigned_to }}
+                {% if task.due_date %}
+                <span class="td-work-item__dot" aria-hidden="true"></span>
+                <span class="material-symbols-outlined">event</span>
+                Due {{ task.due_date|date:"M d, Y" }}
+                {% endif %}
+              </p>
+              {% if task.completed and task.resolution_images.all %}
+              <div class="td-thumbs td-thumbs--sm">
+                {% for res_image in task.resolution_images.all %}
+                <div class="td-thumb-wrap">
+                  <button type="button" class="td-thumb" data-bs-toggle="modal" data-bs-target="#resolutionImageModal{{ res_image.id }}">
+                    <img src="{{ res_image.image.url }}" alt="Resolution">
+                  </button>
+                  {% if ticket.status != 'resolved' %}
+                  <button type="button" class="td-thumb-del"
+                          data-delete-url="{% url 'ticket_management:supervisor:resolution_image_delete' work_task_slug=task.slug image_slug=res_image.slug %}"
+                          onclick="deleteByUrl(this.dataset.deleteUrl, 'Delete this resolution image?')">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                  {% endif %}
+                </div>
+                <div class="modal fade" id="resolutionImageModal{{ res_image.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content td-modal">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Resolution image</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body text-center">
+                        <img src="{{ res_image.image.url }}" alt="Resolution" class="img-fluid" style="max-height:70vh">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            <div class="dropdown td-work-item__menu">
+              <button class="td-icon-btn" type="button" data-bs-toggle="dropdown" aria-label="Task actions">
+                <span class="material-symbols-outlined">more_horiz</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'ticket_management:supervisor:work_task_update' work_task_slug=task.slug %}">Edit</a></li>
+                <li>
+                  {% if not task.completed %}
+                  <a class="dropdown-item" href="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=task.slug %}">Mark complete</a>
+                  {% else %}
+                  <form method="post" action="{% url 'ticket_management:supervisor:work_task_toggle_complete' work_task_slug=task.slug %}">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item">Mark pending</button>
+                  </form>
+                  {% endif %}
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteWorkTaskModal{{ task.id }}">Delete</button>
+                </li>
+              </ul>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="td-work-empty">
+          <span class="td-work-empty__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">checklist</span>
+          </span>
+          <p class="td-work-empty__title">No work tasks yet</p>
+          <p class="td-work-empty__text">Break the ticket into assignable tasks for your team.</p>
+          {% if ticket.status != 'resolved' and ticket.status != 'closed' and ticket.status != 'cancelled' %}
+          <a href="{% url 'ticket_management:supervisor:work_task_create' ticket_slug=ticket.slug %}" class="td-btn td-btn--sm td-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Add task
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="td-work-section">
+        <div class="td-work-section__head">
+          <div class="td-work-section__title">
+            <span class="td-work-section__icon td-work-section__icon--visit" aria-hidden="true">
+              <span class="material-symbols-outlined">location_on</span>
+            </span>
+            <div>
+              <h3>Site visits</h3>
+              <p>{% if site_visits %}{{ site_visits|length }} visit{{ site_visits|length|pluralize }}{% else %}None yet{% endif %}</p>
+            </div>
+          </div>
+          {% if ticket.status != 'resolved' and ticket.status != 'closed' and ticket.status != 'cancelled' %}
+          <a href="{% url 'ticket_management:supervisor:site_visit_create' ticket_slug=ticket.slug %}" class="td-btn td-btn--sm td-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Create
+          </a>
+          {% else %}
+          <button type="button" class="td-btn td-btn--sm td-btn--outline" disabled>Create</button>
+          {% endif %}
+        </div>
+
+        {% if site_visits %}
+        <ul class="td-work-list">
+          {% for visit in site_visits %}
+          <li class="td-work-item">
+            <div class="td-work-item__icon is-visit" aria-hidden="true">
+              <span class="material-symbols-outlined">location_on</span>
+            </div>
+            <div class="td-work-item__body">
+              <div class="td-work-item__top">
+                <h4 class="td-work-item__title">
+                  <a href="{% url 'ticket_management:supervisor:site_visit_detail' site_visit_slug=visit.slug %}" class="td-work-item__link">{{ visit.title }}</a>
+                </h4>
+                <span class="td-pill td-pill--visit-{{ visit.status }}">{{ visit.get_status_display }}</span>
+              </div>
+              <p class="td-work-item__meta">
+                <span class="material-symbols-outlined">person</span>
+                {{ visit.assigned_to.get_full_name|default:visit.assigned_to.email }}
+                <span class="td-work-item__dot" aria-hidden="true"></span>
+                <span class="material-symbols-outlined">schedule</span>
+                {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+              </p>
+              {% if visit.location %}
+              <p class="td-work-item__meta">
+                <span class="material-symbols-outlined">place</span>
+                {{ visit.location|truncatechars:48 }}
+              </p>
+              {% endif %}
+            </div>
+            <div class="dropdown td-work-item__menu">
+              <button class="td-icon-btn" type="button" data-bs-toggle="dropdown" aria-label="Visit actions">
+                <span class="material-symbols-outlined">more_horiz</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                {% if visit.status != 'completed' and visit.status != 'cancelled' %}
+                <li><a class="dropdown-item" href="{% url 'ticket_management:supervisor:site_visit_update' site_visit_slug=visit.slug %}">Edit</a></li>
+                {% endif %}
+                {% if visit.created_by == request.user or request.user.user_type == 'supervisor' %}
+                <li>
+                  <button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteSiteVisitModal{{ visit.id }}">Delete</button>
+                </li>
+                {% endif %}
+              </ul>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="td-work-empty">
+          <span class="td-work-empty__icon td-work-empty__icon--visit" aria-hidden="true">
+            <span class="material-symbols-outlined">location_on</span>
+          </span>
+          <p class="td-work-empty__title">No site visits yet</p>
+          <p class="td-work-empty__text">Schedule an on-site visit when someone needs to inspect the issue.</p>
+          {% if ticket.status != 'resolved' and ticket.status != 'closed' and ticket.status != 'cancelled' %}
+          <a href="{% url 'ticket_management:supervisor:site_visit_create' ticket_slug=ticket.slug %}" class="td-btn td-btn--sm td-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Create visit
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
+
+    </div>
+  </aside>
+
+  {% for visit in site_visits %}
+  <div class="modal fade" id="deleteSiteVisitModal{{ visit.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content td-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete site visit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body"><p>Delete <strong>{{ visit.title }}</strong>?</p></div>
+        <div class="modal-footer">
+          <button type="button" class="td-btn td-btn--outline" data-bs-dismiss="modal">Cancel</button>
+          <form method="post" action="{% url 'ticket_management:supervisor:site_visit_delete' site_visit_slug=visit.slug %}">
+            {% csrf_token %}
+            <button type="submit" class="td-btn td-btn--danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="modal fade" id="markResolvedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content td-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">Mark resolved</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="post" action="{% url 'ticket_management:supervisor:ticket_resolve' ticket_slug=ticket.slug %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="td-field">
+              <label for="resolution_notes" class="td-field__label">Resolution notes *</label>
+              <textarea class="td-textarea" id="resolution_notes" name="resolution_notes" rows="4" required placeholder="How was this resolved?"></textarea>
+            </div>
+            <div class="td-field">
+              <span class="td-field__label">Images <span class="td-field__opt">(optional, max 3)</span></span>
+              <div class="td-file-grid">
+                <div class="tf-media-slot">
+                  <input type="file" id="id_image1" name="image1" accept="image/*">
+                </div>
+                <div class="tf-media-slot">
+                  <input type="file" id="id_image2" name="image2" accept="image/*">
+                </div>
+                <div class="tf-media-slot">
+                  <input type="file" id="id_image3" name="image3" accept="image/*">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="td-btn td-btn--outline" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="td-btn td-btn--primary">Mark resolved</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% for task in work_tasks %}
+  <div class="modal fade" id="deleteWorkTaskModal{{ task.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content td-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete task</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body"><p>Delete <strong>{{ task.title }}</strong>?</p></div>
+        <div class="modal-footer">
+          <button type="button" class="td-btn td-btn--outline" data-bs-dismiss="modal">Cancel</button>
+          <form method="post" action="{% url 'ticket_management:supervisor:work_task_delete' work_task_slug=task.slug %}">
+            {% csrf_token %}
+            <button type="submit" class="td-btn td-btn--danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script src="{% static 'js/comments.js' %}"></script>
+<script src="{% static 'js/components/image-upload.js' %}"></script>
+<script>
+function deleteByUrl(url, message) {
+  if (!url || !confirm(message || 'Are you sure? This cannot be undone.')) return;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (csrfToken) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken.value;
+    form.appendChild(csrfInput);
+  }
+  document.body.appendChild(form);
+  form.submit();
+}
+
+(function () {
+  function formatTime(sec) {
+    if (!isFinite(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  document.querySelectorAll('[data-td-audio]').forEach(function (wrap) {
+    const audio = wrap.querySelector('audio');
+    const playBtn = wrap.querySelector('[data-td-audio-play]');
+    const icon = wrap.querySelector('[data-td-audio-icon]');
+    const seek = wrap.querySelector('[data-td-audio-seek]');
+    const scrub = wrap.querySelector('[data-td-audio-scrub]');
+    const currentEl = wrap.querySelector('[data-td-audio-current]');
+    const durationEl = wrap.querySelector('[data-td-audio-duration]');
+    if (!audio || !playBtn || !seek || !scrub) return;
+
+    let seeking = false;
+    let raf = 0;
+
+    function duration() {
+      const d = audio.duration;
+      return (isFinite(d) && d > 0) ? d : 0;
+    }
+
+    function paint(t) {
+      const dur = duration();
+      const time = typeof t === 'number' ? t : (audio.currentTime || 0);
+      const pct = dur ? Math.min(100, Math.max(0, (time / dur) * 100)) : 0;
+      scrub.style.setProperty('--td-pct', pct + '%');
+      if (currentEl) currentEl.textContent = formatTime(time);
+      if (durationEl) durationEl.textContent = formatTime(dur);
+    }
+
+    function syncDuration() {
+      const dur = duration();
+      if (!dur) return;
+      seek.max = String(dur);
+      paint();
+    }
+
+    function syncFromAudio() {
+      if (seeking) return;
+      seek.value = String(audio.currentTime || 0);
+      paint();
+    }
+
+    function tick() {
+      syncFromAudio();
+      if (!audio.paused && !audio.ended) raf = requestAnimationFrame(tick);
+    }
+
+    playBtn.addEventListener('click', function () {
+      if (audio.paused) audio.play();
+      else audio.pause();
+    });
+
+    audio.addEventListener('play', function () {
+      if (icon) icon.textContent = 'pause';
+      playBtn.setAttribute('aria-label', 'Pause');
+      wrap.classList.add('is-playing');
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+    });
+
+    audio.addEventListener('pause', function () {
+      if (icon) icon.textContent = 'play_arrow';
+      playBtn.setAttribute('aria-label', 'Play');
+      wrap.classList.remove('is-playing');
+      cancelAnimationFrame(raf);
+      syncFromAudio();
+    });
+
+    audio.addEventListener('ended', function () {
+      cancelAnimationFrame(raf);
+      syncFromAudio();
+    });
+
+    audio.addEventListener('timeupdate', syncFromAudio);
+    audio.addEventListener('loadedmetadata', syncDuration);
+    audio.addEventListener('durationchange', syncDuration);
+    audio.addEventListener('canplay', syncDuration);
+    if (audio.readyState >= 1) syncDuration();
+
+    seek.addEventListener('pointerdown', function () { seeking = true; });
+    seek.addEventListener('pointerup', function () {
+      seeking = false;
+      audio.currentTime = Number(seek.value) || 0;
+      syncFromAudio();
+    });
+    seek.addEventListener('change', function () {
+      seeking = false;
+      audio.currentTime = Number(seek.value) || 0;
+      syncFromAudio();
+    });
+    seek.addEventListener('input', function () {
+      seeking = true;
+      const t = Number(seek.value) || 0;
+      paint(t);
+    });
+  });
+})();
+
+(function () {
+  document.querySelectorAll('[data-td-carousel]').forEach(function (root) {
+    const track = root.querySelector('[data-td-carousel-track]');
+    const prev = root.querySelector('[data-td-carousel-prev]');
+    const next = root.querySelector('[data-td-carousel-next]');
+    const dots = root.querySelectorAll('[data-td-carousel-dots] .td-carousel__dot');
+    const gallery = root.closest('.td-overview__gallery');
+    const thumbs = gallery
+      ? gallery.querySelectorAll('[data-td-carousel-thumbs] [data-td-carousel-goto]')
+      : [];
+    if (!track) return;
+
+    function slideWidth() {
+      const slide = track.querySelector('.td-carousel__slide');
+      return slide ? slide.offsetWidth : track.clientWidth;
+    }
+
+    function index() {
+      const w = slideWidth();
+      return w ? Math.round(track.scrollLeft / w) : 0;
+    }
+
+    function update() {
+      const i = index();
+      const max = track.querySelectorAll('.td-carousel__slide').length - 1;
+      if (prev) prev.hidden = i <= 0;
+      if (next) next.hidden = i >= max;
+      dots.forEach(function (dot, di) {
+        dot.classList.toggle('is-active', di === i);
+      });
+      thumbs.forEach(function (thumb, ti) {
+        thumb.classList.toggle('is-active', ti === i);
+      });
+    }
+
+    function goTo(i) {
+      track.scrollTo({ left: i * slideWidth(), behavior: 'smooth' });
+    }
+
+    function go(delta) {
+      goTo(index() + delta);
+    }
+
+    if (prev) prev.addEventListener('click', function () { go(-1); });
+    if (next) next.addEventListener('click', function () { go(1); });
+    thumbs.forEach(function (thumb) {
+      thumb.addEventListener('click', function () {
+        goTo(Number(thumb.getAttribute('data-td-carousel-goto')) || 0);
+      });
+    });
+    track.addEventListener('scroll', function () {
+      window.clearTimeout(track._tdScroll);
+      track._tdScroll = window.setTimeout(update, 60);
+    });
+    update();
+  });
+})();
+
+(function () {
+  const backdrop = document.querySelector('.td-drawer-backdrop');
+  const drawers = {
+    comments: document.getElementById('td-drawer-comments'),
+    work: document.getElementById('td-drawer-work'),
+  };
+
+  function closeAll() {
+    Object.values(drawers).forEach(function (el) {
+      if (!el) return;
+      el.classList.remove('is-open');
+      el.setAttribute('aria-hidden', 'true');
+    });
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.classList.remove('is-open');
+    }
+    document.body.classList.remove('td-drawer-open');
+  }
+
+  function openDrawer(name) {
+    const el = drawers[name];
+    if (!el) return;
+    closeAll();
+    el.classList.add('is-open');
+    el.setAttribute('aria-hidden', 'false');
+    if (backdrop) {
+      backdrop.hidden = false;
+      backdrop.classList.add('is-open');
+    }
+    document.body.classList.add('td-drawer-open');
+  }
+
+  document.querySelectorAll('[data-td-drawer]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openDrawer(btn.getAttribute('data-td-drawer'));
+    });
+  });
+
+  document.querySelectorAll('[data-td-drawer-close]').forEach(function (btn) {
+    btn.addEventListener('click', closeAll);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+})();
+</script>
+{% endblock scripts %}

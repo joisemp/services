@@ -244,10 +244,10 @@ function setupForegroundMessageHandler() {
             // Handle notification click
             notification.onclick = function(event) {
                 event.preventDefault();
-                const issueSlug = payload.data?.issue_slug;
+                const issueSlug = payload.data?.ticket_slug;
                 
                 if (issueSlug) {
-                    window.open(`/issues/central-admin/${issueSlug}/`, '_blank');
+                    window.open(`/tickets/central-admin/${issueSlug}/`, '_blank');
                 }
                 
                 notification.close();

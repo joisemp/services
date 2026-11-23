@@ -10,10 +10,10 @@ applyTo: "src/**/tests.py"
 - Cover both authentication paths where relevant:
   - `general_user`: phone/passwordless flow
   - other roles: email/password flow (PIN path only where feature supports it)
-- For issue-related tests, preserve organization scoping and assert users cannot access cross-org data.
+- For ticket-related tests, preserve organization scoping and assert users cannot access cross-org data.
 - When testing views that render related objects, mirror production query shape (`select_related` / `prefetch_related`) when asserting counts or query-sensitive behavior.
 - Keep role-specific behavior in role-specific tests; shared authenticated behavior belongs in tests aligned with common views.
-- Prefer existing app test modules (`src/core/tests.py`, `src/issue_management/tests.py`, `src/issue_management/tests_firebase_notifications.py`) as pattern references.
+- Prefer existing app test modules (`src/core/tests.py`, `src/ticket_management/tests.py`, `src/ticket_management/tests_firebase_notifications.py`) as pattern references.
 - Link to detailed docs instead of duplicating guidance:
   - `README.md`
   - `docs/PERFORMANCE_REPORT_QUICKSTART.md`

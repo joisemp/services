@@ -1,0 +1,350 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{{ site_visit.title }} — Site visit{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/site_visit_detail/style.css' %}">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:supervisor:site_visit_list' as list_url %}
+{% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug as ticket_url %}
+
+<div class="svd-page{% if site_visit.status == 'scheduled' or site_visit.status == 'in_progress' %} svd-page--has-dock{% endif %}">
+  <a href="{{ list_url }}" class="svd-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Site visits
+  </a>
+
+  <header class="svd-identity">
+    <div class="svd-identity__main">
+      <h1 class="svd-identity__name">{{ site_visit.title }}</h1>
+    </div>
+    <div class="svd-identity__pills">
+      <span class="svd-pill svd-pill--{{ site_visit.status }}">{{ site_visit.get_status_display }}</span>
+      {% if site_visit.is_overdue and site_visit.status == 'scheduled' %}
+      <span class="svd-pill svd-pill--overdue">Overdue</span>
+      {% endif %}
+      <span class="svd-pill">{{ site_visit.created_at|date:"M d, Y" }}</span>
+    </div>
+    <div class="svd-identity__actions">
+      {% if site_visit.status == 'scheduled' %}
+        {% if site_visit.created_by == request.user %}
+        <a href="{% url 'ticket_management:supervisor:site_visit_update' site_visit_slug=site_visit.slug %}"
+           class="svd-btn svd-btn--outline">
+          <span class="material-symbols-outlined">edit</span>
+          Edit
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'ticket_management:supervisor:site_visit_start' site_visit_slug=site_visit.slug %}" class="svd-action--desktop">
+          {% csrf_token %}
+          <button type="submit" class="svd-btn svd-btn--primary">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Start visit
+          </button>
+        </form>
+      {% elif site_visit.status == 'in_progress' %}
+        <button type="button" class="svd-btn svd-btn--primary svd-action--desktop"
+                data-bs-toggle="modal" data-bs-target="#markCompletedModal">
+          <span class="material-symbols-outlined">check_circle</span>
+          Mark complete
+        </button>
+        <form method="post" action="{% url 'ticket_management:supervisor:site_visit_cancel' site_visit_slug=site_visit.slug %}" class="svd-action--desktop">
+          {% csrf_token %}
+          <button type="submit" class="svd-btn svd-btn--danger">
+            <span class="material-symbols-outlined">cancel</span>
+            Cancel
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    <div class="svd-identity__meta">
+      <p class="svd-identity__meta-line">
+        Assigned to <strong>{{ site_visit.assigned_to.get_full_name|default:site_visit.assigned_to.email }}</strong>
+        · {% if ticket.space %}{{ ticket.space.name }} · {% endif %}{{ site_visit.location }}
+        · {{ site_visit.scheduled_date|date:"M d, Y \a\t g:i A" }}
+        {% if site_visit.estimated_duration %}
+        · Est. {{ site_visit.estimated_duration }}
+        {% endif %}
+      </p>
+      <p class="svd-identity__meta-line">
+        Created by {{ site_visit.created_by.get_full_name|default:site_visit.created_by.email }}
+        · Ticket
+        <a href="{{ ticket_url }}" class="svd-text-link">{{ ticket.ticket_id }}</a>
+      </p>
+    </div>
+  </header>
+
+  {% if site_visit.created_by != request.user and site_visit.created_by.phone_number or ticket.reporter != request.user and ticket.reporter.phone_number %}
+  <div class="svd-toolbar">
+    {% if site_visit.created_by != request.user and site_visit.created_by.phone_number %}
+    <a href="tel:{{ site_visit.created_by.phone_number }}" class="svd-btn svd-btn--outline svd-btn--call"
+       title="Call {{ site_visit.created_by.get_full_name|default:site_visit.created_by.email }}">
+      <span class="svd-btn__row">
+        <span class="material-symbols-outlined">call</span>
+        Call {{ site_visit.created_by.first_name|default:site_visit.created_by.email|truncatechars:12 }}
+      </span>
+      <span class="svd-btn__role">Creator</span>
+    </a>
+    {% endif %}
+    {% if ticket.reporter != request.user and ticket.reporter.phone_number %}
+    <a href="tel:{{ ticket.reporter.phone_number }}" class="svd-btn svd-btn--outline svd-btn--call"
+       title="Call {{ ticket.reporter.get_full_name|default:ticket.reporter.email }}">
+      <span class="svd-btn__row">
+        <span class="material-symbols-outlined">call</span>
+        Call {{ ticket.reporter.first_name|default:ticket.reporter.email|truncatechars:12 }}
+      </span>
+      <span class="svd-btn__role">Reporter</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <section class="svd-card" aria-labelledby="svd-overview-heading">
+    <header class="svd-card__head">
+      <h2 id="svd-overview-heading" class="svd-card__title">Overview</h2>
+    </header>
+    <div class="svd-dl">
+      <div class="svd-dl__row">
+        <dt>Assignee</dt>
+        <dd>{{ site_visit.assigned_to.get_full_name|default:site_visit.assigned_to.email }}</dd>
+      </div>
+      <div class="svd-dl__row">
+        <dt>Location</dt>
+        <dd>{% if ticket.space %}{{ ticket.space.name }} — {% endif %}{{ site_visit.location }}</dd>
+      </div>
+      <div class="svd-dl__row">
+        <dt>Scheduled</dt>
+        <dd>{{ site_visit.scheduled_date|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+      {% if site_visit.estimated_duration %}
+      <div class="svd-dl__row">
+        <dt>Est. duration</dt>
+        <dd>{{ site_visit.estimated_duration }}</dd>
+      </div>
+      {% endif %}
+      {% if site_visit.started_at and site_visit.status != 'completed' %}
+      <div class="svd-dl__row">
+        <dt>Started</dt>
+        <dd>{{ site_visit.started_at|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+      {% endif %}
+    </div>
+    <div class="svd-body">
+      <h3 class="svd-label">Description</h3>
+      <p class="svd-prose">{{ site_visit.description|linebreaksbr }}</p>
+    </div>
+  </section>
+
+  {% if site_visit.status == 'completed' %}
+  <section class="svd-card svd-card--done" aria-labelledby="svd-complete-heading">
+    <header class="svd-card__head">
+      <h2 id="svd-complete-heading" class="svd-card__title">
+        <span class="material-symbols-outlined svd-card__icon">check_circle</span>
+        Visit completed
+      </h2>
+    </header>
+    <div class="svd-dl">
+      {% if site_visit.started_at %}
+      <div class="svd-dl__row">
+        <dt>Started</dt>
+        <dd>{{ site_visit.started_at|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+      {% endif %}
+      <div class="svd-dl__row">
+        <dt>Completed</dt>
+        <dd>{{ site_visit.completed_at|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+      {% if site_visit.duration %}
+      <div class="svd-dl__row">
+        <dt>Duration</dt>
+        <dd>{{ site_visit.duration }}</dd>
+      </div>
+      {% endif %}
+    </div>
+    {% if site_visit.findings %}
+    <div class="svd-body">
+      <h3 class="svd-label">Findings</h3>
+      <p class="svd-prose">{{ site_visit.findings|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+    {% if site_visit.actions_taken %}
+    <div class="svd-body">
+      <h3 class="svd-label">Actions taken</h3>
+      <p class="svd-prose">{{ site_visit.actions_taken|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+    {% if site_visit.recommendations %}
+    <div class="svd-body">
+      <h3 class="svd-label">Recommendations</h3>
+      <p class="svd-prose">{{ site_visit.recommendations|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+    {% if site_visit.images.all %}
+    <div class="svd-body">
+      <h3 class="svd-label">Visit images <span class="svd-count">{{ site_visit.images.count }}</span></h3>
+      <div class="svd-thumbs">
+        {% for image in site_visit.images.all %}
+        <a href="{{ image.image.url }}" target="_blank" rel="noopener" class="svd-thumb">
+          <img src="{{ image.image.url }}" alt="Site visit image {{ forloop.counter }}">
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="svd-card" aria-labelledby="svd-ticket-heading">
+    <header class="svd-card__head svd-card__head--row">
+      <div>
+        <h2 id="svd-ticket-heading" class="svd-card__title">Related ticket</h2>
+        <p class="svd-card__desc">{{ ticket.title }}</p>
+      </div>
+      <a href="{{ ticket_url }}" class="svd-btn svd-btn--outline svd-btn--sm">
+        View ticket
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
+    </header>
+    <div class="svd-ticket-pills">
+      <span class="svd-pill svd-pill--id">{{ ticket.ticket_id }}</span>
+      <span class="svd-pill svd-pill--tkt-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+      <span class="svd-pill svd-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+    </div>
+    <div class="svd-dl">
+      <div class="svd-dl__row">
+        <dt>Reporter</dt>
+        <dd>{{ ticket.reporter.get_full_name|default:ticket.reporter.phone_number|default:ticket.reporter.email }}</dd>
+      </div>
+      <div class="svd-dl__row">
+        <dt>Organization</dt>
+        <dd>{{ ticket.org.name }}</dd>
+      </div>
+      {% if ticket.space %}
+      <div class="svd-dl__row">
+        <dt>Space</dt>
+        <dd>{{ ticket.space.name }}</dd>
+      </div>
+      {% endif %}
+    </div>
+    <div class="svd-body">
+      <h3 class="svd-label">Description</h3>
+      <p class="svd-prose">{{ ticket.description|truncatewords:50|linebreaksbr }}</p>
+    </div>
+    {% if ticket.images.all %}
+    <div class="svd-body">
+      <h3 class="svd-label">Ticket images <span class="svd-count">{{ ticket.images.count }}</span></h3>
+      <div class="svd-thumbs svd-thumbs--sm">
+        {% for image in ticket.images.all %}
+        <a href="{{ image.image.url }}" target="_blank" rel="noopener" class="svd-thumb">
+          <img src="{{ image.image.url }}" alt="Ticket image {{ forloop.counter }}">
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if site_visit.status == 'scheduled' or site_visit.status == 'in_progress' %}
+  <section class="svd-dock" aria-label="Visit actions">
+    <div class="svd-dock__actions{% if site_visit.status == 'in_progress' %} svd-dock__actions--split{% endif %}">
+      {% if site_visit.status == 'scheduled' %}
+      <form method="post" action="{% url 'ticket_management:supervisor:site_visit_start' site_visit_slug=site_visit.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="svd-btn svd-btn--primary">
+          <span class="material-symbols-outlined">play_arrow</span>
+          Start visit
+        </button>
+      </form>
+      {% elif site_visit.status == 'in_progress' %}
+      <button type="button" class="svd-btn svd-btn--primary"
+              data-bs-toggle="modal" data-bs-target="#markCompletedModal">
+        <span class="material-symbols-outlined">check_circle</span>
+        Mark complete
+      </button>
+      <form method="post" action="{% url 'ticket_management:supervisor:site_visit_cancel' site_visit_slug=site_visit.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="svd-btn svd-btn--danger">
+          <span class="material-symbols-outlined">cancel</span>
+          Cancel
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if site_visit.status == 'in_progress' %}
+<div class="modal fade" id="markCompletedModal" tabindex="-1" aria-labelledby="markCompletedModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content svd-modal">
+      <div class="modal-header">
+        <h5 class="modal-title" id="markCompletedModalLabel">Complete site visit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'ticket_management:supervisor:site_visit_complete' site_visit_slug=site_visit.slug %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="svd-field">
+            <label for="findings" class="svd-field__label">Findings <span class="svd-req">*</span></label>
+            <textarea class="svd-textarea" id="findings" name="findings" rows="4"
+                      placeholder="Describe your findings and observations…" required></textarea>
+            <p class="svd-field__help">What did you observe during the site visit?</p>
+          </div>
+          <div class="svd-field">
+            <label for="actions_taken" class="svd-field__label">Actions taken <span class="svd-req">*</span></label>
+            <textarea class="svd-textarea" id="actions_taken" name="actions_taken" rows="4"
+                      placeholder="Describe actions taken during the visit…" required></textarea>
+            <p class="svd-field__help">What actions did you take during the visit?</p>
+          </div>
+          <div class="svd-field">
+            <label for="recommendations" class="svd-field__label">Recommendations <span class="svd-field__opt">(optional)</span></label>
+            <textarea class="svd-textarea" id="recommendations" name="recommendations" rows="4"
+                      placeholder="Provide recommendations for follow-up…"></textarea>
+          </div>
+          <div class="svd-field">
+            <span class="svd-field__label">Images <span class="svd-field__opt">(optional, max 3)</span></span>
+            <div class="svd-file-grid">
+              <div class="tf-media-slot">
+                <input type="file" id="id_image1" name="image1" accept="image/*">
+              </div>
+              <div class="tf-media-slot">
+                <input type="file" id="id_image2" name="image2" accept="image/*">
+              </div>
+              <div class="tf-media-slot">
+                <input type="file" id="id_image3" name="image3" accept="image/*">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="svd-btn svd-btn--outline" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="svd-btn svd-btn--primary">
+            <span class="material-symbols-outlined">check_circle</span>
+            Mark complete
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/components/image-upload.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}{{ work_task.title }} — Task{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_detail/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:supervisor:work_task_list' as list_url %}
+{% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug as ticket_url %}
+
+<div class="wtd-page{% if not work_task.completed %} wtd-page--has-dock{% endif %}">
+  <a href="{{ list_url }}" class="wtd-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Tasks
+  </a>
+
+  <header class="wtd-identity">
+    <div class="wtd-identity__main">
+      <h1 class="wtd-identity__name">{{ work_task.title }}</h1>
+    </div>
+    <div class="wtd-identity__pills">
+      {% if work_task.completed %}
+      <span class="wtd-pill wtd-pill--completed">Completed</span>
+      {% else %}
+      <span class="wtd-pill wtd-pill--pending">Pending</span>
+      {% endif %}
+      {% if work_task.due_date %}
+      <span class="wtd-pill">Due {{ work_task.due_date|date:"M d, Y" }}</span>
+      {% endif %}
+      <span class="wtd-pill">{{ work_task.created_at|date:"M d, Y" }}</span>
+    </div>
+    <div class="wtd-identity__actions">
+      {% if ticket.reporter.phone_number %}
+      <a href="tel:{{ ticket.reporter.phone_number }}" class="wtd-btn wtd-btn--outline"
+         title="Call {{ ticket.reporter.get_full_name|default:'Reporter' }}">
+        <span class="material-symbols-outlined">call</span>
+        Call
+      </a>
+      {% endif %}
+      {% if not work_task.completed %}
+      <a href="{% url 'ticket_management:supervisor:work_task_update' work_task_slug=work_task.slug %}"
+         class="wtd-btn wtd-btn--outline">
+        <span class="material-symbols-outlined">edit</span>
+        Edit
+      </a>
+      <a href="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}?next=task_detail"
+         class="wtd-btn wtd-btn--primary wtd-action--desktop">
+        <span class="material-symbols-outlined">check_circle</span>
+        Mark complete
+      </a>
+      {% else %}
+      <button type="button" class="wtd-btn wtd-btn--primary" disabled>
+        <span class="material-symbols-outlined">check_circle</span>
+        Completed
+      </button>
+      {% endif %}
+    </div>
+    <div class="wtd-identity__meta">
+      <p class="wtd-identity__meta-line">
+        Assigned to <strong>{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to.email }}</strong>
+        · Created {{ work_task.created_at|date:"M d, Y \a\t g:i A" }}
+      </p>
+      <p class="wtd-identity__meta-line">
+        Ticket
+        <a href="{{ ticket_url }}" class="wtd-text-link">{{ ticket.ticket_id }}</a>
+        · {% if ticket.space %}{{ ticket.space.name }}{% else %}Organization wide{% endif %}
+      </p>
+    </div>
+  </header>
+
+  <div class="wtd-toolbar">
+    <button type="button" class="wtd-btn wtd-btn--outline" data-wtd-drawer="comments">
+      <span class="material-symbols-outlined">chat</span>
+      Comments
+    </button>
+  </div>
+
+  {% if work_task.completed %}
+  <section class="wtd-card wtd-card--done" aria-labelledby="wtd-complete-heading">
+    <header class="wtd-card__head">
+      <h2 id="wtd-complete-heading" class="wtd-card__title">
+        <span class="material-symbols-outlined wtd-card__icon">check_circle</span>
+        Task completed
+      </h2>
+    </header>
+    <div class="wtd-dl">
+      <div class="wtd-dl__row">
+        <dt>Completed</dt>
+        <dd>{{ work_task.updated_at|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+    </div>
+    {% if work_task.resolution_notes %}
+    <div class="wtd-body">
+      <h3 class="wtd-label">Resolution notes</h3>
+      <p class="wtd-prose">{{ work_task.resolution_notes|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+    {% if work_task.resolution_images.all %}
+    <div class="wtd-body">
+      <h3 class="wtd-label">Resolution images <span class="wtd-count">{{ work_task.resolution_images.count }}</span></h3>
+      <div class="wtd-thumbs">
+        {% for res_image in work_task.resolution_images.all %}
+        <div class="wtd-thumb-wrap">
+          <a href="{{ res_image.image.url }}" target="_blank" rel="noopener" class="wtd-thumb">
+            <img src="{{ res_image.image.url }}" alt="Resolution image {{ forloop.counter }}">
+          </a>
+          {% if work_task.ticket.status != 'resolved' %}
+          <button type="button" class="wtd-thumb-del"
+                  data-delete-url="{% url 'ticket_management:supervisor:resolution_image_delete' work_task_slug=work_task.slug image_slug=res_image.slug %}"
+                  onclick="deleteByUrl(this.dataset.deleteUrl, 'Delete this resolution image?')"
+                  title="Delete image">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="wtd-card" aria-labelledby="wtd-overview-heading">
+    <header class="wtd-card__head">
+      <h2 id="wtd-overview-heading" class="wtd-card__title">Overview</h2>
+    </header>
+    <div class="wtd-dl">
+      <div class="wtd-dl__row">
+        <dt>Assignee</dt>
+        <dd>{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to.email }}</dd>
+      </div>
+      {% if work_task.due_date %}
+      <div class="wtd-dl__row">
+        <dt>Due date</dt>
+        <dd>{{ work_task.due_date|date:"M d, Y" }}</dd>
+      </div>
+      {% endif %}
+      <div class="wtd-dl__row">
+        <dt>Created</dt>
+        <dd>{{ work_task.created_at|date:"M d, Y \a\t g:i A" }}</dd>
+      </div>
+    </div>
+    <div class="wtd-body">
+      <h3 class="wtd-label">Description</h3>
+      {% if work_task.description %}
+      <p class="wtd-prose">{{ work_task.description|linebreaksbr }}</p>
+      {% else %}
+      <p class="wtd-prose wtd-prose--muted">No description</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="wtd-card" aria-labelledby="wtd-ticket-heading">
+    <header class="wtd-card__head wtd-card__head--row">
+      <div>
+        <h2 id="wtd-ticket-heading" class="wtd-card__title">Related ticket</h2>
+        <p class="wtd-card__desc">{{ ticket.title }}</p>
+      </div>
+      <a href="{{ ticket_url }}" class="wtd-btn wtd-btn--outline wtd-btn--sm">
+        View ticket
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
+    </header>
+    <div class="wtd-ticket-pills">
+      <span class="wtd-pill wtd-pill--id">{{ ticket.ticket_id }}</span>
+      <span class="wtd-pill wtd-pill--tkt-{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+      <span class="wtd-pill wtd-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+    </div>
+    <div class="wtd-dl">
+      <div class="wtd-dl__row">
+        <dt>Reporter</dt>
+        <dd>{{ ticket.reporter.get_full_name|default:ticket.reporter.phone_number|default:ticket.reporter.email }}</dd>
+      </div>
+      {% if ticket.space %}
+      <div class="wtd-dl__row">
+        <dt>Space</dt>
+        <dd>{{ ticket.space.name }}</dd>
+      </div>
+      {% endif %}
+    </div>
+    <div class="wtd-body">
+      <h3 class="wtd-label">Description</h3>
+      <p class="wtd-prose">{{ ticket.description|truncatewords:50|linebreaksbr }}</p>
+    </div>
+    {% if ticket.images.all %}
+    <div class="wtd-body">
+      <h3 class="wtd-label">Ticket images <span class="wtd-count">{{ ticket.images.count }}</span></h3>
+      <div class="wtd-thumbs wtd-thumbs--sm">
+        {% for image in ticket.images.all %}
+        <a href="{{ image.image.url }}" target="_blank" rel="noopener" class="wtd-thumb">
+          <img src="{{ image.image.url }}" alt="Ticket image {{ forloop.counter }}">
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if ticket.voice %}
+    <div class="wtd-body">
+      <h3 class="wtd-label">Voice</h3>
+      <audio controls style="width:100%;max-width:28rem">
+        <source src="{{ ticket.voice.url }}" type="audio/mpeg">
+      </audio>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if not work_task.completed %}
+  <section class="wtd-dock" aria-label="Task actions">
+    <div class="wtd-dock__actions">
+      <a href="{% url 'ticket_management:supervisor:work_task_complete' work_task_slug=work_task.slug %}?next=task_detail"
+         class="wtd-btn wtd-btn--primary">
+        <span class="material-symbols-outlined">check_circle</span>
+        Mark complete
+      </a>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="wtd-drawer-backdrop" data-wtd-drawer-close hidden></div>
+
+  <aside id="wtd-drawer-comments" class="wtd-drawer" aria-hidden="true" role="dialog" aria-labelledby="wtd-drawer-comments-title">
+    <div class="wtd-drawer__head">
+      <h2 id="wtd-drawer-comments-title" class="wtd-drawer__title">Comments</h2>
+      <button type="button" class="wtd-icon-btn" data-wtd-drawer-close aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="wtd-drawer__body wtd-drawer__body--comments">
+      <div class="wtd-comments comments-container">
+        <div id="comments-list-area" class="comments-list-scrollable">
+          <div hx-get="{% url 'ticket_management:comment_list' ticket_slug=ticket.slug %}"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+            <div class="wtd-loading">Loading comments…</div>
+          </div>
+        </div>
+        <div id="comment-form-sticky" class="comment-form-sticky">
+          {% if ticket.status == 'resolved' or ticket.status == 'closed' or ticket.status == 'cancelled' %}
+          <p class="wtd-quiet wtd-quiet--pad">Comments disabled</p>
+          {% else %}
+          <form hx-post="{% url 'ticket_management:comment_create' ticket_slug=ticket.slug %}"
+                hx-target="#comments-list-area" hx-swap="innerHTML" class="comment-form">
+            {% csrf_token %}
+            <div class="wtd-comment-form">
+              <div class="wtd-avatar" aria-hidden="true">{{ request.user.get_full_name|default:request.user.email|slice:":2"|upper }}</div>
+              <div class="wtd-comment-form__input">
+                <textarea name="comment" class="wtd-textarea" rows="2" placeholder="Add a comment…" required></textarea>
+                <div class="wtd-comment-form__actions">
+                  <span class="wtd-hint">Ctrl+Enter</span>
+                  <button type="submit" class="wtd-btn wtd-btn--sm wtd-btn--primary">
+                    <span class="material-symbols-outlined">send</span>
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script src="{% static 'js/comments.js' %}"></script>
+<script>
+function deleteByUrl(url, message) {
+  if (!url || !confirm(message || 'Are you sure? This cannot be undone.')) return;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (csrfToken) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken.value;
+    form.appendChild(csrfInput);
+  }
+  document.body.appendChild(form);
+  form.submit();
+}
+
+(function () {
+  const backdrop = document.querySelector('.wtd-drawer-backdrop');
+  const drawers = {
+    comments: document.getElementById('wtd-drawer-comments'),
+  };
+
+  function closeAll() {
+    Object.values(drawers).forEach(function (el) {
+      if (!el) return;
+      el.classList.remove('is-open');
+      el.setAttribute('aria-hidden', 'true');
+    });
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.classList.remove('is-open');
+    }
+    document.body.classList.remove('wtd-drawer-open');
+  }
+
+  function openDrawer(name) {
+    const el = drawers[name];
+    if (!el) return;
+    closeAll();
+    el.classList.add('is-open');
+    el.setAttribute('aria-hidden', 'false');
+    if (backdrop) {
+      backdrop.hidden = false;
+      backdrop.classList.add('is-open');
+    }
+    document.body.classList.add('wtd-drawer-open');
+  }
+
+  document.querySelectorAll('[data-wtd-drawer]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openDrawer(btn.getAttribute('data-wtd-drawer'));
+    });
+  });
+
+  document.querySelectorAll('[data-wtd-drawer-close]').forEach(function (btn) {
+    btn.addEventListener('click', closeAll);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+})();
+</script>
+{% endblock scripts %}

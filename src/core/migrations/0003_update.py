@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('core', '0002_make_organization_optional_for_superusers'),
-        ('issue_management', '0003_alter_issue_reporter'),
+        ('ticket_management', '0003_alter_issue_reporter'),
     ]
 
     operations = [
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('slug', models.SlugField(blank=True, unique=True)),
                 ('org', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='updates', to='core.organization')),
-                ('related_issue', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='updates', to='issue_management.issue')),
+                ('related_issue', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='updates', to='ticket_management.issue')),
                 ('space', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='updates', to='core.space')),
             ],
         ),

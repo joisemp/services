@@ -1,0 +1,290 @@
+{% extends "sidebar_base.html" %}
+{% load static %}
+
+{% block title %}Tickets{% endblock title %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_list/style.css' %}">
+{% endblock styles %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock navbar %}
+
+{% block sidebar %}
+{% include "central_admin/sidebar.html" %}
+{% endblock sidebar %}
+
+{% block content %}
+<div class="ticket-page">
+
+    <header class="ticket-header">
+        <div class="ticket-header__text">
+            <h1 class="ticket-header__title">Tickets</h1>
+            <p class="ticket-header__sub">View and manage tickets across the platform</p>
+        </div>
+        <div class="ticket-header__actions">
+            <div class="dropdown">
+                <button class="ticket-btn ticket-btn--outline dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="material-symbols-outlined">download</span>
+                    Generate Report
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="reportDropdown">
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('xlsx'); return false;">
+                            <span class="material-symbols-outlined" style="font-size:18px;">table_view</span>
+                            Excel (.xlsx)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2" href="#" onclick="downloadReport('pdf'); return false;">
+                            <span class="material-symbols-outlined" style="font-size:18px;">picture_as_pdf</span>
+                            PDF
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <a href="{% url 'ticket_management:central_admin:ticket_create' %}" class="ticket-btn ticket-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Create Ticket
+            </a>
+        </div>
+    </header>
+
+    <section class="ticket-toolbar">
+        <form method="get" class="ticket-search-form" role="search" aria-label="Ticket search">
+            <span class="material-symbols-outlined ticket-search-form__icon">search</span>
+            <input
+                type="text"
+                name="q"
+                value="{{ search_query }}"
+                placeholder="Search by title, ID or description..."
+                class="ticket-search-form__input"
+            >
+            {% if current_filter and current_filter != 'all' %}
+                <input type="hidden" name="status" value="{{ current_filter }}">
+            {% endif %}
+            {% if space_filter %}
+                <input type="hidden" name="space" value="{{ space_filter }}">
+            {% endif %}
+            {% if reporter_filter %}
+                <input type="hidden" name="reporter" value="{{ reporter_filter }}">
+            {% endif %}
+            {% if assignee_filter %}
+                <input type="hidden" name="assignee" value="{{ assignee_filter }}">
+            {% endif %}
+            <button type="submit" class="ticket-btn ticket-btn--primary ticket-search-form__btn">Search</button>
+        </form>
+
+        <div class="ticket-toolbar__right">
+            <select id="spaceFilter" class="ticket-space-select" aria-label="Filter by space" onchange="filterBySpace(this.value)">
+                <option value="">All spaces</option>
+                <option value="no_space" {% if space_filter == 'no_space' %}selected{% endif %}>No space assigned</option>
+                {% for space in spaces %}
+                <option value="{{ space.slug }}" {% if space_filter == space.slug %}selected{% endif %}>
+                    {{ space.name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <div class="ticket-view-toggle" role="group" aria-label="View mode">
+                <button type="button" class="ticket-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+                    <span class="material-symbols-outlined">view_list</span>
+                </button>
+                <button type="button" class="ticket-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+                    <span class="material-symbols-outlined">grid_view</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="ticket-status-bar" id="options-bar" aria-label="Status filters">
+        <div class="ticket-filter-scroll">
+            <button type="button" class="ticket-filter-scroll__btn" id="ticketScrollLeft" aria-label="Scroll filters left">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <div class="ticket-filter-track" id="ticketFilterContainer">
+                <ul class="ticket-filter-tabs">
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'all' %}is-active{% endif %}"
+                           href="?{% if space_filter %}space={{ space_filter|urlencode }}{% endif %}{% if search_query %}{% if space_filter %}&{% endif %}q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}{% if space_filter or search_query %}&{% endif %}reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}{% if space_filter or search_query or reporter_filter %}&{% endif %}assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            All
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'open' %}is-active{% endif %}"
+                           href="?status=open{% if space_filter %}&space={{ space_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}&reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}&assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            Open
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'assigned' %}is-active{% endif %}"
+                           href="?status=assigned{% if space_filter %}&space={{ space_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}&reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}&assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            Assigned
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'unassigned' %}is-active{% endif %}"
+                           href="?status=unassigned{% if space_filter %}&space={{ space_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}&reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}&assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            Unassigned
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'in_progress' %}is-active{% endif %}"
+                           href="?status=in_progress{% if space_filter %}&space={{ space_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}&reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}&assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            In progress
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ticket-filter-tab {% if current_filter == 'critical' %}is-active{% endif %}"
+                           href="?status=critical{% if space_filter %}&space={{ space_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if reporter_filter %}&reporter={{ reporter_filter|urlencode }}{% endif %}{% if assignee_filter %}&assignee={{ assignee_filter|urlencode }}{% endif %}">
+                            Critical
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <button type="button" class="ticket-filter-scroll__btn" id="ticketScrollRight" aria-label="Scroll filters right">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+        </div>
+    </section>
+
+    <section id="ticket-results" class="ticket-view ticket-view--list">
+        {% if tickets %}
+        <div class="ticket-results-grid">
+            {% for ticket in tickets %}
+            <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}" class="ticket-item">
+                <div class="ticket-item__icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">confirmation_number</span>
+                </div>
+                <div class="ticket-item__body">
+                    <span class="ticket-item__name">{{ ticket.title }}</span>
+                    <span class="ticket-item__meta">
+                        {{ ticket.ticket_id }}
+                        ·
+                        {{ ticket.reporter.get_full_name|default:ticket.reporter.get_short_name|default:ticket.reporter.phone_number|default:ticket.reporter.email|default:"Unknown" }}
+                        ·
+                        {% if ticket.space %}{{ ticket.space.name }}{% else %}No space{% endif %}
+                        ·
+                        {{ ticket.created_at|timesince }} ago
+                    </span>
+                </div>
+                <div class="ticket-item__pills">
+                    <span class="ticket-pill ticket-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+                    <span class="ticket-pill ticket-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+                </div>
+                <span class="material-symbols-outlined ticket-item__chevron">chevron_right</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ticket-empty">
+            <span class="material-symbols-outlined ticket-empty__icon">confirmation_number</span>
+            {% if search_query or current_filter != 'all' or space_filter or reporter_filter or assignee_filter %}
+                <h2 class="ticket-empty__title">No matching tickets</h2>
+                <p class="ticket-empty__sub">Try a different search or clear your filters.</p>
+                <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="ticket-btn ticket-btn--outline">Clear filters</a>
+            {% else %}
+                <h2 class="ticket-empty__title">No tickets yet</h2>
+                <p class="ticket-empty__sub">Create the first ticket to get started.</p>
+                <a href="{% url 'ticket_management:central_admin:ticket_create' %}" class="ticket-btn ticket-btn--primary">
+                    <span class="material-symbols-outlined">add</span>
+                    Create Ticket
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function filterBySpace(spaceSlug) {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (spaceSlug) {
+    urlParams.set('space', spaceSlug);
+  } else {
+    urlParams.delete('space');
+  }
+  const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+  window.location.href = newUrl;
+}
+
+function downloadReport(format) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const reportParams = new URLSearchParams();
+  ['status', 'space', 'reporter', 'assignee', 'q'].forEach(function (key) {
+    if (urlParams.has(key)) {
+      reportParams.set(key, urlParams.get(key));
+    }
+  });
+  reportParams.set('format', format);
+  window.location.href = "{% url 'ticket_management:central_admin:ticket_list_report' %}" + '?' + reportParams.toString();
+}
+
+(function () {
+  const results = document.getElementById('ticket-results');
+  const buttons = document.querySelectorAll('.ticket-view-toggle__btn');
+  if (!results || !buttons.length) return;
+
+  const STORAGE_KEY = 'ticketListView';
+  const mq = window.matchMedia('(min-width: 992px)');
+
+  function responsiveDefault() {
+    return mq.matches ? 'list' : 'cards';
+  }
+
+  function applyView(mode, persist) {
+    const view = mode === 'cards' ? 'cards' : 'list';
+    results.classList.remove('ticket-view--list', 'ticket-view--cards');
+    results.classList.add('ticket-view--' + view);
+    buttons.forEach((btn) => {
+      const active = btn.getAttribute('data-view') === view;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (persist) {
+      try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function resolveView() {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored === 'list' || stored === 'cards') return stored;
+    return responsiveDefault();
+  }
+
+  applyView(resolveView(), false);
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => applyView(btn.getAttribute('data-view'), true));
+  });
+
+  const onBreakpoint = () => {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored !== 'list' && stored !== 'cards') {
+      applyView(responsiveDefault(), false);
+    }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+  else if (mq.addListener) mq.addListener(onBreakpoint);
+
+  const track = document.getElementById('ticketFilterContainer');
+  const leftBtn = document.getElementById('ticketScrollLeft');
+  const rightBtn = document.getElementById('ticketScrollRight');
+  if (track && leftBtn && rightBtn) {
+    const scrollBy = 160;
+    leftBtn.addEventListener('click', () => track.scrollBy({ left: -scrollBy, behavior: 'smooth' }));
+    rightBtn.addEventListener('click', () => track.scrollBy({ left: scrollBy, behavior: 'smooth' }));
+  }
+})();
+</script>
+{% endblock scripts %}

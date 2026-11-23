@@ -1,0 +1,121 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Site visits{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/site_visit_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:central_admin:site_visit_list' as list_url %}
+{% with status=request.GET.status %}
+
+<div class="svl-page">
+  <header class="svl-header">
+    <div class="svl-header__text">
+      <h1 class="svl-header__title">Site visits</h1>
+      <p class="svl-header__sub">View and manage site visits across the platform</p>
+    </div>
+    <div class="svl-header__actions">
+      <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="svl-btn svl-btn--outline">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+    </div>
+  </header>
+
+  <section class="svl-filters" aria-label="Status filters">
+    <div class="svl-filter-track">
+      <ul class="svl-filter-tabs">
+        <li>
+          <a class="svl-filter-tab{% if not status %} is-active{% endif %}" href="{{ list_url }}">All</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'scheduled' %} is-active{% endif %}" href="{{ list_url }}?status=scheduled">Scheduled</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'in_progress' %} is-active{% endif %}" href="{{ list_url }}?status=in_progress">In progress</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'completed' %} is-active{% endif %}" href="{{ list_url }}?status=completed">Completed</a>
+        </li>
+        <li>
+          <a class="svl-filter-tab{% if status == 'cancelled' %} is-active{% endif %}" href="{{ list_url }}?status=cancelled">Cancelled</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="svl-results" aria-label="Site visit results">
+    {% if site_visits %}
+    <div class="svl-list">
+      {% for visit in site_visits %}
+      <a href="{% url 'ticket_management:central_admin:site_visit_detail' site_visit_slug=visit.slug %}"
+         class="svl-item{% if visit.is_overdue and visit.status == 'scheduled' %} svl-item--overdue{% endif %}">
+        <div class="svl-item__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">location_on</span>
+        </div>
+        <div class="svl-item__body">
+          <span class="svl-item__name">{{ visit.title }}</span>
+          <span class="svl-item__meta">
+            {{ visit.assigned_to.get_full_name|default:visit.assigned_to.email }}
+            · {{ visit.location|truncatechars:40 }}
+            ·
+            {% if visit.is_overdue and visit.status == 'scheduled' %}
+              Overdue {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+            {% elif visit.status == 'completed' and visit.completed_at %}
+              Completed {{ visit.completed_at|date:"M d, Y" }}
+            {% else %}
+              {{ visit.scheduled_date|date:"M d, Y g:i A" }}
+            {% endif %}
+          </span>
+          <span class="svl-item__ticket">
+            {{ visit.ticket.ticket_id }}
+            · {{ visit.ticket.title|truncatechars:48 }}
+          </span>
+        </div>
+        <div class="svl-item__pills">
+          <span class="svl-pill svl-pill--{{ visit.status }}">{{ visit.get_status_display }}</span>
+          {% if visit.is_overdue and visit.status == 'scheduled' %}
+          <span class="svl-pill svl-pill--overdue">Overdue</span>
+          {% endif %}
+          <span class="svl-pill svl-pill--prio-{{ visit.ticket.priority }}">{{ visit.ticket.get_priority_display }}</span>
+        </div>
+        <span class="material-symbols-outlined svl-item__chevron">chevron_right</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="svl-empty">
+      <span class="material-symbols-outlined svl-empty__icon">location_off</span>
+      {% if status %}
+      <h2 class="svl-empty__title">No matching site visits</h2>
+      <p class="svl-empty__sub">Try a different status filter, or open tickets to schedule a visit.</p>
+      <a href="{{ list_url }}" class="svl-btn svl-btn--outline">Clear filter</a>
+      {% else %}
+      <h2 class="svl-empty__title">No site visits yet</h2>
+      <p class="svl-empty__sub">Site visits are created from a ticket’s detail page.</p>
+      <a href="{% url 'ticket_management:central_admin:ticket_list' %}" class="svl-btn svl-btn--primary">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+{% endwith %}
+{% endblock %}

@@ -56,8 +56,8 @@ result = send_push_notification(
 
 ```python
 # Automatically truncates to safe limits
-title = f"New Issue: {issue.title[:80]}"  # Max 80 chars
-body = f"Details: {issue.description[:200]}"  # Max 200 chars
+title = f"New Ticket: {ticket.title[:80]}"  # Max 80 chars
+body = f"Details: {ticket.description[:200]}"  # Max 200 chars
 ```
 
 ### 5. **Enhanced Error Handling**
@@ -148,30 +148,30 @@ def send_push_notification_to_multiple(
 - Identifies invalid tokens for cleanup
 - Returns aggregate results
 
-### `send_issue_created_notification()`
-Helper for issue creation notifications.
+### `send_ticket_created_notification()`
+Helper for ticket creation notifications.
 
 ```python
-def send_issue_created_notification(issue, central_admins) -> dict
+def send_ticket_created_notification(ticket, central_admins) -> dict
 ```
 
 **Features:**
-- Automatically determines priority based on issue priority
+- Automatically determines priority based on ticket priority
 - Truncates title/body to safe limits
-- Includes issue metadata in data payload
+- Includes ticket metadata in data payload
 - Auto-cleans invalid tokens
-- 48-hour TTL for issue notifications
+- 48-hour TTL for ticket notifications
 
 **Usage:**
 ```python
 from core.models import User
-from issue_management.utils.firebase_notifications import send_issue_created_notification
+from ticket_management.utils.firebase_notifications import send_ticket_created_notification
 
 # Get admins
 admins = User.objects.filter(user_type='central_admin', fcm_token__isnull=False)
 
 # Send notification
-result = send_issue_created_notification(issue, admins)
+result = send_ticket_created_notification(ticket, admins)
 print(f"Notified {result['success']} admins")
 ```
 
@@ -182,7 +182,7 @@ print(f"Notified {result['success']} admins")
 # Use high priority for:
 - Critical alerts requiring immediate attention
 - Time-sensitive notifications (OTPs, alerts)
-- Issues marked as "critical" or "high" priority
+- Tickets marked as "critical" or "high" priority
 
 # Use normal priority for:
 - General updates and informational messages
@@ -198,7 +198,7 @@ print(f"Notified {result['success']} admins")
 - Real-time updates
 
 # Medium TTL (24-48 hours):
-- Issue notifications
+- Ticket notifications
 - Task assignments
 - Important updates
 
@@ -212,8 +212,8 @@ print(f"Notified {result['success']} admins")
 ```python
 # DO: Keep data minimal
 data = {
-    'issue_id': '123',
-    'type': 'issue_created'
+    'ticket_id': '123',
+    'type': 'ticket_created'
 }
 
 # DON'T: Include large data
@@ -252,10 +252,10 @@ for token in tokens:  # Slow!
 Run the test suite:
 ```bash
 # Inside Docker container
-docker exec -it sfs-services-dev-container python manage.py test issue_management.tests_firebase_notifications
+docker exec -it sfs-services-dev-container python manage.py test ticket_management.tests_firebase_notifications
 
 # Or run specific test
-docker exec -it sfs-services-dev-container python manage.py test issue_management.tests_firebase_notifications.FirebaseNotificationTests.test_batch_notification_success
+docker exec -it sfs-services-dev-container python manage.py test ticket_management.tests_firebase_notifications.FirebaseNotificationTests.test_batch_notification_success
 ```
 
 ## Monitoring & Debugging
@@ -269,7 +269,7 @@ docker exec -it sfs-services-dev-container python manage.py test issue_managemen
 ### Application Logs
 ```python
 import logging
-logger = logging.getLogger('issue_management.utils.firebase_notifications')
+logger = logging.getLogger('ticket_management.utils.firebase_notifications')
 
 # Check logs for:
 # - "Successfully sent push notification" (success)
@@ -278,20 +278,20 @@ logger = logging.getLogger('issue_management.utils.firebase_notifications')
 # - "Notification payload may be too large" (size warning)
 ```
 
-### Common Issues
+### Common Tickets
 
-**Issue**: Notifications not received
+**Ticket**: Notifications not received
 - **Check**: Is FCM token saved in database?
 - **Check**: Is Firebase initialized? (check app logs)
 - **Check**: Are notification permissions granted on device?
 - **Check**: Is the token still valid?
 
-**Issue**: High failure rate
+**Ticket**: High failure rate
 - **Solution**: Check `invalid_tokens` in response and clean database
 - **Solution**: Verify Firebase credentials are correct
 - **Solution**: Check FCM quota in Firebase Console
 
-**Issue**: Slow delivery for many recipients
+**Ticket**: Slow delivery for many recipients
 - **Solution**: Ensure using `send_push_notification_to_multiple()` (batch API)
 - **Solution**: Check network connectivity and Firebase service status
 
@@ -302,7 +302,7 @@ logger = logging.getLogger('issue_management.utils.firebase_notifications')
 | Payload size | 4KB max | Truncate data, use IDs instead of full objects |
 | Batch size | 500 tokens | Auto-handled by our implementation |
 | Topics per app | 2000 max | Plan topic structure carefully |
-| Subscriptions per topic | 1M max | Should not be an issue for most apps |
+| Subscriptions per topic | 1M max | Should not be a ticket for most apps |
 | Message TTL | 4 weeks max | Set appropriate expiration |
 | Delivery guarantee | Best-effort | Not 100% guaranteed, handle gracefully |
 

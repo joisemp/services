@@ -3,307 +3,223 @@
 {% load static %}
 {% load core_tags %}
 
-{% block title %}{{ space.name }} - Space Details{% endblock %}
+{% block title %}{{ space.name }} — Space{% endblock title %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/core/space_detail/style.css' %}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-{% endblock %}
+{% endblock styles %}
 
 {% block navbar %}
 {% include "navbar.html" %}
-{% endblock %}
+{% endblock navbar %}
 
 {% block sidebar %}
 {% include "central_admin/sidebar.html" %}
-{% endblock %}
+{% endblock sidebar %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="sd-page">
 
-  <a class="btn btn-sm btn-dark mb-3 d-inline-flex align-items-center" href="{% url 'core:space_list' %}">
-    <span class="material-symbols-outlined me-1" style="font-size: 16px;">arrow_back</span>
-    Go back
-  </a>
+    <a href="{% url 'core:space_list' %}" class="sd-back">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Spaces
+    </a>
 
-  <!-- Alert and Actions -->
-   <section id="alert-details" class="mb-3">
-    <div class="alert custom-alert d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3"
-        role="alert">
-        <div class="message flex-grow-1">
-            <h3 class="mb-1">{{ space.name }}</h3>
-            <span class="alert-text text-body-secondary">ICSE</span>
+    <header class="sd-identity">
+        <div class="sd-identity__mark" aria-hidden="true">
+            <span class="material-symbols-outlined">apartment</span>
         </div>
-        <div class="alert-buttons d-flex flex-column flex-sm-row gap-2">
-            <a href="{% url 'core:space_update' space_slug=space.slug %}"
-                class="btn btn-primary space-action-btn d-flex align-items-center justify-content-center">
-                <span class="material-symbols-outlined me-2" style="font-size: 18px;">edit_square</span>
-                <span>Edit Space</span>
-            </a>
-            <a href="{% url 'core:space_delete' space_slug=space.slug %}"
-                class="btn btn-danger space-action-btn d-flex align-items-center justify-content-center">
-                <span class="material-symbols-outlined me-2" style="font-size: 18px;">delete</span>
-                <span>Delete Space</span>
-            </a>
-        </div>
-    </div>
-</section>
-
-  <!-- Statistics Cards -->
-  <div class="row row-cols-2 row-cols-md-4 g-3 stats-cards mb-4">
-    <div class="col">
-      <div class="card border-0">
-        <div class="card-body text-center">
-          <div class="d-flex align-items-center justify-content-center mb-2">
-            <span class="material-symbols-outlined text-primary me-2" style="font-size: 24px;">list</span>
-            <h5 class="mb-0">{{ issues_count }}</h5>
-          </div>
-          <p class="text-muted mb-0 small">Total Issues</p>
-        </div>
-      </div>
-    </div>
-    <div class="col">
-      <div class="card border-0">
-        <div class="card-body text-center">
-          <div class="d-flex align-items-center justify-content-center mb-2">
-            <span class="material-symbols-outlined text-warning me-2" style="font-size: 24px;">schedule</span>
-            <h5 class="mb-0">{{ open_issues_count }}</h5>
-          </div>
-          <p class="text-muted mb-0 small">Open Issues</p>
-        </div>
-      </div>
-    </div>
-    <div class="col">
-      <div class="card border-0">
-        <div class="card-body text-center">
-          <div class="d-flex align-items-center justify-content-center mb-2">
-            <span class="material-symbols-outlined text-info me-2" style="font-size: 24px;">pending</span>
-            <h5 class="mb-0">{{ in_progress_issues_count }}</h5>
-          </div>
-          <p class="text-muted mb-0 small">In Progress</p>
-        </div>
-      </div>
-    </div>
-    <div class="col">
-      <div class="card border-0">
-        <div class="card-body text-center">
-          <div class="d-flex align-items-center justify-content-center mb-2">
-            <span class="material-symbols-outlined text-success me-2" style="font-size: 24px;">check_circle</span>
-            <h5 class="mb-0">{{ resolved_issues_count }}</h5>
-          </div>
-          <p class="text-muted mb-0 small">Resolved</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <div class="row">
-    <!-- Issues Section -->
-    <div class="col-lg-8">
-      <div class="card">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">bug_report</span>
-            Recent Issues
-          </h5>
-          <a href="{% url 'issue_management:central_admin:issue_list' %}?space={{ space.slug }}" class="btn btn-sm btn-outline-primary">
-            <span class="material-symbols-outlined me-1" style="font-size: 14px;">visibility</span>
-            View All
-          </a>
-        </div>
-        <div class="card-body p-0">
-          {% if issues %}
-            <div class="list-group list-group-flush">
-              {% for issue in issues|slice:":5" %}
-                <a href="{% url 'issue_management:central_admin:issue_detail' issue_slug=issue.slug %}" 
-                   class="list-group-item list-group-item-action border-0 px-3 py-3 issue-item">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div class="issue-info flex-grow-1 me-2">
-                      <div class="d-flex align-items-start mb-2">
-                        <h6 class="mb-0 fw-semibold text-dark">{{ issue.title }}</h6>
-                        {% if issue.images.exists %}
-                          <span class="material-symbols-outlined text-muted ms-2" style="font-size: 18px;" title="Has attachments">image</span>
-                        {% endif %}
-                      </div>
-                      <p class="mb-2 text-muted small">{{ issue.description|truncatewords:20 }}</p>
-                      <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="badge rounded-pill badge-{{ issue.status }}">{{ issue.get_status_display }}</span>
-                        <span class="badge rounded-pill badge-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
-                        <small class="text-muted">
-                          <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">person</span>
-                          {{ issue.reporter.get_full_name|default:issue.reporter.get_short_name }}
-                        </small>
-                        <small class="text-muted">
-                          <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">schedule</span>
-                          {{ issue.created_at|timesince }} ago
-                        </small>
-                      </div>
-                    </div>
-                    <div class="issue-arrow align-self-center">
-                      <span class="material-symbols-outlined text-muted" style="font-size: 20px;">chevron_right</span>
-                    </div>
-                  </div>
-                </a>
-              {% endfor %}
+        <div class="sd-identity__body">
+            <div class="sd-identity__top">
+                <div class="sd-identity__titles">
+                    <h1 class="sd-identity__name">{{ space.name }}</h1>
+                    {% if space.label %}
+                    <span class="sd-label">{{ space.label }}</span>
+                    {% endif %}
+                </div>
+                <div class="sd-identity__actions">
+                    <a href="{% url 'core:space_update' space_slug=space.slug %}" class="sd-btn sd-btn--primary">
+                        <span class="material-symbols-outlined">edit</span>
+                        Edit space
+                    </a>
+                    <a href="{% url 'core:space_delete' space_slug=space.slug %}" class="sd-btn sd-btn--quiet">
+                        Delete
+                    </a>
+                </div>
             </div>
-          {% else %}
-            <div class="text-center py-5">
-              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 48px;">bug_report</span>
-              <p class="text-muted mb-0">No issues found in this space.</p>
-            </div>
-          {% endif %}
+            {% if space.description %}
+            <p class="sd-identity__desc">{{ space.description }}</p>
+            {% endif %}
+            <p class="sd-identity__org">{{ space.org.name }} · {{ users_count }} member{{ users_count|pluralize }}</p>
         </div>
-      </div>
-    </div>
+    </header>
 
-    <!-- Users Section -->
-    <div class="col-lg-4">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">
-            <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">people</span>
-            Users ({{ users_count }})
-          </h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUsersModal">
-            <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
-            Add Space Admin
-          </button>
+    <section class="sd-breakdown" aria-label="Ticket status">
+        <div class="sd-breakdown__bar" role="img" aria-label="{{ tickets_count }} tickets total">
+            {% if open_tickets_count %}<span class="sd-breakdown__seg sd-breakdown__seg--open" style="flex-grow: {{ open_tickets_count }}"></span>{% endif %}
+            {% if in_progress_tickets_count %}<span class="sd-breakdown__seg sd-breakdown__seg--progress" style="flex-grow: {{ in_progress_tickets_count }}"></span>{% endif %}
+            {% if resolved_tickets_count %}<span class="sd-breakdown__seg sd-breakdown__seg--done" style="flex-grow: {{ resolved_tickets_count }}"></span>{% endif %}
+            {% if other_tickets_count %}<span class="sd-breakdown__seg sd-breakdown__seg--other" style="flex-grow: {{ other_tickets_count }}"></span>{% endif %}
         </div>
-        <div class="card-body">
-          {% if users %}
-            <div class="list-group list-group-flush">
-              {% for user in users %}
-                <div class="list-group-item border-0 px-0 py-2">
-                  <div class="d-flex align-items-center">
-                    <div class="user-avatar me-3">
-                      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                        <span class="small fw-bold">
-                          {% if user.first_name %}{{ user.first_name|first|upper }}{% else %}{{ user.get_short_name|first|upper }}{% endif %}
-                        </span>
-                      </div>
+        <ul class="sd-breakdown__legend">
+            <li>
+                <span class="sd-breakdown__dot sd-breakdown__dot--open" aria-hidden="true"></span>
+                Open <strong>{{ open_tickets_count }}</strong>
+            </li>
+            <li>
+                <span class="sd-breakdown__dot sd-breakdown__dot--progress" aria-hidden="true"></span>
+                In progress <strong>{{ in_progress_tickets_count }}</strong>
+            </li>
+            <li>
+                <span class="sd-breakdown__dot sd-breakdown__dot--done" aria-hidden="true"></span>
+                Resolved <strong>{{ resolved_tickets_count }}</strong>
+            </li>
+            {% if other_tickets_count %}
+            <li>
+                <span class="sd-breakdown__dot sd-breakdown__dot--other" aria-hidden="true"></span>
+                Other <strong>{{ other_tickets_count }}</strong>
+            </li>
+            {% endif %}
+            <li class="sd-breakdown__total">{{ tickets_count }} total</li>
+        </ul>
+    </section>
+
+    <div class="sd-panel">
+
+        <section class="sd-section" aria-labelledby="sd-team-heading">
+            <div class="sd-section__head">
+                <h2 id="sd-team-heading" class="sd-section__title">Team</h2>
+                {% if users %}
+                <button type="button" class="sd-btn sd-btn--primary sd-btn--sm" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+                    <span class="material-symbols-outlined">person_add</span>
+                    Add admin
+                </button>
+                {% endif %}
+            </div>
+
+            {% if users %}
+            <ul class="sd-people">
+                {% for user in users %}
+                <li class="sd-person">
+                    <div class="sd-person__avatar" aria-hidden="true">
+                        {% if user.first_name %}{{ user.first_name|first|upper }}{% elif user.last_name %}{{ user.last_name|first|upper }}{% else %}{{ user.get_short_name|first|upper }}{% endif %}
                     </div>
-                    <div class="user-info flex-grow-1">
-                      <h6 class="mb-0 small">{{ user.get_full_name|default:user.get_short_name }}</h6>
-                      <small class="text-muted">{{ user.get_user_type_display }}</small>
-                      {% if user.email %}
-                        <br><small class="text-muted">{{ user.email }}</small>
-                      {% endif %}
+                    <div class="sd-person__body">
+                        <p class="sd-person__name">{{ user.get_full_name|default:user.get_short_name }}</p>
+                        <p class="sd-person__meta">
+                            {{ user.get_user_type_display }}
+                            {% if user.email %} · {{ user.email }}{% endif %}
+                            {% if user.phone_number %} · {{ user.phone_number }}{% endif %}
+                        </p>
                     </div>
-                    <div class="user-actions">
-                      <form method="post" action="{% url 'core:space_remove_user' space_slug=space.slug %}" 
-                            onsubmit="return confirm('Are you sure you want to remove {{ user.get_full_name|default:user.get_short_name }} from this space?')" 
-                            style="display: inline;">
+                    <form method="post"
+                          action="{% url 'core:space_remove_user' space_slug=space.slug %}"
+                          onsubmit="return confirm('Remove {{ user.get_full_name|default:user.get_short_name }} from this space?')"
+                          class="sd-person__action">
                         {% csrf_token %}
                         <input type="hidden" name="user_id" value="{{ user.id }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove user from space">
-                          <span class="material-symbols-outlined" style="font-size: 14px;">person_remove</span>
+                        <button type="submit" class="sd-icon-btn" title="Remove from space">
+                            <span class="material-symbols-outlined">close</span>
                         </button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="text-center py-3">
-              <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">people</span>
-              <p class="text-muted mb-0 small">No users assigned to this space.</p>
-              <button type="button" class="btn btn-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#addUsersModal">
-                <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
-                Add First Space Admin
-              </button>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Add Users Modal -->
-      <div class="modal fade" id="addUsersModal" tabindex="-1" aria-labelledby="addUsersModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <form method="post" action="{% url 'core:space_add_users' space_slug=space.slug %}">
-              {% csrf_token %}
-              <div class="modal-header">
-                <h5 class="modal-title" id="addUsersModalLabel">
-                  <span class="material-symbols-outlined me-2" style="font-size: 20px; vertical-align: middle;">person_add</span>
-                  Add Space Admins to Space
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                {{ user_add_form.non_field_errors }}
-                <div class="form-group">
-                  <label class="form-label">{{ user_add_form.users.label }}</label>
-                  <p class="text-muted small mb-3">Only Space Admin users can be added to spaces</p>
-                  <div class="user-checkbox-list">
-                    {% for checkbox in user_add_form.users %}
-                    <div class="user-checkbox-item mb-2 border rounded p-2">
-                      <div class="form-check d-flex align-items-center">
-                        {{ checkbox.tag }}
-                        <label class="form-check-label flex-grow-1 ms-3" for="{{ checkbox.id_for_label }}">
-                          <div class="d-flex align-items-center">
-                            <div class="user-avatar me-2">
-                              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                                   style="width: 24px; height: 24px;">
-                                <span class="small" style="font-size: 12px;">
-                                  {{ checkbox.choice_label|slice:":1"|upper }}
-                                </span>
-                              </div>
-                            </div>
-                            <div class="user-info">
-                              <div class="fw-medium">{{ checkbox.choice_label }}</div>
-                              <small class="text-muted">
-                                {% with user=user_add_form.fields.users.queryset|get_item:forloop.counter0 %}
-                                  {{ user.get_user_type_display }}
-                                  {% if user.email %} • {{ user.email }}{% endif %}
-                                {% endwith %}
-                              </small>
-                            </div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center py-3">
-                      <span class="material-symbols-outlined mb-2 text-muted" style="font-size: 32px;">person_off</span>
-                      <p class="text-muted mb-0">No Space Admin users available to add to this space.</p>
-                    </div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">
-                  <span class="material-symbols-outlined me-1" style="font-size: 14px;">person_add</span>
-                  Add Selected Space Admins
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="sd-empty">
+                <p class="sd-empty__text">No space admins assigned.</p>
+                <button type="button" class="sd-btn sd-btn--primary sd-btn--sm" data-bs-toggle="modal" data-bs-target="#addUsersModal">
+                    <span class="material-symbols-outlined">person_add</span>
+                    Add admin
                 </button>
-              </div>
+            </div>
+            {% endif %}
+        </section>
 
-              <style>
-                .user-checkbox-list {
-                  max-height: 300px;
-                  overflow-y: auto;
-                }
-                .user-checkbox-item:hover {
-                  background-color: #f8f9fa;
-                }
-                .user-checkbox-item .form-check {
-                  margin-bottom: 0;
-                }
-                .user-checkbox-item .form-check-input {
-                  width: 1.2em;
-                  height: 1.2em;
-                }
-              </style>
-            </form>
-          </div>
-        </div>
-      </div>
-        </div>
-      </div>
+        <section class="sd-section" aria-labelledby="sd-activity-heading">
+            <div class="sd-section__head">
+                <h2 id="sd-activity-heading" class="sd-section__title">Activity</h2>
+                <a href="{% url 'ticket_management:central_admin:ticket_list' %}?space={{ space.slug }}" class="sd-text-link">
+                    {% if tickets %}View all{% else %}Ticket list{% endif %}
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </a>
+            </div>
+
+            {% if tickets %}
+            <ul class="sd-tickets">
+                {% for ticket in tickets|slice:":6" %}
+                <li>
+                    <a href="{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug %}" class="sd-ticket">
+                        <div class="sd-ticket__text">
+                            <span class="sd-ticket__title">{{ ticket.title }}</span>
+                            <span class="sd-ticket__meta">
+                                {{ ticket.reporter.get_full_name|default:ticket.reporter.get_short_name }}
+                                · {{ ticket.created_at|timesince }} ago
+                            </span>
+                        </div>
+                        <div class="sd-ticket__tags">
+                            <span class="sd-pill sd-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+                            <span class="sd-pill sd-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+                        </div>
+                        <span class="material-symbols-outlined sd-ticket__chevron">chevron_right</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="sd-empty">
+                <p class="sd-empty__text">No tickets in this space yet.</p>
+            </div>
+            {% endif %}
+        </section>
+
     </div>
-  </div>
+
+    <div class="modal fade" id="addUsersModal" tabindex="-1" aria-labelledby="addUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content sd-modal">
+                <form method="post" action="{% url 'core:space_add_users' space_slug=space.slug %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addUsersModalLabel">Add space admins</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        {{ user_add_form.non_field_errors }}
+                        <p class="sd-modal__hint">Only Space Admin users can be added.</p>
+                        <div class="sd-check-list">
+                            {% for checkbox in user_add_form.users %}
+                            <label class="sd-check" for="{{ checkbox.id_for_label }}">
+                                {{ checkbox.tag }}
+                                <span class="sd-person__avatar sd-person__avatar--sm" aria-hidden="true">
+                                    {{ checkbox.choice_label|slice:":1"|upper }}
+                                </span>
+                                <span class="sd-check__text">
+                                    <span class="sd-check__name">{{ checkbox.choice_label }}</span>
+                                    <span class="sd-check__meta">
+                                        {% with user=user_add_form.fields.users.queryset|get_item:forloop.counter0 %}
+                                            {{ user.get_user_type_display }}
+                                            {% if user.email %} · {{ user.email }}{% endif %}
+                                        {% endwith %}
+                                    </span>
+                                </span>
+                            </label>
+                            {% empty %}
+                            <p class="sd-quiet">No Space Admin users available to add.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="sd-btn sd-btn--outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="sd-btn sd-btn--primary">Add selected</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
-{% endblock %}
+{% endblock content %}

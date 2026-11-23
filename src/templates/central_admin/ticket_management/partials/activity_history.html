@@ -1,0 +1,63 @@
+<section class="td-card" id="activity-history" aria-labelledby="td-activity-heading">
+  <div class="td-card__head">
+    <h2 id="td-activity-heading" class="td-card__title">Activity</h2>
+    <span class="td-count">{{ activities.count }}</span>
+  </div>
+
+  {% if activities %}
+  <ul class="td-activity">
+    {% for activity in activities|slice:":12" %}
+    <li class="td-activity__item">
+      <div class="td-activity__icon" aria-hidden="true">
+        <span class="material-symbols-outlined">
+          {% if activity.activity_type == 'created' %}add
+          {% elif activity.activity_type == 'status_changed' or activity.activity_type == 'resolved' or activity.activity_type == 'closed' or activity.activity_type == 'cancelled' or activity.activity_type == 'escalated' %}swap_horiz
+          {% elif activity.activity_type == 'reopened' %}refresh
+          {% elif activity.activity_type == 'assigned' or activity.activity_type == 'reassigned' or activity.activity_type == 'unassigned' %}person
+          {% elif activity.activity_type == 'priority_changed' %}flag
+          {% elif activity.activity_type == 'work_task_created' or activity.activity_type == 'work_task_updated' %}checklist
+          {% elif activity.activity_type == 'work_task_completed' %}check
+          {% elif activity.activity_type == 'work_task_reopened' %}undo
+          {% elif activity.activity_type == 'work_task_deleted' %}delete
+          {% elif activity.activity_type == 'site_visit_created' or activity.activity_type == 'site_visit_updated' %}location_on
+          {% elif activity.activity_type == 'site_visit_completed' %}check_circle
+          {% elif activity.activity_type == 'site_visit_cancelled' %}cancel
+          {% elif activity.activity_type == 'purchase_request_created' %}shopping_cart
+          {% elif activity.activity_type == 'purchase_request_approved' %}check_circle
+          {% elif activity.activity_type == 'purchase_request_rejected' %}cancel
+          {% elif activity.activity_type == 'purchase_request_deleted' %}delete
+          {% elif activity.activity_type == 'image_added' or activity.activity_type == 'image_deleted' %}image
+          {% elif activity.activity_type == 'voice_added' or activity.activity_type == 'voice_deleted' %}mic
+          {% elif activity.activity_type == 'review_requested' or activity.activity_type == 'reviewed' %}rate_review
+          {% elif activity.activity_type == 'updated' %}edit
+          {% else %}circle
+          {% endif %}
+        </span>
+      </div>
+      <div class="td-activity__body">
+        <div class="td-activity__head">
+          <strong>{{ activity.get_activity_type_display }}</strong>
+          <span class="td-activity__who">
+            by
+            {% if activity.user %}
+              {{ activity.user.get_full_name|default:activity.user.email|default:activity.user.phone_number }}
+            {% else %}
+              System
+            {% endif %}
+          </span>
+          <time class="td-activity__when" datetime="{{ activity.created_at|date:'c' }}">{{ activity.created_at|date:"M d, Y" }}</time>
+        </div>
+        <p class="td-activity__desc">{{ activity.description }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if activities.count > 12 %}
+  <p class="td-quiet td-quiet--top">Showing latest 12 of {{ activities.count }}</p>
+  {% endif %}
+  {% else %}
+  <div class="td-empty">
+    <p class="td-empty__text">No activity yet</p>
+  </div>
+  {% endif %}
+</section>

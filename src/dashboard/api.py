@@ -18,18 +18,18 @@ class DashboardAPIView(DashboardDataMixin, APIView):
 
     permission_classes = [IsDashboardRole]
 
-    def get_issue_list_route_name(self):
-        return 'issue_management:central_admin:issue_list'
+    def get_ticket_list_route_name(self):
+        return 'ticket_management:central_admin:ticket_list'
 
-    def get_issue_detail_route_name(self):
-        return 'issue_management:central_admin:issue_detail'
+    def get_ticket_detail_route_name(self):
+        return 'ticket_management:central_admin:ticket_detail'
 
-    def get_issue_detail_url(self, issue):
+    def get_ticket_detail_url(self, ticket):
         # Prefer slug for API clients instead of HTML reverse routes.
-        return f'/api/issues/{issue.slug}/'
+        return f'/api/tickets/{ticket.slug}/'
 
     def get_view_all_url(self):
-        return '/api/issues/'
+        return '/api/tickets/'
 
     @extend_schema(
         tags=['Dashboard'],
@@ -65,7 +65,8 @@ class DashboardAPIView(DashboardDataMixin, APIView):
                 'role': user.user_type,
                 'summary_cards': self.get_summary_cards(issue_queryset),
                 'chart_config': self.get_trend_config(issue_queryset),
-                'recent_issues': self.get_recent_issues(issue_queryset),
+                'recent_tickets': self.get_recent_tickets(issue_queryset),
+                'overdue_tasks': self.get_overdue_tasks(issue_queryset),
                 'status_breakdown': self.get_status_breakdown(issue_queryset),
                 'priority_breakdown': self.get_priority_breakdown(issue_queryset),
                 'active_space': (

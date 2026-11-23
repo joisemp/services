@@ -1,10 +1,12 @@
 {% extends 'sidebar_base.html' %}
+{% load static %}
 
 {% block title %}Central Admin Dashboard{% endblock %}
 
-{% load static %}
-
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/dashboard/central_admin/style.css' %}">
 {% endblock %}
 
@@ -17,172 +19,310 @@
 {% endblock %}
 
 {% block content %}
+<div class="ca-dash">
 
-<section id="header" class="mt-2">
-  <div class="alert alert-notification alert-primary" role="alert">
-    <h5 class="mb-1">Welcome back {{ request.user.first_name|default:request.user.get_short_name }}</h5>
-    <p class="mb-0">Here's what's happening across your organization today.</p>
-  </div>
-</section>
+  <header class="ca-dash-header">
+    <div class="ca-dash-header__text">
+      <h1 class="ca-dash-header__title">
+        Welcome back, {{ request.user.first_name|default:request.user.get_short_name }}
+      </h1>
+      <p class="ca-dash-header__sub">
+        Organization-wide overview — tickets, tasks, and trends in one place.
+      </p>
+    </div>
+    <div class="ca-dash-header__actions">
+      {% for link in quick_links %}
+      <a href="{{ link.url }}" class="ca-dash-icon-btn" title="{{ link.label }}">
+        <span class="material-symbols-outlined">{{ link.icon }}</span>
+        <span class="ca-dash-icon-btn__label">{{ link.label }}</span>
+      </a>
+      {% endfor %}
+      <a href="{% url 'ticket_management:central_admin:ticket_create' %}" class="ca-dash-icon-btn ca-dash-icon-btn--primary">
+        <span class="material-symbols-outlined">add</span>
+        <span class="ca-dash-icon-btn__label">Create ticket</span>
+      </a>
+    </div>
+  </header>
 
-<section id="summary" class="mt-4">
-  <div class="row g-3">
-    {% for card in summary_cards %}
-      <div class="col-6 col-lg-4 col-xxl-3">
-        <div class="card h-100 border-0">
-          <div class="card-body d-flex justify-content-between align-items-center">
-            <div>
-              <p class="text-muted small mb-1">{{ card.label }}</p>
-              <h4 class="fw-semibold mb-0">{{ card.value }}</h4>
-            </div>
-            <span class="material-symbols-outlined fs-2 text-{{ card.variant }}">{{ card.icon }}</span>
-          </div>
+  <section class="ca-dash-kpis" aria-label="Key metrics">
+    <article class="ca-dash-kpi">
+      <div class="ca-dash-kpi__top">
+        <div class="ca-dash-kpi__icon ca-dash-kpi__icon--blue">
+          <span class="material-symbols-outlined">confirmation_number</span>
+        </div>
+        <span class="ca-dash-kpi__meta">{{ summary_cards.1.value }} active</span>
+      </div>
+      <p class="ca-dash-kpi__value">{{ summary_cards.0.value }}</p>
+      <p class="ca-dash-kpi__label">Total tickets</p>
+    </article>
+
+    <article class="ca-dash-kpi">
+      <div class="ca-dash-kpi__top">
+        <div class="ca-dash-kpi__icon ca-dash-kpi__icon--sky">
+          <span class="material-symbols-outlined">pending</span>
+        </div>
+        {% if summary_cards.0.value %}
+        <span class="ca-dash-kpi__meta">{% widthratio summary_cards.1.value summary_cards.0.value 100 %}% of total</span>
+        {% else %}
+        <span class="ca-dash-kpi__meta">0% of total</span>
+        {% endif %}
+      </div>
+      <p class="ca-dash-kpi__value">{{ summary_cards.1.value }}</p>
+      <p class="ca-dash-kpi__label">Active tickets</p>
+    </article>
+
+    <article class="ca-dash-kpi">
+      <div class="ca-dash-kpi__top">
+        <div class="ca-dash-kpi__icon ca-dash-kpi__icon--green">
+          <span class="material-symbols-outlined">task_alt</span>
+        </div>
+        <span class="ca-dash-kpi__meta">This month</span>
+      </div>
+      <p class="ca-dash-kpi__value">{{ summary_cards.2.value }}</p>
+      <p class="ca-dash-kpi__label">Resolved this month</p>
+    </article>
+
+    <article class="ca-dash-kpi">
+      <div class="ca-dash-kpi__top">
+        <div class="ca-dash-kpi__icon ca-dash-kpi__icon--amber">
+          <span class="material-symbols-outlined">assignment</span>
+        </div>
+        <span class="ca-dash-kpi__meta{% if summary_cards.3.value %} ca-dash-kpi__meta--danger{% endif %}">
+          {{ summary_cards.3.value }} overdue
+        </span>
+      </div>
+      <p class="ca-dash-kpi__value">{{ summary_cards.4.value }}</p>
+      <p class="ca-dash-kpi__label">Pending tasks</p>
+    </article>
+  </section>
+
+  <section class="ca-dash-mid">
+    <div class="ca-dash-card ca-dash-card--chart">
+      <div class="ca-dash-card__hd ca-dash-card__hd--row">
+        <div>
+          <h2 class="ca-dash-card__title">Ticket trends</h2>
+          <p class="ca-dash-card__sub">New, in progress, and resolved over the last 6 months</p>
         </div>
       </div>
-    {% endfor %}
-  </div>
-</section>
-
-<section id="stats" class="mt-4">
-  <div>
-    <div class="card-body">
-      <div style="width: 100%; height: 320px;">
-        <canvas id="dashboardChart" aria-label="Issue trend chart" role="img"></canvas>
+      <div class="ca-dash-chart-wrap">
+        <canvas id="dashboardChart" aria-label="Ticket trend chart" role="img"></canvas>
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    {{ chart_data|json_script:"central-admin-chart-data" }}
+    <div class="ca-dash-card ca-dash-card--split">
+      <div class="ca-dash-card__hd">
+        <h2 class="ca-dash-card__title">Status split</h2>
+        <p class="ca-dash-card__sub">Share of tickets by status</p>
+      </div>
+      <div class="ca-dash-donut-wrap">
+        <canvas id="statusDonut" aria-label="Status breakdown chart" role="img"></canvas>
+        <div class="ca-dash-donut-center">
+          <span class="ca-dash-donut-center__value">{{ summary_cards.0.value }}</span>
+          <span class="ca-dash-donut-center__label">Total</span>
+        </div>
+      </div>
+      <ul class="ca-dash-legend">
+        {% for item in status_breakdown %}
+        {% if item.count %}
+        <li class="ca-dash-legend__item">
+          <span class="ca-dash-legend__dot ca-dash-legend__dot--{{ item.status }}"></span>
+          <span class="ca-dash-legend__label">{{ item.label }}</span>
+          <span class="ca-dash-legend__value">{{ item.count }} · {{ item.percent }}%</span>
+        </li>
+        {% endif %}
+        {% empty %}
+        <li class="ca-dash-empty">No status data yet.</li>
+        {% endfor %}
+        {% if summary_cards.0.value == 0 %}
+        <li class="ca-dash-empty">No status data yet.</li>
+        {% endif %}
+      </ul>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        const canvas = document.getElementById('central-admin-chart');
-        const rawConfig = document.getElementById('central-admin-chart-data');
-        if (!canvas || !rawConfig) {
-          return;
-        }
+      <div class="ca-dash-priority">
+        <h3 class="ca-dash-priority__title">By priority</h3>
+        <ul class="ca-dash-legend ca-dash-legend--compact">
+          {% for item in priority_breakdown %}
+          <li class="ca-dash-legend__item">
+            <span class="ca-dash-legend__dot ca-dash-legend__dot--prio-{{ item.priority }}"></span>
+            <span class="ca-dash-legend__label">{{ item.label }}</span>
+            <span class="ca-dash-legend__value">{{ item.count }}</span>
+          </li>
+          {% empty %}
+          <li class="ca-dash-empty">No priority data yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
 
-        const chartConfig = JSON.parse(rawConfig.textContent);
-        const datasets = chartConfig.datasets.map(function (dataset) {
-          return Object.assign({
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            fill: dataset.fill || false,
-          }, dataset);
-        });
+  <section class="ca-dash-bottom">
+    <div class="ca-dash-card ca-dash-card--table">
+      <div class="ca-dash-card__hd ca-dash-card__hd--row">
+        <div>
+          <h2 class="ca-dash-card__title">Recent tickets</h2>
+          <p class="ca-dash-card__sub">Latest activity across the organization</p>
+        </div>
+        <a href="{{ view_all_issues_url }}" class="ca-dash-link">
+          View all
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+      </div>
 
-        new Chart(canvas, {
-          type: 'line',
-          data: {
-            labels: chartConfig.labels,
-            datasets: datasets,
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-              mode: 'index',
-              intersect: false,
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  precision: 0,
-                },
-                grid: {
-                  color: 'rgba(15, 23, 42, 0.08)',
-                },
-              },
-              x: {
-                grid: {
-                  display: false,
-                },
-              },
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  usePointStyle: true,
-                  padding: 20,
-                },
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false,
-                callbacks: {
-                  label: function (context) {
-                    const label = context.dataset.label || '';
-                    const value = context.parsed.y ?? 0;
-                    return `${label}: ${value}`;
-                  },
-                },
-              },
-            },
-          },
-        });
-      });
-    </script>
-</section>
+      {% if recent_tickets %}
+      <div class="ca-dash-table-wrap">
+        <table class="ca-dash-table">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Reporter</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ticket in recent_tickets %}
+            <tr>
+              <td>
+                <a href="{{ ticket.url }}" class="ca-dash-table__title">{{ ticket.title }}</a>
+              </td>
+              <td>{{ ticket.reporter }}</td>
+              <td>{{ ticket.created_at|date:"M j, Y" }}</td>
+              <td><span class="ca-dash-pill ca-dash-pill--status-{{ ticket.status }}">{{ ticket.status_display }}</span></td>
+              <td><span class="ca-dash-pill ca-dash-pill--{{ ticket.priority }}">{{ ticket.priority_display }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-<section id="issue-card" class="mt-4">
-  <div class="title-recent-issues d-flex justify-content-between align-items-center">
-    <h3 class="mb-1">Recent Issues</h3>
-    <a href="{{ view_all_issues_url }}" class="btn btn-primary btn-sm d-flex align-items-center">
-      <span>View All</span>
-      <span class="material-symbols-outlined ms-2" style="font-size: 16px;">arrow_forward_ios</span>
-    </a>
-  </div>
-  <div class="container-fluid px-0 mt-3">
-    {% if recent_issues %}
-      <div class="row row-cols-1 row-cols-lg-2 row-cols-xxl-3 g-3">
-        {% for issue in recent_issues %}
-          <div class="col">
-            <a href="{{ issue.url }}" class="text-decoration-none card-link-wrapper">
-              <div class="card h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <h5 class="card-title mb-0">{{ issue.title }}</h5>
-                    <span class="badge {{ issue.priority_class }} rounded-pill text-uppercase">{{ issue.priority_display }}</span>
-                  </div>
-                  <hr>
-                  <div class="d-flex justify-content-between text-muted small mb-2">
-                    <span>{{ issue.created_at|date:"M j, Y" }}</span>
-                    <span>{{ issue.created_at|time:"H:i" }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                      <p class="mb-1 text-muted small">Reporter</p>
-                      <p class="mb-0 fw-semibold">{{ issue.reporter }}</p>
-                    </div>
-                    <span class="badge {{ issue.status_class }} rounded-pill">{{ issue.status_display }}</span>
-                  </div>
-                </div>
-              </div>
-            </a>
+      <div class="ca-dash-ticket-cards">
+        {% for ticket in recent_tickets %}
+        <a href="{{ ticket.url }}" class="ca-dash-ticket-card">
+          <div class="ca-dash-ticket-card__top">
+            <span class="ca-dash-ticket-card__title">{{ ticket.title }}</span>
+            <span class="material-symbols-outlined ca-dash-ticket-card__chevron">chevron_right</span>
           </div>
+          <p class="ca-dash-ticket-card__meta">
+            {{ ticket.reporter }} · {{ ticket.created_at|date:"M j, Y" }}
+          </p>
+          <div class="ca-dash-ticket-card__pills">
+            <span class="ca-dash-pill ca-dash-pill--status-{{ ticket.status }}">{{ ticket.status_display }}</span>
+            <span class="ca-dash-pill ca-dash-pill--{{ ticket.priority }}">{{ ticket.priority_display }}</span>
+          </div>
+        </a>
         {% endfor %}
       </div>
-    {% else %}
-      <div class="alert alert-light border mt-3" role="alert">
-        No issues have been reported yet. They'll appear here once activity starts.
+      {% else %}
+      <p class="ca-dash-empty ca-dash-empty--pad">No tickets yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="ca-dash-side">
+      <div class="ca-dash-card">
+        <div class="ca-dash-card__hd">
+          <h2 class="ca-dash-card__title">Needs attention</h2>
+          <p class="ca-dash-card__sub">{{ summary_cards.3.value }} overdue task{{ summary_cards.3.value|pluralize }}</p>
+        </div>
+        {% if overdue_tasks %}
+        <ul class="ca-dash-list">
+          {% for task in overdue_tasks %}
+          <li>
+            <a href="{{ task.url }}" class="ca-dash-row">
+              <div class="ca-dash-row__body">
+                <span class="ca-dash-row__title">{{ task.title }}</span>
+                <span class="ca-dash-row__sub">{{ task.ticket_title }}</span>
+              </div>
+              <time class="ca-dash-pill ca-dash-pill--danger">{{ task.due_date|date:"M j" }}</time>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="ca-dash-empty ca-dash-empty--pad">Nothing overdue right now.</p>
+        {% endif %}
       </div>
-    {% endif %}
-  </div>
-</section>
+
+      <div class="ca-dash-card ca-dash-card--actions">
+        <div class="ca-dash-card__hd">
+          <h2 class="ca-dash-card__title">Quick actions</h2>
+          <p class="ca-dash-card__sub">Jump into common workflows</p>
+        </div>
+        <div class="ca-dash-actions">
+          <a href="{{ view_all_issues_url }}" class="ca-dash-btn ca-dash-btn--outline">
+            <span class="material-symbols-outlined">list</span>
+            Browse tickets
+          </a>
+          <a href="{% url 'ticket_management:central_admin:ticket_create' %}" class="ca-dash-btn ca-dash-btn--primary">
+            Create ticket
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {{ chart_config|json_script:"dashboard-chart-config" }}
-<script>
-  const chartCanvas = document.getElementById('dashboardChart');
-  const chartDataElement = document.getElementById('dashboard-chart-config');
-  if (chartCanvas && chartDataElement) {
-    const chartConfig = JSON.parse(chartDataElement.textContent);
-    new Chart(chartCanvas, chartConfig);
-  }
+<script id="status-donut-data" type="application/json">
+[
+  {% for item in status_breakdown %}
+  {"label": "{{ item.label|escapejs }}", "count": {{ item.count }}, "status": "{{ item.status|escapejs }}"}{% if not forloop.last %},{% endif %}
+  {% endfor %}
+]
 </script>
+<script>
+  (function () {
+    const trendCanvas = document.getElementById('dashboardChart');
+    const trendRaw = document.getElementById('dashboard-chart-config');
+    if (trendCanvas && trendRaw) {
+      new Chart(trendCanvas, JSON.parse(trendRaw.textContent));
+    }
 
+    const donutCanvas = document.getElementById('statusDonut');
+    const donutRaw = document.getElementById('status-donut-data');
+    if (!donutCanvas || !donutRaw) return;
+
+    const rows = JSON.parse(donutRaw.textContent.trim() || '[]');
+    if (!rows.length) return;
+
+    const palette = {
+      open: '#9ca3af',
+      assigned: '#60a5fa',
+      in_progress: '#2563EB',
+      resolved: '#16a34a',
+      escalated: '#f59e0b',
+      closed: '#374151',
+      cancelled: '#d1d5db',
+    };
+
+    new Chart(donutCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: rows.map((r) => r.label),
+        datasets: [{
+          data: rows.map((r) => r.count),
+          backgroundColor: rows.map((r) => palette[r.status] || '#93c5fd'),
+          borderWidth: 0,
+          hoverOffset: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed}`,
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>
 {% endblock %}

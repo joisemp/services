@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Organization, Space, User
-from issue_management.models import Issue, WorkTask
+from ticket_management.models import Ticket, WorkTask
 
 
 class DashboardViewTests(TestCase):
@@ -47,7 +47,7 @@ class DashboardViewTests(TestCase):
 	def _create_issues(self):
 		now = timezone.now()
 
-		self.issue_open = Issue.objects.create(
+		self.issue_open = Ticket.objects.create(
 			title='Water leak',
 			description='Pipe leaking in basement',
 			reporter=self.reporter,
@@ -57,7 +57,7 @@ class DashboardViewTests(TestCase):
 			space=self.space_a,
 		)
 
-		self.issue_in_progress = Issue.objects.create(
+		self.issue_in_progress = Ticket.objects.create(
 			title='Broken elevator',
 			description='Elevator stuck between floors',
 			reporter=self.reporter,
@@ -68,8 +68,8 @@ class DashboardViewTests(TestCase):
 			space=self.space_a,
 		)
 
-		self.issue_resolved = Issue.objects.create(
-			title='Lighting issue',
+		self.issue_resolved = Ticket.objects.create(
+			title='Lighting ticket',
 			description='Lights flickering on level 2',
 			reporter=self.reporter,
 			status='resolved',
@@ -78,7 +78,7 @@ class DashboardViewTests(TestCase):
 			space=self.space_a,
 		)
 
-		self.issue_other_space = Issue.objects.create(
+		self.issue_other_space = Ticket.objects.create(
 			title='Parking gate stuck',
 			description='Gate not closing properly',
 			reporter=self.reporter,
@@ -89,7 +89,7 @@ class DashboardViewTests(TestCase):
 		)
 
 		WorkTask.objects.create(
-			issue=self.issue_in_progress,
+			ticket=self.issue_in_progress,
 			title='Diagnose fault',
 			description='Investigate mechanical failure',
 			assigned_to=self.space_admin,
@@ -97,7 +97,7 @@ class DashboardViewTests(TestCase):
 		)
 
 		WorkTask.objects.create(
-			issue=self.issue_in_progress,
+			ticket=self.issue_in_progress,
 			title='Order replacement parts',
 			description='Procure necessary parts',
 			assigned_to=self.space_admin,
@@ -115,8 +115,8 @@ class DashboardViewTests(TestCase):
 		summary_cards = response.context['summary_cards']
 		summary_map = self._summary_to_dict(summary_cards)
 
-		self.assertEqual(summary_map['Total Issues'], 4)
-		self.assertEqual(summary_map['Active Issues'], 3)  # open, in progress, assigned
+		self.assertEqual(summary_map['Total Tickets'], 4)
+		self.assertEqual(summary_map['Active Tickets'], 3)  # open, in progress, assigned
 		self.assertEqual(summary_map['Resolved This Month'], 1)
 		self.assertEqual(summary_map['Overdue Tasks'], 1)
 		self.assertEqual(summary_map['Pending Tasks'], 2)
@@ -132,9 +132,9 @@ class DashboardViewTests(TestCase):
 		self.assertEqual(priority_breakdown['medium'], 2)
 		self.assertEqual(priority_breakdown['low'], 1)
 
-		recent_issues = response.context['recent_issues']
-		self.assertTrue(all('url' in issue for issue in recent_issues))
-		self.assertGreaterEqual(len(recent_issues), 3)
+		recent_tickets = response.context['recent_tickets']
+		self.assertTrue(all('url' in ticket for ticket in recent_tickets))
+		self.assertGreaterEqual(len(recent_tickets), 3)
 
 	def test_space_admin_dashboard_limits_to_assigned_spaces(self):
 		self.client.force_login(self.space_admin)
@@ -145,11 +145,11 @@ class DashboardViewTests(TestCase):
 		summary_map = self._summary_to_dict(summary_cards)
 
 		# Only issues from space_a should be counted (3)
-		self.assertEqual(summary_map['Total Issues'], 3)
+		self.assertEqual(summary_map['Total Tickets'], 3)
 
-		recent_issues = response.context['recent_issues']
-		issue_titles = {issue['title'] for issue in recent_issues}
-		self.assertIn('Water leak', issue_titles)
-		self.assertNotIn('Parking gate stuck', issue_titles)
+		recent_tickets = response.context['recent_tickets']
+		ticket_titles = {ticket['title'] for ticket in recent_tickets}
+		self.assertIn('Water leak', ticket_titles)
+		self.assertNotIn('Parking gate stuck', ticket_titles)
 
-		self.assertEqual(response.context['view_all_issues_url'], reverse('issue_management:space_admin:issue_list'))
+		self.assertEqual(response.context['view_all_issues_url'], reverse('ticket_management:space_admin:ticket_list'))

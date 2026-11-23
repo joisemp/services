@@ -9,7 +9,7 @@ class OrgScopedMixin:
     Restrict querysets to the authenticated user's organization.
 
     Set ``org_field`` (default ``org``) to the FK name on the model
-    (``organization`` for User, ``org`` for Issue/Space).
+    (``organization`` for User, ``org`` for Ticket/Space).
     """
 
     org_field = 'org'

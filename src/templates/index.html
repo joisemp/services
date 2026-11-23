@@ -1,23 +1,333 @@
 {% extends "base.html" %}
-
 {% load static %}
 
+{% block body_class %}landing-page{% endblock body_class %}
+{% block main_content_class %}landing-main{% endblock main_content_class %}
+
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/home/style.css' %}">
 {% endblock styles %}
 
-{% block content %}
+{% block navbar %}
+{% include "home/navbar.html" %}
+{% endblock navbar %}
 
-<section id="home">
-    <div class="container d-flex">
-        <div class="content">
-            <h1>Simplifying Life with Seamless Service</h1>
-            <p>Report, track, and manage issues efficiently for your organisation.</p>
-            <div class="button-container">
-                <a href="{% url 'core:login' %}" class="btn btn-light fw-semibold btn-lg">Get Started</a>
+{% block content_outer %}
+
+{# ─── HERO ──────────────────────────────────────────────────────────────────── #}
+<section id="hero">
+    <div class="hero-deco" aria-hidden="true">
+        <div class="hero-deco__orb hero-deco__orb--1"></div>
+        <div class="hero-deco__orb hero-deco__orb--2"></div>
+        <div class="hero-deco__dots"></div>
+    </div>
+    <div class="container">
+        <div class="hero-layout">
+
+            <div class="hero-text">
+                <div class="hero-badge">
+                    <span class="hero-badge__dot"></span>
+                    Facility &amp; Operations Management
+                </div>
+                <h1>Operations<br>management,<br><em>simplified</em></h1>
+                <p>Report, track, and resolve service tickets across your organisation — with media attachments, role-based workflows, and a complete audit trail.</p>
+                <div class="hero-actions">
+                    <a href="{% url 'core:login' %}" class="btn-solid">
+                        Get started <span class="material-symbols-outlined btn-icon">arrow_forward</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+                <div class="ticket-card ticket-card--main">
+                    <div class="tc-header">
+                        <span class="tc-id">#1042</span>
+                        <span class="tc-badge tc-badge--progress">In progress</span>
+                    </div>
+                    <div class="tc-title">Broken AC unit — Block C, Floor 2</div>
+                    <div class="tc-meta">
+                        <span class="material-symbols-outlined tc-icon">manage_accounts</span>
+                        Assigned to Ravi M. &nbsp;·&nbsp; Due tomorrow
+                    </div>
+                    <div class="tc-progress-bar">
+                        <div class="tc-progress-fill" style="width: 65%;"></div>
+                    </div>
+                    <div class="tc-tags">
+                        <span class="tc-tag">
+                            <span class="material-symbols-outlined tc-icon">photo_camera</span> 2 photos
+                        </span>
+                        <span class="tc-tag">
+                            <span class="material-symbols-outlined tc-icon">mic</span> Voice note
+                        </span>
+                    </div>
+                </div>
+                <div class="ticket-card ticket-card--sm">
+                    <div class="tc-header">
+                        <span class="tc-id">#1038</span>
+                        <span class="tc-badge tc-badge--resolved">Resolved</span>
+                    </div>
+                    <div class="tc-title">Water leakage — Canteen area</div>
+                </div>
+                <div class="ticket-card ticket-card--xs">
+                    <div class="tc-header">
+                        <span class="tc-id">#1043</span>
+                        <span class="tc-badge tc-badge--open">Open</span>
+                    </div>
+                    <div class="tc-title">Street light out — Main entrance</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+{# ─── FEATURES ──────────────────────────────────────────────────────────────── #}
+<section id="features">
+    <div class="container">
+        <div class="section-heading">
+            <p class="section-eyebrow">What you get</p>
+            <h2>Everything your team needs</h2>
+            <p class="section-sub">From the first report to the final sign-off — all the tools your facilities team needs in one platform.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">confirmation_number</span>
+                </div>
+                <span class="feature-num">01</span>
+                <h5>Ticket Reporting</h5>
+                <p>Staff raise tickets with photos, voice recordings, and location details. Phone-only sign-in keeps it frictionless for general users.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">checklist</span>
+                </div>
+                <span class="feature-num">02</span>
+                <h5>Work-Task Tracking</h5>
+                <p>Break tickets into tasks, assign team members, set due dates, and share progress links with contractors — no account needed.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">manage_accounts</span>
+                </div>
+                <span class="feature-num">03</span>
+                <h5>Role-Based Workflows</h5>
+                <p>Six roles, six focused views. Each team member sees exactly what they need — no clutter, no confusion.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="material-symbols-outlined">apartment</span>
+                </div>
+                <span class="feature-num">04</span>
+                <h5>Multi-Tenant Spaces</h5>
+                <p>Organisations with multiple sites run independently under one platform. Fleet and inventory management included.</p>
             </div>
         </div>
     </div>
 </section>
 
-{% endblock content %}
+{# ─── HOW IT WORKS ──────────────────────────────────────────────────────────── #}
+<section id="how-it-works">
+    <div class="container">
+        <div class="section-heading">
+            <p class="section-eyebrow">The workflow</p>
+            <h2>From report to resolution</h2>
+            <p class="section-sub">Three steps. No confusion about who does what next.</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-item">
+                <div class="step-num">01</div>
+                <div class="step-body">
+                    <h5>Report it</h5>
+                    <p>A general user opens a ticket — attaches photos, adds a voice note, and pins the location. Takes under two minutes from any device.</p>
+                </div>
+            </div>
+            <div class="step-arrow" aria-hidden="true">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </div>
+            <div class="step-item">
+                <div class="step-num">02</div>
+                <div class="step-body">
+                    <h5>Assign &amp; track</h5>
+                    <p>A maintainer creates work tasks, assigns team members, and monitors progress. Supervisors escalate or reassign at any point.</p>
+                </div>
+            </div>
+            <div class="step-arrow" aria-hidden="true">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </div>
+            <div class="step-item">
+                <div class="step-num">03</div>
+                <div class="step-body">
+                    <h5>Resolve &amp; close</h5>
+                    <p>Once work is done, a reviewer signs off. Every step is logged — full audit trail, no guesswork for anyone.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── WHO IT'S FOR ──────────────────────────────────────────────────────────── #}
+<section id="who-its-for">
+    <div class="container">
+        <div class="section-heading">
+            <p class="section-eyebrow">Built for everyone</p>
+            <h2>Who it's for</h2>
+            <p class="section-sub">A platform designed around the people who use it — not the other way around.</p>
+        </div>
+        <div class="roles-grid">
+            <div class="role-card">
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">security</span>
+                </div>
+                <h5>Central Admins</h5>
+                <p>Full platform visibility. Manage organisations, spaces, users, and performance reports from one centralised dashboard.</p>
+            </div>
+            <div class="role-card">
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">construction</span>
+                </div>
+                <h5>Operations Teams</h5>
+                <p>Maintainers, supervisors, and reviewers each work in their own focused view — assign, escalate, and close without getting in each other's way.</p>
+            </div>
+            <div class="role-card">
+                <div class="role-icon">
+                    <span class="material-symbols-outlined">smartphone</span>
+                </div>
+                <h5>General Users</h5>
+                <p>Raise tickets with just a phone number — no password, no complexity. Get notified as work progresses without needing to follow up.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── FAQ ───────────────────────────────────────────────────────────────────── #}
+<section id="faq">
+    <div class="container">
+        <div class="faq-layout">
+            <div class="faq-heading">
+                <p class="section-eyebrow">Common questions</p>
+                <h2>Frequently asked questions</h2>
+                <p class="section-sub">Everything you need to know before getting started.</p>
+            </div>
+            <div class="faq-body">
+                <div class="accordion accordion-flush" id="faqAccordion">
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#faq-1"
+                                aria-expanded="false" aria-controls="faq-1">
+                                What is Services?
+                            </button>
+                        </h2>
+                        <div id="faq-1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Services is a ticket management platform built for Orgnizations with multiple facilities. It lets staff report issues, operations teams track and resolve them, and administrators monitor everything across multiple spaces and organisations — in one place.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#faq-2"
+                                aria-expanded="false" aria-controls="faq-2">
+                                Who can sign in, and how?
+                            </button>
+                        </h2>
+                        <div id="faq-2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                General users (staff / residents) sign in with their phone number only — no password required. All other roles sign in with an email and password or a 4-digit PIN.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#faq-3"
+                                aria-expanded="false" aria-controls="faq-3">
+                                How do I get an account?
+                            </button>
+                        </h2>
+                        <div id="faq-3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                There is no self-service sign-up. Accounts are created by an administrator. Contact your space admin or central admin to have your account set up.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#faq-4"
+                                aria-expanded="false" aria-controls="faq-4">
+                                What is the ticket lifecycle?
+                            </button>
+                        </h2>
+                        <div id="faq-4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Tickets flow through: <strong>Open → Assigned → In progress → Resolved → Closed</strong>. Reviewers can also escalate resolved tickets if more work is needed. Every transition is logged with a timestamp.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#faq-5"
+                                aria-expanded="false" aria-controls="faq-5">
+                                Can I attach photos or voice notes to a ticket?
+                            </button>
+                        </h2>
+                        <div id="faq-5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes — up to three images and one voice recording per ticket. Attachments are visible to the entire assigned team throughout the resolution process.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ─── CTA BAND ──────────────────────────────────────────────────────────────── #}
+<section id="cta-band">
+    <div class="container">
+        <div class="cta-inner">
+            <div class="cta-text">
+                <h2>Ready to bring order to your operations?</h2>
+                <p>Your team can be up and running today. Contact your administrator to get access.</p>
+            </div>
+            <a href="{% url 'core:login' %}" class="btn-cta-white">
+                Sign in <span class="material-symbols-outlined btn-icon">arrow_forward</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+{# ─── FOOTER ────────────────────────────────────────────────────────────────── #}
+<footer id="footer">
+    <div class="container">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <img src="{% static 'images/logo-icon-light.svg' %}" alt="Services" class="footer-logo">
+                <span class="footer-name">Services</span>
+            </div>
+            <div class="footer-right">
+                <p>&copy; 2026 SFS INSTITUTIONS, BENGALURU. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+{% endblock content_outer %}
+
+{% block scripts %}
+<script src="{% static 'js/home.js' %}"></script>
+{% endblock scripts %}

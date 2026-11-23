@@ -1,0 +1,182 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_list/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:supervisor:work_task_list' as list_url %}
+{% with status=request.GET.status %}
+
+<div class="wtl-page">
+  <header class="wtl-header">
+    <div class="wtl-header__text">
+      <h1 class="wtl-header__title">Tasks</h1>
+      <p class="wtl-header__sub">View and manage work tasks assigned to you</p>
+    </div>
+    <div class="wtl-header__actions">
+      <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="wtl-btn wtl-btn--outline">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+    </div>
+  </header>
+
+  <section class="wtl-toolbar">
+    <div class="wtl-view-toggle" role="group" aria-label="View mode">
+      <button type="button" class="wtl-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+        <span class="material-symbols-outlined">view_list</span>
+      </button>
+      <button type="button" class="wtl-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+        <span class="material-symbols-outlined">grid_view</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="wtl-filters" aria-label="Status filters">
+    <div class="wtl-filter-track">
+      <ul class="wtl-filter-tabs">
+        <li>
+          <a class="wtl-filter-tab{% if not status %} is-active{% endif %}" href="{{ list_url }}">All</a>
+        </li>
+        <li>
+          <a class="wtl-filter-tab{% if status == 'pending' %} is-active{% endif %}" href="{{ list_url }}?status=pending">Pending</a>
+        </li>
+        <li>
+          <a class="wtl-filter-tab{% if status == 'completed' %} is-active{% endif %}" href="{{ list_url }}?status=completed">Completed</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="wtl-results" class="wtl-view wtl-view--list" aria-label="Task results">
+    {% if work_tasks %}
+    <div class="wtl-results-grid">
+      {% for task in work_tasks %}
+      <a href="{% url 'ticket_management:supervisor:work_task_detail' work_task_slug=task.slug %}"
+         class="wtl-item{% if task.completed %} wtl-item--done{% endif %}">
+        <div class="wtl-item__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">{% if task.completed %}check{% else %}checklist{% endif %}</span>
+        </div>
+        <div class="wtl-item__body">
+          <span class="wtl-item__name">{{ task.title }}</span>
+          <span class="wtl-item__meta">
+            {% if task.due_date %}
+              Due {{ task.due_date|date:"M d, Y" }}
+            {% else %}
+              Created {{ task.created_at|date:"M d, Y" }}
+            {% endif %}
+            {% if task.ticket.space %}
+              · {{ task.ticket.space.name }}
+            {% endif %}
+          </span>
+          <span class="wtl-item__ticket">
+            {{ task.ticket.ticket_id }}
+            · {{ task.ticket.title|truncatechars:48 }}
+          </span>
+        </div>
+        <div class="wtl-item__pills">
+          {% if task.completed %}
+          <span class="wtl-pill wtl-pill--completed">Completed</span>
+          {% else %}
+          <span class="wtl-pill wtl-pill--pending">Pending</span>
+          {% endif %}
+          <span class="wtl-pill wtl-pill--prio-{{ task.ticket.priority }}">{{ task.ticket.get_priority_display }}</span>
+        </div>
+        <span class="material-symbols-outlined wtl-item__chevron">chevron_right</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="wtl-empty">
+      <span class="material-symbols-outlined wtl-empty__icon">task_alt</span>
+      {% if status %}
+      <h2 class="wtl-empty__title">No matching tasks</h2>
+      <p class="wtl-empty__sub">Try a different status filter, or open tickets to create work tasks.</p>
+      <a href="{{ list_url }}" class="wtl-btn wtl-btn--outline">Clear filter</a>
+      {% else %}
+      <h2 class="wtl-empty__title">No tasks assigned</h2>
+      <p class="wtl-empty__sub">Work tasks assigned to you will show up here.</p>
+      <a href="{% url 'ticket_management:supervisor:ticket_list' %}" class="wtl-btn wtl-btn--primary">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        View tickets
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+{% endwith %}
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+(function () {
+  const results = document.getElementById('wtl-results');
+  const buttons = document.querySelectorAll('.wtl-view-toggle__btn');
+  if (!results || !buttons.length) return;
+
+  const STORAGE_KEY = 'workTaskListView';
+  const mq = window.matchMedia('(min-width: 992px)');
+
+  function responsiveDefault() {
+    return mq.matches ? 'list' : 'cards';
+  }
+
+  function applyView(mode, persist) {
+    const view = mode === 'cards' ? 'cards' : 'list';
+    results.classList.remove('wtl-view--list', 'wtl-view--cards');
+    results.classList.add('wtl-view--' + view);
+    buttons.forEach(function (btn) {
+      const active = btn.getAttribute('data-view') === view;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (persist) {
+      try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function resolveView() {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored === 'list' || stored === 'cards') return stored;
+    return responsiveDefault();
+  }
+
+  applyView(resolveView(), false);
+
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      applyView(btn.getAttribute('data-view'), true);
+    });
+  });
+
+  const onBreakpoint = function () {
+    let stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    if (stored !== 'list' && stored !== 'cards') {
+      applyView(responsiveDefault(), false);
+    }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+  else if (mq.addListener) mq.addListener(onBreakpoint);
+})();
+</script>
+{% endblock scripts %}

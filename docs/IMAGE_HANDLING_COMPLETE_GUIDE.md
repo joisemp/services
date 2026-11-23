@@ -135,7 +135,7 @@ Generates **guaranteed unique** alphanumeric filenames by checking storage.
 from config.utils import generate_unique_image_filename
 
 filename = generate_unique_image_filename(
-    upload_path='public/issue_images/',  # Required for uniqueness check
+    upload_path='public/ticket_images/',  # Required for uniqueness check
     length=16,                           # Optional, default: 16
     extension='webp',                    # Optional, default: 'webp'
     max_attempts=100                     # Optional, default: 100
@@ -168,7 +168,7 @@ compressed_image = compress_image(
     max_height=1920,                     # Optional, default: 1920
     quality=85,                          # Optional, default: 85
     format='WEBP',                       # Optional, default: 'WEBP'
-    upload_path='public/issue_images/'  # IMPORTANT: For uniqueness guarantee
+    upload_path='public/ticket_images/'  # IMPORTANT: For uniqueness guarantee
 )
 ```
 
@@ -192,9 +192,9 @@ compressed_image = compress_image(
 
 All image models automatically optimize images on upload:
 
-1. **IssueImage** - Issue attachments (`public/issue_images/`)
+1. **TicketImage** - Ticket attachments (`public/ticket_images/`)
 2. **WorkTaskResolutionImage** - Work task resolution photos (`public/work_task_resolution_images/`)
-3. **IssueResolutionImage** - Issue resolution photos (`public/issue_resolution_images/`)
+3. **TicketResolutionImage** - Ticket resolution photos (`public/ticket_resolution_images/`)
 
 ### Implementation Pattern
 
@@ -202,9 +202,9 @@ All image models automatically optimize images on upload:
 from django.db import models
 from config.utils import compress_image, generate_unique_code
 
-class IssueImage(models.Model):
-    issue = models.ForeignKey(Issue, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='public/issue_images/')
+class TicketImage(models.Model):
+    ticket = models.ForeignKey(Ticket, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='public/ticket_images/')
     slug = models.SlugField(unique=True)
     
     def save(self, *args, **kwargs):
@@ -220,13 +220,13 @@ class IssueImage(models.Model):
                 max_height=1920, 
                 quality=85, 
                 format='WEBP',
-                upload_path='public/issue_images/'  # Must match upload_to
+                upload_path='public/ticket_images/'  # Must match upload_to
             )
         
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"Image for Issue: {self.issue.title}"
+        return f"Image for Ticket: {self.ticket.title}"
 ```
 
 **Key Points:**
@@ -261,7 +261,7 @@ self.image = compress_image(
     max_height=1280,
     quality=75,
     format='WEBP',
-    upload_path='public/issue_images/'
+    upload_path='public/ticket_images/'
 )
 
 # Higher quality for critical images
@@ -271,7 +271,7 @@ self.image = compress_image(
     max_height=2560,
     quality=90,
     format='WEBP',
-    upload_path='public/issue_images/'
+    upload_path='public/ticket_images/'
 )
 
 # Use JPEG instead of WebP (not recommended)
@@ -281,7 +281,7 @@ self.image = compress_image(
     max_height=1920,
     quality=85,
     format='JPEG',
-    upload_path='public/issue_images/'
+    upload_path='public/ticket_images/'
 )
 ```
 
@@ -387,7 +387,7 @@ For maximum compatibility with older browsers, you can optionally provide fallba
 <picture>
     <source srcset="{{ image.image.url }}" type="image/webp">
     <!-- Fallback to original format (though it's converted to WebP) -->
-    <img src="{{ image.image.url }}" alt="{{ image.issue.title }}" loading="lazy">
+    <img src="{{ image.image.url }}" alt="{{ image.ticket.title }}" loading="lazy">
 </picture>
 ```
 
@@ -473,7 +473,7 @@ Compressed dimensions: (1920, 1920)
 
 ## Troubleshooting
 
-### Common Issues
+### Common Tickets
 
 #### 1. Images not being compressed
 
@@ -535,7 +535,7 @@ Compressed dimensions: (1920, 1920)
 - Rebuild container if using Docker: `docker-compose build`
 - Update requirements: `pip install -U pillow`
 
-#### 7. Storage path issues
+#### 7. Storage path tickets
 
 **Problem:** Files not saving to correct location
 
@@ -594,7 +594,7 @@ print('webp' in Image.EXTENSION)  # Should print: True
 ### Related Files
 
 - **Implementation**: `src/config/utils.py`
-- **Models**: `src/issue_management/models.py`
+- **Models**: `src/ticket_management/models.py`
 - **Tests**: `src/test_image_utils.py`
 - **Settings**: `src/config/settings.py`
 - **Storage**: `src/config/storages.py`
@@ -632,7 +632,7 @@ if self.image and (not self.pk or self._state.adding):
         max_height=1920,
         quality=85,
         format='WEBP',
-        upload_path='public/issue_images/'
+        upload_path='public/ticket_images/'
     )
 ```
 

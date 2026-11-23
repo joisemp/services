@@ -1,0 +1,33 @@
+{% extends 'sidebar_base.html' %}
+
+{% load static %}
+
+{% block title %}Ticket Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles/ticket_management/forms/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'transport_incharge/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <h3>Change Workshop</h3>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="{{ form.workshop.id_for_label }}" class="form-label">Workshop</label>
+      {{ form.workshop }}
+      {% if form.workshop.errors %}<div class="text-danger small mt-1">{{ form.workshop.errors }}</div>{% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'ticket_management:transport_incharge:ticket_detail' ticket_slug=ticket.slug %}" class="btn btn-secondary ms-2">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% load static %}
+<header class="home-header" id="home-header">
+    <div class="container">
+        <div class="home-nav-inner">
+            <a class="home-nav-brand" href="{% url 'home' %}">
+                {# Light version: white hexagon + blue S — shown over dark hero #}
+                <img src="{% static 'images/logo-icon-light.svg' %}" alt="Services logo" class="home-nav-logo home-nav-logo--light">
+                {# Dark version: blue hexagon + white S — shown on white scrolled nav #}
+                <img src="{% static 'images/logo-icon.svg' %}" alt="Services logo" class="home-nav-logo home-nav-logo--dark">
+                <span class="home-nav-name">Services</span>
+            </a>
+            <a href="{% url 'core:login' %}" class="btn-nav-cta">Get started</a>
+        </div>
+    </div>
+</header>

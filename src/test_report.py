@@ -6,7 +6,7 @@ Run this in Django shell: python manage.py shell < test_report.py
 from django.utils import timezone
 from datetime import timedelta
 from core.models import User, Organization
-from issue_management.utils.performance_report import PerformanceReportGenerator
+from ticket_management.utils.performance_report import PerformanceReportGenerator
 
 print("Testing Performance Report Generator...")
 print("-" * 50)
@@ -56,8 +56,8 @@ else:
             metrics = generator.get_supervisor_metrics(supervisor)
             print(f"\n{supervisor.get_full_name() or supervisor.email}:")
             print(f"  Rating: {metrics['rating']}/100 ({generator.get_rating_label(metrics['rating'])})")
-            print(f"  Issues Assigned: {metrics['total_assigned']}")
-            print(f"  Issues Resolved: {metrics['resolved']}")
+            print(f"  Tickets Assigned: {metrics['total_assigned']}")
+            print(f"  Tickets Resolved: {metrics['resolved']}")
             print(f"  Avg Resolution Time: {metrics['avg_resolution_hours']} hours" if metrics['avg_resolution_hours'] else "  Avg Resolution Time: N/A")
         
         # Test metric calculation for each maintainer

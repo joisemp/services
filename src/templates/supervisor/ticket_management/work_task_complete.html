@@ -1,0 +1,131 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Complete work task — {{ work_task.title }}{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/components/image-upload.css' %}">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/work_task_complete/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'supervisor/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug as ticket_url %}
+{% if next_param == 'task_detail' %}
+  {% url 'ticket_management:supervisor:work_task_detail' work_task_slug=work_task.slug as back_url %}
+{% else %}
+  {% url 'ticket_management:supervisor:ticket_detail' ticket_slug=ticket.slug as back_url %}
+{% endif %}
+
+<div class="wtd-page">
+  <a href="{{ back_url }}" class="wtd-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    {% if next_param == 'task_detail' %}Back to task{% else %}Back to ticket{% endif %}
+  </a>
+
+  <header class="wtd-identity">
+    <h1 class="wtd-identity__name">{{ work_task.title }}</h1>
+    <div class="wtd-identity__pills">
+      <span class="wtd-pill wtd-pill--id">{{ ticket.ticket_id }}</span>
+      {% if work_task.completed %}
+      <span class="wtd-pill wtd-pill--done">Done</span>
+      {% else %}
+      <span class="wtd-pill wtd-pill--pending">Pending</span>
+      {% endif %}
+      {% if work_task.due_date %}
+      <span class="wtd-pill">Due {{ work_task.due_date|date:"M d, Y" }}</span>
+      {% endif %}
+    </div>
+    <p class="wtd-identity__meta">
+      Ticket
+      <a href="{{ ticket_url }}" class="wtd-text-link">{{ ticket.ticket_id }}</a>
+      · {{ ticket.title }}
+      · Assigned to <strong>{{ work_task.assigned_to.get_full_name|default:work_task.assigned_to }}</strong>
+      {% if work_task.due_date %}
+      · Due {{ work_task.due_date|date:"M d, Y" }}
+      {% endif %}
+    </p>
+    {% if work_task.description %}
+    <p class="wtd-identity__desc">{{ work_task.description }}</p>
+    {% endif %}
+  </header>
+
+  <section class="wtd-card" aria-labelledby="wtd-form-heading">
+    <header class="wtd-card__head">
+      <h2 id="wtd-form-heading" class="wtd-card__title">Mark task complete</h2>
+      <p class="wtd-card__desc">Add resolution notes and optional photos of the completed work.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="wtd-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="wtd-form"{% if next_param %} action="?next={{ next_param }}"{% endif %}>
+      {% csrf_token %}
+
+      <div class="wtd-field">
+        <label for="{{ form.resolution_notes.id_for_label }}" class="wtd-label">
+          Resolution notes <span class="wtd-req">*</span>
+        </label>
+        {{ form.resolution_notes }}
+        {% if form.resolution_notes.help_text %}
+        <p class="wtd-help">{{ form.resolution_notes.help_text }}</p>
+        {% endif %}
+        {% if form.resolution_notes.errors %}
+        <div class="wtd-error">
+          {% for error in form.resolution_notes.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtd-field">
+        <span class="wtd-label">Images <span class="wtd-opt">(optional, max 3)</span></span>
+        <div class="wtd-file-grid">
+          <div class="tf-media-slot">
+            {{ form.image1 }}
+          </div>
+          <div class="tf-media-slot">
+            {{ form.image2 }}
+          </div>
+          <div class="tf-media-slot">
+            {{ form.image3 }}
+          </div>
+        </div>
+        {% if form.image1.errors or form.image2.errors or form.image3.errors %}
+        <div class="wtd-error">
+          {% for error in form.image1.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          {% for error in form.image2.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          {% for error in form.image3.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="wtd-actions">
+        <a href="{{ back_url }}" class="wtd-btn wtd-btn--outline">Cancel</a>
+        <button type="submit" class="wtd-btn wtd-btn--primary">
+          <span class="material-symbols-outlined">check_circle</span>
+          Complete task
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/components/image-upload.js' %}"></script>
+{% endblock %}

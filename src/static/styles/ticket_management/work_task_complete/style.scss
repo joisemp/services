@@ -1,0 +1,293 @@
+@use '../../sidebar_base';
+@use '../../colors' as c;
+
+$blue:   c.$primary;
+$border: #e5e7eb;
+$text:   #111827;
+$muted:  #6b7280;
+$r:      0.5rem;
+$font:   'Inter', ui-sans-serif, system-ui, sans-serif;
+
+.wtd-page {
+  font-family: $font;
+  color: $text;
+  -webkit-font-smoothing: antialiased;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0;
+  padding-bottom: 2.5rem;
+}
+
+// ─── Back ─────────────────────────────────────────────────────────────────────
+.wtd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+  margin-bottom: 1.1rem;
+  transition: color 0.15s;
+
+  .material-symbols-outlined { font-size: 1.05rem; }
+
+  &:hover { color: $blue; }
+}
+
+// ─── Identity ─────────────────────────────────────────────────────────────────
+.wtd-identity {
+  margin-bottom: 1rem;
+}
+
+.wtd-identity__name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.wtd-identity__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.wtd-identity__meta {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  color: $muted;
+  line-height: 1.45;
+
+  strong {
+    color: $text;
+    font-weight: 600;
+  }
+}
+
+.wtd-identity__desc {
+  margin: 0.55rem 0 0;
+  font-size: 0.8125rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.wtd-text-link {
+  color: $blue;
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ─── Pills ────────────────────────────────────────────────────────────────────
+.wtd-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  background: #f3f4f6;
+  color: #4b5563;
+
+  &--id {
+    background: #fff;
+    color: $text;
+    border: 1px solid $border;
+  }
+
+  &--done { background: #ecfdf5; color: #047857; }
+  &--pending { background: #fff7ed; color: #c2410c; }
+}
+
+// ─── Card / form ──────────────────────────────────────────────────────────────
+.wtd-card {
+  border: 1px solid $border;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1.25rem 1.15rem 1.35rem;
+
+  @media (min-width: 640px) {
+    padding: 1.4rem 1.35rem 1.5rem;
+  }
+}
+
+.wtd-card__head {
+  margin-bottom: 1.15rem;
+}
+
+.wtd-card__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.wtd-card__desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: $muted;
+}
+
+.wtd-alert {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: $r;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.wtd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.wtd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wtd-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.wtd-req { color: #dc2626; }
+
+.wtd-opt {
+  font-weight: 400;
+  color: $muted;
+}
+
+.wtd-help {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $muted;
+  line-height: 1.4;
+}
+
+.wtd-error {
+  font-size: 0.75rem;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
+.wtd-textarea {
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $font;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: $text;
+  background: #fff;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  &::placeholder { color: #9ca3af; }
+}
+
+.wtd-file-grid {
+  display: grid;
+  gap: 0.55rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.wtd-page .tf-media-slot__drop {
+  min-height: 7.25rem;
+}
+
+.wtd-page input[type="file"].tf-media-slot__input {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+// ─── Actions / buttons ────────────────────────────────────────────────────────
+.wtd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid $border;
+  margin-top: 0.15rem;
+}
+
+.wtd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: $r;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: $font;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  color: $text;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  .material-symbols-outlined { font-size: 1.05rem; }
+
+  &--primary {
+    background: $blue;
+    color: #fff;
+    border-color: $blue;
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+  }
+
+  &--outline {
+    background: #fff;
+    color: $text;
+    border-color: $border;
+
+    &:hover {
+      background: #f9fafb;
+      color: $text;
+    }
+  }
+}
+
+@media (max-width: 639.98px) {
+  .wtd-identity__name {
+    font-size: 1.125rem;
+  }
+
+  .wtd-actions {
+    flex-direction: column-reverse;
+
+    .wtd-btn { width: 100%; }
+  }
+}

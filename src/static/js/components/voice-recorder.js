@@ -24,34 +24,41 @@ class VoiceRecorder {
     
     createRecorderHTML() {
         this.container.innerHTML = `
-            <div class="voice-recorder" id="voiceRecorderContainer">
-                <div class="voice-recorder-controls">
-                    <button type="button" class="record-button" id="recordButton">
+            <div class="voice-recorder">
+                <div class="voice-recorder-idle" id="voiceRecorderIdle">
+                    <button type="button" class="record-button" id="recordButton" aria-label="Hold to record">
                         <span class="material-symbols-outlined">mic</span>
                     </button>
-                    <div class="recording-timer" id="recordingTimer">0:00</div>
-                    <div class="waveform-container" id="waveformContainer">
-                        <div class="waveform" id="waveform">
-                            <div class="text-muted">Hold to record voice message</div>
-                        </div>
+                    <div class="voice-recorder-copy">
+                        <p class="voice-recorder-copy__title">Hold to record</p>
+                        <p class="voice-recorder-copy__sub">Release to stop · max useful for short notes</p>
                     </div>
-                    <div class="recording-actions" id="recordingActions" style="display: none;">
-                        <button type="button" class="action-button delete-button" id="deleteButton">
-                            <span class="material-symbols-outlined">delete</span>
-                        </button>
-                    </div>
+                    <div class="recording-timer" id="recordingTimer" hidden>0:00</div>
+                </div>
+                <div class="waveform-container" id="waveformContainer" hidden>
+                    <div class="waveform" id="waveform"></div>
+                </div>
+                <div class="recording-actions" id="recordingActions" hidden>
+                    <button type="button" class="action-button delete-button" id="deleteButton" aria-label="Delete recording">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
                 </div>
                 <div class="voice-preview" id="voicePreview">
-                    <div class="voice-preview-controls">
-                        <button type="button" class="action-button play-button" id="previewPlayButton">
-                            <span class="material-symbols-outlined">play_arrow</span>
-                        </button>
+                    <button type="button" class="action-button play-button" id="previewPlayButton" aria-label="Play recording">
+                        <span class="material-symbols-outlined">play_arrow</span>
+                    </button>
+                    <div class="voice-preview-body">
                         <div class="playback-waveform" id="playbackWaveform">
                             <div class="playback-progress" id="playbackProgress"></div>
                         </div>
-                        <span class="recording-info" id="recordingDuration">0:00</span>
+                        <div class="voice-preview-meta">
+                            <span class="recording-info" id="recordingDuration">0:00</span>
+                            <span class="recording-info" id="recordingSize"></span>
+                        </div>
                     </div>
-                    <div class="recording-info" id="recordingSize"></div>
+                    <button type="button" class="action-button delete-button" id="previewDeleteButton" aria-label="Delete recording">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -60,10 +67,10 @@ class VoiceRecorder {
     bindEvents() {
         const recordButton = document.getElementById('recordButton');
         const deleteButton = document.getElementById('deleteButton');
+        const previewDeleteButton = document.getElementById('previewDeleteButton');
         const previewPlayButton = document.getElementById('previewPlayButton');
         const playbackWaveform = document.getElementById('playbackWaveform');
-        
-        // Record button events
+
         recordButton.addEventListener('mousedown', () => this.startRecording());
         recordButton.addEventListener('mouseup', () => this.stopRecording());
         recordButton.addEventListener('mouseleave', () => this.stopRecording());
@@ -75,12 +82,10 @@ class VoiceRecorder {
             e.preventDefault();
             this.stopRecording();
         });
-        
-        // Action buttons
-        deleteButton.addEventListener('click', () => this.deleteRecording());
+
+        if (deleteButton) deleteButton.addEventListener('click', () => this.deleteRecording());
+        if (previewDeleteButton) previewDeleteButton.addEventListener('click', () => this.deleteRecording());
         previewPlayButton.addEventListener('click', () => this.togglePreviewPlayback());
-        
-        // Playback waveform click
         playbackWaveform.addEventListener('click', (e) => this.seekAudio(e));
     }
     
@@ -255,42 +260,54 @@ class VoiceRecorder {
     
     showPreview(audioFile) {
         const preview = document.getElementById('voicePreview');
+        const idle = document.getElementById('voiceRecorderIdle');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const recordingActions = document.getElementById('recordingActions');
         const durationElement = document.getElementById('recordingDuration');
         const sizeElement = document.getElementById('recordingSize');
-        
-        // Calculate duration and size
+        const timer = document.getElementById('recordingTimer');
+
         const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
         const minutes = Math.floor(duration / 60);
         const seconds = duration % 60;
         const fileSize = (audioFile.size / 1024).toFixed(1);
-        
+
         durationElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        sizeElement.textContent = `Size: ${fileSize} KB`;
-        
+        sizeElement.textContent = `${fileSize} KB`;
+
+        if (idle) idle.hidden = true;
+        if (waveformContainer) waveformContainer.hidden = true;
+        if (recordingActions) recordingActions.hidden = true;
+        if (timer) timer.hidden = true;
         preview.classList.add('show');
-        document.getElementById('recordingActions').style.display = 'flex';
     }
-    
+
     deleteRecording() {
-        // Clear the file input
         this.fileInput.value = '';
-        
-        // Hide preview
+
         document.getElementById('voicePreview').classList.remove('show');
-        document.getElementById('recordingActions').style.display = 'none';
-        
-        // Reset waveform
+        const idle = document.getElementById('voiceRecorderIdle');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const recordingActions = document.getElementById('recordingActions');
+        const timer = document.getElementById('recordingTimer');
         const waveform = document.getElementById('waveform');
-        waveform.innerHTML = '<div class="text-muted">Hold to record voice message</div>';
-        
-        // Reset timer
-        document.getElementById('recordingTimer').textContent = '0:00';
-        
-        // Clean up audio
+
+        if (idle) idle.hidden = false;
+        if (waveformContainer) waveformContainer.hidden = true;
+        if (recordingActions) recordingActions.hidden = true;
+        if (timer) {
+            timer.hidden = true;
+            timer.textContent = '0:00';
+        }
+        if (waveform) waveform.innerHTML = '';
+
         if (this.currentAudio) {
             this.currentAudio.pause();
             this.currentAudio = null;
         }
+
+        const recorder = this.container.querySelector('.voice-recorder');
+        if (recorder) recorder.classList.remove('recording');
     }
     
     togglePreviewPlayback() {
@@ -339,23 +356,37 @@ class VoiceRecorder {
     
     updateUI(recording) {
         const recordButton = document.getElementById('recordButton');
-        const container = document.getElementById('voiceRecorderContainer');
+        const recorder = this.container.querySelector('.voice-recorder');
+        const idle = document.getElementById('voiceRecorderIdle');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const timer = document.getElementById('recordingTimer');
+        const copy = idle ? idle.querySelector('.voice-recorder-copy') : null;
         const icon = recordButton.querySelector('span');
-        
+
         if (recording) {
             recordButton.classList.add('recording');
-            container.classList.add('recording');
+            if (recorder) recorder.classList.add('recording');
             icon.textContent = 'stop';
+            if (copy) copy.hidden = true;
+            if (timer) timer.hidden = false;
+            if (waveformContainer) waveformContainer.hidden = false;
         } else {
             recordButton.classList.remove('recording');
-            container.classList.remove('recording');
+            if (recorder) recorder.classList.remove('recording');
             icon.textContent = 'mic';
+            if (copy) copy.hidden = false;
+            if (timer) timer.hidden = true;
+            if (waveformContainer) waveformContainer.hidden = true;
         }
     }
-    
+
     showError(message) {
-        const waveform = document.getElementById('waveform');
-        waveform.innerHTML = `<div class="text-danger">${message}</div>`;
+        const idle = document.getElementById('voiceRecorderIdle');
+        const copy = idle ? idle.querySelector('.voice-recorder-copy__sub') : null;
+        if (copy) {
+            copy.textContent = message;
+            copy.classList.add('is-error');
+        }
     }
 }
 

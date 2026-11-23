@@ -1,0 +1,122 @@
+{% extends 'sidebar_base.html' %}
+{% load static %}
+
+{% block title %}Edit ticket — {{ ticket.title }}{% endblock %}
+
+{% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'styles/ticket_management/ticket_update/style.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block sidebar %}
+{% include 'central_admin/sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% url 'ticket_management:central_admin:ticket_detail' ticket_slug=ticket.slug as detail_url %}
+
+<div class="tue-page">
+  <a href="{{ detail_url }}" class="tue-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Back to ticket
+  </a>
+
+  <header class="tue-identity">
+    <h1 class="tue-identity__name">{{ ticket.title }}</h1>
+    <div class="tue-identity__pills">
+      <span class="tue-pill tue-pill--id">{{ ticket.ticket_id }}</span>
+      <span class="tue-pill tue-pill--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+      <span class="tue-pill tue-pill--prio-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+    </div>
+    <p class="tue-identity__meta">
+      Update ticket details
+      {% if ticket.assigned_to %}
+      · Assigned to <strong>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}</strong>
+      {% endif %}
+    </p>
+  </header>
+
+  <section class="tue-card" aria-labelledby="tue-form-heading">
+    <header class="tue-card__head">
+      <h2 id="tue-form-heading" class="tue-card__title">Edit ticket</h2>
+      <p class="tue-card__desc">Change the title, description, status, or priority. Images and voice are managed from the ticket page.</p>
+    </header>
+
+    {% if form.non_field_errors %}
+    <div class="tue-alert" role="alert">
+      {% for error in form.non_field_errors %}
+        {{ error }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="tue-form">
+      {% csrf_token %}
+
+      <div class="tue-field">
+        <label for="{{ form.title.id_for_label }}" class="tue-label">
+          Title <span class="tue-req">*</span>
+        </label>
+        {{ form.title }}
+        {% if form.title.errors %}
+        <div class="tue-error">
+          {% for error in form.title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="tue-field">
+        <label for="{{ form.description.id_for_label }}" class="tue-label">
+          Description{% if form.description.field.required %} <span class="tue-req">*</span>{% endif %}
+        </label>
+        {{ form.description }}
+        {% if form.description.errors %}
+        <div class="tue-error">
+          {% for error in form.description.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="tue-field-row">
+        <div class="tue-field">
+          <label for="{{ form.status.id_for_label }}" class="tue-label">
+            Status <span class="tue-req">*</span>
+          </label>
+          {{ form.status }}
+          {% if form.status.errors %}
+          <div class="tue-error">
+            {% for error in form.status.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="tue-field">
+          <label for="{{ form.priority.id_for_label }}" class="tue-label">
+            Priority <span class="tue-req">*</span>
+          </label>
+          {{ form.priority }}
+          {% if form.priority.errors %}
+          <div class="tue-error">
+            {% for error in form.priority.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tue-actions">
+        <a href="{{ detail_url }}" class="tue-btn tue-btn--outline">Cancel</a>
+        <button type="submit" class="tue-btn tue-btn--primary">
+          <span class="material-symbols-outlined">save</span>
+          Save changes
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

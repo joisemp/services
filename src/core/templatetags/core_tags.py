@@ -24,13 +24,13 @@ def is_active(context, url_name, return_value='active'):
     Check if the current URL matches the given URL name pattern.
     
     Usage in templates:
-        <a class="navlink {% is_active 'issue_management:central_admin:issue_list' %}" href="...">
+        <a class="navlink {% is_active 'ticket_management:central_admin:ticket_list' %}" href="...">
     
     Or for multiple URL patterns:
-        <a class="navlink {% is_active 'issue_management:central_admin:issue_list,issue_management:central_admin:issue_detail' %}" href="...">
+        <a class="navlink {% is_active 'ticket_management:central_admin:ticket_list,ticket_management:central_admin:ticket_detail' %}" href="...">
     
     Or for wildcard matching (all URLs in a namespace):
-        <a class="navlink {% is_active 'issue_management:central_admin:*' %}" href="...">
+        <a class="navlink {% is_active 'ticket_management:central_admin:*' %}" href="...">
     """
     request = context.get('request')
     if not request:
@@ -73,7 +73,7 @@ def is_active_path(context, path_pattern, return_value='active'):
     Check if the current path matches the given path pattern.
     
     Usage in templates:
-        <a class="navlink {% is_active_path '/issues/' %}" href="...">
+        <a class="navlink {% is_active_path '/tickets/' %}" href="...">
     
     For exact match, use '=' prefix:
         <a class="navlink {% is_active_path '=/dashboard/' %}" href="...">

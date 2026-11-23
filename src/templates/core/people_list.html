@@ -3,18 +3,10 @@
 {% load static %}
 
 {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'styles/core/people_list/style.css' %}">
-<style>
-    .hover-card {
-        transition: all 0.2s ease-in-out;
-        cursor: pointer;
-    }
-    .hover-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        background-color: #f8f9fa !important;
-    }
-</style>
 {% endblock %}
 
 {% block navbar %}
@@ -26,170 +18,150 @@
 {% endblock %}
 
 {% block content %}
+<div class="people-page">
 
-<!-- alert details -->
-<section id="alert-details" class="mb-3">
-    <div class="alert custom-alert d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3"
-        role="alert">
-        <div class="message flex-grow-1">
-            <h3 class="mb-1">People</h3>
-            <span class="alert-text text-body-secondary">Manage all the people in your organisation</span>
+    <header class="people-header">
+        <div class="people-header__text">
+            <h1 class="people-header__title">People</h1>
+            <p class="people-header__sub">Manage everyone in your organisation</p>
         </div>
-        <div class="alert-buttons d-flex flex-column flex-sm-row gap-2">
-            <a href="{% url 'issue_management:central_admin:performance_report' %}"
-                class="btn btn-outline-primary d-flex align-items-center justify-content-center">
+        <div class="people-header__actions">
+            <a href="{% url 'ticket_management:central_admin:performance_report' %}" class="people-btn people-btn--outline">
                 <span class="material-symbols-outlined">analytics</span>
-                <span class="ms-2">Performance Report</span>
+                Performance Report
             </a>
-            <a href="{% url 'core:people_create' %}"
-                class="btn btn-primary d-flex align-items-center justify-content-center">
+            <a href="{% url 'core:people_create' %}" class="people-btn people-btn--primary">
                 <span class="material-symbols-outlined">add</span>
-                <span class="ms-2">Add Person</span>
+                Add Person
             </a>
         </div>
-    </div>
-</section>
+    </header>
 
-<!-- filter fields -->
-<section id="filter-bar" class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-stretch mb-3">
-    <!-- search-bar -->
-    <section id="search-bar" class="flex-grow-1">
+    <section class="people-toolbar" id="filter-bar">
         <form method="get" class="people-search-form" role="search" aria-label="People search">
+            <span class="material-symbols-outlined people-search-form__icon">search</span>
             <input
                 type="text"
                 name="q"
                 value="{{ search_query }}"
                 placeholder="Search by name, email or phone..."
-                class="form-control w-100"
+                class="people-search-form__input"
             >
             {% if current_user_type_filter != 'all' %}
                 <input type="hidden" name="user_type" value="{{ current_user_type_filter }}">
             {% endif %}
-            <button type="submit" class="btn btn-primary">Search</button>
+            <button type="submit" class="people-btn people-btn--primary people-search-form__btn">Search</button>
         </form>
-    </section>
-    <!-- filters -->
-    <section id="options-bar" class="w-100 w-md-auto">
-        <div class="role-scroll-wrap">
-            <button type="button" class="role-scroll-btn role-scroll-btn-left" id="roleScrollLeft" aria-label="Scroll filters left">
-                <span class="material-symbols-outlined">chevron_left</span>
-            </button>
-            <div class="container-nav overflow-auto" id="roleFilterContainer">
-                <ul class="nav nav-pills flex-nowrap role-filter-tabs">
-                    {% for role_value, role_label in user_role_filters %}
-                        <li class="nav-item">
-                            <a
-                                class="nav-link text-wrap-none {% if current_user_type_filter == role_value %}nav-active{% endif %}"
-                                href="?{% if role_value != 'all' %}user_type={{ role_value|urlencode }}{% endif %}{% if search_query %}{% if role_value != 'all' %}&{% endif %}q={{ search_query|urlencode }}{% endif %}"
-                            >
-                                {{ role_label }}
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
+
+        <div class="people-toolbar__right">
+            <div class="role-scroll-wrap" id="options-bar">
+                <button type="button" class="role-scroll-btn" id="roleScrollLeft" aria-label="Scroll filters left">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <div class="role-filter-track" id="roleFilterContainer">
+                    <ul class="role-filter-tabs">
+                        {% for role_value, role_label in user_role_filters %}
+                            <li>
+                                <a
+                                    class="role-filter-tab {% if current_user_type_filter == role_value %}is-active{% endif %}"
+                                    href="?{% if role_value != 'all' %}user_type={{ role_value|urlencode }}{% endif %}{% if search_query %}{% if role_value != 'all' %}&{% endif %}q={{ search_query|urlencode }}{% endif %}"
+                                >
+                                    {{ role_label }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button type="button" class="role-scroll-btn" id="roleScrollRight" aria-label="Scroll filters right">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
             </div>
-            <button type="button" class="role-scroll-btn role-scroll-btn-right" id="roleScrollRight" aria-label="Scroll filters right">
-                <span class="material-symbols-outlined">chevron_right</span>
-            </button>
+
+            <div class="people-view-toggle" role="group" aria-label="View mode">
+                <button type="button" class="people-view-toggle__btn" data-view="list" aria-pressed="false" title="List view">
+                    <span class="material-symbols-outlined">view_list</span>
+                </button>
+                <button type="button" class="people-view-toggle__btn" data-view="cards" aria-pressed="false" title="Card view">
+                    <span class="material-symbols-outlined">grid_view</span>
+                </button>
+            </div>
         </div>
     </section>
-</section>
 
-<!-- cards-profile -->
-<section id="people-list">
-    <div class="container-fluid">
-        <div class="row g-3">
-            {% for user in users %}
-            <!-- Profile Card for {{ user.get_full_name|default:user.get_short_name }} -->
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 user-card" 
-                     style="cursor: pointer;"
-                     data-bs-toggle="modal" 
-                     data-bs-target="#userOptionsModal"
-                     data-user-id="{{ user.id }}"
-                     data-user-slug="{{ user.slug }}"
-                     data-user-name="{{ user.get_full_name|default:user.get_short_name|default:'No Name' }}"
-                     data-user-email="{{ user.email|default:'' }}"
-                     data-user-phone="{{ user.phone_number|default:'' }}"
-                     data-user-type="{{ user.get_user_type_display }}"
-                     data-user-type-value="{{ user.user_type }}"
-                     data-user-auth-method="{{ user.auth_method }}"
-                     data-user-allow-phone-login="{% if user.allow_phone_login %}true{% else %}false{% endif %}"
-                     data-user-organization="{{ user.organization.name|default:'' }}"
-                     data-total-reported="{{ user.total_reported_issues }}"
-                     data-total-assigned="{{ user.total_assigned_issues }}"
-                     data-resolved-reported-issues="{{ user.resolved_reported_issues_count }}"
-                     data-open-issues="{{ user.open_issues_count }}"
-                     data-in-progress-issues="{{ user.in_progress_issues_count }}"
-                     data-resolved-issues="{{ user.resolved_issues_count }}"
-                     data-closed-issues="{{ user.closed_issues_count }}">
-                    <div class="card-body">
-                        <div class="profile-content d-flex flex-column flex-sm-row align-items-center align-items-sm-start gap-3">
-                            <div class="profile-pic flex-shrink-0">
-                                <div class="pic d-flex align-items-center justify-content-center">
-                                   <h3 class="m-0 text-white">
-                                       {% if user.first_name and user.last_name %}
-                                           {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
-                                       {% elif user.first_name %}
-                                           {{ user.first_name|slice:":2"|upper }}
-                                       {% elif user.email %}
-                                           {{ user.email|slice:":2"|upper }}
-                                       {% elif user.phone_number %}
-                                           {{ user.phone_number|slice:"-2:"|upper }}
-                                       {% else %}
-                                           U
-                                       {% endif %}
-                                   </h3>
-                                </div>
-                            </div>
-                            <div class="text-content flex-grow-1 text-center text-sm-start">
-                               <h5 class="card-title mb-1">
-                                   {{ user.get_full_name|default:user.get_short_name|default:"No Name" }}
-                               </h5>
-                               {% if user.email %}
-                                   <p class="card-text mb-1 text-muted">{{ user.email }}</p>
-                               {% endif %}
-                               {% if user.phone_number %}
-                                   <p class="card-text mb-0 text-muted">{{ user.phone_number }}</p>
-                               {% endif %}
-                               {% if user.organization %}
-                                   <p class="card-text mb-0 text-muted small"><i class="fas fa-building"></i> {{ user.organization.name }}</p>
-                               {% endif %}
-                            </div>
-                            <div class="label d-flex align-self-center align-self-sm-start">
-                                <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ user.get_user_type_display }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <!-- Empty state when no users found -->
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <div class="text-muted">
-                        <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
-                        {% if search_query or current_user_type_filter != 'all' %}
-                            <h4>No Matching People Found</h4>
-                            <p class="mb-3">Try a different search term or clear your current role filter.</p>
-                            <a href="{% url 'core:people_list' %}" class="btn btn-outline-primary">
-                                Clear Filters
-                            </a>
+    <section id="people-results" class="people-view people-view--list">
+        {% if users %}
+            <div class="people-results-grid">
+                {% for user in users %}
+                <div
+                    class="people-item user-card"
+                    role="button"
+                    tabindex="0"
+                    data-bs-toggle="modal"
+                    data-bs-target="#userOptionsModal"
+                    data-user-id="{{ user.id }}"
+                    data-user-slug="{{ user.slug }}"
+                    data-user-name="{{ user.get_full_name|default:user.get_short_name|default:'No Name' }}"
+                    data-user-email="{{ user.email|default:'' }}"
+                    data-user-phone="{{ user.phone_number|default:'' }}"
+                    data-user-type="{{ user.get_user_type_display }}"
+                    data-user-type-value="{{ user.user_type }}"
+                    data-user-auth-method="{{ user.auth_method }}"
+                    data-user-allow-phone-login="{% if user.allow_phone_login %}true{% else %}false{% endif %}"
+                    data-user-organization="{{ user.organization.name|default:'' }}"
+                    data-total-reported="{{ user.total_reported_tickets }}"
+                    data-total-assigned="{{ user.total_assigned_tickets }}"
+                    data-resolved-reported-tickets="{{ user.resolved_reported_tickets_count }}"
+                    data-open-tickets="{{ user.open_tickets_count }}"
+                    data-in-progress-tickets="{{ user.in_progress_tickets_count }}"
+                    data-resolved-tickets="{{ user.resolved_tickets_count }}"
+                    data-closed-tickets="{{ user.closed_tickets_count }}"
+                >
+                    <div class="people-item__avatar" aria-hidden="true">
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                        {% elif user.first_name %}
+                            {{ user.first_name|slice:":2"|upper }}
+                        {% elif user.email %}
+                            {{ user.email|slice:":2"|upper }}
+                        {% elif user.phone_number %}
+                            {{ user.phone_number|slice:"-2:"|upper }}
                         {% else %}
-                            <h4>No People Found</h4>
-                            <p class="mb-3">There are no users in the system yet.</p>
-                            <a href="{% url 'core:people_create' %}" class="btn btn-primary">
-                                <span class="material-symbols-outlined me-2">add</span>
-                                Add First Person
-                            </a>
+                            U
                         {% endif %}
                     </div>
+                    <div class="people-item__body">
+                        <span class="people-item__name">{{ user.get_full_name|default:user.get_short_name|default:"No Name" }}</span>
+                        <span class="people-item__meta">
+                            {% if user.email %}{{ user.email }}{% endif %}
+                            {% if user.email and user.phone_number %} · {% endif %}
+                            {% if user.phone_number %}{{ user.phone_number }}{% endif %}
+                        </span>
+                    </div>
+                    <span class="people-item__badge">{{ user.get_user_type_display }}</span>
+                    <span class="material-symbols-outlined people-item__chevron">chevron_right</span>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
+        {% else %}
+            <div class="people-empty">
+                <span class="material-symbols-outlined people-empty__icon">group_off</span>
+                {% if search_query or current_user_type_filter != 'all' %}
+                    <h2 class="people-empty__title">No matching people</h2>
+                    <p class="people-empty__sub">Try a different search term or clear your role filter.</p>
+                    <a href="{% url 'core:people_list' %}" class="people-btn people-btn--outline">Clear filters</a>
+                {% else %}
+                    <h2 class="people-empty__title">No people yet</h2>
+                    <p class="people-empty__sub">Add the first person to get started.</p>
+                    <a href="{% url 'core:people_create' %}" class="people-btn people-btn--primary">
+                        <span class="material-symbols-outlined">add</span>
+                        Add First Person
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+
+</div>
 
 <!-- User Options Modal -->
 <div class="modal fade" id="userOptionsModal" tabindex="-1" aria-labelledby="userOptionsModalLabel" aria-hidden="true">
@@ -239,19 +211,19 @@
                     
                     <!-- General stats for all users -->
                     <div id="general-stats" class="row g-2 mb-3">
-                        <!-- Reported Issues -->
+                        <!-- Reported Tickets -->
                         <div class="col-6">
-                            <a href="#" id="reported-issues-link" class="text-decoration-none" style="color: inherit;">
+                            <a href="#" id="reported-tickets-link" class="text-decoration-none" style="color: inherit;">
                                 <div class="border rounded p-3 text-center h-100 hover-card">
                                     <div class="d-flex flex-column align-items-center">
                                         <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
                                         <h4 class="mb-1" id="modal-total-reported">0</h4>
-                                        <small class="text-muted">Reported Issues</small>
+                                        <small class="text-muted">Reported Tickets</small>
                                     </div>
                                 </div>
                             </a>
                         </div>
-                        <!-- Total Assigned Issues - Only for Maintainer/Supervisor -->
+                        <!-- Total Assigned Tickets - Only for Maintainer/Supervisor -->
                         <div class="col-6" id="total-assigned-column">
                             <a href="#" id="total-assigned-link" class="text-decoration-none" style="color: inherit;">
                                 <div class="border rounded p-3 text-center h-100 hover-card">
@@ -269,7 +241,7 @@
                     <div id="assigned-breakdown" class="d-none">
                         <h6 class="text-muted mb-2 small">
                             <i class="fas fa-clipboard-list me-2"></i>
-                            Assigned Issues Breakdown
+                            Assigned Tickets Breakdown
                         </h6>
                         <div class="row g-2">
                             <!-- Total Assigned -->
@@ -326,19 +298,19 @@
                     <!-- Alternate layout for non-supervisor/maintainer roles -->
                     <div id="other-stats" class="d-none">
                         <div class="row g-2">
-                            <!-- Reported Issues (moved from general stats) -->
+                            <!-- Reported Tickets (moved from general stats) -->
                             <div class="col-6" id="other-stats-reported">
                                 <a href="#" id="other-reported-link" class="text-decoration-none" style="color: inherit;">
                                     <div class="border rounded p-3 text-center h-100 hover-card">
                                         <div class="d-flex flex-column align-items-center">
                                             <i class="fas fa-exclamation-circle text-primary mb-2" style="font-size: 1.5rem;"></i>
                                             <h4 class="mb-1" id="modal-reported-other">0</h4>
-                                            <small class="text-muted">Reported Issues</small>
+                                            <small class="text-muted">Reported Tickets</small>
                                         </div>
                                     </div>
                                 </a>
                             </div>
-                            <!-- Resolved Issues -->
+                            <!-- Resolved Tickets -->
                             <div class="col-6">
                                 <a href="#" id="other-resolved-link" class="text-decoration-none" style="color: inherit;">
                                     <div class="border rounded p-3 text-center h-100 hover-card">
@@ -597,6 +569,67 @@ document.addEventListener('DOMContentLoaded', function() {
         updateRoleScrollButtons();
     }
 
+    // View mode: list (desktop default) / cards (mobile default), with localStorage override
+    (function initPeopleViewToggle() {
+        const results = document.getElementById('people-results');
+        const buttons = document.querySelectorAll('.people-view-toggle__btn');
+        if (!results || !buttons.length) return;
+
+        const STORAGE_KEY = 'peopleListView';
+        const mq = window.matchMedia('(min-width: 992px)');
+
+        function responsiveDefault() {
+            return mq.matches ? 'list' : 'cards';
+        }
+
+        function applyView(mode, persist) {
+            const view = mode === 'cards' ? 'cards' : 'list';
+            results.classList.remove('people-view--list', 'people-view--cards');
+            results.classList.add('people-view--' + view);
+            buttons.forEach((btn) => {
+                const active = btn.getAttribute('data-view') === view;
+                btn.classList.toggle('is-active', active);
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            if (persist) {
+                try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+            }
+        }
+
+        function resolveView() {
+            let stored = null;
+            try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+            if (stored === 'list' || stored === 'cards') return stored;
+            return responsiveDefault();
+        }
+
+        applyView(resolveView(), false);
+
+        buttons.forEach((btn) => {
+            btn.addEventListener('click', () => applyView(btn.getAttribute('data-view'), true));
+        });
+
+        const onBreakpoint = () => {
+            let stored = null;
+            try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+            if (stored !== 'list' && stored !== 'cards') {
+                applyView(responsiveDefault(), false);
+            }
+        };
+        if (mq.addEventListener) mq.addEventListener('change', onBreakpoint);
+        else if (mq.addListener) mq.addListener(onBreakpoint);
+
+        // Keyboard open for list/card items
+        results.querySelectorAll('.people-item.user-card').forEach((item) => {
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    item.click();
+                }
+            });
+        });
+    })();
+
     // User options modal handling
     const userOptionsModal = document.getElementById('userOptionsModal');
     const deleteUserModal = document.getElementById('deleteUserModal');
@@ -644,11 +677,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Extract statistics from data-* attributes
             const totalReported = card.getAttribute('data-total-reported') || '0';
             const totalAssigned = card.getAttribute('data-total-assigned') || '0';
-            const resolvedReportedIssues = card.getAttribute('data-resolved-reported-issues') || '0';
-            const openIssues = card.getAttribute('data-open-issues') || '0';
-            const inProgressIssues = card.getAttribute('data-in-progress-issues') || '0';
-            const resolvedIssues = card.getAttribute('data-resolved-issues') || '0';
-            const closedIssues = card.getAttribute('data-closed-issues') || '0';
+            const resolvedReportedTickets = card.getAttribute('data-resolved-reported-tickets') || '0';
+            const openTickets = card.getAttribute('data-open-tickets') || '0';
+            const inProgressTickets = card.getAttribute('data-in-progress-tickets') || '0';
+            const resolvedTickets = card.getAttribute('data-resolved-tickets') || '0';
+            const closedTickets = card.getAttribute('data-closed-tickets') || '0';
             
             // Store user data for delete confirmation
             selectedUserData = {
@@ -672,8 +705,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-total-reported').textContent = totalReported;
             document.getElementById('modal-total-assigned').textContent = totalAssigned;
             
-            // Base URL for all issue list links
-            const baseUrl = '{% url "issue_management:central_admin:issue_list" %}';
+            // Base URL for all ticket list links
+            const baseUrl = '{% url "ticket_management:central_admin:ticket_list" %}';
             
             // Show/hide general stats and Total Assigned column based on user type
             const generalStats = document.getElementById('general-stats');
@@ -683,27 +716,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const assignedBreakdown = document.getElementById('assigned-breakdown');
             const otherStats = document.getElementById('other-stats');
             
-            // Check if user is Supervisor or Maintainer - show assigned issues breakdown
+            // Check if user is Supervisor or Maintainer - show assigned tickets breakdown
             if (selectedUserType === 'Supervisor' || selectedUserType === 'Maintainer') {
                 totalAssignedColumn.classList.remove('d-none');
                 generalStats.classList.remove('d-none');
                 assignedBreakdown.classList.remove('d-none');
                 otherStats.classList.add('d-none');
                 
-                // Update assigned issues breakdown for maintainers/supervisors
+                // Update assigned tickets breakdown for maintainers/supervisors
                 const totalAssignedNum = parseInt(totalAssigned) || 0;
-                const resolvedAssignedNum = parseInt(resolvedIssues) || 0;
-                const inProgressNum = parseInt(inProgressIssues) || 0;
+                const resolvedAssignedNum = parseInt(resolvedTickets) || 0;
+                const inProgressNum = parseInt(inProgressTickets) || 0;
                 const remainingNum = totalAssignedNum - resolvedAssignedNum;
                 
                 document.getElementById('modal-assigned-count').textContent = totalAssigned;
-                document.getElementById('modal-assigned-resolved').textContent = resolvedIssues;
-                document.getElementById('modal-assigned-in-progress').textContent = inProgressIssues;
+                document.getElementById('modal-assigned-resolved').textContent = resolvedTickets;
+                document.getElementById('modal-assigned-in-progress').textContent = inProgressTickets;
                 document.getElementById('modal-assigned-remaining').textContent = remainingNum;
                 
-                // Set up links to central admin issue list with filters (use slug if available)
+                // Set up links to central admin ticket list with filters (use slug if available)
                 const userParam = selectedUserSlug || selectedUserId;
-                document.getElementById('reported-issues-link').href = `${baseUrl}?reporter=${userParam}`;
+                document.getElementById('reported-tickets-link').href = `${baseUrl}?reporter=${userParam}`;
                 document.getElementById('total-assigned-link').href = `${baseUrl}?assignee=${userParam}`;
                 document.getElementById('assigned-total-link').href = `${baseUrl}?assignee=${userParam}`;
                 document.getElementById('assigned-resolved-link').href = `${baseUrl}?assignee=${userParam}&status=resolved`;
@@ -718,9 +751,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update reported and resolved in other-stats section
                 document.getElementById('modal-reported-other').textContent = totalReported;
-                document.getElementById('modal-resolved-reported').textContent = resolvedReportedIssues;
+                document.getElementById('modal-resolved-reported').textContent = resolvedReportedTickets;
                 
-                // Set up links to central admin issue list with filters (use slug if available)
+                // Set up links to central admin ticket list with filters (use slug if available)
                 const userParam = selectedUserSlug || selectedUserId;
                 document.getElementById('other-reported-link').href = `${baseUrl}?reporter=${userParam}`;
                 document.getElementById('other-resolved-link').href = `${baseUrl}?reporter=${userParam}&status=resolved`;
