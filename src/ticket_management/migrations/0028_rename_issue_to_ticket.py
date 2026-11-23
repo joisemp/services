@@ -1,10 +1,22 @@
 # Data-preserving rename: Issue* → Ticket*, issue fields → ticket fields.
 # For existing DBs that still have issue_management_* tables / migration rows,
 # run `python manage.py relabel_issue_to_ticket_app` before this migration.
+#
+# Database renames are idempotent (SeparateDatabaseAndState + RunPython) so a
+# half-applied / raced rename no longer fails with:
+#   relation "ticket_management_issue" does not exist
 
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+
+
+def forwards_idempotent_issue_to_ticket(apps, schema_editor):
+    from ticket_management.management.commands.repair_ticket_table_names import (
+        repair_ticket_tables,
+    )
+
+    repair_ticket_tables(dry_run=False)
 
 
 class Migration(migrations.Migration):
@@ -14,7 +26,7 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
-    operations = [
+    state_operations = [
         # --- Models ---
         migrations.RenameModel(old_name='Issue', new_name='Ticket'),
         migrations.RenameModel(old_name='IssueImage', new_name='TicketImage'),
@@ -205,5 +217,17 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Ticket Review Comment',
                 'verbose_name_plural': 'Ticket Review Comments',
             },
+        ),
+    ]
+
+    operations = [
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(
+                    forwards_idempotent_issue_to_ticket,
+                    migrations.RunPython.noop,
+                ),
+            ],
+            state_operations=state_operations,
         ),
     ]
