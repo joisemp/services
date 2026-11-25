@@ -1019,12 +1019,6 @@ body.td-drawer-open .td-card--manage {
   visibility: hidden;
 }
 
-@media screen and (min-width: 431px) and (max-width: 1024px) {
-  .td-card--manage {
-    left: 76px;
-  }
-}
-
 @media screen and (max-width: 767.98px) {
   .td-page {
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));

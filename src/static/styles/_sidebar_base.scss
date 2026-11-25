@@ -1,7 +1,6 @@
 @use "./colors" as colors;
 
 $sidebar-w: 200px;
-$rail-w:    76px;
 $header-h:  60px;
 
 // Overall wrap
@@ -114,14 +113,13 @@ $header-h:  60px;
     // Profile dropdown visuals live in components/navbar.css (np-* classes)
   }
 
-  @media screen and (max-width: 430px) {
-    .sidebar-collapsed {
-      margin-left: -100%;
-      transition: margin-left 0.3s;
-    }
+  // Fully closed only — no icon-rail intermediate state
+  .sidebar.sidebar-collapsed {
+    transform: translateX(-100%);
+    pointer-events: none;
   }
 
-  // ── Sidebar (white, denser rail + section groups) ─────────────────────────
+  // ── Sidebar (white + section groups) ───────────────────────────────────────
   .sidebar {
     width: $sidebar-w;
     background-color: colors.$base-white;
@@ -138,6 +136,7 @@ $header-h:  60px;
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 transparent;
     padding: 0.75rem 0.5rem 1.25rem;
+    transition: transform 0.3s ease;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -266,41 +265,6 @@ $header-h:  60px;
       }
     }
 
-    // Tablet / denser icon rail
-    @media screen and (min-width: 431px) and (max-width: 1024px) {
-      width: $rail-w;
-      padding: 0.75rem 0.45rem 1rem;
-
-      .nav-section__label {
-        display: none;
-      }
-
-      .nav-section {
-        margin-top: 0.75rem;
-        gap: 0.4rem;
-      }
-
-      .navlink {
-        min-height: 3.35rem;
-        padding: 0.75rem 0.4rem !important;
-        justify-content: center;
-        flex-direction: column;
-        gap: 0.25rem;
-        border-radius: 0.75rem;
-
-        .material-symbols-outlined {
-          font-size: 1.35rem;
-          margin: 0 !important;
-        }
-
-        .menu-text {
-          font-size: 0.625rem;
-          margin: 0 !important;
-          max-width: 100%;
-          text-align: center;
-        }
-      }
-    }
   }
 
   // Content section
@@ -310,15 +274,16 @@ $header-h:  60px;
     padding: 1rem;
     overflow-y: auto;
     height: calc(100vh - #{$header-h});
-
-    @media screen and (min-width: 431px) and (max-width: 1024px) {
-      margin-left: $rail-w;
-    }
+    transition: margin-left 0.3s ease;
 
     @media screen and (max-width: 430px) {
-      margin-left: auto;
+      margin-left: 0;
       width: 100%;
     }
+  }
+
+  &:has(.sidebar.sidebar-collapsed) .main-content {
+    margin-left: 0;
   }
 }
 
