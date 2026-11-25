@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAdminUser
 from core.api.health import HealthView
 from core.api.openapi import error_responses
 from dashboard.api import DashboardAPIView
-from .views import HomePageView, ServiceWorkerView
+from .views import HomePageView, OfflineView, ServiceWorkerView, WebManifestView
 
 
 class DocumentedSchemaView(SpectacularAPIView):
@@ -67,6 +67,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('django.contrib.auth.urls')),
     path('', HomePageView.as_view(), name='home'),
+    path('offline/', OfflineView.as_view(), name='offline'),
+    path('manifest.webmanifest', WebManifestView.as_view(), name='web-manifest'),
     path('firebase-messaging-sw.js', ServiceWorkerView.as_view(), name='firebase-sw'),
     path('core/', include('core.urls')),
     path('tickets/', include('ticket_management.urls')),

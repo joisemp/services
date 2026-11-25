@@ -262,8 +262,13 @@ function setupForegroundMessageHandler() {
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            // Register service worker from root path for proper scope
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            // Reuse the PWA registration when present; otherwise register the root SW
+            let registration = await navigator.serviceWorker.getRegistration('/');
+            if (!registration) {
+                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                    scope: '/',
+                });
+            }
             debugLog('Service Worker registered successfully:', registration);
             
             return registration;
@@ -321,7 +326,9 @@ async function initializeFCM() {
             debugLog('Sending Firebase config to service worker');
             activeWorker.postMessage({
                 type: 'FIREBASE_CONFIG',
-                config: firebaseConfig
+                config: firebaseConfig,
+                notificationIcon: window.PWA_NOTIFICATION_ICON || '/static/images/notification-icon.png',
+                notificationBadge: window.PWA_NOTIFICATION_BADGE || '/static/images/notification-badge.png',
             });
         }
         
