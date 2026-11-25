@@ -1,0 +1,63 @@
+.pwa-splash {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  place-items: center;
+  background: #2563EB;
+  color: #f8fafc;
+  opacity: 1;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+html.pwa-standalone:not(.pwa-splash-done) .pwa-splash {
+  display: grid;
+  visibility: visible;
+}
+
+.pwa-splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.pwa-splash__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.9rem;
+  animation: pwa-splash-fade 0.55s ease both;
+}
+
+.pwa-splash__logo {
+  width: 3.25rem;
+  height: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.pwa-splash__brand {
+  margin: 0;
+  font-family: "Sora", "Inter", system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .pwa-splash__brand {
+    display: none;
+  }
+}
+
+@keyframes pwa-splash-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-splash__content {
+    animation: none;
+  }
+}

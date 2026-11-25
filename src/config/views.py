@@ -38,7 +38,7 @@ class WebManifestView(View):
             "scope": "/",
             "display": "standalone",
             "orientation": "any",
-            "background_color": "#ffffff",
+            "background_color": "#2563EB",
             "theme_color": "#2563EB",
             "icons": [
                 {

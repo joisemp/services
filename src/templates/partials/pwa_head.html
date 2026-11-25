@@ -2,7 +2,24 @@
 <meta name="theme-color" content="#2563EB">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Services">
 <link rel="manifest" href="{% url 'web-manifest' %}">
 <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
+<style>
+  html.pwa-standalone:not(.pwa-splash-done){background:#2563EB}
+  html.pwa-standalone:not(.pwa-splash-done) body{visibility:hidden}
+</style>
+<script>
+(function () {
+  var standalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.navigator.standalone === true;
+  if (!standalone) return;
+  document.documentElement.classList.add('pwa-standalone');
+  if (sessionStorage.getItem('services-pwa-splash-shown') === '1') {
+    document.documentElement.classList.add('pwa-splash-done');
+  }
+})();
+</script>
