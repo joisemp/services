@@ -1,17 +1,22 @@
 /**
- * Firebase Cloud Messaging (FCM) Service Worker Configuration
- * This file handles background push notifications
+ * Combined PWA + Firebase Cloud Messaging service worker.
+ * - Installable app shell with network-first navigation
+ * - Offline fallback at /offline/
+ * - Background push notifications (FCM)
  */
 
-// Import Firebase scripts
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Firebase config will be set dynamically via message from main thread
-let messaging = null;
+const CACHE_VERSION = 'services-pwa-v1';
+const OFFLINE_URL = '/offline/';
+const PRECACHE_URLS = [OFFLINE_URL];
 
-// Debug mode - only log in development
-const DEBUG_MODE = false; // Set to true only for debugging service worker tickets
+let messaging = null;
+let notificationIcon = '/static/images/notification-icon.png';
+let notificationBadge = '/static/images/notification-badge.png';
+
+const DEBUG_MODE = false;
 
 function debugLog(...args) {
     if (DEBUG_MODE) {
@@ -19,45 +24,112 @@ function debugLog(...args) {
     }
 }
 
-// Listen for message from main thread with Firebase config
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        (async () => {
+            const cache = await caches.open(CACHE_VERSION);
+            await cache.addAll(PRECACHE_URLS);
+            await self.skipWaiting();
+        })()
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        (async () => {
+            const keys = await caches.keys();
+            await Promise.all(
+                keys
+                    .filter((key) => key !== CACHE_VERSION)
+                    .map((key) => caches.delete(key))
+            );
+            await self.clients.claim();
+        })()
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    const { request } = event;
+
+    if (request.method !== 'GET') {
+        return;
+    }
+
+    const url = new URL(request.url);
+
+    // Same-origin document navigations: network-first, offline fallback
+    const isNavigation =
+        request.mode === 'navigate' ||
+        (request.headers.get('accept') || '').includes('text/html');
+
+    if (isNavigation && url.origin === self.location.origin) {
+        event.respondWith(
+            (async () => {
+                try {
+                    const networkResponse = await fetch(request);
+                    return networkResponse;
+                } catch (error) {
+                    const cache = await caches.open(CACHE_VERSION);
+                    const offline = await cache.match(OFFLINE_URL);
+                    if (offline) {
+                        return offline;
+                    }
+                    return new Response('You are offline.', {
+                        status: 503,
+                        headers: { 'Content-Type': 'text/plain' },
+                    });
+                }
+            })()
+        );
+    }
+});
+
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'FIREBASE_CONFIG') {
         const firebaseConfig = event.data.config;
-        
+
+        if (event.data.notificationIcon) {
+            notificationIcon = event.data.notificationIcon;
+        }
+        if (event.data.notificationBadge) {
+            notificationBadge = event.data.notificationBadge;
+        }
+
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             messaging = firebase.messaging();
-            
-            // Set up background message handler
+
             messaging.onBackgroundMessage((payload) => {
                 debugLog('Received background message:', payload);
-                
-                const notificationTitle = payload.notification.title;
+
+                const notificationTitle = payload.notification?.title || 'Services';
                 const notificationOptions = {
-                    body: payload.notification.body,
-                    icon: '/static/images/notification-icon.png',
-                    badge: '/static/images/notification-badge.png',
-                    data: payload.data
+                    body: payload.notification?.body || '',
+                    icon: notificationIcon,
+                    badge: notificationBadge,
+                    data: payload.data || {},
                 };
-                
-                return self.registration.showNotification(notificationTitle, notificationOptions);
+
+                return self.registration.showNotification(
+                    notificationTitle,
+                    notificationOptions
+                );
             });
         }
     }
 });
 
-// Handle notification click
 self.addEventListener('notificationclick', (event) => {
     debugLog('Notification clicked:', event);
     event.notification.close();
-    
-    // Get the ticket slug from notification data
+
     const issueSlug = event.notification.data?.ticket_slug;
-    
+
     if (issueSlug) {
-        // Navigate to the ticket detail page
         event.waitUntil(
             clients.openWindow(`/tickets/central-admin/${issueSlug}/`)
         );
+    } else {
+        event.waitUntil(clients.openWindow('/'));
     }
 });

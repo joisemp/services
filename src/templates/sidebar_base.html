@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Services | {% block title %}{% endblock title %}</title>
+    {% include "partials/pwa_head.html" %}
     <link rel="icon" type="image/x-icon" href="{% static 'images/logo-favicon.svg' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +23,7 @@
 </head>
 
 <body class="bg-light">
+    {% include "partials/pwa_splash.html" %}
     <div class="initial-wrap">
 
         <!-- Navbar -->
@@ -50,11 +52,16 @@
     </div>
     
     <!-- Firebase Cloud Messaging Scripts -->
+    <script>
+        window.PWA_NOTIFICATION_ICON = "{% static 'images/notification-icon.png' %}";
+        window.PWA_NOTIFICATION_BADGE = "{% static 'images/notification-badge.png' %}";
+    </script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
     <script src="{% static 'js/fcm-token-manager.js' %}"></script>
     
     {% block scripts %}{% endblock scripts %}
+    <script src="{% static 'js/pwa-register.js' %}"></script>
     <script src="{% static 'js/components/loading-progress.js' %}"></script>
     <script src="{% static 'js/form-submit-handler.js' %}"></script>
     <script src="{% static 'utils/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
